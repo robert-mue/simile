@@ -1,0 +1,6 @@
+/*
+ * simile app-specific styles.
+ *
+ * Loaded AFTER the shell's sienna/src/styles.css, so rules here override the
+ * shell where needed. Empty for now — the diagram editor will add its styles.
+ */
