@@ -135,3 +135,47 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 
 - **Land-use change** (reference; §4) — PATCH fixed-membership + FOREST/CROP conditional + NEXT TO **self-association** (both roles from the same submodel).
 - **Farmers & fields** (Muetzelfeldt 2010, CCAFS) — VILLAGE contains FARMER (population: initialiser/migrator/exterminator), FIELD (fixed-membership), OWNERSHIP (**two-party association**, roles "owns"/"owned" from two *different* submodels of *different* kinds). Complements land-use: covers the second association topology plus population-only nodes. Confirmed the strawman needs nothing new for it.
+
+## 10. Representation — flat vs tree, and file vs in-memory
+
+*Decided 2026-07-29 (after review with a colleague). This settles the object-model representation question left open in §4/§7.*
+
+### 10.1 Flat (parent pointers) vs tree (containment hierarchy)
+
+The question: store hierarchy as flat id-keyed records each carrying a `parent` id (the strawman, and what Simile does), or as a **tree** where submodels physically contain their children so containment is structural, not a computed query.
+
+**What a real tree buys you:**
+1. **Containment invariants for free.** In a tree an element is in exactly one place → you cannot represent an orphan (parent id → nothing), a cycle (A in B in A), or a dangling parent. In the flat model `parent` is a foreign key you must *validate*; all three bad states are expressible.
+2. **Traversal/scoping = natural recursion** (bounding boxes, collapse/expand, z-order, containment hit-testing). Flat does the same by filtering on `parent` or via an index.
+3. **Extraction looks trivial** — a submodel *is* its subtree, so "save as module" = serialise that node.
+4. **Namespacing on insert** — ids can be relative within a subtree, so pasting a module re-keys only the root.
+
+**The catch — a diagram is a graph *over* a containment tree, not a tree.** Containment nests cleanly; **connectivity does not.** Arcs' `from`/`to` frequently span different submodels; a **ghost** is a second appearance of a node living elsewhere; cross-boundary influences reach across nesting. None respect the tree → even a "tree" stores arcs/ghosts as id references, i.e. a hybrid: tree for containment + flat id-refs for the graph. The tree only ever modelled *half* the diagram — and that other half is exactly **#4** (which submodel owns a cross-boundary arc?), which a tree relocates to "where in the tree does a boundary-crossing arc sit?" (arguably harder), not dissolves.
+
+**Why flat fits *this* substrate especially well:**
+- **Stable id = stable address.** userData is path-addressed; undo/replay/pub-sub key on paths. Flat gives every element a short *stable* address (`…/nodes/node1/props/rate`) that survives **re-parenting** (move a node → its `parent` field changes, its identity/address don't: one write, one undo entry, one event). In a tree the address *is* the path from root, so re-parenting **moves the address** — identity and structural position are fused, awkward for path-keyed undo/replay.
+- **One join key** across model/layout/style (§6) — a single global id space. A logical tree + flat layout/style would be an impedance mismatch.
+
+**On modularity/extraction specifically** (the colleague's headline concern): what makes a submodel a reusable *module* is not that its contents are physically nested — it's a **well-defined boundary** (contents + interface). The interface is the set of references crossing the boundary (arcs with one end outside, in/out influences, ghosts) — which *neither* representation gives for free, and which a tree can *hide* (they live "elsewhere" in the tree). Flat `extractSubmodel(id)` walks parent pointers to gather the closure (O(n), trivial) and, in the same pass, classifies each arc as **internal** (travels with the module) vs **boundary-crossing** (defines the module's ports) — forcing the interface to be enumerated. The tree cheapens only the trivial half (containment) and still leaves the boundary hunt. **Existence proof:** Simile already extracts submodels from a flat parent-pointer model, so the capability isn't in question — only ergonomics.
+
+**Decision:** **flat maps are the source of truth**; the tree is recovered as a **derived child-index** (`parent → [child ids]`, cached, invalidated on structural change) giving O(1) child lookup + easy recursion for rendering/extraction — the tree's ergonomics without its storage costs. The one thing not free from the index is relative namespacing on insert (flat global ids must be re-minted + references remapped on paste) — a once-per-insert mechanical op, not a per-edit cost.
+
+### 10.2 The file/in-memory distinction (the key that resolves it)
+
+The flat-vs-tree tension largely dissolves once we separate **the serialised external file** from **the in-memory runtime form**. Three layers:
+
+- **Canonical core** — the DRY set of *independent* facts, present in both forms and the only thing that is authoritative. This is the flat maps: `parent` pointers, arc `from`/`to`, `props`, user-set geometry, enums.
+- **File-only concerns** — canonical **ordering** (sort keys for stable, git-friendly diffs; memory uses unordered hash maps) and format/versioning. Ids (not pointers) are the only cross-references — a pointer can't be serialised; the loader resolves id→object once.
+- **Memory-only derived structures** — everything computable from the core, kept for fast **bidirectional** lookup and never serialised: the **child-index** (down: parent→children; the core stores only up: child→parent), a **reverse arc index** (node→incident arcs; the core stores only arc→endpoints), a **ghost/appearance index** (node↔its appearances), cached **completeness** (red/black), and auto-computed geometry (auto-routed waypoints, bounding boxes).
+
+**The DRY inclusion rule for the file:** store a fact **iff it is independent** (not derivable from other stored facts). Applying it — and note it *justifies* several earlier decisions rather than adding new ones:
+- `parent` → **in file** (independent: you choose containment). Child lists → **memory only** (derivable → storing them violates DRY, can go stale).
+- Submodel *conditional*/*association* kind → **NOT stored** (inferred from a contained condition node / role arcs — decision #3). DRY *explains why* #3 is right: an association flag would be redundant with the role arcs.
+- Completeness (red/black) → **NOT stored** (derived from `props`).
+- Layout: **user-set** geometry (independent input) → **in file**; **auto-computed** geometry (routing, bboxes) → **memory only**. (Refines §6 — layout is itself split into independent vs derived.)
+
+**Architectural placement in sienna maps onto this split cleanly:** **`userData` = the DRY canonical core = what gets serialised** (it autosaves to localStorage / exports to file). The derived indices must **NOT** live in `userData` (or they'd be persisted and could drift, and would pollute undo/replay); they live in the **diagram widget's runtime**, rebuilt from `userData` via `subscribe`/`_watchModel`. So: mutate only the core (through the userData API); indices are updated by the same code or rebuilt from events → they cannot drift, and `userData` stays DRY.
+
+**External-tools trade-off** (a stated project goal — make it easy for others to process models): strict-DRY files give consumers minimal, canonical, unambiguous data but push derivation onto each consumer. Preferred stance: **DRY file + a reference loader** that builds the convenient indices — ship the denormalisation as *code*, not as file bloat (a redundant file must be trusted/validated and makes diffs noisy). If any convenience redundancy is ever added to the file, mark it explicitly as derived/non-authoritative and regenerate it on write.
+
+**Net:** the "flat store as truth + derived tree/index view" recommendation of 10.1 *is* the file/in-memory split of 10.2 — DRY parent-pointers persisted, fast child/reverse indices held only in memory and rebuilt on load. Adopt both together.
