@@ -116,7 +116,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 ## 7. Open threads
 
 1. **#4 — Arc parentage & cross-boundary arcs.** Does an arc belong to a submodel, and if so which one when its endpoints are in different submodels? Options floated: nearest common ancestor / `null` / derive from endpoints. The murkiest corner. **[ASK]**
-2. **Build vs. buy.** From-scratch SVG + jQuery-UI draggable, vs. vendoring an engine (JointJS et al. — the user's dislike of an earlier JointJS app was of his own code, not the library). Edges/routing/ports/hit-testing/embedding are the hard parts if from scratch. Still open and foundational.
+2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
 3. **Grammar rule language.** Expressiveness (declarative endpoint tables vs. general constraints) and *when* enforced (preventively during editing vs. as a validation pass — Simile leans preventive).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
 
@@ -179,3 +179,62 @@ The flat-vs-tree tension largely dissolves once we separate **the serialised ext
 **External-tools trade-off** (a stated project goal — make it easy for others to process models): strict-DRY files give consumers minimal, canonical, unambiguous data but push derivation onto each consumer. Preferred stance: **DRY file + a reference loader** that builds the convenient indices — ship the denormalisation as *code*, not as file bloat (a redundant file must be trusted/validated and makes diffs noisy). If any convenience redundancy is ever added to the file, mark it explicitly as derived/non-authoritative and regenerate it on write.
 
 **Net:** the "flat store as truth + derived tree/index view" recommendation of 10.1 *is* the file/in-memory split of 10.2 — DRY parent-pointers persisted, fast child/reverse indices held only in memory and rebuilt on load. Adopt both together.
+
+## 11. Build vs buy — **decided: build**
+
+*Decided 2026-07-30, after checking JointJS's current free/commercial split. This closes open thread §7.2. Recorded in this much detail so the decision is auditable and does not get re-litigated later; the facts it rests on are dated and checkable.*
+
+### 11.1 Two assumptions checked (and corrected)
+
+Both unknowns that were blocking the decision resolved **in JointJS's favour** — the case for build does not rest on them:
+
+- **Containment/nesting is in the free core**, not the paid tier. `element.embed(child)`, a `parent` property plus an `embeds` child-list, `embeddingMode` on the paper, and translation cascading from parent to children. There are container-layout demos. "Might be impractical" is off the table.
+- **Styling-by-type exists too**, via `dia.Element` subclasses carrying markup + `attrs` on the prototype `defaults`, and via CSS classes on the SVG. What is *not* provided is our §6 three-level cascade (schema default → document → per-element); that would be ours to build either way.
+
+Two claims made earlier **against** buying are also withdrawn as wrong:
+
+- **`file://` does not block vendoring.** A library would go in `sienna/vendor` like the existing vendored ones. (It *does* rule out loading from an external URL at runtime — that breaks offline use, which matters for field/teaching use — but local vendoring was never obstructed.)
+- **"jQuery-UI draggable"** was never the plan and is withdrawn as a straw man; see 11.3, dragging is easy but not via that plugin.
+
+### 11.2 Why build anyway — the two reasons that decide it
+
+**1. The free tier is a renderer, not an editor.** Everything that constitutes a diagram *editor* sits behind the commercial JointJS+ licence: undo/redo (CommandManager), Stencil (element palette), Inspector (property editor), Selection & Halo, Toolbar, Clipboard, keyboard shortcuts, zoom & scroll (PaperScroller), Minimap, inline text editing, validation, image/SVG export, print. The free core gives shapes, links, routers/connectors/anchors, element & link tools, events, highlighters, embedding, geometry/Vectorizer, JSON import/export, dagre integration.
+
+That matters *here* specifically because **sienna already provides that paid layer** — panels, menu, action log, undo/redo, session replay. So the offer on the table is not "buy the hard parts cheaply"; it is "take a renderer, then either buy an editor layer we already have, or duplicate it against sienna's". Much weaker than it first appears.
+
+**2. It conflicts with who owns the truth.** JointJS's `dia.Graph` wants to *be* the model — geometry and connectivity in Backbone models. §10.2 rules that **`userData` is the DRY canonical core**, with undo/replay/pub-sub keyed on paths. Reconciling those means either two stores under bidirectional sync (drift, doubled undo), or demoting JointJS to a pure view rendered from `userData` — at which point we use perhaps a third of it and fight the rest. This is the real fit crunch; containment never was.
+
+**Supporting (weaker, but aligned):**
+
+- **No build step.** JointJS v4 is ESM-first; we would pin a UMD bundle and be unable to upgrade without introducing a build chain — a poor bet for a tool intended to outlive its current author's involvement.
+- **Contributor entry cost.** A stated project goal is that others can pick this up. One fewer library to internalise, and no bottom of the dependency we cannot see. (Licence is *not* an obstacle — JointJS core is MPL-2.0, compatible with an open-source project.)
+- **Owning the whole stack** is also a stated preference and a source of enjoyment. Named as a preference, not dressed as engineering — but for this project it is legitimate weight, and the goal being serious academic use *reinforces* rather than undercuts the choice: a small owned SVG layer with no build step is more durable over a decade than a vendored library we cannot upgrade.
+
+### 11.3 What build actually costs
+
+**Straightforward — do not over-plan these:**
+
+- **Dragging.** Hand-rolled SVG dragging is ~60–80 lines: `pointerdown`/`pointermove`/`pointerup` (prefer pointer events + `setPointerCapture` over mouse+touch branches — touch and pen come free, and the drag survives the cursor outrunning the element), `getScreenCTM()` to map screen pixels into user space, write a transform. Use the full inverse (`createSVGPoint` + `matrixTransform(getScreenCTM().inverse())`) rather than the `(clientX - CTM.e) / CTM.a` shortcut, so it stays correct once pan/zoom exists. *Prior art: the author has already built an SVG graph editor with dragging.*
+- **Hit-testing thin curved arcs.** Render an invisible fat-stroke twin of each arc path as the pointer target. Solved cheaply.
+- **Orthogonal / obstacle-avoiding routing.** Genuinely hard — and **declined**. Simile uses straight/curved arcs with a bend point, and §4 already stores explicit `waypoints`. Avoid the hard problem by notation choice.
+
+**The actual work — what a "drag" *means* in this editor:**
+
+1. **Dragging a submodel must move its contents.** With flat world coordinates (11.4) this means explicitly translating every descendant — walk the derived child-index, which is where §10's index earns its keep.
+2. **Drop-target detection for re-parenting.** Dragging a node into a submodel is a *logical-model* edit (`parent` changes) triggered by a gesture. Needs hit-testing against submodel rects, a rule for ambiguity when submodels nest/overlap (innermost wins?), and a decision on whether the grammar may **refuse** a drop mid-drag — which ties directly into the preventive-vs-validation question of §7.3.
+3. **One undo entry per drag, not per `pointermove`.** Otherwise sienna's action log records hundreds of writes. Live geometry during the drag; a single committed write on `pointerup`.
+4. **Arc-to-arc attachment.** §4 requires an influence to target an arc (`arc2 → arc1`, as Simile does). Keeping the endpoint glued to a moving arc needs point-on-path projection. This is the one item on this list the free JointJS core would have given us; budget for it.
+
+Note that items 1 and 2 are exactly the places a library would have imposed its own opinions — further reason the choice is close to cost-neutral rather than a sacrifice.
+
+### 11.4 Foundational calls to make before drawing anything
+
+- **One flat world coordinate space**, with a single pan/zoom transform on a root `<g>` — *not* nested `<g transform>` per submodel. Nested transforms would make 11.3(1) free, but would force coordinate-space conversion on every cross-boundary arc, and cross-boundary arcs (#4) are the case we cannot afford to make awkward. **This is a real trade, consciously taken**, not a free win.
+- **Explicit layer groups**, because SVG has no `z-index` — paint order is document order. Suggested layers: submodel bodies → arcs → nodes → labels → interaction overlay. Cheap to set up now, painful to retrofit.
+- **Text has no auto-wrap in SVG.** Labels need either manual measurement or `foreignObject` (acceptable — we only target browsers).
+
+### 11.5 Escape hatch
+
+Keep rendering behind a **thin interface** (create/update/remove a visual for an element id; hit-test at a point; report gestures as intents). Then a JointJS-backed renderer remains implementable if from-scratch stalls, and the decision above is reversible at the cost of one adapter rather than a rewrite. This also keeps the §10 discipline honest: the renderer consumes the core plus derived indices and owns nothing authoritative.
+
+**Sources for the free/paid split (checked 2026-07-30):** [jointjs.com/comparison](https://www.jointjs.com/comparison), [JointJS API docs v4.0](https://resources.jointjs.com/docs/jointjs), [container layout demos](https://www.jointjs.com/demos/jointjs-layouts).
