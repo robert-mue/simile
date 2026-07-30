@@ -336,7 +336,7 @@ Eventually each rule should therefore declare **what it depends on**, so re-chec
 
 ### 12.6 Left open
 
-- The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing.
+- The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing. *Seeded 2026-07-31 with the first entries we know independently:* **a flow may not branch** (one source, one target — the quantity would otherwise divide; §13.3), **a role arc may not branch**, and **an arc may not terminate on an arc** (influences into a flow target its valve; §4). All three are structural, hence **preventive** per §12.3 — refuse the gesture. The flow rule needs a good refusal `message`, since the modeller's intent is legitimate: it should say *draw two flows, and add a variable to sum them if you want the total*.
 - The exact **rule vocabulary** (`ends` / `contains` / `parentKind` above are illustrative, not final) — best fixed against that catalogue plus the SBML cross-check, so it is not over-fitted to Simile.
 - Whether rules live **in the schema file** alongside vocabulary/dialogs/styling (§3's second face) or as a separable ruleset. Assumed in-schema for now.
 
@@ -378,9 +378,20 @@ That gives an identity rule needing no invented ids. A port is determined by the
 
 The middle segment is per-arc either way. The asymmetry is right, not merely traditional: everything leaving port `(S1, a)` demonstrably came from `a`, so fan-out loses no information — whereas a merged arrival would hide which outside node an arrow came from.
 
-**Sharing applies to *influence* arcs only** *(ruled 2026-07-31)*. Branching presupposes one source with many targets. **Role** arcs (one submodel → one association) and **flow** arcs (one compartment/cloud → one other) are **always one-to-one**, so no branching structure arises for them and no segment of theirs is ever shared. Note this is about *branching*, not about count: several role arcs may leave the same submodel (the self-association case, `arc3`/`arc4` in §4) — each is still its own one-to-one link.
+**Two words that must not be confused** *(2026-07-31)*:
 
-Consequence: the port-sharing machinery is influence-specific. Whether a role or flow arc is ever **split** at all — i.e. whether either can cross a submodel boundary and so acquire (unshared) segments — is a separate question, left open below.
+- **Segmented** — one arc drawn as several pieces because it crosses boundaries. A **diagram** fact; this whole section.
+- **Branched** — one source, several targets. A **model** fact.
+
+An arc may be segmented without being branched, and the two questions have different answers per arc type.
+
+**Sharing applies to *influence* arcs only** *(ruled 2026-07-31)*. Sharing presupposes branching, and only influences branch. **Role** arcs (one submodel → one association) and **flow** arcs (one compartment/cloud → one other) are **always one-to-one**, so no branching structure arises for them and no segment of theirs is ever shared. Note this is about *branching*, not about count: several role arcs may leave the same submodel (the self-association case, `arc3`/`arc4` in §4) — each is still its own one-to-one link.
+
+**Why only influences branch — it is semantic, not conventional.** *Branching is safe exactly for arcs that carry information rather than stuff.* An influence delivers a value; copying it to three targets costs nothing and changes nothing. A flow carries a quantity, so branching one would mean the quantity itself divides — 10 m³/hour becoming 6 and 4. That is a perfectly reasonable and neat thing for a modeller to want, but it forces a flow equation per branch, and the ordering and conservation questions that come with it: a nightmare. **The answer we give the modeller is: draw two flows, and if the total is wanted, add a variable summing them.**
+
+This yields a second, independent reason flows must never share segments *visually*: a shared flow segment would look exactly like the division we are forbidding. For influences no such reading arises, since nothing is being divided.
+
+Consequence: the port-sharing machinery is influence-specific. Whether role and flow arcs are ever **segmented** is a separate question — see §13.6, where flows are confirmed to be and role arcs are pending.
 
 Consequences:
 
@@ -411,13 +422,15 @@ If a cross-boundary connection is one arc, `parent` on an arc is either derived 
 **Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. Two small residues:
 
 - the port-position-on-last-delete detail (§13.4);
-- whether **role** and **flow** arcs can cross a submodel boundary at all (§13.3) — i.e. whether they are ever split into (unshared) segments, or are always a single straight link.
+- whether **role** and **flow** arcs are ever **segmented** — i.e. can cross a submodel boundary — as opposed to always being a single straight link. (On *branching*, all three types are settled: influences branch, role and flow arcs never do — §13.3.)
+
+  **Flows: YES, confirmed 2026-07-31.** Flows can connect compartments at different levels of nesting, so a flow is segmented like any other arc — just never with *shared* segments, since flows do not branch. So §13 is **not** an influence-only story.
 
   **Role arcs: normally nothing is crossed** *(corrected 2026-07-31)*. An association between S1 and S2 is modelled by adding a **third** submodel S3 and drawing two role arcs **S1→S3 and S2→S3** — never S1→S2. S3 thereby *becomes* the association, by inference from the two role arcs pointing at it (decision #3). With S1, S2, S3 siblings under one parent, neither role arc crosses any boundary.
 
   The reason is worth stating, because it is what makes role arcs different from influences: **a role arc's endpoints are submodels, not nodes inside them.** An arc from a node must exit that node's containers to reach anything outside; an arc *from a submodel* has nothing to exit, since the submodel is itself the endpoint. So a role arc between siblings runs edge-to-edge and crosses nothing.
 
-  What remains open is only the non-sibling case: may a role arc connect submodels at **different nesting levels** — an association involving a submodel nested deeper (the FLORES-style case flagged in §8)? If not, role arcs never split, full stop. Same question for **flows** between compartments in different submodels. **[ASK]**
+  What remains open is only the non-sibling case: may a role arc connect submodels at **different nesting levels** — an association involving a submodel nested deeper (the FLORES-style case flagged in §8)? If not, role arcs are never segmented at all. **The user is checking this** (2026-07-31); nothing depends on the answer, since flows already prove the machinery is needed.
 
 ### 13.7 None of this reaches the model — the discardable-layout test
 
