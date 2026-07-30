@@ -103,7 +103,8 @@ Key points:
 12. Vocabulary: **ID / label / name**, with "identifier" dropped, and **label ≡ name** enforced typographically. **Yes** (§14).
 13. An influence carries a **local name (alias)** for the value it imports; equations never use path-qualified names. **Yes** (§14).
 14. **No fan-in** — segment sharing is source-side only; the branching structure always relates to a single source variable. **Yes** (§13.3).
-15. Ports are **auto-placed on creation, then draggable**, later arcs attaching to the existing port; port **positions are stored**, port *existence* is derived. **Yes** (§13.4).
+15. Ports are **auto-placed on creation, then draggable**, later arcs attaching to the existing port; port **positions are persisted in `layout`** (never in the model), port *existence* is derived. **Yes** (§13.4, §13.7).
+16. §13 governs the **diagram only**. The model stores one arc between two IDs — no segments, no ports — unlike Simile, where diagram and file match. Test: **discarding the layout must not change the model's meaning.** **Yes** (§13.7).
 
 ## 6. Three orthogonal concerns: model / layout / style
 
@@ -381,9 +382,11 @@ Consequences:
 
 *Ruled 2026-07-30.* A port is **auto-placed when first created**. Later arcs out of the same source **attach to that existing port, where and as it then is** — they do not each get their own placement. A port may afterwards be **dragged** by the user.
 
-This settles whether ports are persisted, and the answer refines §10.2's independent-vs-derived split. Auto-placement is a **one-time seed, not a standing derivation**: once the port exists, the second arc's geometry depends on where the first one put it, so re-deriving on load could move an arrangement the user has come to rely on (and would move it for every arc at once). Therefore **a port's position is stored from the moment the port exists**, whether or not it has been dragged. The category is "seeded automatically, then owned by the document" — a third case beside §10.2's pure-independent and pure-derived, and worth naming there when that section is next revised.
+This settles whether ports are persisted, and the answer refines §10.2's independent-vs-derived split. Auto-placement is a **one-time seed, not a standing derivation**: once the port exists, the second arc's geometry depends on where the first one put it, so re-deriving on load could move an arrangement the user has come to rely on (and would move it for every arc at once). Therefore **a port's position is persisted from the moment the port exists**, whether or not it has been dragged. The category is "seeded automatically, then owned by the document" — a third case beside §10.2's pure-independent and pure-derived, and worth naming there when that section is next revised.
 
-What is still *not* stored is the port's **existence**: which ports there are follows from the arcs and the containment hierarchy, so the file holds positions for ports that the derivation reconstructs, and a position with no corresponding port is simply ignored on load.
+What is still *not* persisted is the port's **existence**: which ports there are follows from the arcs and the containment hierarchy, so what is held is a position for a port the derivation reconstructs, and a position with no corresponding port is simply ignored on load.
+
+**Persisted where — `layout`, never the model.** *(Clarified 2026-07-31; the earlier phrasing "ports appear in the file" wrongly suggested the model file.)* Ports and segments are **diagram** facts and live in `layout`, which §6 keeps as a concern apart from the model — plausibly a separate file, with several named layouts over one shared model. Nothing about boundary crossings enters `nodes`/`arcs`/`submodels`. See §13.7.
 
 *Small detail left open:* when the last arc through a port is deleted, is the port's dragged position forgotten, or remembered in case an arc is drawn there again? Remembering is friendlier for undo/redo and costs a little orphaned data; forgetting is tidier. Not urgent.
 
@@ -396,6 +399,16 @@ If a cross-boundary connection is one arc, `parent` on an arc is either derived 
 ### 13.6 Status
 
 **Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. The only residue is the port-position-on-last-delete detail in §13.4.
+
+### 13.7 None of this reaches the model — the discardable-layout test
+
+*Stated explicitly 2026-07-31, because §13 is all about the drawing and it would be easy to read it as being about the saved model.*
+
+Everything in §13 concerns the **diagram**. The **model** holds a cross-boundary connection as exactly one arc between two element IDs — `arc2: { type:"influence", from:"node1", to:"node5", alias:"state" }` — with no parent, no segments, no ports. **In Simile the diagrammatic representation matches the model file precisely; we deliberately do not follow that.** The gain is the project's stated goal of a declarative, tool-friendly format: someone processing the file to reason about model *structure* reads `a` influences `growth_rate` and never has to reconstruct that from three boundary hops.
+
+The rejected alternative was to store segments and reason over them with a small graph library. Note that the library is needed **either way** — under the one-arc design it is what *derives* the segments for rendering (nearest common ancestor, containment walk, the §10.2 child-index). So the choice was never "arc plus reasoning" versus "segments plus reasoning"; it was where the redundancy sits, and the declarative form wins.
+
+**The test that keeps this honest: discard the layout entirely and the model must mean exactly the same thing.** Ports regenerate by auto-seeding (§13.4) — in different places than before, which is a cosmetic loss, not a structural one — and no fact about model structure is lost. If that ever ceases to hold, something has leaked from the diagram into the model.
 
 ## 14. Naming — ID, label, name
 
