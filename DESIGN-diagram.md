@@ -78,7 +78,7 @@ Key points:
 - **Ids** are numerically incremented, prefixed by family: `node1`, `arc1`, `submodel1`. The prefix also names which map to look in.
 - **Arcs** carry `from`/`to` as element-id strings, and **no `parent`** — a cross-boundary arc is *one* arc, drawn as several segments (§13). Arcs never terminate on arcs: an influence into a flow targets the flow's **valve** (`arc2 → node5`). Only **role** arcs carry a `label`; flow and influence arcs do not (§14).
 - **Valves** are real, auto-created node elements, one per flow, holding the flow's label/name and its rate equation. They are the System Dynamics instance of a general **attachment node** — the node a notation creates so that things can be hung off an arc; in other notations (e.g. webakt causal links) the same node has no glyph. Visible-or-not is a **style** fact (§6), not a model fact.
-- **Submodel `kind`** = membership only (`single` / `fixed-membership` / `population`). *Conditional* and *association* are **inferred**, not stored: a submodel is conditional if it contains a condition node; it is an association if role arcs point into it. (Per-record and special-grid kinds deferred.)
+- **Submodel `kind`** = membership only (`single` / `fixed-membership` / `population`). *Conditional* and *association* are **inferred**, not stored: a submodel is conditional if it contains a condition node; it is an association if role arcs point into it. An association between S1 and S2 is modelled by adding a **third** submodel S3 with role arcs S1→S3 and S2→S3 — **never** S1→S2; S3 becomes the association by virtue of those arcs. (Per-record and special-grid kinds deferred.)
 - **Clouds** are real, auto-created node elements (created at a flow's blank end). Traditionally unnamed (a stock whose value we don't care about) but **optionally nameable** — e.g. "atmosphere"/"ocean" in a hydrological model. A cloud may carry **several** in/outflows, so it is deleted only when the flow being deleted was its **last** connection — unlike a valve, which is one-to-one with its flow and dies with it.
 - **Completeness** (Simile's red-until-defined, black-when-complete) is **derived** from whether props are filled, not stored.
 - **Enumerated types** live at model level.
@@ -411,7 +411,13 @@ If a cross-boundary connection is one arc, `parent` on an arc is either derived 
 **Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. Two small residues:
 
 - the port-position-on-last-delete detail (§13.4);
-- whether **role** and **flow** arcs can cross a submodel boundary at all (§13.3). If they can, they are split into segments like any other arc, just never *shared* ones; if they cannot, §13's machinery is influence-only and role/flow arcs are always a single straight link. Role arcs plainly cross *something* — a submodel and the association it participates in are drawn as separate boxes — so the real question is whether the two are always siblings under one parent, or whether an association may involve a submodel nested deeper (the FLORES-style case already flagged in §8). **[ASK]**
+- whether **role** and **flow** arcs can cross a submodel boundary at all (§13.3) — i.e. whether they are ever split into (unshared) segments, or are always a single straight link.
+
+  **Role arcs: normally nothing is crossed** *(corrected 2026-07-31)*. An association between S1 and S2 is modelled by adding a **third** submodel S3 and drawing two role arcs **S1→S3 and S2→S3** — never S1→S2. S3 thereby *becomes* the association, by inference from the two role arcs pointing at it (decision #3). With S1, S2, S3 siblings under one parent, neither role arc crosses any boundary.
+
+  The reason is worth stating, because it is what makes role arcs different from influences: **a role arc's endpoints are submodels, not nodes inside them.** An arc from a node must exit that node's containers to reach anything outside; an arc *from a submodel* has nothing to exit, since the submodel is itself the endpoint. So a role arc between siblings runs edge-to-edge and crosses nothing.
+
+  What remains open is only the non-sibling case: may a role arc connect submodels at **different nesting levels** — an association involving a submodel nested deeper (the FLORES-style case flagged in §8)? If not, role arcs never split, full stop. Same question for **flows** between compartments in different submodels. **[ASK]**
 
 ### 13.7 None of this reaches the model — the discardable-layout test
 
