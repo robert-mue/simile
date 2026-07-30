@@ -1,2 +1,6 @@
 .DS_Store
 *.log
+
+# Rendered documents (exported transcripts, PDF builds of the .md notes) —
+# the markdown source is tracked, the render is not.
+*.pdf
