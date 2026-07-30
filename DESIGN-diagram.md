@@ -106,6 +106,10 @@ Key points:
 15. Ports are **auto-placed on creation, then draggable**, later arcs attaching to the existing port; port **positions are persisted in `layout`** (never in the model), port *existence* is derived. **Yes** (§13.4, §13.7).
 16. §13 governs the **diagram only**. The model stores one arc between two IDs — no segments, no ports — unlike Simile, where diagram and file match. Test: **discarding the layout must not change the model's meaning.** **Yes** (§13.7).
 
+*Ruling added 2026-07-31:*
+
+17. **Ghosts — not built at this stage** (§15). A layout-only concept under §13.7, so adding them later touches `layout` + renderer, not the model or the format.
+
 ## 6. Three orthogonal concerns: model / layout / style
 
 A marker we are planting now but only partly building:
@@ -140,7 +144,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 - ~~**#4:** How does Simile decide which submodel an arc "belongs to"?~~ **ANSWERED 2026-07-30** (§13): Simile splits a cross-boundary arc into three arcs both on the diagram *and* in the model declarations — but stores no arc-parent fact, each split arc's parentage being recoverable from its endpoints. We keep the visual split, reject the model split, and likewise do not store arc parentage. Sharing is source-side only (no fan-in) and ports are auto-seeded then draggable — both confirmed by the user, so nothing further to ask here.
 - **Association inference:** In the saved model, is a submodel's *association* nature truly implicit (recoverable only from its role arcs), or is there an explicit marker? Same question for *conditional* (the contained condition symbol) — stored flag or inferred?
 - **Storage separation:** Does the `.sml` (Prolog) format separate logical structure from diagram layout at all? Any notion of style separate from layout?
-- **Ghosts:** How is a ghost (a second on-diagram appearance of a node) stored — and confirm only nodes are ghostable, never arcs/submodels?
+- ~~**Ghosts:** How is a ghost stored, and confirm only nodes are ghostable?~~ **NOT ASKED — deferred 2026-07-31, see §15.** Jasper confirmed he uses ghosts, to reduce influence-arrow clutter; we are still leaving them out for now. The question returns if and when they do.
 - **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference? *(Partly answered 2026-07-30: condition nodes do carry a label, indicating what the condition is based on.)*
 - **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? And is name-uniqueness scoped to the containing submodel?
 - **Completeness (red/black):** The precise rule for when an element flips from red (incomplete) to black — per element type.
@@ -182,7 +186,7 @@ The flat-vs-tree tension largely dissolves once we separate **the serialised ext
 
 - **Canonical core** — the DRY set of *independent* facts, present in both forms and the only thing that is authoritative. This is the flat maps: `parent` pointers, arc `from`/`to`, `props`, user-set geometry, enums.
 - **File-only concerns** — canonical **ordering** (sort keys for stable, git-friendly diffs; memory uses unordered hash maps) and format/versioning. Ids (not pointers) are the only cross-references — a pointer can't be serialised; the loader resolves id→object once.
-- **Memory-only derived structures** — everything computable from the core, kept for fast **bidirectional** lookup and never serialised: the **child-index** (down: parent→children; the core stores only up: child→parent), a **reverse arc index** (node→incident arcs; the core stores only arc→endpoints), a **ghost/appearance index** (node↔its appearances), cached **completeness** (red/black), and auto-computed geometry (auto-routed waypoints, bounding boxes).
+- **Memory-only derived structures** — everything computable from the core, kept for fast **bidirectional** lookup and never serialised: the **child-index** (down: parent→children; the core stores only up: child→parent), a **reverse arc index** (node→incident arcs; the core stores only arc→endpoints), a **ghost/appearance index** (node↔its appearances — *not needed while ghosts are deferred, §15; listed because the shape of the split is what matters here*), cached **completeness** (red/black), and auto-computed geometry (auto-routed waypoints, bounding boxes).
 
 **The DRY inclusion rule for the file:** store a fact **iff it is independent** (not derivable from other stored facts). Applying it — and note it *justifies* several earlier decisions rather than adding new ones:
 - `parent` → **in file** (independent: you choose containment). Child lists → **memory only** (derivable → storing them violates DRY, can go stale).
@@ -436,3 +440,24 @@ An influence carries the name under which the target's equation refers to the im
 - **It is also what makes rename safe.** §4 stores equations verbatim and never resolves them, so the editor *cannot* rewrite equation text when a source is renamed. Because the alias is copied at arc creation and not re-synced, renaming a source changes only that element — no downstream equation breaks. (Accepted cost: the alias may go stale relative to the source's new label; mouseover still tells the truth.)
 - **Path-qualified names never appear in equation text** (`S1:growth_rate + S2:growth_rate` is rejected). It solves the collision problem but locks an equation to the presence of S1 and S2, which defeats modularity — an equation must survive being lifted into another model.
 - The alias lives on the **arc**, which is exactly one source→target pair — correctly *not* on a segment, which may be shared (§13.3).
+
+## 15. Ghosts — deferred, deliberately
+
+*Decided 2026-07-31.*
+
+A **ghost** is a second on-diagram appearance of an element that lives elsewhere. **We are not building them at this stage.**
+
+**The case both ways, recorded so the decision can be revisited on its merits:**
+
+- *Against* — they obscure interconnections. The user has never used them and dislikes them as seen in other System Dynamics packages (Stella, Vensim): a reader cannot tell from the diagram where a value actually comes from.
+- *For* — Jasper (the Simile developer), asked directly, says he does use them and finds them very useful for **reducing influence-arrow clutter**. That is a real problem in large models and this design has no other answer to it.
+
+The point is that both are true, and the trade is about diagram legibility at scale, not about correctness.
+
+**Deferring costs little, and here is why — ghosts are a *layout* concept under §13.7.** A ghost changes nothing about model structure: an arc still connects one element to another, and *which appearance of an element an arc visually attaches to* is a diagram fact. So adding ghosts later touches `layout` and the renderer, and leaves `nodes`/`arcs`/`submodels` and the file format alone. (This is only true because §13.7 separated the two; in Simile, where diagram and file match, ghosts are necessarily a format concern.)
+
+**The one thing that would make it expensive, and the cheap insurance against it.** Today `layout` keys on element id (§4: `node1:{x,y}`), which quietly assumes **one appearance per element**; §13.3's port keys `(boundary, source element)` make the same assumption. Ghosts break that 1:1, so layout and port keys would have to become **appearance**-keyed. That is a mechanical re-keying, but a scattered one if every renderer site indexes `layout[id]` directly.
+
+Cheap insurance, if we want it: have the renderer reach layout through a **single accessor** (`appearanceOf(elementId)`) that today always returns the one and only appearance. Near-zero cost now, and it localises the later change to that accessor plus the port keys. *Recommended, but optional — flagged rather than adopted, since the point of this ruling is to reduce what is on our plate.*
+
+**Likely trigger for revisiting:** importing legacy Simile models that already contain ghosts, or clutter becoming unmanageable in a large test model. Not a decision to re-open before then.
