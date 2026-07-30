@@ -109,6 +109,7 @@ Key points:
 *Ruling added 2026-07-31:*
 
 17. **Ghosts — not built at this stage** (§15). A layout-only concept under §13.7, so adding them later touches `layout` + renderer, not the model or the format.
+18. **Renderer reads layout only via `appearanceOf(elementId)`** — never `layout[id]` directly (§15). Accepted as a standing discipline so that ghosts stay a one-place change. **Yes.**
 
 ## 6. Three orthogonal concerns: model / layout / style
 
@@ -252,6 +253,7 @@ Note that items 1 and 2 are exactly the places a library would have imposed its 
 - **One flat world coordinate space**, with a single pan/zoom transform on a root `<g>` — *not* nested `<g transform>` per submodel. Nested transforms would make 11.3(1) free, but would force coordinate-space conversion on every cross-boundary arc, and cross-boundary arcs (#4) are the case we cannot afford to make awkward. **This is a real trade, consciously taken**, not a free win.
 - **Explicit layer groups**, because SVG has no `z-index` — paint order is document order. Suggested layers: submodel bodies → arcs → nodes → labels → interaction overlay. Cheap to set up now, painful to retrofit.
 - **Text has no auto-wrap in SVG.** Labels need either manual measurement or `foreignObject` (acceptable — we only target browsers).
+- **All layout reads go through `appearanceOf(elementId)`** — never `layout[id]` in renderer code (ruling 18, §15). One indirection now; it is what keeps ghosts a one-place change later.
 
 ### 11.5 Escape hatch
 
@@ -458,6 +460,8 @@ The point is that both are true, and the trade is about diagram legibility at sc
 
 **The one thing that would make it expensive, and the cheap insurance against it.** Today `layout` keys on element id (§4: `node1:{x,y}`), which quietly assumes **one appearance per element**; §13.3's port keys `(boundary, source element)` make the same assumption. Ghosts break that 1:1, so layout and port keys would have to become **appearance**-keyed. That is a mechanical re-keying, but a scattered one if every renderer site indexes `layout[id]` directly.
 
-Cheap insurance, if we want it: have the renderer reach layout through a **single accessor** (`appearanceOf(elementId)`) that today always returns the one and only appearance. Near-zero cost now, and it localises the later change to that accessor plus the port keys. *Recommended, but optional — flagged rather than adopted, since the point of this ruling is to reduce what is on our plate.*
+**The insurance, ACCEPTED 2026-07-31:** the renderer reaches layout through a **single accessor** — `appearanceOf(elementId)` — which today always returns the one and only appearance. No renderer code indexes `layout[id]` directly. Near-zero cost now, and it localises the later change to that accessor plus the port keys.
+
+This is a **discipline for code not yet written** (§11 decided we build the renderer ourselves), so it costs nothing today and must simply be honoured when the renderer is built. It is *not* a request to model appearances now: there is no appearance id, no appearance map, no second appearance — only one indirection, so that adding them later is a change in one place.
 
 **Likely trigger for revisiting:** importing legacy Simile models that already contain ghosts, or clutter becoming unmanageable in a large test model. Not a decision to re-open before then.
