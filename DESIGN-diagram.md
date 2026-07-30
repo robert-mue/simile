@@ -117,7 +117,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 
 1. **#4 — Arc parentage & cross-boundary arcs.** Does an arc belong to a submodel, and if so which one when its endpoints are in different submodels? Options floated: nearest common ancestor / `null` / derive from endpoints. The murkiest corner. **[ASK]**
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
-3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-31 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
+3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-30 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
 
 ## 8. Questions for the Simile developer **[ASK]**
@@ -241,7 +241,7 @@ Keep rendering behind a **thin interface** (create/update/remove a visual for an
 
 ## 12. Graph grammar — principles and machinery
 
-*Decided 2026-07-31. This partly resolves open thread §7.3.*
+*Decided 2026-07-30. This partly resolves open thread §7.3.*
 
 **Deliberately scoped.** What is settled here is the **machinery**: the shape of a rule, the escape hatch for cases the declarative form cannot express, and *when* rules are enforced. What is **not** settled, and is explicitly not being settled yet, is the **catalogue** of actual rules — a list of the specific checks Simile performs (and when) has been requested from the Simile developer and will land as an appendix. Enumerating every possible check now would be premature: passing a model to the Simile execution phase is a long way off, and the checks that matter *for the editor* are a much smaller set (see 12.3).
 
