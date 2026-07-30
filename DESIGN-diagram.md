@@ -117,7 +117,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 
 1. **#4 — Arc parentage & cross-boundary arcs.** Does an arc belong to a submodel, and if so which one when its endpoints are in different submodels? Options floated: nearest common ancestor / `null` / derive from endpoints. The murkiest corner. **[ASK]**
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
-3. **Grammar rule language.** Expressiveness (declarative endpoint tables vs. general constraints) and *when* enforced (preventively during editing vs. as a validation pass — Simile leans preventive).
+3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-31 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
 
 ## 8. Questions for the Simile developer **[ASK]**
@@ -238,3 +238,82 @@ Note that items 1 and 2 are exactly the places a library would have imposed its 
 Keep rendering behind a **thin interface** (create/update/remove a visual for an element id; hit-test at a point; report gestures as intents). Then a JointJS-backed renderer remains implementable if from-scratch stalls, and the decision above is reversible at the cost of one adapter rather than a rewrite. This also keeps the §10 discipline honest: the renderer consumes the core plus derived indices and owns nothing authoritative.
 
 **Sources for the free/paid split (checked 2026-07-30):** [jointjs.com/comparison](https://www.jointjs.com/comparison), [JointJS API docs v4.0](https://resources.jointjs.com/docs/jointjs), [container layout demos](https://www.jointjs.com/demos/jointjs-layouts).
+
+## 12. Graph grammar — principles and machinery
+
+*Decided 2026-07-31. This partly resolves open thread §7.3.*
+
+**Deliberately scoped.** What is settled here is the **machinery**: the shape of a rule, the escape hatch for cases the declarative form cannot express, and *when* rules are enforced. What is **not** settled, and is explicitly not being settled yet, is the **catalogue** of actual rules — a list of the specific checks Simile performs (and when) has been requested from the Simile developer and will land as an appendix. Enumerating every possible check now would be premature: passing a model to the Simile execution phase is a long way off, and the checks that matter *for the editor* are a much smaller set (see 12.3).
+
+### 12.1 Declarative first
+
+The default is that a rule is **data**, not code — inspectable, enumerable, serialisable, and writable by someone who is not a programmer. This can be pushed a good deal further than endpoint tables alone: connectivity, containment, and **cardinality** ("what type and how many symbols may this kind of submodel hold") all express declaratively.
+
+```js
+// endpoint / connectivity
+{ id:"flow-ends", subject:"arc:flow", ends:["compartment","cloud"],
+  message:"A flow must run between compartments or clouds." }
+
+// containment + cardinality
+{ id:"one-condition", subject:"submodel", contains:{ condition:{ max:1 } },
+  message:"A submodel may hold at most one condition." }
+
+{ id:"population-symbols", subject:"node:initialiser|migrator|exterminator",
+  parentKind:"population",
+  message:"Population symbols may only appear inside a population submodel." }
+```
+
+Each rule carries an `id` (so it can be cited, suppressed, or tested) and a human `message` (so the error text lives with the rule rather than in the engine).
+
+### 12.2 The escape hatch — named predicates, never code strings
+
+There is a limit to what templates can express, and the un-expressed cases must be reachable. The mechanism: a rule may **name a predicate** implemented in JavaScript and registered in a table, which the developer (not the user) extends as required. The predicate receives the full model.
+
+```js
+{ id:"no-self-containment", subject:"submodel", predicate:"notAncestorOfSelf",
+  message:"A submodel cannot contain itself." }
+
+Sienna.grammar.predicates.notAncestorOfSelf = (ctx, el, model) => { … };
+```
+
+*This is a refinement of the originally proposed single `check_action()` function holding a growing list of cases.* A predicate **registry** is preferred over one accumulating function because it keeps the ruleset **enumerable** (one can ask "what rules apply to a flow?" — needed for 12.4), keeps the message attached per case, and keeps the rules exportable to other tools even when a few of them delegate. The imperative part still lives in code, keyed by name; the schema stays declarative.
+
+**Hard constraint:** a rule may hold a predicate **name**, never a code **string**. Evaluating rule text at runtime is rejected outright — it is the `eval` road, and it would break the goal of a JSON-friendly, tool-friendly declarative format (§ project goals). Shipping predicates as code in the schema `.js` is not `eval` and carries none of its problems.
+
+### 12.3 When rules are enforced — structural preventive, content deferred
+
+Enforcement is **not** the binary "preventive vs validation pass" it first appeared to be. Simile has in effect already drawn the line, and §4 records half of it: connectivity is refused outright, whereas an element with unfilled props is *permitted and coloured red* until complete. Adopt that split as the principle:
+
+| Class | Holds | Enforcement | Why |
+|---|---|---|---|
+| **Structural** | connectivity, containment, cardinality | **Preventive** — refuse the gesture | States with no meaning are never reachable; must be cheap and local, as these run mid-gesture |
+| **Content** | equations, values, units, required props | **Deferred** — report, never block | Half-finished work must stay editable; also required to import legacy or partial models |
+
+Completeness (red/black, §4 — derived, not stored) *is* the content-rule reporting channel; it is not a separate mechanism.
+
+A consequence worth stating: **only the structural rules are needed now.** Content rules are what matter for handing a model to the execution engine, which is exactly the distant concern this section defers.
+
+### 12.4 One engine, three questions
+
+The same rules are consulted by three callers, and the call signature should be fixed with all three in mind:
+
+1. **"May I do this?"** — mid-gesture, e.g. may this arc connect, may this element be dropped into this submodel (§11.3(2)).
+2. **"What may I create/place here?"** — palette filtering, menu enable/disable, legal-drop-target highlighting.
+3. **"Is this whole model sound?"** — a validation pass over everything.
+
+(2) falls out of (1) by dry-run — ask the rules about each candidate and keep those that pass — provided rules are enumerable by subject (12.2). Greyed-out illegal palette entries and highlighted legal drop targets then cost no extra rules. Cheap to allow for now, awkward to retrofit.
+
+### 12.5 Rules quantify over *derived* facts
+
+A consequence of §4/§10 that shapes where the engine sits: *conditional* and *association* are **inferred**, not stored (decision #3). So `parentKind:"population"`-style rules quantify over derived properties, which means:
+
+- the grammar runs against the **in-memory denormalised form** (§10.2's indices), not the DRY core alone;
+- inference is **non-monotonic in practice** — adding a condition node changes a submodel's inferred kind, which can render previously-legal contents illegal. Legitimate, but it means a structural edit can invalidate elements it did not touch.
+
+Eventually each rule should therefore declare **what it depends on**, so re-checking after an edit is incremental rather than whole-model. Noted as a direction, **not built now** — with rule counts in the tens and models in the hundreds of elements, whole-model re-checking is affordable.
+
+### 12.6 Left open
+
+- The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing.
+- The exact **rule vocabulary** (`ends` / `contains` / `parentKind` above are illustrative, not final) — best fixed against that catalogue plus the SBML cross-check, so it is not over-fitted to Simile.
+- Whether rules live **in the schema file** alongside vocabulary/dialogs/styling (§3's second face) or as a separable ruleset. Assumed in-schema for now.
