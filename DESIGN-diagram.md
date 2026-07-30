@@ -89,7 +89,7 @@ Key points:
 1. Logical/layout split — **yes**.
 2. Three maps `nodes`/`arcs`/`submodels` — **yes** (over a single `elements` map).
 3. Conditional/association — **inferred, no explicit flag**.
-4. Arc parentage + cross-boundary arcs — ~~deferred~~ **largely resolved 2026-07-30, see §13** (rulings 7–9 below); fan-in and port placement remain open.
+4. Arc parentage + cross-boundary arcs — ~~deferred~~ **RESOLVED 2026-07-30, see §13** (rulings 7–9, 14–15 below).
 5. Clouds as real auto-created nodes, **optionally named** — **yes**.
 6. Ids — **sequential, family-prefixed** (`node1`/`arc1`/`submodel1`).
 
@@ -102,6 +102,8 @@ Key points:
 11. Cloud deletion is **refcounted** (last connection only); valve deletion follows its flow. **Yes.**
 12. Vocabulary: **ID / label / name**, with "identifier" dropped, and **label ≡ name** enforced typographically. **Yes** (§14).
 13. An influence carries a **local name (alias)** for the value it imports; equations never use path-qualified names. **Yes** (§14).
+14. **No fan-in** — segment sharing is source-side only; the branching structure always relates to a single source variable. **Yes** (§13.3).
+15. Ports are **auto-placed on creation, then draggable**, later arcs attaching to the existing port; port **positions are stored**, port *existence* is derived. **Yes** (§13.4).
 
 ## 6. Three orthogonal concerns: model / layout / style
 
@@ -127,14 +129,14 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 
 ## 7. Open threads
 
-1. **#4 — Arc parentage & cross-boundary arcs.** **LARGELY RESOLVED 2026-07-30 → see §13.** One arc, many shared segments; arc `parent` not stored. Still open within it: **fan-in symmetry** (is a target-side segment shared by target, as source-side segments are shared by source?) and whether **ports are user-dragged or auto-placed**.
+1. ~~**#4 — Arc parentage & cross-boundary arcs.**~~ **RESOLVED 2026-07-30 → see §13.** One arc, source-side-shared segments, no fan-in, ports auto-seeded then draggable and persisted, arc `parent` not stored.
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
 3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-30 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
 
 ## 8. Questions for the Simile developer **[ASK]**
 
-- ~~**#4:** How does Simile decide which submodel an arc "belongs to"?~~ **ANSWERED 2026-07-30** (§13): Simile splits a cross-boundary arc into three arcs both on the diagram *and* in the model declarations — but stores no arc-parent fact, each split arc's parentage being recoverable from its endpoints. We keep the visual split, reject the model split, and likewise do not store arc parentage. Remaining sub-question: **fan-in** — does Simile share the target-side segment across several incoming arcs, as it shares the source-side one? **[ASK]**
+- ~~**#4:** How does Simile decide which submodel an arc "belongs to"?~~ **ANSWERED 2026-07-30** (§13): Simile splits a cross-boundary arc into three arcs both on the diagram *and* in the model declarations — but stores no arc-parent fact, each split arc's parentage being recoverable from its endpoints. We keep the visual split, reject the model split, and likewise do not store arc parentage. Sharing is source-side only (no fan-in) and ports are auto-seeded then draggable — both confirmed by the user, so nothing further to ask here.
 - **Association inference:** In the saved model, is a submodel's *association* nature truly implicit (recoverable only from its role arcs), or is there an explicit marker? Same question for *conditional* (the contained condition symbol) — stored flag or inferred?
 - **Storage separation:** Does the `.sml` (Prolog) format separate logical structure from diagram layout at all? Any notion of style separate from layout?
 - **Ghosts:** How is a ghost (a second on-diagram appearance of a node) stored — and confirm only nodes are ghostable, never arcs/submodels?
@@ -360,22 +362,40 @@ Reason 4 above means segments cannot be derived per arc. All arcs leaving `a` sh
 
 That gives an identity rule needing no invented ids. A port is determined by the pair **(boundary submodel, endpoint element)** — `(S1, a)`. Every arc out of `a` crossing S1 uses port `(S1, a)`; if S1 is inside S0 they also share `(S0, a)`, because the path from `a` upward is unique. Segments are then simply the links between consecutive ports.
 
+**Sharing is source-side only — there is no fan-in** *(ruled 2026-07-30)*. The branching structure always relates to a **single source variable**: incoming influences are never merged. So the shape is precisely a tree rooted at `a` — shared on the ascent to the common ancestor, and **not** shared on the descent to each destination. Port keys follow directly:
+
+| | shared by | port key |
+|---|---|---|
+| ascent (out of the source's containers) | all arcs from `a` | `(boundary, a)` |
+| descent (into a destination's containers) | nobody — per arc | `(boundary, arc)` |
+
+The middle segment is per-arc either way. The asymmetry is right, not merely traditional: everything leaving port `(S1, a)` demonstrably came from `a`, so fan-out loses no information — whereas a merged arrival would hide which outside node an arrow came from.
+
 Consequences:
 
-- **Layout keys on ports, not on arcs** — e.g. `port:submodel1/node_a → {edge:"top", t:0.4}`. Dragging `a`'s exit from S1 moves it for every arc out of `a` at once, which is the wanted behaviour, and it comes from the keying rather than from bookkeeping. Per §10.2, a *user-set* port position is independent (file); an auto-placed one is derived (memory only).
+- **Layout keys on ports, not on arcs** — e.g. `port:submodel1/node_a → {edge:"top", t:0.4}`. Dragging `a`'s exit from S1 moves it for every arc out of `a` at once, which is the wanted behaviour, and it comes from the keying rather than from bookkeeping.
 - **Deletion needs no refcounting.** Delete one arc out of `a` and the shared exit segment survives because the remaining arcs still derive it. The derivation just recomputes.
 - **Labels and aliases belong to the arc**, never the segment — a shared segment cannot carry any one arc's data (§14).
 
-### 13.4 Arc parentage dissolves
+### 13.4 Port placement — auto-seeded, then user-owned
+
+*Ruled 2026-07-30.* A port is **auto-placed when first created**. Later arcs out of the same source **attach to that existing port, where and as it then is** — they do not each get their own placement. A port may afterwards be **dragged** by the user.
+
+This settles whether ports are persisted, and the answer refines §10.2's independent-vs-derived split. Auto-placement is a **one-time seed, not a standing derivation**: once the port exists, the second arc's geometry depends on where the first one put it, so re-deriving on load could move an arrangement the user has come to rely on (and would move it for every arc at once). Therefore **a port's position is stored from the moment the port exists**, whether or not it has been dragged. The category is "seeded automatically, then owned by the document" — a third case beside §10.2's pure-independent and pure-derived, and worth naming there when that section is next revised.
+
+What is still *not* stored is the port's **existence**: which ports there are follows from the arcs and the containment hierarchy, so the file holds positions for ports that the derivation reconstructs, and a position with no corresponding port is simply ignored on load.
+
+*Small detail left open:* when the last arc through a port is deleted, is the port's dragged position forgotten, or remembered in case an arc is drawn there again? Remembering is friendlier for undo/redo and costs a little orphaned data; forgetting is tidier. Not urgent.
+
+### 13.5 Arc parentage dissolves
 
 If a cross-boundary connection is one arc, `parent` on an arc is either derived (nearest common ancestor of the endpoints) or simply absent. Either way it stops being something the user chooses or the file records — which is the outcome we want, since a stored arc-parent can contradict the endpoints and would then need repair logic. Consistent with §10.2's DRY rule: not independent, so not stored.
 
 **Ruling #9, confirmed 2026-07-30 — and there is an existence proof, not merely an argument.** Simile's own saved model carries no arc-parent fact: the parentage of each of its split arcs is recoverable from that arc's endpoints. So a format that omits it demonstrably loses nothing. Our version derives the parent of the *whole* arc rather than of each split piece, but the same reasoning applies — endpoints determine containment, so containment need not be stored alongside them.
 
-### 13.5 Left open
+### 13.6 Status
 
-- **Fan-in symmetry.** Source-side sharing is settled. Is the target side symmetric — one segment from S2's boundary in to `b` shared by all arcs arriving at `b`, or one per arc? If symmetric, only the middle segment (last source port → first target port) is per-arc, and target ports key as `(S2, b)`. If not, target ports key as `(S2, b, arc)`. The cleanliness argument applies equally to both sides, but there is a genuine asymmetry in *reading*: everything leaving port `(S1, a)` demonstrably came from `a`, whereas a merged arrival at `b` no longer shows which outside node it came from. **[ASK]** what Simile does.
-- **Port placement** — user-dragged or auto-placed from geometry? This decides whether ports appear in the file at all (see §10.2).
+**Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. The only residue is the port-position-on-last-delete detail in §13.4.
 
 ## 14. Naming — ID, label, name
 
