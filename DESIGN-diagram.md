@@ -97,7 +97,7 @@ Key points:
 
 7. A cross-boundary connection is **one arc** in the model, **several segments** in the drawing — the visual split is kept. **Yes.**
 8. Segments are **shared**, not per-arc: all arcs leaving `a` share `a`'s exit through each boundary. **Yes.**
-9. Arc `parent` — **not stored**; derivable as the nearest common ancestor of the endpoints. *(Follows from #7 and was flagged in discussion without objection, but was not explicitly ruled — confirm.)*
+9. Arc `parent` — **not stored**; derivable as the nearest common ancestor of the endpoints. **Confirmed 2026-07-30.**
 10. **Valve = a real node**, not a property of the flow arc; influences into a flow land on it. **Yes.**
 11. Cloud deletion is **refcounted** (last connection only); valve deletion follows its flow. **Yes.**
 12. Vocabulary: **ID / label / name**, with "identifier" dropped, and **label ≡ name** enforced typographically. **Yes** (§14).
@@ -134,7 +134,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 
 ## 8. Questions for the Simile developer **[ASK]**
 
-- ~~**#4:** How does Simile decide which submodel an arc "belongs to"?~~ **ANSWERED 2026-07-30** (§13): Simile splits a cross-boundary arc into three arcs both on the diagram *and* in the model declarations, each with an honest parent. We keep the visual split and reject the model split. Remaining sub-question: **fan-in** — does Simile share the target-side segment across several incoming arcs, as it shares the source-side one? **[ASK]**
+- ~~**#4:** How does Simile decide which submodel an arc "belongs to"?~~ **ANSWERED 2026-07-30** (§13): Simile splits a cross-boundary arc into three arcs both on the diagram *and* in the model declarations — but stores no arc-parent fact, each split arc's parentage being recoverable from its endpoints. We keep the visual split, reject the model split, and likewise do not store arc parentage. Remaining sub-question: **fan-in** — does Simile share the target-side segment across several incoming arcs, as it shares the source-side one? **[ASK]**
 - **Association inference:** In the saved model, is a submodel's *association* nature truly implicit (recoverable only from its role arcs), or is there an explicit marker? Same question for *conditional* (the contained condition symbol) — stored flag or inferred?
 - **Storage separation:** Does the `.sml` (Prolog) format separate logical structure from diagram layout at all? Any notion of style separate from layout?
 - **Ghosts:** How is a ghost (a second on-diagram appearance of a node) stored — and confirm only nodes are ghostable, never arcs/submodels?
@@ -368,7 +368,9 @@ Consequences:
 
 ### 13.4 Arc parentage dissolves
 
-If a cross-boundary connection is one arc, `parent` on an arc is either derived (nearest common ancestor of the endpoints) or simply absent. Either way it stops being something the user chooses or the file records — which is the outcome we want, since a stored arc-parent can contradict the endpoints and would then need repair logic. Consistent with §10.2's DRY rule: not independent, so not stored. *(Ruling #9 — confirm.)*
+If a cross-boundary connection is one arc, `parent` on an arc is either derived (nearest common ancestor of the endpoints) or simply absent. Either way it stops being something the user chooses or the file records — which is the outcome we want, since a stored arc-parent can contradict the endpoints and would then need repair logic. Consistent with §10.2's DRY rule: not independent, so not stored.
+
+**Ruling #9, confirmed 2026-07-30 — and there is an existence proof, not merely an argument.** Simile's own saved model carries no arc-parent fact: the parentage of each of its split arcs is recoverable from that arc's endpoints. So a format that omits it demonstrably loses nothing. Our version derives the parent of the *whole* arc rather than of each split piece, but the same reasoning applies — endpoints determine containment, so containment need not be stored alongside them.
 
 ### 13.5 Left open
 
