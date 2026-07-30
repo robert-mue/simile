@@ -53,14 +53,15 @@ The model lives in sienna `userData` at a path like `models/landuse`. It is **fl
   nodes: {
     node1: { type:"compartment", parent:"submodel1", label:"state",  props:{ initial:"…" } },
     node2: { type:"cloud",       parent:"submodel1", label:"",       props:{} },  // label optional
-    node3: { type:"condition",   parent:"submodel2", label:"exists", props:{ expr:"state = 1" } },
-    node4: { type:"condition",   parent:"submodel3", label:"exists", props:{ expr:"state = 2" } }
+    node3: { type:"condition",   parent:"submodel2", label:"is_forest",    props:{ expr:"state = 1" } },
+    node4: { type:"condition",   parent:"submodel3", label:"is_crop",      props:{ expr:"state = 2" } },
+    node5: { type:"valve",       parent:"submodel1", label:"change_state", props:{ rate:"…" } }   // auto-created with arc1
   },
   arcs: {
-    arc1: { type:"flow",      parent:"submodel1"/*#4*/, from:"node2",     to:"node1",     label:"change state", props:{ rate:"…" } },
-    arc2: { type:"influence", parent:"submodel1"/*#4*/, from:"node1",     to:"arc1",      label:"",             props:{} },
-    arc3: { type:"role",      parent:null,             from:"submodel1", to:"submodel4", label:"role1",        props:{} },
-    arc4: { type:"role",      parent:null,             from:"submodel1", to:"submodel4", label:"role2",        props:{} }
+    arc1: { type:"flow",      from:"node2",     to:"node1",     valve:"node5", props:{} },   // no label — the valve carries it
+    arc2: { type:"influence", from:"node1",     to:"node5",     alias:"state", props:{} },   // targets the valve, not the arc
+    arc3: { type:"role",      from:"submodel1", to:"submodel4", label:"role1", props:{} },
+    arc4: { type:"role",      from:"submodel1", to:"submodel4", label:"role2", props:{} }
   },
 
   // --- LAYOUT (presentation-geometry, editor-only, per-instance) ---
@@ -75,9 +76,10 @@ Key points:
 
 - **Three logical maps** (`nodes` / `arcs` / `submodels`) rather than one — chosen for familiarity (almost every graph library splits node/arc). The map *is* the family, so no `family` field is needed.
 - **Ids** are numerically incremented, prefixed by family: `node1`, `arc1`, `submodel1`. The prefix also names which map to look in.
-- **Arcs** carry `from`/`to` as element-id strings; `parent` is a submodel id. An influence may target an arc (`arc2 → arc1`), matching Simile.
+- **Arcs** carry `from`/`to` as element-id strings, and **no `parent`** — a cross-boundary arc is *one* arc, drawn as several segments (§13). Arcs never terminate on arcs: an influence into a flow targets the flow's **valve** (`arc2 → node5`). Only **role** arcs carry a `label`; flow and influence arcs do not (§14).
+- **Valves** are real, auto-created node elements, one per flow, holding the flow's label/name and its rate equation. They are the System Dynamics instance of a general **attachment node** — the node a notation creates so that things can be hung off an arc; in other notations (e.g. webakt causal links) the same node has no glyph. Visible-or-not is a **style** fact (§6), not a model fact.
 - **Submodel `kind`** = membership only (`single` / `fixed-membership` / `population`). *Conditional* and *association* are **inferred**, not stored: a submodel is conditional if it contains a condition node; it is an association if role arcs point into it. (Per-record and special-grid kinds deferred.)
-- **Clouds** are real, auto-created node elements (created at a flow's blank end). Traditionally unnamed (a stock whose value we don't care about) but **optionally nameable** — e.g. "atmosphere"/"ocean" in a hydrological model.
+- **Clouds** are real, auto-created node elements (created at a flow's blank end). Traditionally unnamed (a stock whose value we don't care about) but **optionally nameable** — e.g. "atmosphere"/"ocean" in a hydrological model. A cloud may carry **several** in/outflows, so it is deleted only when the flow being deleted was its **last** connection — unlike a valve, which is one-to-one with its flow and dies with it.
 - **Completeness** (Simile's red-until-defined, black-when-complete) is **derived** from whether props are filled, not stored.
 - **Enumerated types** live at model level.
 - **Equations are stored verbatim, never resolved** by the editor.
@@ -87,9 +89,19 @@ Key points:
 1. Logical/layout split — **yes**.
 2. Three maps `nodes`/`arcs`/`submodels` — **yes** (over a single `elements` map).
 3. Conditional/association — **inferred, no explicit flag**.
-4. Arc parentage + cross-boundary arcs — **deferred, to be discussed** (see §7 / §8).
+4. Arc parentage + cross-boundary arcs — ~~deferred~~ **largely resolved 2026-07-30, see §13** (rulings 7–9 below); fan-in and port placement remain open.
 5. Clouds as real auto-created nodes, **optionally named** — **yes**.
 6. Ids — **sequential, family-prefixed** (`node1`/`arc1`/`submodel1`).
+
+*Rulings added 2026-07-30 (see §13, §14):*
+
+7. A cross-boundary connection is **one arc** in the model, **several segments** in the drawing — the visual split is kept. **Yes.**
+8. Segments are **shared**, not per-arc: all arcs leaving `a` share `a`'s exit through each boundary. **Yes.**
+9. Arc `parent` — **not stored**; derivable as the nearest common ancestor of the endpoints. *(Follows from #7 and was flagged in discussion without objection, but was not explicitly ruled — confirm.)*
+10. **Valve = a real node**, not a property of the flow arc; influences into a flow land on it. **Yes.**
+11. Cloud deletion is **refcounted** (last connection only); valve deletion follows its flow. **Yes.**
+12. Vocabulary: **ID / label / name**, with "identifier" dropped, and **label ≡ name** enforced typographically. **Yes** (§14).
+13. An influence carries a **local name (alias)** for the value it imports; equations never use path-qualified names. **Yes** (§14).
 
 ## 6. Three orthogonal concerns: model / layout / style
 
@@ -115,18 +127,19 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 
 ## 7. Open threads
 
-1. **#4 — Arc parentage & cross-boundary arcs.** Does an arc belong to a submodel, and if so which one when its endpoints are in different submodels? Options floated: nearest common ancestor / `null` / derive from endpoints. The murkiest corner. **[ASK]**
+1. **#4 — Arc parentage & cross-boundary arcs.** **LARGELY RESOLVED 2026-07-30 → see §13.** One arc, many shared segments; arc `parent` not stored. Still open within it: **fan-in symmetry** (is a target-side segment shared by target, as source-side segments are shared by source?) and whether **ports are user-dragged or auto-placed**.
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
 3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-30 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
 
 ## 8. Questions for the Simile developer **[ASK]**
 
-- **#4:** How does Simile decide which submodel an arc "belongs to"? Can arcs cross submodel boundaries, and how are such arcs stored and drawn? Is arc-parent even a stored fact, or is it always derived from the endpoints?
+- ~~**#4:** How does Simile decide which submodel an arc "belongs to"?~~ **ANSWERED 2026-07-30** (§13): Simile splits a cross-boundary arc into three arcs both on the diagram *and* in the model declarations, each with an honest parent. We keep the visual split and reject the model split. Remaining sub-question: **fan-in** — does Simile share the target-side segment across several incoming arcs, as it shares the source-side one? **[ASK]**
 - **Association inference:** In the saved model, is a submodel's *association* nature truly implicit (recoverable only from its role arcs), or is there an explicit marker? Same question for *conditional* (the contained condition symbol) — stored flag or inferred?
 - **Storage separation:** Does the `.sml` (Prolog) format separate logical structure from diagram layout at all? Any notion of style separate from layout?
 - **Ghosts:** How is a ghost (a second on-diagram appearance of a node) stored — and confirm only nodes are ghostable, never arcs/submodels?
-- **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference?
+- **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference? *(Partly answered 2026-07-30: condition nodes do carry a label, indicating what the condition is based on.)*
+- **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? And is name-uniqueness scoped to the containing submodel?
 - **Completeness (red/black):** The precise rule for when an element flips from red (incomplete) to black — per element type.
 - **Vocabulary drift:** Are `event` / `state` / `squirt` / `satellite` / per-record & special-grid submodels genuinely later additions to the canonical set (compartment, variable, submodel, flow, influence, role, condition, initialiser, migrator, reproducer, exterminator)? Anything else we've missed?
 - **Anything about the model that is hard to express as flat id-keyed maps + parent pointers** — deep nesting (FLORES: Village▸Household▸5 submodels, 900+ patches), associations between deeply-nested submodels, array access (`element()`/`index()`).
@@ -317,3 +330,74 @@ Eventually each rule should therefore declare **what it depends on**, so re-chec
 - The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing.
 - The exact **rule vocabulary** (`ends` / `contains` / `parentKind` above are illustrative, not final) — best fixed against that catalogue plus the SBML cross-check, so it is not over-fitted to Simile.
 - Whether rules live **in the schema file** alongside vocabulary/dialogs/styling (§3's second face) or as a separable ruleset. Assumed in-schema for now.
+
+## 13. Arcs, segments and ports — cross-boundary connections
+
+*Decided 2026-07-30. This largely closes open thread #4 (§7.1), the "murkiest corner". Two sub-questions remain open at the end.*
+
+### 13.1 Vocabulary
+
+- **Arc** — the *semantic* link, `a → b`. One object in the model, with one type, one set of props, and (for roles) one label.
+- **Segment** — one *drawn* piece of an arc. Segments are not stored; they are derived.
+- **Port** — the point at which a drawn connection crosses a submodel boundary.
+
+### 13.2 One arc in the model, several segments in the drawing
+
+If `a ∈ S1` influences `b ∈ S2`, that is semantically **one** influence. Simile splits it into three arcs on the diagram (`a`→S1 boundary, S1 boundary→S2 boundary, S2 boundary→`b`) *and* into three arcs in the model declarations. **We keep the visual split and reject the model split.**
+
+The number of segments is **never stored**. The renderer walks the containment path from `a` up to the nearest common ancestor of `a` and `b` and back down, emitting a segment per boundary crossed: same submodel → one segment, the example above → three, deeply nested pairs → more.
+
+**Why keep the visual split** (it is not merely fidelity to Simile):
+
+1. **Collapse falls out for free.** Collapse S1 and the inner segment disappears while the boundary-to-boundary segment remains, now terminating on S1's edge. With a single polyline this needs special-casing.
+2. **Ports are real layout facts.** Where an arc pierces a boundary is something a user may position and expects to persist, and several arcs compete for room along one edge — so it needs to be addressable.
+3. **Hit-testing and waypoints** are naturally per-segment.
+4. **Fan-out keeps the diagram clean** *(the strongest reason)*. If `a` influences several nodes outside S1, there is **one** segment from `a` to S1's boundary (and to each further ancestor boundary) serving all of them — not one per destination.
+
+### 13.3 Segments are shared, so a segment is not a function of one arc
+
+Reason 4 above means segments cannot be derived per arc. All arcs leaving `a` share their exit through S1, and through S1's ancestors, up to the point where their paths diverge: the picture is a **tree rooted at `a`**, not *n* independent polylines.
+
+That gives an identity rule needing no invented ids. A port is determined by the pair **(boundary submodel, endpoint element)** — `(S1, a)`. Every arc out of `a` crossing S1 uses port `(S1, a)`; if S1 is inside S0 they also share `(S0, a)`, because the path from `a` upward is unique. Segments are then simply the links between consecutive ports.
+
+Consequences:
+
+- **Layout keys on ports, not on arcs** — e.g. `port:submodel1/node_a → {edge:"top", t:0.4}`. Dragging `a`'s exit from S1 moves it for every arc out of `a` at once, which is the wanted behaviour, and it comes from the keying rather than from bookkeeping. Per §10.2, a *user-set* port position is independent (file); an auto-placed one is derived (memory only).
+- **Deletion needs no refcounting.** Delete one arc out of `a` and the shared exit segment survives because the remaining arcs still derive it. The derivation just recomputes.
+- **Labels and aliases belong to the arc**, never the segment — a shared segment cannot carry any one arc's data (§14).
+
+### 13.4 Arc parentage dissolves
+
+If a cross-boundary connection is one arc, `parent` on an arc is either derived (nearest common ancestor of the endpoints) or simply absent. Either way it stops being something the user chooses or the file records — which is the outcome we want, since a stored arc-parent can contradict the endpoints and would then need repair logic. Consistent with §10.2's DRY rule: not independent, so not stored. *(Ruling #9 — confirm.)*
+
+### 13.5 Left open
+
+- **Fan-in symmetry.** Source-side sharing is settled. Is the target side symmetric — one segment from S2's boundary in to `b` shared by all arcs arriving at `b`, or one per arc? If symmetric, only the middle segment (last source port → first target port) is per-arc, and target ports key as `(S2, b)`. If not, target ports key as `(S2, b, arc)`. The cleanliness argument applies equally to both sides, but there is a genuine asymmetry in *reading*: everything leaving port `(S1, a)` demonstrably came from `a`, whereas a merged arrival at `b` no longer shows which outside node it came from. **[ASK]** what Simile does.
+- **Port placement** — user-dragged or auto-placed from geometry? This decides whether ports appear in the file at all (see §10.2).
+
+## 14. Naming — ID, label, name
+
+*Decided 2026-07-30. Supersedes the strawman's loose use of `label` in §4.*
+
+Four words were in circulation; three survive, with fixed meanings:
+
+- **ID** — system-generated, family-prefixed, e.g. `arc1`. Never user-facing, never user-editable, stable across re-parenting (§10.1).
+- **Label** — the user-editable text attached to an element on the model diagram.
+- **Name** — the variable's name as used in equations.
+- **~~Identifier~~** — **dropped**; it was being used for both ID and name.
+
+**Label ≡ name is enforced.** A label need not in principle be the equation name, but a model in which they differ is very confusing, so we insist they are typographically the same. Two consequences:
+
+- **One stored field, not two.** There is no `name` beside `label`; the label *is* the name for those types that have one, and whether a type has an equation-name is a fact about the type. A named cloud ("atmosphere") is simply a type whose label is not referenceable.
+- **Equation syntax constrains what may be typed as a label.** Confirmed: **no spaces**. The remaining rules, and whether name-uniqueness is scoped to the containing submodel, are **[ASK]** (§8).
+
+**Which elements have labels:** nodes (including valves, clouds — optional — and condition nodes, whose label indicates what the condition is based on), submodels, and **role** arcs. **Flow and influence arcs have none** — a flow's name belongs to its **valve** (§4), which is the element that holds the rate equation and that influences actually target.
+
+### 14.1 Local names (aliases) on influences
+
+An influence carries the name under which the target's equation refers to the imported value. Simile defaults this to the source's label and suffixes on collision (`growth_rate`, `growth_rate1`, disambiguated by mouseover to `S1:growth_rate` / `S2:growth_rate`); the modeller may rename it. **We keep this, including renaming.**
+
+- **Renaming is a real requirement, not a workaround.** The naming in the source submodel and in the target submodel may come from different sources, and a modeller may legitimately wish to keep both conventions from the scientific literature.
+- **It is also what makes rename safe.** §4 stores equations verbatim and never resolves them, so the editor *cannot* rewrite equation text when a source is renamed. Because the alias is copied at arc creation and not re-synced, renaming a source changes only that element — no downstream equation breaks. (Accepted cost: the alias may go stale relative to the source's new label; mouseover still tells the truth.)
+- **Path-qualified names never appear in equation text** (`S1:growth_rate + S2:growth_rate` is rejected). It solves the collision problem but locks an equation to the presence of S1 and S2, which defeats modularity — an equation must survive being lifted into another model.
+- The alias lives on the **arc**, which is exactly one source→target pair — correctly *not* on a segment, which may be shared (§13.3).
