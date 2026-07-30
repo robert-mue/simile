@@ -102,7 +102,7 @@ Key points:
 11. Cloud deletion is **refcounted** (last connection only); valve deletion follows its flow. **Yes.**
 12. Vocabulary: **ID / label / name**, with "identifier" dropped, and **label ≡ name** enforced typographically. **Yes** (§14).
 13. An influence carries a **local name (alias)** for the value it imports; equations never use path-qualified names. **Yes** (§14).
-14. **No fan-in** — segment sharing is source-side only; the branching structure always relates to a single source variable. **Yes** (§13.3).
+14. **No fan-in** — segment sharing is source-side only; the branching structure always relates to a single source variable. **Yes** (§13.3). *Extended 2026-07-31:* sharing is **influence-only** — role and flow arcs are always one-to-one, so they never branch.
 15. Ports are **auto-placed on creation, then draggable**, later arcs attaching to the existing port; port **positions are persisted in `layout`** (never in the model), port *existence* is derived. **Yes** (§13.4, §13.7).
 16. §13 governs the **diagram only**. The model stores one arc between two IDs — no segments, no ports — unlike Simile, where diagram and file match. Test: **discarding the layout must not change the model's meaning.** **Yes** (§13.7).
 
@@ -378,6 +378,10 @@ That gives an identity rule needing no invented ids. A port is determined by the
 
 The middle segment is per-arc either way. The asymmetry is right, not merely traditional: everything leaving port `(S1, a)` demonstrably came from `a`, so fan-out loses no information — whereas a merged arrival would hide which outside node an arrow came from.
 
+**Sharing applies to *influence* arcs only** *(ruled 2026-07-31)*. Branching presupposes one source with many targets. **Role** arcs (one submodel → one association) and **flow** arcs (one compartment/cloud → one other) are **always one-to-one**, so no branching structure arises for them and no segment of theirs is ever shared. Note this is about *branching*, not about count: several role arcs may leave the same submodel (the self-association case, `arc3`/`arc4` in §4) — each is still its own one-to-one link.
+
+Consequence: the port-sharing machinery is influence-specific. Whether a role or flow arc is ever **split** at all — i.e. whether either can cross a submodel boundary and so acquire (unshared) segments — is a separate question, left open below.
+
 Consequences:
 
 - **Layout keys on ports, not on arcs** — e.g. `port:submodel1/node_a → {edge:"top", t:0.4}`. Dragging `a`'s exit from S1 moves it for every arc out of `a` at once, which is the wanted behaviour, and it comes from the keying rather than from bookkeeping.
@@ -404,7 +408,10 @@ If a cross-boundary connection is one arc, `parent` on an arc is either derived 
 
 ### 13.6 Status
 
-**Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. The only residue is the port-position-on-last-delete detail in §13.4.
+**Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. Two small residues:
+
+- the port-position-on-last-delete detail (§13.4);
+- whether **role** and **flow** arcs can cross a submodel boundary at all (§13.3). If they can, they are split into segments like any other arc, just never *shared* ones; if they cannot, §13's machinery is influence-only and role/flow arcs are always a single straight link. Role arcs plainly cross *something* — a submodel and the association it participates in are drawn as separate boxes — so the real question is whether the two are always siblings under one parent, or whether an association may involve a submodel nested deeper (the FLORES-style case already flagged in §8). **[ASK]**
 
 ### 13.7 None of this reaches the model — the discardable-layout test
 
