@@ -310,20 +310,28 @@ Enforcement is **not** the binary "preventive vs validation pass" it first appea
 |---|---|---|---|
 | **Structural** | connectivity, containment, cardinality | **Preventive** — refuse the gesture | States with no meaning are never reachable; must be cheap and local, as these run mid-gesture |
 | **Content** | equations, values, units, required props | **Deferred** — report, never block | Half-finished work must stay editable; also required to import legacy or partial models |
+| **Behavioural** | facts no gesture can violate | **Silent** — parameterise the editor, never surface | There is nothing to refuse: the rule decides what the editor *does*, not whether the user may |
 
 Completeness (red/black, §4 — derived, not stored) *is* the content-rule reporting channel; it is not a separate mechanism.
 
-A consequence worth stating: **only the structural rules are needed now.** Content rules are what matter for handing a model to the execution engine, which is exactly the distant concern this section defers.
+**The third row was added 2026-07-31, and it is not a technicality.** "A flow may not branch" looks preventive, but no gesture can break it: dragging two flows out of a compartment is perfectly legal and simply yields two flows. Nor is influence branching something a user *requests* — it happens automatically when the second influence out of the same source crosses the boundary. The rule is never asked "may I?"; it tells the **arc-drawing routine** whether to attach to an existing port or make a new one. Likewise "an arc may not terminate on an arc" never surfaces: dragging an influence at a flow resolves the endpoint to the valve (§4). Same for "a role arc may not branch".
 
-### 12.4 One engine, three questions
+So a behavioural rule needs **no user-facing message at all** — and a rule that would have to explain itself apologetically is a sign it has been put in the wrong row. Such rules are still declared in the schema, for the usual reasons (a second notation may answer differently, and external tools can read the answer); they are simply consumed by the editor's behaviour rather than by its permission checks.
 
-The same rules are consulted by three callers, and the call signature should be fixed with all three in mind:
+A consequence worth stating: **only the structural and behavioural rules are needed now.** Content rules are what matter for handing a model to the execution engine, which is exactly the distant concern this section defers.
+
+### 12.4 One engine, four questions
+
+The same rules are consulted by four callers, and the call signature should be fixed with all of them in mind:
 
 1. **"May I do this?"** — mid-gesture, e.g. may this arc connect, may this element be dropped into this submodel (§11.3(2)).
 2. **"What may I create/place here?"** — palette filtering, menu enable/disable, legal-drop-target highlighting.
 3. **"Is this whole model sound?"** — a validation pass over everything.
+4. **"How do I draw/resolve this?"** — *added 2026-07-31.* Does this arc share an existing port or make its own (§13.3)? Where does this endpoint actually land? No answer here is ever refused; the reply configures the gesture rather than judging it.
 
 (2) falls out of (1) by dry-run — ask the rules about each candidate and keep those that pass — provided rules are enumerable by subject (12.2). Greyed-out illegal palette entries and highlighted legal drop targets then cost no extra rules. Cheap to allow for now, awkward to retrofit.
+
+(4) is the caller for the **behavioural** class above, and the reason it is worth naming separately: a rules API designed only around "may I?" would return a boolean plus a message, which is the wrong shape for "which port does this attach to?".
 
 ### 12.5 Rules quantify over *derived* facts
 
@@ -336,7 +344,7 @@ Eventually each rule should therefore declare **what it depends on**, so re-chec
 
 ### 12.6 Left open
 
-- The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing. *Seeded 2026-07-31 with the first entries we know independently:* **a flow may not branch** (one source, one target — the quantity would otherwise divide; §13.3), **a role arc may not branch**, and **an arc may not terminate on an arc** (influences into a flow target its valve; §4). All three are structural, hence **preventive** per §12.3 — refuse the gesture. The flow rule needs a good refusal `message`, since the modeller's intent is legitimate: it should say *draw two flows, and add a variable to sum them if you want the total*.
+- The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing. *Seeded 2026-07-31 with the first entries we know independently:* **influences may branch; flows and role arcs may not** (§13.3), and **an arc may not terminate on an arc** (influences into a flow resolve to its valve; §4). All are **behavioural**, not preventive — they carry no message and are consulted by the arc-drawing routine, per the third row of §12.3 and question 4 of §12.4. *(These were first recorded as preventive rules with refusal messages; corrected the same day — no gesture can violate them.)*
 - The exact **rule vocabulary** (`ends` / `contains` / `parentKind` above are illustrative, not final) — best fixed against that catalogue plus the SBML cross-check, so it is not over-fitted to Simile.
 - Whether rules live **in the schema file** alongside vocabulary/dialogs/styling (§3's second face) or as a separable ruleset. Assumed in-schema for now.
 
