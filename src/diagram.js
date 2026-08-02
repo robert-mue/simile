@@ -193,6 +193,52 @@
     },
 
     /**
+     * Elements whose parent is `id` (null = top level). Derived by scanning —
+     * the model stores only child->parent (§10.2); a cached child-index is the
+     * documented optimisation, not needed at this size.
+     */
+    childrenOf: function (id) {
+      var self = this;
+      var out = [];
+      ['nodes', 'submodels'].forEach(function (fam) {
+        self.ids(fam).forEach(function (k) {
+          if (self.parentOf(k) === (id == null ? null : id)) out.push(k);
+        });
+      });
+      return out;
+    },
+
+    /** Everything inside `id`, at any depth. */
+    descendantsOf: function (id) {
+      var out = [];
+      var stack = this.childrenOf(id);
+      while (stack.length) {
+        var k = stack.pop();
+        if (out.indexOf(k) >= 0) continue;
+        out.push(k);
+        stack = stack.concat(this.childrenOf(k));
+      }
+      return out;
+    },
+
+    /** Arcs with `id` at either end (the reverse index of §10.2, derived). */
+    arcsAt: function (id) {
+      var self = this;
+      return this.ids('arcs').filter(function (a) {
+        var arc = self.get(a);
+        return arc && (arc.from === id || arc.to === id || arc.valve === id);
+      });
+    },
+
+    /** Port layout keys sitting on a given submodel's boundary. */
+    portsOn: function (boundary) {
+      var base = this.path + '/layout/ports/' + boundary;
+      return Sienna.userData.keys(base).map(function (owner) {
+        return 'ports/' + boundary + '/' + owner;
+      });
+    },
+
+    /**
      * Deepest submodel containing both, or null for "the diagram itself".
      * This is the turning point of an arc's path (§13.2).
      */
@@ -212,9 +258,9 @@
      * its *type* gets from the schema unless layout overrides it (§6 — whether
      * a type is resizable is a style fact).
      */
-    box: function (id) {
+    box: function (id, override) {
       var el = this.get(id);
-      var geom = this.appearanceOf(id) || { x: 0, y: 0 };
+      var geom = (override && override[id]) || this.appearanceOf(id) || { x: 0, y: 0 };
       var style = (this.schema().style || {})[el ? el.type : 'submodel'] || {};
       if (el && mapOf(id) === 'submodels') style = (this.schema().style || {}).submodel || style;
       return {
@@ -278,8 +324,8 @@
     arcPoints: function (arcId, override) {
       var arc = this.get(arcId);
       if (!arc) return [];
-      var a = this.box(arc.from);
-      var z = this.box(arc.to);
+      var a = this.box(arc.from, override);
+      var z = this.box(arc.to, override);
       var pts = [{ x: a.cx, y: a.cy }];
       var self = this;
       this.portsFor(arcId).forEach(function (p) {
@@ -313,6 +359,53 @@
         p.x = pos.x; p.y = pos.y;
         return p;
       });
+    },
+
+    /**
+     * Commit a drag: a map of layout keys to new positions, and optionally a
+     * change of containment. ONE action, so however many elements moved — a
+     * submodel carries its contents and its boundary's ports — the whole
+     * gesture is a single undo step.
+     *
+     * Re-parenting is a MODEL change (it is `parent`, not geometry), so it is
+     * written alongside the layout in the same transaction. Afterwards the
+     * affected arcs may cross different boundaries than before, so their ports
+     * are re-seeded: port existence is derived from containment (§13.4), and
+     * containment has just changed.
+     *
+     * NOTE: drop legality is NOT checked — the grammar engine does not exist
+     * yet, so an illegal containment can currently be created (§12.3 would make
+     * this preventive).
+     */
+    commitDrag: function (moves, reparent) {
+      var self = this;
+      var ids = Object.keys(moves || {});
+      if (!ids.length && !reparent) return;
+      Sienna.actions.dispatch(
+        {
+          type: 'diagram.drag',
+          target: this.path,
+          payload: { moved: ids.length, reparent: reparent || null },
+        },
+        function () {
+          if (reparent) {
+            var map = mapOf(reparent.id);
+            Sienna.userData.set(self.path + '/' + map + '/' + reparent.id + '/parent', reparent.parent);
+          }
+          ids.forEach(function (k) {
+            Sienna.userData.set(self.path + '/layout/' + k, moves[k]);
+          });
+          if (reparent) {
+            var touched = [reparent.id].concat(self.descendantsOf(reparent.id));
+            var seen = {};
+            touched.forEach(function (el) {
+              self.arcsAt(el).forEach(function (a) {
+                if (!seen[a]) { seen[a] = true; self._seedPorts(a); }
+              });
+            });
+          }
+        }
+      );
     },
 
     /**

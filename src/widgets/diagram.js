@@ -136,7 +136,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   /** An element's box — computed in the model layer, which owns the geometry. */
   _box(d, id) {
-    return d.box(id);
+    return d.box(id, this._drag && this._drag.moves);
   },
 
   /**
@@ -182,11 +182,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   /** A submodel: a box in the bodies layer, labelled along its top edge. */
   _renderSubmodel(d, id, sub) {
-    const b = d.box(id);
+    const b = this._box(d, id);
     const g = this._el('g', { class: 'slx-submodel slx-submodel-' + sub.kind, 'data-id': id });
     g.appendChild(this._el('rect', {
       x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 4,
     }));
+    if (this._drag && this._drag.dropTarget === id) g.setAttribute('class', g.getAttribute('class') + ' slx-drop-target');
+    g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     this._layer.bodies.appendChild(g);
 
     if (sub.label) {
@@ -221,6 +223,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       default:
         g.appendChild(this._el('circle', { cx: b.cx, cy: b.cy, r: Math.max(b.w, b.h) / 2 }));
     }
+    g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     this._layer.nodes.appendChild(g);
 
     if (node.label) {
@@ -272,7 +275,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * the valve of a *crossing* flow is left where it lies for now.
    */
   _chainFor(d, id, arc) {
-    const pts = d.arcPoints(id, this._portDrag).slice();
+    const pts = d.arcPoints(id, this._overrides()).slice();
     if (pts.length < 2) return pts;
 
     if (arc.type === 'flow' && arc.valve && pts.length === 2) {
@@ -295,7 +298,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * gesture is a single undo step.
    */
   _renderPort(d, port) {
-    const pos = (this._portDrag && this._portDrag[port.key]) || port;
+    const ov = this._overrides();
+    const pos = (ov && ov[port.key]) || port;
     const h = this._el('circle', {
       class: 'slx-port' + (port.shared ? ' slx-port-shared' : ''),
       cx: pos.x, cy: pos.y, r: 5,
@@ -341,6 +345,96 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._render();
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  /** Positions being previewed by an in-flight drag (ports or elements). */
+  _overrides() {
+    if (this._portDrag) return this._portDrag;
+    return this._drag ? this._drag.moves : null;
+  },
+
+  /**
+   * Drag an element. A submodel carries everything inside it — and the ports on
+   * its own boundary — because §11.4 chose ONE flat coordinate space with no
+   * nested transforms: translation is explicit, computed through the derived
+   * child index, which is the cost that choice deliberately accepted.
+   *
+   * Like a port drag, nothing is written until the drop, so the gesture is one
+   * undo step. On drop the element may also change parent, which is a model
+   * change rather than a layout one.
+   */
+  _beginElementDrag(e, d, id) {
+    if (this._drag || this._portDrag) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const isSub = id.indexOf('submodel') === 0;
+    const carried = isSub ? d.descendantsOf(id) : [];
+    const keys = [id].concat(carried);
+    // A submodel's boundary ports travel with it, as do those of its contents.
+    const portKeys = [];
+    if (isSub) {
+      [id].concat(carried).forEach((k) => {
+        if (k.indexOf('submodel') === 0) portKeys.push(...d.portsOn(k));
+      });
+    }
+
+    const start = {};
+    keys.concat(portKeys).forEach((k) => {
+      const g = k.indexOf('ports/') === 0 ? d.layout(k) : d.appearanceOf(k);
+      if (g) start[k] = { x: g.x, y: g.y, w: g.w, h: g.h };
+    });
+
+    const origin = this._toWorld(e.clientX, e.clientY);
+    const handle = e.currentTarget;
+    if (handle.setPointerCapture) {
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
+    }
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      const dx = w.x - origin.x;
+      const dy = w.y - origin.y;
+      const moves = {};
+      Object.keys(start).forEach((k) => {
+        moves[k] = Object.assign({}, start[k], { x: start[k].x + dx, y: start[k].y + dy });
+        if (moves[k].w === undefined) delete moves[k].w;
+        if (moves[k].h === undefined) delete moves[k].h;
+      });
+      this._drag = { id, moves, dropTarget: isSub ? null : this._dropTargetAt(d, w, id) };
+      this._render();
+    };
+    const end = () => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      const drag = this._drag;
+      this._drag = null;
+      if (drag && drag.moves[id] && (drag.moves[id].x !== start[id].x || drag.moves[id].y !== start[id].y)) {
+        const newParent = drag.dropTarget !== undefined ? drag.dropTarget : null;
+        const changed = !isSub && newParent !== d.parentOf(id);
+        d.commitDrag(drag.moves, changed ? { id, parent: newParent } : null);
+      }
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  /**
+   * The submodel a dropped point lands in: the DEEPEST one containing it, so
+   * nesting resolves inward. `exclude` keeps an element from being dropped into
+   * itself or its own contents.
+   */
+  _dropTargetAt(d, pt, exclude) {
+    let best = null;
+    let bestDepth = -1;
+    d.ids('submodels').forEach((sid) => {
+      if (sid === exclude || d.ancestorsOf(sid).indexOf(exclude) >= 0) return;
+      const b = d.box(sid, this._drag && this._drag.moves);
+      if (pt.x < b.cx - b.w / 2 || pt.x > b.cx + b.w / 2) return;
+      if (pt.y < b.cy - b.h / 2 || pt.y > b.cy + b.h / 2) return;
+      const depth = d.ancestorsOf(sid).length;
+      if (depth > bestDepth) { best = sid; bestDepth = depth; }
+    });
+    return best;
   },
 
   /** Nearest point on a rectangle's perimeter — a port lives ON its boundary. */

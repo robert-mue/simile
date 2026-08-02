@@ -126,3 +126,15 @@
 .slx-port:active {
   cursor: grabbing;
 }
+
+/* The submodel a dragged element would land in. */
+.slx-submodel.slx-drop-target rect {
+  stroke: #4a7fb5;
+  stroke-width: 2.5;
+  fill: #f2f7fc;
+}
+
+.slx-node,
+.slx-submodel {
+  cursor: grab;
+}
