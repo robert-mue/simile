@@ -175,6 +175,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     Object.keys(model.submodels || {}).forEach((id) => this._renderSubmodel(d, id, model.submodels[id]));
     Object.keys(model.arcs || {}).forEach((id) => this._renderArc(d, id, model.arcs[id]));
     Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
+    d.allPorts().forEach((p) => this._renderPort(d, p));
 
     this._fit();
   },
@@ -271,7 +272,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * the valve of a *crossing* flow is left where it lies for now.
    */
   _chainFor(d, id, arc) {
-    const pts = d.arcPoints(id).slice();
+    const pts = d.arcPoints(id, this._portDrag).slice();
     if (pts.length < 2) return pts;
 
     if (arc.type === 'flow' && arc.valve && pts.length === 2) {
@@ -282,6 +283,79 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     pts[0] = this._edge(d.box(arc.from), pts[1]);
     pts[pts.length - 1] = this._edge(d.box(arc.to), pts[pts.length - 2]);
     return pts;
+  },
+
+  /**
+   * A port handle. Ports are auto-placed but user-owned (ruling 15), so they
+   * are draggable — constrained to the boundary they belong to, since a port
+   * that left its boundary would not be a crossing point at all.
+   *
+   * A drag writes NOTHING until it is dropped: mid-drag positions are previewed
+   * through `_portDrag`, and the drop is one `movePort` action, so the whole
+   * gesture is a single undo step.
+   */
+  _renderPort(d, port) {
+    const pos = (this._portDrag && this._portDrag[port.key]) || port;
+    const h = this._el('circle', {
+      class: 'slx-port' + (port.shared ? ' slx-port-shared' : ''),
+      cx: pos.x, cy: pos.y, r: 5,
+      'data-port': port.key,
+    });
+    const title = this._el('title');
+    title.textContent = port.shared
+      ? `shared exit of ${d.label(port.owner) || port.owner} (${port.arcs.length} arc${port.arcs.length > 1 ? 's' : ''})`
+      : `crossing of ${port.owner}`;
+    h.appendChild(title);
+
+    h.addEventListener('pointerdown', (e) => this._beginPortDrag(e, d, port));
+    this._layer.overlay.appendChild(h);
+  },
+
+  _beginPortDrag(e, d, port) {
+    e.preventDefault();
+    e.stopPropagation();               // never let this start a canvas pan
+    if (this._portDrag) return;        // a drag is already in flight
+    const rect = d.box(port.boundary);
+    const start = { x: port.x, y: port.y };
+
+    // Capture the pointer so we still hear move/up if it leaves the handle —
+    // and so a lost pointerup cannot strand the document-level listeners.
+    const handle = e.currentTarget;
+    if (handle.setPointerCapture) {
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
+    }
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      this._portDrag = { [port.key]: this._ontoRect(w, rect) };
+      this._render();
+    };
+    const end = () => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      const final = this._portDrag && this._portDrag[port.key];
+      this._portDrag = null;
+      // A click that never moved is not an edit: no action, so no undo entry.
+      if (final && (final.x !== start.x || final.y !== start.y)) {
+        d.movePort(port.key, final.x, final.y);          // ONE action per drag
+      }
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  /** Nearest point on a rectangle's perimeter — a port lives ON its boundary. */
+  _ontoRect(p, rect) {
+    const x1 = rect.cx - rect.w / 2, x2 = rect.cx + rect.w / 2;
+    const y1 = rect.cy - rect.h / 2, y2 = rect.cy + rect.h / 2;
+    const x = Math.min(x2, Math.max(x1, p.x));
+    const y = Math.min(y2, Math.max(y1, p.y));
+    // Snap to whichever edge is closest.
+    const d4 = [x - x1, x2 - x, y - y1, y2 - y];
+    const m = Math.min.apply(null, d4);
+    if (m === d4[0]) return { x: x1, y };
+    if (m === d4[1]) return { x: x2, y };
+    if (m === d4[2]) return { x, y: y1 };
+    return { x, y: y2 };
   },
 
   /** A single-segment influence keeps Simile's slight bow. */

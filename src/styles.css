@@ -105,3 +105,24 @@
    counterpart — the split is a drawing convention, not a different relation. */
 .slx-arc-split {
 }
+
+/* --- ports (§13) ---------------------------------------------------- */
+
+/* A port is auto-placed but user-owned, so it advertises itself as draggable.
+   A shared port is filled: dragging it moves every arc leaving that source. */
+.slx-port {
+  fill: #fff;
+  stroke: #4a7fb5;
+  stroke-width: 1.5;
+  cursor: grab;
+}
+.slx-port-shared {
+  fill: #4a7fb5;
+}
+.slx-port:hover {
+  stroke: #1f5fa0;
+  stroke-width: 2.5;
+}
+.slx-port:active {
+  cursor: grabbing;
+}

@@ -275,7 +275,7 @@
      * centre. One entry per point, so `points.length - 1` segments — the count
      * is derived, never stored (§13.2).
      */
-    arcPoints: function (arcId) {
+    arcPoints: function (arcId, override) {
       var arc = this.get(arcId);
       if (!arc) return [];
       var a = this.box(arc.from);
@@ -283,11 +283,52 @@
       var pts = [{ x: a.cx, y: a.cy }];
       var self = this;
       this.portsFor(arcId).forEach(function (p) {
-        var pos = self.layout(p.key);
+        // `override` lets a drag preview a new position without writing to the
+        // store: mid-drag values are not model changes, only the drop is.
+        var pos = (override && override[p.key]) || self.layout(p.key);
         if (pos) pts.push({ x: pos.x, y: pos.y, port: p.key });
       });
       pts.push({ x: z.cx, y: z.cy });
       return pts;
+    },
+
+    /**
+     * Every port currently in the diagram, derived by asking each arc which it
+     * passes through. Ports have no existence of their own to enumerate (§13.4)
+     * — this IS the derivation.
+     */
+    allPorts: function () {
+      var seen = {};
+      var out = [];
+      var self = this;
+      this.ids('arcs').forEach(function (arcId) {
+        self.portsFor(arcId).forEach(function (p) {
+          if (seen[p.key]) { seen[p.key].arcs.push(arcId); return; }
+          seen[p.key] = { key: p.key, boundary: p.boundary, owner: p.owner, shared: p.shared, arcs: [arcId] };
+          out.push(seen[p.key]);
+        });
+      });
+      return out.map(function (p) {
+        var pos = self.layout(p.key) || { x: 0, y: 0 };
+        p.x = pos.x; p.y = pos.y;
+        return p;
+      });
+    },
+
+    /**
+     * Move a port — one user action, hence one undo step, however many
+     * pointermove events the drag took. Because the position is keyed on
+     * (boundary, owner), moving a shared port moves it for every arc that uses
+     * it at once (§13.3): that is the keying doing the work, not bookkeeping.
+     */
+    movePort: function (key, x, y) {
+      var self = this;
+      Sienna.actions.dispatch(
+        { type: 'diagram.movePort', target: this.path, payload: { port: key, x: x, y: y } },
+        function () {
+          Sienna.userData.set(self.path + '/layout/' + key, { x: x, y: y });
+        }
+      );
     },
 
     /**
