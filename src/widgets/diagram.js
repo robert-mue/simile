@@ -1,0 +1,326 @@
+/**
+ * `sienna.diagram` — renders a model as SVG. Read-only for now.
+ *
+ * The foundational calls of DESIGN-diagram.md §11.4 are made here, because they
+ * are painful to retrofit:
+ *
+ *   - **One flat world coordinate space.** Every element's layout is in world
+ *     coordinates, and a *single* transform on one root `<g>` does pan/zoom.
+ *     There are deliberately NO nested per-submodel transforms: they would make
+ *     dragging a submodel's children free, but would force a coordinate-space
+ *     conversion on every cross-boundary arc, and cross-boundary arcs are the
+ *     case we cannot afford to make awkward (§11.4, a conscious trade).
+ *   - **Explicit layer groups**, because SVG has no z-index — paint order is
+ *     document order. Bodies, then arcs, then nodes, then labels, then overlay.
+ *   - **Layout is read only through `d.appearanceOf(id)`** (ruling 18), never
+ *     by indexing the layout map, so that ghosts stay a one-place change.
+ *
+ * Glyphs and sizes come from the **schema's** style face, not from code here —
+ * swapping the schema must be able to change how a notation looks (§3, §6).
+ *
+ * Arcs are drawn as straight/curved links between element edges. The §13
+ * segment-and-port machinery is NOT here yet: it only bites once submodels are
+ * on the diagram, which this milestone does not cover.
+ *
+ * Classic script, injected on demand by the widget registry.
+ */
+$.widget('sienna.diagram', $.sienna.widgetBase, {
+  options: {
+    /** Model path to view when the panel is unbound (no `ref`). */
+    path: 'models/growth',
+    padding: 40,
+    maxFitScale: 2,
+  },
+
+  // Layers, painted in this order (SVG has no z-index).
+  _LAYERS: ['bodies', 'arcs', 'nodes', 'labels', 'overlay'],
+
+  _create() {
+    this.element.addClass('slx-diagram');
+
+    this._view = { x: 0, y: 0, k: 1 }; // pan/zoom: the one root transform
+
+    this._buildCanvas();
+    this._bindView();
+
+    if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(() => this._fit());
+      this._ro.observe(this.element[0]);
+    }
+
+    // Live-update on model change (undo, a sibling panel, an import).
+    if (this._bound()) this._watchModel(this._render);
+    else this._unsub = Sienna.userData.subscribe(this.options.path, () => this._render());
+
+    this._render();
+  },
+
+  /** The diagram this panel views: its `ref` when bound, else the option. */
+  _diagram() {
+    const path = this._bound() ? this._ref() : this.options.path;
+    return Sienna.userData.get(path) ? new Sienna.Diagram(path) : null;
+  },
+
+  // ---- canvas ---------------------------------------------------------
+
+  _buildCanvas() {
+    const svg = this._svg = this._el('svg', { class: 'slx-diagram-svg' });
+    this.element.append(svg);
+
+    // Arrowheads: one marker per arc type, so the schema's styling can grow.
+    const defs = this._el('defs');
+    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L10,4 L0,8 z', 10, 4));
+    defs.appendChild(this._marker('slx-arrow-influence', 'M0,1 L7,4 L0,7 z', 7, 4));
+    svg.appendChild(defs);
+
+    // THE root transform — pan/zoom lives here and nowhere else.
+    this._root = this._el('g', { class: 'slx-diagram-root' });
+    svg.appendChild(this._root);
+
+    this._layer = {};
+    this._LAYERS.forEach((name) => {
+      this._layer[name] = this._el('g', { class: 'slx-layer-' + name });
+      this._root.appendChild(this._layer[name]);
+    });
+  },
+
+  _bindView() {
+    const el = this.element;
+
+    // Wheel = zoom about the pointer; drag on blank canvas = pan.
+    this._on(el, {
+      wheel: (e) => {
+        e.preventDefault();
+        this._userView = true;
+        const ev = e.originalEvent;
+        const p = this._toWorld(ev.clientX, ev.clientY);
+        const k = Math.min(4, Math.max(0.2, this._view.k * (ev.deltaY < 0 ? 1.1 : 1 / 1.1)));
+        // Keep the world point under the cursor fixed.
+        this._view.x += p.x * (this._view.k - k);
+        this._view.y += p.y * (this._view.k - k);
+        this._view.k = k;
+        this._applyView();
+      },
+      pointerdown: (e) => {
+        if (e.target !== this._svg && e.target !== this._root) return; // blank only
+        this._userView = true;
+        const start = { x: e.clientX, y: e.clientY, vx: this._view.x, vy: this._view.y };
+        const move = (ev) => {
+          this._view.x = start.vx + (ev.clientX - start.x);
+          this._view.y = start.vy + (ev.clientY - start.y);
+          this._applyView();
+        };
+        const up = () => {
+          $(document).off('pointermove', move).off('pointerup', up);
+        };
+        $(document).on('pointermove', move).on('pointerup', up);
+      },
+    });
+  },
+
+  _applyView() {
+    const v = this._view;
+    this._root.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`);
+  },
+
+  /** Screen point -> world coordinates (the inverse of the root transform). */
+  _toWorld(clientX, clientY) {
+    const r = this._svg.getBoundingClientRect();
+    return {
+      x: (clientX - r.left - this._view.x) / this._view.k,
+      y: (clientY - r.top - this._view.y) / this._view.k,
+    };
+  },
+
+  // ---- geometry -------------------------------------------------------
+
+  /**
+   * An element's box in world coordinates: layout position (via appearanceOf)
+   * plus the size the *schema* gives its type unless layout overrides it.
+   */
+  _box(d, id) {
+    const el = d.get(id);
+    const geom = d.appearanceOf(id) || { x: 0, y: 0 };
+    const style = (d.schema().style || {})[el ? el.type : ''] || {};
+    const w = geom.w != null ? geom.w : style.w || 30;
+    const h = geom.h != null ? geom.h : style.h || 30;
+    return { x: geom.x || 0, y: geom.y || 0, w, h, cx: geom.x || 0, cy: geom.y || 0, shape: style.shape };
+  },
+
+  /**
+   * Where a line aimed at `towards` leaves the boundary of box `b` — so arcs
+   * stop at the glyph's edge rather than at its centre.
+   */
+  _edge(b, towards) {
+    const dx = towards.x - b.cx;
+    const dy = towards.y - b.cy;
+    const len = Math.hypot(dx, dy) || 1;
+    if (b.shape === 'rect') {
+      const sx = b.w / 2 / Math.abs(dx || 1e-6);
+      const sy = b.h / 2 / Math.abs(dy || 1e-6);
+      const s = Math.min(sx, sy);
+      return { x: b.cx + dx * s, y: b.cy + dy * s };
+    }
+    const r = Math.max(b.w, b.h) / 2;
+    return { x: b.cx + (dx / len) * r, y: b.cy + (dy / len) * r };
+  },
+
+  // ---- render ---------------------------------------------------------
+
+  _render() {
+    const d = this._diagram();
+    this._LAYERS.forEach((n) => { this._layer[n].textContent = ''; });
+    if (!d) {
+      this._layer.labels.appendChild(
+        this._text(20, 30, 'No model at ' + (this._bound() ? this._ref() : this.options.path), 'slx-empty')
+      );
+      return;
+    }
+
+    const model = d.model();
+
+    // Arcs first (under the glyphs they connect), then nodes, then labels.
+    Object.keys(model.arcs || {}).forEach((id) => this._renderArc(d, id, model.arcs[id]));
+    Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
+
+    this._fit();
+  },
+
+  _renderNode(d, id, node) {
+    const b = this._box(d, id);
+    const g = this._el('g', { class: 'slx-node slx-node-' + node.type, 'data-id': id });
+
+    switch (b.shape) {
+      case 'rect':
+        g.appendChild(this._el('rect', { x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h }));
+        break;
+      case 'cloud':
+        g.appendChild(this._el('path', { d: this._cloudPath(b) }));
+        break;
+      case 'valve':
+        // The System Dynamics valve: a bow-tie sitting on its flow.
+        g.appendChild(this._el('path', {
+          d: `M${b.cx - 9},${b.cy - 7} L${b.cx + 9},${b.cy + 7} L${b.cx + 9},${b.cy - 7} L${b.cx - 9},${b.cy + 7} z`,
+        }));
+        break;
+      case 'diamond':
+        g.appendChild(this._el('path', {
+          d: `M${b.cx},${b.cy - b.h / 2} L${b.cx + b.w / 2},${b.cy} L${b.cx},${b.cy + b.h / 2} L${b.cx - b.w / 2},${b.cy} z`,
+        }));
+        break;
+      default:
+        g.appendChild(this._el('circle', { cx: b.cx, cy: b.cy, r: Math.max(b.w, b.h) / 2 }));
+    }
+    this._layer.nodes.appendChild(g);
+
+    if (node.label) {
+      // A compartment holds its label. A valve's goes BELOW its glyph, because
+      // influences into it bow overhead and would collide. Everything else sits
+      // above its glyph.
+      let ly;
+      if (b.shape === 'rect') ly = b.cy + 4;
+      else if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13;
+      else ly = b.cy - b.h / 2 - 6;
+      this._layer.labels.appendChild(this._text(b.cx, ly, node.label, 'slx-label'));
+    }
+  },
+
+  _renderArc(d, id, arc) {
+    if (arc.type === 'flow') return this._renderFlow(d, id, arc);
+
+    const a = this._box(d, arc.from);
+    const z = this._box(d, arc.to);
+    const p1 = this._edge(a, { x: z.cx, y: z.cy });
+    const p2 = this._edge(z, { x: a.cx, y: a.cy });
+    // Influences are drawn with a slight bow, as in Simile.
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+    const nx = -(p2.y - p1.y) * 0.25;
+    const ny = (p2.x - p1.x) * 0.25;
+    this._layer.arcs.appendChild(this._el('path', {
+      class: 'slx-arc slx-arc-' + arc.type,
+      'data-id': id,
+      d: `M${p1.x},${p1.y} Q${mx + nx},${my + ny} ${p2.x},${p2.y}`,
+      'marker-end': 'url(#slx-arrow-influence)',
+    }));
+  },
+
+  /**
+   * A flow runs source -> valve -> target. The two pieces here are just the
+   * drawing of one arc through its valve glyph; they are NOT §13 segments,
+   * which appear only when a boundary is crossed.
+   */
+  _renderFlow(d, id, arc) {
+    const a = this._box(d, arc.from);
+    const z = this._box(d, arc.to);
+    const v = arc.valve ? this._box(d, arc.valve) : { cx: (a.cx + z.cx) / 2, cy: (a.cy + z.cy) / 2 };
+    const p1 = this._edge(a, { x: v.cx, y: v.cy });
+    const p2 = this._edge(z, { x: v.cx, y: v.cy });
+
+    this._layer.arcs.appendChild(this._el('path', {
+      class: 'slx-arc slx-arc-flow', 'data-id': id,
+      d: `M${p1.x},${p1.y} L${v.cx},${v.cy} L${p2.x},${p2.y}`,
+      'marker-end': 'url(#slx-arrow-flow)',
+    }));
+  },
+
+  /**
+   * Frame the content (world coords; the view transform does the work). Re-runs
+   * whenever the panel is resized — but stops as soon as the user pans or zooms,
+   * since after that the view is theirs, not ours.
+   */
+  _fit() {
+    if (this._userView) return;
+    const box = this._root.getBBox ? this._root.getBBox() : null;
+    if (!box || !box.width) return;
+    const r = this.element[0].getBoundingClientRect();
+    if (!r.width) return;
+    const pad = this.options.padding;
+    // Scale up to fill the panel, but only so far: a two-node model blown up
+    // to full screen looks absurd.
+    const k = Math.min(this.options.maxFitScale, (r.width - pad * 2) / box.width, (r.height - pad * 2) / box.height);
+    this._view = { k, x: pad - box.x * k, y: pad - box.y * k };
+    this._applyView();
+  },
+
+  // ---- small SVG helpers ----------------------------------------------
+
+  _el(name, attrs) {
+    const n = document.createElementNS('http://www.w3.org/2000/svg', name);
+    Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
+    return n;
+  },
+
+  _text(x, y, str, cls) {
+    const t = this._el('text', { x, y, class: cls });
+    t.textContent = str;
+    return t;
+  },
+
+  _marker(id, path, w, h) {
+    const m = this._el('marker', {
+      id, markerWidth: w, markerHeight: h * 2, refX: w, refY: h,
+      orient: 'auto', markerUnits: 'userSpaceOnUse',
+    });
+    m.appendChild(this._el('path', { d: path }));
+    return m;
+  },
+
+  _cloudPath(b) {
+    const { cx, cy, w, h } = b;
+    const r = h / 2;
+    return `M${cx - w / 2},${cy + r * 0.4}
+            a${r * 0.7},${r * 0.7} 0 0 1 ${r * 0.2},-${r}
+            a${r * 0.8},${r * 0.8} 0 0 1 ${r * 1.4},-${r * 0.4}
+            a${r * 0.8},${r * 0.8} 0 0 1 ${r * 1.5},${r * 0.5}
+            a${r * 0.7},${r * 0.7} 0 0 1 ${r * 0.1},${r * 0.9} z`.replace(/\s+/g, ' ');
+  },
+
+  _destroy() {
+    if (this._ro) this._ro.disconnect();
+    if (this._unsub) this._unsub();
+    this.element.removeClass('slx-diagram').empty();
+  },
+});
+
+window.Sienna.widgetRegistry._loaded('diagram', 'diagram');

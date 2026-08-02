@@ -25,7 +25,7 @@
 
     // 1. The compartment the flow runs into. (x/y are layout only — the model
     //    itself is position-free; see DESIGN-diagram.md §6.)
-    var biomass = d.addNode('compartment', { label: 'biomass', x: 320, y: 160, w: 60, h: 40 });
+    var biomass = d.addNode('compartment', { label: 'biomass', x: 340, y: 220, w: 60, h: 40 });
 
     // 2. The flow. Drawn from blank space, so its source cloud is auto-created,
     //    as is its valve — the node that carries the name 'growth' and will
@@ -33,13 +33,13 @@
     var flow = d.addFlow({
       to: biomass,
       label: 'growth',
-      x: 220, y: 180,            // the valve
-      fromXY: { x: 120, y: 180 }, // the auto-created cloud
+      x: 200, y: 220,            // the valve
+      fromXY: { x: 70, y: 220 },  // the auto-created cloud
       props: { rate: 'k * biomass' },
     });
 
     // 3. The parameter.
-    var k = d.addNode('variable', { label: 'k', props: { value: '0.1' }, x: 200, y: 60 });
+    var k = d.addNode('variable', { label: 'k', props: { value: '0.1' }, x: 150, y: 90 });
 
     // 4. Two influences into the flow — which means into its **valve**: an
     //    influence never terminates on an arc (§4). Each carries the local

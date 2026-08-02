@@ -58,6 +58,11 @@
     }
   });
 
+  // TEMPORARY dev convenience: seed the demo model so Widgets ▸ Diagram has
+  // something to draw on a fresh browser. Goes away once models can be created
+  // and opened through the UI.
+  if (!Sienna.userData.get('models/growth') && Sienna.demoGrowth) Sienna.demoGrowth();
+
   app.restore();
 
   // Handy for tinkering from the browser console.
