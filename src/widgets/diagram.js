@@ -177,7 +177,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
     d.allPorts().forEach((p) => this._renderPort(d, p));
 
-    this._fit();
+    // Never re-frame mid-gesture: the drag changes the bounding box, and
+    // rescaling under the pointer makes the diagram squirm as you drag.
+    if (!this._drag && !this._portDrag) this._fit();
   },
 
   /** A submodel: a box in the bodies layer, labelled along its top edge. */
@@ -278,13 +280,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const pts = d.arcPoints(id, this._overrides()).slice();
     if (pts.length < 2) return pts;
 
+    // Every box lookup here must see the drag override, or a dragged glyph
+    // slides away from the arc that is attached to it.
+    const ov = this._overrides();
+
     if (arc.type === 'flow' && arc.valve && pts.length === 2) {
-      const v = d.box(arc.valve);
+      const v = d.box(arc.valve, ov);
       pts.splice(1, 0, { x: v.cx, y: v.cy });
     }
 
-    pts[0] = this._edge(d.box(arc.from), pts[1]);
-    pts[pts.length - 1] = this._edge(d.box(arc.to), pts[pts.length - 2]);
+    pts[0] = this._edge(d.box(arc.from, ov), pts[1]);
+    pts[pts.length - 1] = this._edge(d.box(arc.to, ov), pts[pts.length - 2]);
     return pts;
   },
 
