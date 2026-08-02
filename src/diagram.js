@@ -34,6 +34,32 @@
     return m[1] === 'submodel' ? 'submodels' : m[1] + 's';
   }
 
+  /**
+   * Where the segment p→q crosses the boundary of `rect` (centre cx/cy, w/h),
+   * or null if it does not. Used to seed a port's position on the boundary it
+   * pierces.
+   */
+  function crossRect(p, q, rect) {
+    var x1 = rect.cx - rect.w / 2, x2 = rect.cx + rect.w / 2;
+    var y1 = rect.cy - rect.h / 2, y2 = rect.cy + rect.h / 2;
+    var dx = q.x - p.x, dy = q.y - p.y;
+    var best = null;
+    function consider(t, x, y) {
+      if (t <= 0 || t >= 1) return;
+      if (x < x1 - 0.01 || x > x2 + 0.01 || y < y1 - 0.01 || y > y2 + 0.01) return;
+      if (!best || t < best.t) best = { t: t, x: x, y: y };
+    }
+    if (dx) {
+      consider((x1 - p.x) / dx, x1, p.y + dy * ((x1 - p.x) / dx));
+      consider((x2 - p.x) / dx, x2, p.y + dy * ((x2 - p.x) / dx));
+    }
+    if (dy) {
+      consider((y1 - p.y) / dy, p.x + dx * ((y1 - p.y) / dy), y1);
+      consider((y2 - p.y) / dy, p.x + dx * ((y2 - p.y) / dy), y2);
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }
+
   function Diagram(path) {
     if (!(this instanceof Diagram)) return new Diagram(path);
     this.path = String(path);
@@ -145,6 +171,155 @@
     /** Deep copy, handy for inspection in the console. */
     toJSON: function () {
       return Sienna.userData.toJSON(this.path);
+    },
+
+    // ---- containment (§10.2: the model stores only child->parent) ----
+
+    /** The submodel an element sits in, or null at top level. */
+    parentOf: function (id) {
+      var el = this.get(id);
+      return el && el.parent != null ? el.parent : null;
+    },
+
+    /** Containment path upward: [immediate parent, …, outermost]. */
+    ancestorsOf: function (id) {
+      var out = [];
+      var p = this.parentOf(id);
+      while (p != null && out.indexOf(p) < 0) {
+        out.push(p);
+        p = this.parentOf(p);
+      }
+      return out;
+    },
+
+    /**
+     * Deepest submodel containing both, or null for "the diagram itself".
+     * This is the turning point of an arc's path (§13.2).
+     */
+    nearestCommonAncestor: function (a, b) {
+      var up = this.ancestorsOf(a);
+      var down = this.ancestorsOf(b);
+      for (var i = 0; i < up.length; i++) {
+        if (down.indexOf(up[i]) >= 0) return up[i];
+      }
+      return null;
+    },
+
+    // ---- geometry (shared by the renderer; no DOM involved) ----
+
+    /**
+     * An element's box in world coordinates: its layout position, with the size
+     * its *type* gets from the schema unless layout overrides it (§6 — whether
+     * a type is resizable is a style fact).
+     */
+    box: function (id) {
+      var el = this.get(id);
+      var geom = this.appearanceOf(id) || { x: 0, y: 0 };
+      var style = (this.schema().style || {})[el ? el.type : 'submodel'] || {};
+      if (el && mapOf(id) === 'submodels') style = (this.schema().style || {}).submodel || style;
+      return {
+        cx: geom.x || 0,
+        cy: geom.y || 0,
+        w: geom.w != null ? geom.w : style.w || 30,
+        h: geom.h != null ? geom.h : style.h || 30,
+        shape: style.shape,
+      };
+    },
+
+    // ---- ports and segments (§13) ----
+
+    /**
+     * A port is named by **(boundary submodel, the element it serves)** — no
+     * invented ids (§13.3). On the ascent out of the source's containers the
+     * owner is the *source element*, so every arc leaving it shares that port;
+     * on the descent into the target's containers the owner is the *arc*,
+     * because there is no fan-in (ruling 14).
+     *
+     * The pair becomes a path under `layout/ports/` rather than a single
+     * compound key, because `/` is userData's path separator: nesting keeps
+     * ports out of the element-id namespace in `layout`, and lets a subscriber
+     * watch one boundary's ports.
+     */
+    portKey: function (boundary, owner) {
+      return 'ports/' + boundary + '/' + owner;
+    },
+
+    /**
+     * The ports an arc passes through, source-side first. Empty when both ends
+     * live in the same submodel — then the arc is a single segment.
+     */
+    portsFor: function (arcId) {
+      var arc = this.get(arcId);
+      if (!arc) return [];
+      var nca = this.nearestCommonAncestor(arc.from, arc.to);
+      var self = this;
+
+      function upTo(id) {                     // containers crossed, innermost first
+        var path = self.ancestorsOf(id);
+        var stop = nca == null ? path.length : path.indexOf(nca);
+        return path.slice(0, stop < 0 ? path.length : stop);
+      }
+
+      var ascent = upTo(arc.from).map(function (b) {
+        return { boundary: b, owner: arc.from, key: self.portKey(b, arc.from), shared: true };
+      });
+      // Descent is walked outermost-first: that is the order they are crossed.
+      var descent = upTo(arc.to).reverse().map(function (b) {
+        return { boundary: b, owner: arcId, key: self.portKey(b, arcId), shared: false };
+      });
+      return ascent.concat(descent);
+    },
+
+    /**
+     * The polyline an arc is drawn along: source centre, each port, target
+     * centre. One entry per point, so `points.length - 1` segments — the count
+     * is derived, never stored (§13.2).
+     */
+    arcPoints: function (arcId) {
+      var arc = this.get(arcId);
+      if (!arc) return [];
+      var a = this.box(arc.from);
+      var z = this.box(arc.to);
+      var pts = [{ x: a.cx, y: a.cy }];
+      var self = this;
+      this.portsFor(arcId).forEach(function (p) {
+        var pos = self.layout(p.key);
+        if (pos) pts.push({ x: pos.x, y: pos.y, port: p.key });
+      });
+      pts.push({ x: z.cx, y: z.cy });
+      return pts;
+    },
+
+    /**
+     * Seed any missing port positions for an arc. Auto-placement is a ONE-TIME
+     * SEED, not a standing derivation (ruling 15): a later arc from the same
+     * source attaches to the port where the first one put it, and the user may
+     * drag it afterwards — so the position is persisted from the moment the
+     * port exists. Existence itself stays derived from arcs + containment.
+     *
+     * Called inside the action that creates an arc, so it is part of that one
+     * undo step.
+     */
+    _seedPorts: function (arcId) {
+      var arc = this.get(arcId);
+      if (!arc) return;
+      var ports = this.portsFor(arcId);
+      if (!ports.length) return;
+
+      var from = this.box(arc.from);
+      var to = this.box(arc.to);
+      var cur = { x: from.cx, y: from.cy };
+      var self = this;
+
+      ports.forEach(function (p) {
+        var existing = self.layout(p.key);
+        if (existing) { cur = existing; return; }   // an earlier arc placed it
+        var rect = self.box(p.boundary);
+        var hit = crossRect(cur, { x: to.cx, y: to.cy }, rect);
+        var pos = hit || { x: rect.cx, y: rect.cy };
+        Sienna.userData.set(self.path + '/layout/' + p.key, { x: pos.x, y: pos.y });
+        cur = pos;
+      });
     },
 
     // ---- id minting (derived, never stored) ----
@@ -292,6 +467,7 @@
           self._put('arcs', arcId, {
             type: 'flow', from: fromId, to: toId, valve: valveId, props: {},
           }, null);
+          self._seedPorts(arcId);
         }
       );
       return { arc: arcId, valve: valveId, from: fromId, to: toId };
@@ -323,6 +499,7 @@
           var el = { type: 'influence', from: from, to: to, props: opt.props || {} };
           if (alias !== undefined) el.alias = alias;
           self._put('arcs', id, el, null);
+          self._seedPorts(id);   // §13: ports are placed when the arc is drawn
         }
       );
       return id;
@@ -344,6 +521,7 @@
           self._put('arcs', id, {
             type: 'role', from: from, to: to, label: opt.label || '', props: opt.props || {},
           }, null);
+          self._seedPorts(id);
         }
       );
       return id;

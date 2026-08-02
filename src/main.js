@@ -62,6 +62,7 @@
   // something to draw on a fresh browser. Goes away once models can be created
   // and opened through the UI.
   if (!Sienna.userData.get('models/growth') && Sienna.demoGrowth) Sienna.demoGrowth();
+  if (!Sienna.userData.get('models/plant') && Sienna.demoSubmodel) Sienna.demoSubmodel();
 
   app.restore();
 

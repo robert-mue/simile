@@ -86,3 +86,22 @@
   fill: #888;
   text-anchor: start;
 }
+
+/* --- submodels ----------------------------------------------------- */
+
+.slx-submodel rect {
+  fill: #fcfcfa;
+  stroke: #555;
+  stroke-width: 1.5;
+}
+
+.slx-submodel-label {
+  font-weight: 600;
+  fill: #444;
+  letter-spacing: 0.04em;
+}
+
+/* A segment of an arc that crosses a boundary. Same ink as its unsplit
+   counterpart — the split is a drawing convention, not a different relation. */
+.slx-arc-split {
+}

@@ -134,17 +134,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   // ---- geometry -------------------------------------------------------
 
-  /**
-   * An element's box in world coordinates: layout position (via appearanceOf)
-   * plus the size the *schema* gives its type unless layout overrides it.
-   */
+  /** An element's box — computed in the model layer, which owns the geometry. */
   _box(d, id) {
-    const el = d.get(id);
-    const geom = d.appearanceOf(id) || { x: 0, y: 0 };
-    const style = (d.schema().style || {})[el ? el.type : ''] || {};
-    const w = geom.w != null ? geom.w : style.w || 30;
-    const h = geom.h != null ? geom.h : style.h || 30;
-    return { x: geom.x || 0, y: geom.y || 0, w, h, cx: geom.x || 0, cy: geom.y || 0, shape: style.shape };
+    return d.box(id);
   },
 
   /**
@@ -179,11 +171,28 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     const model = d.model();
 
-    // Arcs first (under the glyphs they connect), then nodes, then labels.
+    // Bodies first (submodels sit under everything), then arcs, then nodes.
+    Object.keys(model.submodels || {}).forEach((id) => this._renderSubmodel(d, id, model.submodels[id]));
     Object.keys(model.arcs || {}).forEach((id) => this._renderArc(d, id, model.arcs[id]));
     Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
 
     this._fit();
+  },
+
+  /** A submodel: a box in the bodies layer, labelled along its top edge. */
+  _renderSubmodel(d, id, sub) {
+    const b = d.box(id);
+    const g = this._el('g', { class: 'slx-submodel slx-submodel-' + sub.kind, 'data-id': id });
+    g.appendChild(this._el('rect', {
+      x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 4,
+    }));
+    this._layer.bodies.appendChild(g);
+
+    if (sub.label) {
+      const t = this._text(b.cx - b.w / 2 + 8, b.cy - b.h / 2 + 15, sub.label, 'slx-label slx-submodel-label');
+      t.setAttribute('text-anchor', 'start');
+      this._layer.labels.appendChild(t);
+    }
   },
 
   _renderNode(d, id, node) {
@@ -225,43 +234,63 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     }
   },
 
+  /**
+   * Draw an arc as its **segments** (§13). The point chain comes from the model
+   * layer — source, each port it passes through, target — so the number of
+   * segments is derived here too, never stored. Each segment is its own path
+   * element, which is what later makes per-segment hit-testing and collapse
+   * possible; only the last one carries the arrowhead.
+   */
   _renderArc(d, id, arc) {
-    if (arc.type === 'flow') return this._renderFlow(d, id, arc);
+    const pts = this._chainFor(d, id, arc);
+    if (pts.length < 2) return;
 
-    const a = this._box(d, arc.from);
-    const z = this._box(d, arc.to);
-    const p1 = this._edge(a, { x: z.cx, y: z.cy });
-    const p2 = this._edge(z, { x: a.cx, y: a.cy });
-    // Influences are drawn with a slight bow, as in Simile.
+    // "Split" means a boundary was crossed — NOT merely that the polyline has a
+    // bend, which a flow gets from routing through its valve.
+    const crossings = d.portsFor(id).length;
+    const marker = arc.type === 'flow' ? 'slx-arrow-flow' : 'slx-arrow-influence';
+    const bowed = arc.type === 'influence' && !crossings && pts.length === 2;
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const path = this._el('path', {
+        class: 'slx-arc slx-arc-' + arc.type + (crossings ? ' slx-arc-split' : ''),
+        'data-id': id,
+        'data-segment': i,
+        d: bowed ? this._bow(p1, p2) : `M${p1.x},${p1.y} L${p2.x},${p2.y}`,
+      });
+      if (i === pts.length - 2) path.setAttribute('marker-end', 'url(#' + marker + ')');
+      this._layer.arcs.appendChild(path);
+    }
+  },
+
+  /**
+   * The points an arc is drawn through, with the two ends pulled back to the
+   * glyph edges. A flow with no boundary to cross is routed through its valve;
+   * the valve of a *crossing* flow is left where it lies for now.
+   */
+  _chainFor(d, id, arc) {
+    const pts = d.arcPoints(id).slice();
+    if (pts.length < 2) return pts;
+
+    if (arc.type === 'flow' && arc.valve && pts.length === 2) {
+      const v = d.box(arc.valve);
+      pts.splice(1, 0, { x: v.cx, y: v.cy });
+    }
+
+    pts[0] = this._edge(d.box(arc.from), pts[1]);
+    pts[pts.length - 1] = this._edge(d.box(arc.to), pts[pts.length - 2]);
+    return pts;
+  },
+
+  /** A single-segment influence keeps Simile's slight bow. */
+  _bow(p1, p2) {
     const mx = (p1.x + p2.x) / 2;
     const my = (p1.y + p2.y) / 2;
     const nx = -(p2.y - p1.y) * 0.25;
     const ny = (p2.x - p1.x) * 0.25;
-    this._layer.arcs.appendChild(this._el('path', {
-      class: 'slx-arc slx-arc-' + arc.type,
-      'data-id': id,
-      d: `M${p1.x},${p1.y} Q${mx + nx},${my + ny} ${p2.x},${p2.y}`,
-      'marker-end': 'url(#slx-arrow-influence)',
-    }));
-  },
-
-  /**
-   * A flow runs source -> valve -> target. The two pieces here are just the
-   * drawing of one arc through its valve glyph; they are NOT §13 segments,
-   * which appear only when a boundary is crossed.
-   */
-  _renderFlow(d, id, arc) {
-    const a = this._box(d, arc.from);
-    const z = this._box(d, arc.to);
-    const v = arc.valve ? this._box(d, arc.valve) : { cx: (a.cx + z.cx) / 2, cy: (a.cy + z.cy) / 2 };
-    const p1 = this._edge(a, { x: v.cx, y: v.cy });
-    const p2 = this._edge(z, { x: v.cx, y: v.cy });
-
-    this._layer.arcs.appendChild(this._el('path', {
-      class: 'slx-arc slx-arc-flow', 'data-id': id,
-      d: `M${p1.x},${p1.y} L${v.cx},${v.cy} L${p2.x},${p2.y}`,
-      'marker-end': 'url(#slx-arrow-flow)',
-    }));
+    return `M${p1.x},${p1.y} Q${mx + nx},${my + ny} ${p2.x},${p2.y}`;
   },
 
   /**
