@@ -25,19 +25,6 @@
 (function (Sienna) {
   'use strict';
 
-  // --- provisional vocabulary -------------------------------------------
-  // Placeholder for schema/simile-v1.js (DESIGN-diagram.md §3, §12.7). Only the
-  // facts this file actually needs; it is NOT the notation's full vocabulary.
-  var VOCAB = {
-    // A flow gets an auto-created valve node, which carries the flow's label
-    // and its rate equation; influences into a flow target the valve (§4).
-    flowValveType: 'valve',
-    // A flow drawn from/to blank space gets an auto-created cloud (§4).
-    blankEndType: 'cloud',
-  };
-
-  var FAMILY_OF_TYPE = { submodel: 'submodels' }; // else decided by caller
-
   // --- helpers ----------------------------------------------------------
 
   // Which map an id lives in, from its family prefix (§4: the prefix names it).
@@ -45,16 +32,6 @@
     var m = /^([a-z]+)\d+$/.exec(String(id || ''));
     if (!m) return null;
     return m[1] === 'submodel' ? 'submodels' : m[1] + 's';
-  }
-
-  // §14: a label is also the equation name, so it must be a legal variable
-  // name. Confirmed rule so far: no spaces. Others to follow from Simile.
-  function checkLabel(label) {
-    if (label == null || label === '') return label; // optional (e.g. clouds)
-    if (/\s/.test(String(label))) {
-      throw new Error('Invalid label "' + label + '": labels may not contain spaces.');
-    }
-    return label;
   }
 
   function Diagram(path) {
@@ -90,6 +67,41 @@
 
   Diagram.prototype = {
     constructor: Diagram,
+
+    // ---- the schema (the notation; nothing about it is hard-wired here) ----
+
+    /** The schema this model declares, from `Sienna.schemas`. */
+    schema: function () {
+      var m = this.model();
+      return Sienna.schemas.get((m && m.schema) || 'simile-v1');
+    },
+
+    /** Vocabulary entry for a node type, e.g. `nodeType('valve')`. */
+    nodeType: function (type) {
+      var t = this.schema().nodes[type];
+      if (!t) throw new Error('Unknown node type "' + type + '" in schema ' + this.schema().name + '.');
+      return t;
+    },
+
+    /** Vocabulary entry for an arc type, e.g. `arcType('flow').attachmentNode`. */
+    arcType: function (type) {
+      var t = this.schema().arcs[type];
+      if (!t) throw new Error('Unknown arc type "' + type + '" in schema ' + this.schema().name + '.');
+      return t;
+    },
+
+    /**
+     * §14: a label is also the equation name, so it must be a legal variable
+     * name. The rule belongs to the notation, so it comes from the schema.
+     */
+    checkLabel: function (label) {
+      if (label == null || label === '') return label; // optional (e.g. clouds)
+      var naming = this.schema().naming || {};
+      if (naming.forbidPattern && new RegExp(naming.forbidPattern).test(String(label))) {
+        throw new Error('Invalid label "' + label + '": ' + (naming.message || 'not a legal name.'));
+      }
+      return label;
+    },
 
     // ---- reads (straight through to userData) ----
 
@@ -189,7 +201,8 @@
      */
     addNode: function (type, o) {
       var opt = o || {};
-      checkLabel(opt.label);
+      this.nodeType(type);          // the schema decides what types exist
+      this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('node');
       Sienna.actions.dispatch(
@@ -212,7 +225,7 @@
      */
     addSubmodel: function (o) {
       var opt = o || {};
-      checkLabel(opt.label);
+      this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('submodel');
       Sienna.actions.dispatch(
@@ -242,8 +255,9 @@
      */
     addFlow: function (o) {
       var opt = o || {};
-      checkLabel(opt.label);
+      this.checkLabel(opt.label);
       var self = this;
+      var spec = this.arcType('flow');   // the notation decides what a flow brings
 
       // Ids are minted up-front, all at once, so the action's payload can name
       // them: nothing reaches userData until the dispatch below runs.
@@ -263,13 +277,13 @@
           // Auto-created clouds at blank ends.
           made.forEach(function (m) {
             self._put('nodes', m.id, {
-              type: VOCAB.blankEndType, parent: opt.parent != null ? opt.parent : null,
+              type: spec.blankEnd, parent: opt.parent != null ? opt.parent : null,
               label: '', props: {},
             }, self._geom(m.xy));
           });
           // The valve: a real node, and the element that carries the name.
           self._put('nodes', valveId, {
-            type: VOCAB.flowValveType,
+            type: spec.attachmentNode,
             parent: opt.parent != null ? opt.parent : null,
             label: opt.label || '',
             props: opt.props || {},
@@ -297,15 +311,18 @@
     addInfluence: function (from, to, o) {
       var opt = o || {};
       var self = this;
-      var alias = opt.alias != null ? opt.alias : this.label(from);
-      checkLabel(alias);
+      // The notation says whether this arc type carries a local name at all.
+      var alias = this.arcType('influence').alias
+        ? (opt.alias != null ? opt.alias : this.label(from))
+        : undefined;
+      this.checkLabel(alias);
       var id = this._mintId('arc');
       Sienna.actions.dispatch(
         { type: 'diagram.addInfluence', target: this.path, payload: { id: id, from: from, to: to, alias: alias } },
         function () {
-          self._put('arcs', id, {
-            type: 'influence', from: from, to: to, alias: alias, props: opt.props || {},
-          }, null);
+          var el = { type: 'influence', from: from, to: to, props: opt.props || {} };
+          if (alias !== undefined) el.alias = alias;
+          self._put('arcs', id, el, null);
         }
       );
       return id;
@@ -318,7 +335,7 @@
      */
     addRole: function (from, to, o) {
       var opt = o || {};
-      checkLabel(opt.label);
+      this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('arc');
       Sienna.actions.dispatch(
@@ -334,5 +351,4 @@
   };
 
   Sienna.Diagram = Diagram;
-  void FAMILY_OF_TYPE;
 })(window.Sienna);
