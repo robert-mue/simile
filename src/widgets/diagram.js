@@ -39,7 +39,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   // Arrowhead length per arc type, in world units — must match the marker
   // paths built in _buildCanvas, since the line is shortened by exactly this.
-  _ARROW_LEN: { flow: 6, influence: 4.5, role: 4.5 },
+  _ARROW_LEN: { flow: 9, influence: 6.75, role: 6.75 },
 
   // Sagitta as a fraction of the chord may not reach 0.5: at 0.5 the arc is a
   // semicircle, and beyond it the drawn arc is no longer the one intended.
@@ -132,8 +132,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     // Arrowheads: one marker per arc type, so the schema's styling can grow.
     const defs = this._el('defs');
-    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L6,2.5 L0,5 z', 6, 2.5));
-    defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.5 L4.5,2.5 L0,4.5 z', 4.5, 2.5));
+    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L9,3.75 L0,7.5 z', 9, 3.75));
+    defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.75 L6.75,3.75 L0,6.75 z', 6.75, 3.75));
     svg.appendChild(defs);
 
     // THE root transform — pan/zoom lives here and nowhere else.
@@ -815,7 +815,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     this.element.find('.slx-label-edit').remove();
     const input = $('<input class="slx-label-edit" type="text">')
-      .val(el.label || '')
+      // Empty label? Offer the id, so a label that was deleted can be revived
+      // by double-clicking the glyph and pressing Enter.
+      .val(el.label || id)
       .css({ left, top })
       .appendTo(this.element);
 

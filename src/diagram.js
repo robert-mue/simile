@@ -60,6 +60,17 @@
     return best ? { x: best.x, y: best.y } : null;
   }
 
+  /**
+   * A new element is born named after its own id ('node5'), not nameless.
+   * A nameless element is invisible in equations and awkward to point at, and
+   * an id is at least a legal, unique name the user can then improve on.
+   * Types the notation marks as optionally-labelled (clouds) are left blank.
+   */
+  function defaultLabel(spec, id, given) {
+    if (given) return given;
+    return spec && spec.label === true ? id : '';
+  }
+
   function Diagram(path) {
     if (!(this instanceof Diagram)) return new Diagram(path);
     this.path = String(path);
@@ -596,17 +607,18 @@
      */
     addNode: function (type, o) {
       var opt = o || {};
-      this.nodeType(type);          // the schema decides what types exist
+      var spec = this.nodeType(type);   // the schema decides what types exist
       this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('node');
+      var label = defaultLabel(spec, id, opt.label);
       Sienna.actions.dispatch(
-        { type: 'diagram.addNode', target: this.path, payload: { id: id, nodeType: type, label: opt.label || '' } },
+        { type: 'diagram.addNode', target: this.path, payload: { id: id, nodeType: type, label: label } },
         function () {
           self._put('nodes', id, {
             type: type,
             parent: opt.parent != null ? opt.parent : null,
-            label: opt.label || '',
+            label: label,
             props: opt.props || {},
           }, self._geom(opt));
         }
@@ -641,6 +653,7 @@
       this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('submodel');
+      var label = opt.label || id;
       var parent = opt.parent != null ? opt.parent : null;
       var rect = this._geom(opt);
       var captured = rect ? this._enclosedBy(rect, parent) : [];
@@ -649,13 +662,13 @@
         {
           type: 'diagram.addSubmodel',
           target: this.path,
-          payload: { id: id, label: opt.label || '', captured: captured.length },
+          payload: { id: id, label: label, captured: captured.length },
         },
         function () {
           self._put('submodels', id, {
             kind: opt.kind || 'single',
             parent: parent,
-            label: opt.label || '',
+            label: label,
             props: opt.props || {},
           }, rect);
 
@@ -745,7 +758,7 @@
           self._put('nodes', valveId, {
             type: spec.attachmentNode,
             parent: opt.parent != null ? opt.parent : null,
-            label: opt.label || '',
+            label: defaultLabel(self.nodeType(spec.attachmentNode), valveId, opt.label),
             props: opt.props || {},
           }, null);
           // The flow arc itself: no label (the valve has it), no parent (§13).
