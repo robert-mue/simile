@@ -411,6 +411,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   _beginLabelDrag(e, d, id, off) {
     if (this._tool) return;                       // placing/connecting takes precedence
+    if (this._isDoubleClick(id)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return this._editLabel(d, id);
+    }
     e.preventDefault();
     e.stopPropagation();                          // not a drag of the element itself
     const origin = this._toWorld(e.clientX, e.clientY);
@@ -432,10 +437,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       const final = this._labelDrag && this._labelDrag.off;
       this._labelDrag = null;
-      if (final && (final.dx !== start.dx || final.dy !== start.dy)) {
-        d.moveLabel(id, final.dx, final.dy);      // one action per drag
-      }
-      this._render();
+      const moved = final && (final.dx !== start.dx || final.dy !== start.dy);
+      if (moved) d.moveLabel(id, final.dx, final.dy);   // one action per drag
+      // A click that moved nothing must NOT re-render: replacing the DOM node
+      // between the two halves of a double-click is what broke renaming.
+      if (final) this._render();
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
@@ -718,6 +724,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   _beginElementDrag(e, d, id) {
     if (this._tool && this._tool.indexOf('arc:') === 0) return this._beginArcDraw(e, d, id);
+    if (!this._tool && this._isDoubleClick(id)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return this._editLabel(d, id);
+    }
     // With a placing tool armed, a press on an existing element is still a
     // placement, not a drag — otherwise nothing could ever be put INSIDE a
     // submodel, since the submodel's own body covers its whole interior.
@@ -767,12 +778,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       const drag = this._drag;
       this._drag = null;
-      if (drag && drag.moves[id] && (drag.moves[id].x !== start[id].x || drag.moves[id].y !== start[id].y)) {
+      const moved = drag && drag.moves[id]
+        && (drag.moves[id].x !== start[id].x || drag.moves[id].y !== start[id].y);
+      if (moved) {
         const newParent = drag.dropTarget !== undefined ? drag.dropTarget : null;
         const changed = !isSub && newParent !== d.parentOf(id);
         d.commitDrag(drag.moves, changed ? { id, parent: newParent } : null);
       }
-      this._render();
+      if (moved || drag) this._render();
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
@@ -857,6 +870,19 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _flash(text) {
     const note = $('<div class="slx-flash">').text(text).appendTo(this.element);
     setTimeout(() => note.fadeOut(200, () => note.remove()), 2200);
+  },
+
+  /**
+   * Our own double-click detection, keyed on the element ID rather than the DOM
+   * node. The native `dblclick` cannot be relied on here: every gesture ends in
+   * a re-render that REPLACES the SVG element, so the browser sees two clicks
+   * on two different nodes and never pairs them.
+   */
+  _isDoubleClick(id) {
+    const now = Date.now();
+    const prev = this._lastClick;
+    this._lastClick = { id, t: now };
+    return !!(prev && prev.id === id && now - prev.t < 450);
   },
 
   /** Nearest point on a rectangle's perimeter — a port lives ON its boundary. */
