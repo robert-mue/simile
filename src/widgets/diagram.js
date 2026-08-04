@@ -211,10 +211,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   /**
-   * Draw a submodel by dragging out its rectangle — the gesture that matters,
-   * because a submodel is usually drawn AROUND things that already exist, and
-   * it captures whatever it encloses. A plain click (no drag) still gives a
-   * default-sized empty box.
+   * Draw a submodel by dragging out its rectangle. This is the ONLY way to make
+   * one: a submodel is drawn AROUND things, and it captures whatever it
+   * encloses, so its size is part of the gesture. A click that never becomes a
+   * drag creates nothing and leaves the tool armed to try again — one mode, not
+   * two, and no default size to be surprised by.
    */
   _beginSubmodelDraw(e) {
     const d = this._diagram();
@@ -236,10 +237,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       ghost.remove();
       const w = Math.abs(cur.x - origin.x);
       const h = Math.abs(cur.y - origin.y);
-      const dragged = w > 20 && h > 20;
-      const box = dragged
-        ? { x: (origin.x + cur.x) / 2, y: (origin.y + cur.y) / 2, w, h }
-        : { x: origin.x, y: origin.y };
+      if (w < 20 || h < 20) return;              // not a drag: nothing made, tool stays armed
+      const box = { x: (origin.x + cur.x) / 2, y: (origin.y + cur.y) / 2, w: w, h: h };
       this._tool = null;
       this._syncPalette();
       const id = d.addSubmodel(Object.assign({ parent: this._dropTargetAt(d, origin, null), label: '' }, box));
