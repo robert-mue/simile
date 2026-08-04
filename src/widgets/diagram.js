@@ -39,7 +39,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   // Arrowhead length per arc type, in world units — must match the marker
   // paths built in _buildCanvas, since the line is shortened by exactly this.
-  _ARROW_LEN: { flow: 10, influence: 7, role: 7 },
+  _ARROW_LEN: { flow: 6, influence: 4.5, role: 4.5 },
+
+  // Sagitta as a fraction of the chord may not reach 0.5: at 0.5 the arc is a
+  // semicircle, and beyond it the drawn arc is no longer the one intended.
+  _MAX_BOW: 0.48,
 
   _create() {
     this.element.addClass('slx-diagram');
@@ -128,8 +132,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     // Arrowheads: one marker per arc type, so the schema's styling can grow.
     const defs = this._el('defs');
-    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L10,4 L0,8 z', 10, 4));
-    defs.appendChild(this._marker('slx-arrow-influence', 'M0,1 L7,4 L0,7 z', 7, 4));
+    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L6,2.5 L0,5 z', 6, 2.5));
+    defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.5 L4.5,2.5 L0,4.5 z', 4.5, 2.5));
     svg.appendChild(defs);
 
     // THE root transform — pan/zoom lives here and nowhere else.
@@ -353,7 +357,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       case 'valve':
         // The System Dynamics valve: a bow-tie sitting on its flow.
         g.appendChild(this._el('path', {
-          d: `M${b.cx - 9},${b.cy - 7} L${b.cx + 9},${b.cy + 7} L${b.cx + 9},${b.cy - 7} L${b.cx - 9},${b.cy + 7} z`,
+          d: `M${b.cx - b.w / 2},${b.cy - b.h / 2} L${b.cx + b.w / 2},${b.cy + b.h / 2}`
+           + ` L${b.cx + b.w / 2},${b.cy - b.h / 2} L${b.cx - b.w / 2},${b.cy + b.h / 2} z`,
         }));
         break;
       case 'diamond':
@@ -439,26 +444,88 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const pts = this._chainFor(d, id, arc);
     if (pts.length < 2) return;
 
-    // "Split" means a boundary was crossed — NOT merely that the polyline has a
-    // bend, which a flow gets from routing through its valve.
     const crossings = d.portsFor(id).length;
     const marker = arc.type === 'flow' ? 'slx-arrow-flow' : 'slx-arrow-influence';
-    // Influences are curved — including each segment of one that crosses a
-    // boundary. Flows and roles stay straight.
-    const bowed = arc.type === 'influence';
+    const curved = arc.type === 'influence';
+    const bow = curved ? this._bowOf(d, id) : 0;
+    const head = this._ARROW_LEN[arc.type] || 4.5;
+    const ov = this._overrides();
 
     for (let i = 0; i < pts.length - 1; i++) {
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
+      const last = i === pts.length - 2;
+      let dAttr;
+
+      if (curved) {
+        // Only the true ends have a glyph to trim against; a port is a bare
+        // point on a boundary, so the segment runs right up to it.
+        const boxA = i === 0 ? d.box(arc.from, ov) : null;
+        const boxZ = last ? d.box(arc.to, ov) : null;
+        const seg = this._arcPath(pts[i], pts[i + 1], boxA, boxZ, bow, last ? head : 0);
+        if (!seg) continue;
+        dAttr = seg.d;
+      } else {
+        dAttr = `M${pts[i].x},${pts[i].y} L${pts[i + 1].x},${pts[i + 1].y}`;
+      }
+
+      // A wide invisible twin under the visible stroke: a 0.8px hairline is
+      // impossible to hit otherwise, so this is what the pointer actually grabs.
+      const hit = this._el('path', {
+        class: 'slx-arc-hit', 'data-id': id, 'data-segment': i, d: dAttr,
+      });
+      if (curved) {
+        hit.addEventListener('pointerdown', (e) => this._beginBowDrag(e, d, id, pts[i], pts[i + 1]));
+      }
+      this._layer.arcs.appendChild(hit);
+
       const path = this._el('path', {
         class: 'slx-arc slx-arc-' + arc.type + (crossings ? ' slx-arc-split' : ''),
         'data-id': id,
         'data-segment': i,
-        d: bowed ? this._bow(p1, p2) : `M${p1.x},${p1.y} L${p2.x},${p2.y}`,
+        d: dAttr,
       });
-      if (i === pts.length - 2) path.setAttribute('marker-end', 'url(#' + marker + ')');
+      if (last) path.setAttribute('marker-end', 'url(#' + marker + ')');
       this._layer.arcs.appendChild(path);
     }
+  },
+
+  /**
+   * Drag an influence's curvature. The new bow is the pointer's signed
+   * perpendicular distance from the segment's chord, as a fraction of it — so
+   * dragging across the chord flips the bend to the other side. Nothing is
+   * written until the drop: one action, one undo step.
+   */
+  _beginBowDrag(e, d, id, a, z) {
+    if (this._tool || this._drag || this._portDrag || this._bowDrag) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const handle = e.currentTarget;
+    if (handle.setPointerCapture) {
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
+    }
+    const start = this._bowOf(d, id);
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      const dx = z.x - a.x;
+      const dy = z.y - a.y;
+      const c = Math.hypot(dx, dy);
+      if (c < 1) return;
+      // Signed distance from the chord, positive on the side the default bows.
+      const side = ((w.x - a.x) * dy - (w.y - a.y) * dx) / c;
+      // Clamped so the sagitta stays under half the chord: beyond that the arc
+      // exceeds a semicircle, which a large-arc-flag of 0 cannot express, and
+      // the curve would silently snap to the minor arc on the far side.
+      this._bowDrag = { id, bow: Math.max(-this._MAX_BOW, Math.min(this._MAX_BOW, -side / c)) };
+      this._render();
+    };
+    const end = () => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      const final = this._bowDrag && this._bowDrag.bow;
+      this._bowDrag = null;
+      if (final != null && final !== start) d.setArcBow(id, final);
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
 
   /**
@@ -474,6 +541,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // Every box lookup here must see the drag override, or a dragged glyph
     // slides away from the arc that is attached to it.
     const ov = this._overrides();
+
+    // An INFLUENCE keeps the raw centres: its arc is defined THROUGH them and
+    // trimmed where it crosses each glyph (see _arcPath), which is what makes
+    // it look like it leaves the node rather than a point on its rim. Straight
+    // arcs can be clipped here, since chord and curve coincide.
+    if (arc.type === 'influence') return pts;
 
     pts[0] = this._edge(d.box(arc.from, ov), pts[1]);
     pts[pts.length - 1] = this._edge(d.box(arc.to, ov), pts[pts.length - 2]);
@@ -800,35 +873,89 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   /**
-   * An influence is drawn as an ARC OF A CIRCLE through its two ends, bulging
-   * to one side by a fixed fraction of the chord.
+   * An influence, drawn as an ARC OF A CIRCLE **through the two node centres**,
+   * then trimmed where it crosses each glyph. Defining the circle by the
+   * centres is what makes the arrow appear to come from the node rather than
+   * from an arbitrary point on its rim. (Simile does not do this; we take the
+   * chance to correct it.)
    *
-   * Geometry: for chord c and sagitta h, the radius is (c²/4 + h²) / 2h. The
-   * arc is always less than a semicircle (h < c/2), so large-arc-flag is 0; the
-   * sweep flag picks the side, and is derived from the sign of the cross
-   * product so the bulge lands consistently whichever way the arc is drawn.
+   * For chord c and SIGNED sagitta h, radius = (c² / 4 + h²) / 2|h|. The sign
+   * of h chooses the side, so a negative bow bends the other way.
    *
-   * (Quadratic and spline alternatives are still open — this is the simple
-   * choice, deliberately.)
+   * Trimming walks the arc rather than solving circle-against-glyph
+   * analytically: glyphs are rects, circles, clouds and bow-ties, and a walk is
+   * exact enough at these sizes while working for all of them.
    */
-  _bow(p1, p2) {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
+  _arcPath(a, z, boxA, boxZ, bow, head) {
+    const dx = z.x - a.x;
+    const dy = z.y - a.y;
     const c = Math.hypot(dx, dy);
-    if (c < 1) return `M${p1.x},${p1.y} L${p2.x},${p2.y}`;
+    if (c < 1) return null;
 
-    const h = c * this.options.bowFraction;
-    if (h < 0.5) return `M${p1.x},${p1.y} L${p2.x},${p2.y}`;
-    const r = (c * c / 4 + h * h) / (2 * h);
+    const h = c * Math.max(-this._MAX_BOW, Math.min(this._MAX_BOW, bow));
+    if (Math.abs(h) < 0.5) return this._straightTrim(a, z, boxA, boxZ, head);
 
-    // Bulge to the left of travel: centre lies on the other side of the chord.
-    const cxm = (p1.x + p2.x) / 2 - (-dy / c) * (r - h);
-    const cym = (p1.y + p2.y) / 2 - (dx / c) * (r - h);
-    const cross = (p1.x - cxm) * (p2.y - cym) - (p1.y - cym) * (p2.x - cxm);
-    const sweep = cross > 0 ? 1 : 0;
+    const sgn = h < 0 ? -1 : 1;
+    const r = (c * c / 4 + h * h) / (2 * Math.abs(h));
+    const nx = -dy / c;
+    const ny = dx / c;
+    const cx = (a.x + z.x) / 2 - nx * sgn * (r - Math.abs(h));
+    const cy = (a.y + z.y) / 2 - ny * sgn * (r - Math.abs(h));
 
-    return `M${p1.x},${p1.y} A${r},${r} 0 0,${sweep} ${p2.x},${p2.y}`;
+    const a1 = Math.atan2(a.y - cy, a.x - cx);
+    const a2 = Math.atan2(z.y - cy, z.x - cx);
+    let delta = a2 - a1;
+    while (delta > Math.PI) delta -= 2 * Math.PI;
+    while (delta < -Math.PI) delta += 2 * Math.PI;
+
+    const at = (t) => ({
+      x: cx + r * Math.cos(a1 + delta * t),
+      y: cy + r * Math.sin(a1 + delta * t),
+    });
+
+    const STEPS = 240;
+    let t0 = 0;
+    if (boxA) while (t0 < 1 && this._insideBox(boxA, at(t0))) t0 += 1 / STEPS;
+    let t1 = 1;
+    if (boxZ) while (t1 > t0 && this._insideBox(boxZ, at(t1))) t1 -= 1 / STEPS;
+    if (head) {
+      const arcLen = Math.abs(delta) * r;
+      if (arcLen > 0) t1 -= head / arcLen;
+    }
+    if (t1 <= t0) return null;
+
+    const p0 = at(t0);
+    const p1 = at(t1);
+    return { d: `M${p0.x},${p0.y} A${r},${r} 0 0,${delta > 0 ? 1 : 0} ${p1.x},${p1.y}`, from: p0, to: p1 };
   },
+
+  /** The straight case of the above, used when the bow is ~0. */
+  _straightTrim(a, z, boxA, boxZ, head) {
+    const p0 = boxA ? this._edge(boxA, z) : a;
+    let p1 = boxZ ? this._edge(boxZ, a) : z;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const len = Math.hypot(dx, dy);
+    if (head && len > head) p1 = { x: p1.x - (dx / len) * head, y: p1.y - (dy / len) * head };
+    return { d: `M${p0.x},${p0.y} L${p1.x},${p1.y}`, from: p0, to: p1 };
+  },
+
+  /** Is a point within a glyph's own shape? */
+  _insideBox(b, p) {
+    const dx = p.x - b.cx;
+    const dy = p.y - b.cy;
+    if (b.shape === 'rect') return Math.abs(dx) <= b.w / 2 && Math.abs(dy) <= b.h / 2;
+    const r = Math.max(b.w, b.h) / 2;
+    return dx * dx + dy * dy <= r * r;
+  },
+
+  /** An arc's curvature: a live drag, else the stored value, else the default. */
+  _bowOf(d, id) {
+    if (this._bowDrag && this._bowDrag.id === id) return this._bowDrag.bow;
+    const stored = d.arcBow(id);
+    return stored == null ? this.options.bowFraction : stored;
+  },
+
 
   /**
    * Frame the content (world coords; the view transform does the work). Re-runs

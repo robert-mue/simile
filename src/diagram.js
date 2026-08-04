@@ -306,6 +306,26 @@
       return this.layout('labels/' + id) || null;
     },
 
+    /**
+     * An arc's curvature: signed sagitta as a fraction of its chord. Negative
+     * bends the other way. Absent means the notation's default.
+     */
+    arcBow: function (id) {
+      var rec = this.layout('arcs/' + id);
+      return rec && typeof rec.bow === 'number' ? rec.bow : null;
+    },
+
+    /** Set an arc's curvature — one action per drag. */
+    setArcBow: function (id, bow) {
+      var self = this;
+      Sienna.actions.dispatch(
+        { type: 'diagram.setArcBow', target: this.path, payload: { id: id, bow: bow } },
+        function () {
+          Sienna.userData.set(self.path + '/layout/arcs/' + id, { bow: bow });
+        }
+      );
+    },
+
     /** Move a label relative to its element — one action, one undo step. */
     moveLabel: function (id, dx, dy) {
       var self = this;

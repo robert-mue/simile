@@ -183,13 +183,15 @@
     // Only the part that has a structural consequence is filled in: `resizable`
     // decides whether an element's layout carries w/h at all (§6). Glyphs,
     // colours and fonts arrive with the renderer.
+    // Sizes are 60% of the first draft: the glyphs were chunky relative to the
+    // spacing between them, which is what a diagram's scale really means here.
     style: {
-      compartment:  { shape: 'rect',    resizable: true,  w: 60, h: 40 },
-      variable:     { shape: 'circle',  resizable: false, w: 30, h: 30 },
-      cloud:        { shape: 'cloud',   resizable: false, w: 40, h: 26 },
-      valve:        { shape: 'valve',   resizable: false, w: 20, h: 20 },
-      condition:    { shape: 'diamond', resizable: false, w: 30, h: 30 },
-      submodel:     { shape: 'rect',    resizable: true,  w: 200, h: 140 },
+      compartment:  { shape: 'rect',    resizable: true,  w: 36, h: 24 },
+      variable:     { shape: 'circle',  resizable: false, w: 18, h: 18 },
+      cloud:        { shape: 'cloud',   resizable: false, w: 24, h: 16 },
+      valve:        { shape: 'valve',   resizable: false, w: 12, h: 12 },
+      condition:    { shape: 'diamond', resizable: false, w: 18, h: 18 },
+      submodel:     { shape: 'rect',    resizable: true,  w: 120, h: 84 },
     },
   });
 })(window.Sienna);

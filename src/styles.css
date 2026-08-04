@@ -35,7 +35,7 @@
 .slx-node path {
   fill: #fff;
   stroke: #222;
-  stroke-width: 1.5;
+  stroke-width: 0.9;
 }
 
 /* A compartment is a stock: solid box. */
@@ -58,13 +58,13 @@
 /* A flow carries stuff: heavy line. */
 .slx-arc-flow {
   stroke: #222;
-  stroke-width: 3;
+  stroke-width: 1.8;
 }
 
 /* An influence carries information: hairline. */
 .slx-arc-influence {
   stroke: #666;
-  stroke-width: 1.2;
+  stroke-width: 0.8;
 }
 
 .slx-diagram-svg defs path {
@@ -75,7 +75,7 @@
 /* --- labels -------------------------------------------------------- */
 
 .slx-label {
-  font: 12px/1.2 system-ui, sans-serif;
+  font: 7.5px/1.2 system-ui, sans-serif;   /* 60% of the first draft, with the glyphs */
   fill: #111;
   text-anchor: middle;
   cursor: grab;            /* labels are draggable (offset stored in layout) */
@@ -92,7 +92,7 @@
 .slx-submodel rect {
   fill: #fcfcfa;
   stroke: #555;
-  stroke-width: 1.5;
+  stroke-width: 0.9;
 }
 
 .slx-submodel-label {
@@ -113,7 +113,7 @@
 .slx-port {
   fill: #fff;
   stroke: #4a7fb5;
-  stroke-width: 1.5;
+  stroke-width: 0.9;
   cursor: grab;
 }
 .slx-port-shared {
@@ -245,4 +245,14 @@
   stroke-width: 1.5;
   stroke-dasharray: 5 3;
   pointer-events: none;
+}
+
+/* An invisible, generously wide twin under each arc: a hairline is impossible
+   to hit with a pointer, so this is what grabs the drag. */
+.slx-arc-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  pointer-events: stroke;
+  cursor: ns-resize;
 }

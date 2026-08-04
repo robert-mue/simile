@@ -36,11 +36,11 @@
     var d = Sienna.Diagram.create(p, { name: 'Plant' });
 
     // The container. Everything below with parent:plant sits inside it.
-    var plant = d.addSubmodel({ label: 'PLANT', kind: 'single', x: 250, y: 220, w: 320, h: 200 });
+    var plant = d.addSubmodel({ label: 'PLANT', kind: 'single', x: 250, y: 220, w: 200, h: 130 });
 
     // --- inside PLANT ---
     var biomass = d.addNode('compartment', {
-      label: 'biomass', parent: plant, x: 330, y: 220, w: 60, h: 40,
+      label: 'biomass', parent: plant, x: 330, y: 220, w: 36, h: 24,
     });
     var flow = d.addFlow({
       to: biomass, label: 'growth', parent: plant,
