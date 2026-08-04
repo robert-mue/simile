@@ -35,6 +35,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   // Layers, painted in this order (SVG has no z-index).
   _LAYERS: ['bodies', 'arcs', 'nodes', 'labels', 'overlay'],
 
+  // Arrowhead length per arc type, in world units — must match the marker
+  // paths built in _buildCanvas, since the line is shortened by exactly this.
+  _ARROW_LEN: { flow: 10, influence: 7, role: 7 },
+
   _create() {
     this.element.addClass('slx-diagram');
 
@@ -383,6 +387,18 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     pts[0] = this._edge(d.box(arc.from, ov), pts[1]);
     pts[pts.length - 1] = this._edge(d.box(arc.to, ov), pts[pts.length - 2]);
+
+    // Stop the line short so the arrowhead — anchored at its base — reaches the
+    // glyph edge on its own. Without this the stroke's square end shows through
+    // the point of the arrow.
+    const n = pts.length - 1;
+    const head = this._ARROW_LEN[arc.type] || 7;
+    const dx = pts[n].x - pts[n - 1].x;
+    const dy = pts[n].y - pts[n - 1].y;
+    const len = Math.hypot(dx, dy);
+    if (len > head) {
+      pts[n] = { x: pts[n].x - (dx / len) * head, y: pts[n].y - (dy / len) * head };
+    }
     return pts;
   },
 
@@ -734,9 +750,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     return t;
   },
 
+  /**
+   * An arrowhead anchored at its BASE (refX 0), not its tip. The line is then
+   * shortened by the head's length (see ARROW_LEN), so the stroke stops where
+   * the triangle begins. With the line running all the way to the tip instead,
+   * its flat cap is wider than the triangle's apex and pokes out either side —
+   * the blunt-tipped arrow this avoids.
+   */
   _marker(id, path, w, h) {
     const m = this._el('marker', {
-      id, markerWidth: w, markerHeight: h * 2, refX: w, refY: h,
+      id, markerWidth: w, markerHeight: h * 2, refX: 0, refY: h,
       orient: 'auto', markerUnits: 'userSpaceOnUse',
     });
     m.appendChild(this._el('path', { d: path }));
