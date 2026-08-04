@@ -321,6 +321,17 @@ So a behavioural rule needs **no user-facing message at all** — and a rule tha
 
 A consequence worth stating: **only the structural and behavioural rules are needed now.** Content rules are what matter for handing a model to the execution engine, which is exactly the distant concern this section defers.
 
+**Two corrections from building the engine (2026-08-04, `src/grammar.js`).**
+
+**(i) Behavioural facts belong in the vocabulary, not in the rules array.** §12.6 seeded three of them as rule records — *influence-branches*, *flow-role-no-branch*, *no-arc-on-arc*. Building the engine showed they were the same fact twice: each type already declares `branches` and `attachmentNode` in the vocabulary (§3.1), which is where the arc-drawing routine reads them, so a parallel list could only drift. They are **removed from the catalogue**; callers ask `Sienna.grammar.behaviour()`, which reads the vocabulary. The behavioural *class* stands — it was a real distinction, and it is what identified these as not-rules — but the class turns out to describe **where a fact lives**, not a third kind of entry in the same list.
+
+**(ii) "Preventive" is a property of the GESTURE, not only of the rule.** The same structural rule can be preventive at one point of entry and reportable at another. The case that forced this: *population symbols only inside a population submodel*.
+
+- **Dropping** an element into a submodel is refused outright — the user is asserting containment, and there is nothing to gain by allowing a state they must then undo.
+- **Capturing** by drawing a submodel around existing elements is **allowed and reported**. §5's own workflow requires it: box a flat model, *then* declare the box a population. The moment the box exists it is `single`, so every population symbol inside it breaches the rule — refusing the capture would block the very thing the feature is for. The breach is reported instead, in the manner of the validation pass (§12.4 q3).
+
+So enforcement has two axes, not one: the rule's **class** (structural / content / behavioural) and the gesture's **stance** (refuse / report). A structural rule refuses where the user is asserting the thing the rule governs, and reports where they are doing something else that happens to pass through an illegal state. §12.5's non-monotonicity is the general form of this: an edit elsewhere can invalidate elements it never touched, and those can only ever be reported.
+
 ### 12.4 One engine, four questions
 
 The same rules are consulted by four callers, and the call signature should be fixed with all of them in mind:
@@ -345,7 +356,7 @@ Eventually each rule should therefore declare **what it depends on**, so re-chec
 
 ### 12.6 Left open
 
-- The **rule catalogue** — **first entries received from the Simile developer 2026-08-04, see §12.8**; more expected. *Seeded 2026-07-31 with the entries we knew independently:* **influences may branch; flows and role arcs may not** (§13.3), and **an arc may not terminate on an arc** (influences into a flow resolve to its valve; §4). All are **behavioural**, not preventive — they carry no message and are consulted by the arc-drawing routine, per the third row of §12.3 and question 4 of §12.4. *(These were first recorded as preventive rules with refusal messages; corrected the same day — no gesture can violate them.)*
+- The **rule catalogue** — **first entries received from the Simile developer 2026-08-04, see §12.8**; more expected. *Seeded 2026-07-31 with the entries we knew independently:* **influences may branch; flows and role arcs may not** (§13.3), and **an arc may not terminate on an arc** (influences into a flow resolve to its valve; §4). All are **behavioural**, not preventive — they carry no message and are consulted by the arc-drawing routine, per §12.3 and question 4 of §12.4. *(First recorded as preventive rules with refusal messages, corrected the same day — no gesture can violate them — and then, on building the engine, moved out of the rule catalogue entirely into the vocabulary where they were already declared: §12.3(i).)*
 - The exact **rule vocabulary** (`ends` / `contains` / `parentKind` above are illustrative, not final) — best fixed against that catalogue plus the SBML cross-check, so it is not over-fitted to Simile.
 - Whether rules live **in the schema file** alongside vocabulary/dialogs/styling (§3's second face) or as a separable ruleset. Assumed in-schema for now.
 
