@@ -50,6 +50,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     this._view = { x: 0, y: 0, k: 1 }; // pan/zoom: the one root transform
     this._tool = null;                 // null = select/drag; else a palette tool
+    this._sel = [];                    // selected element ids
 
     this._buildPalette();
     this._buildCanvas();
@@ -175,6 +176,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
           return;
         }
         if (this._tool) { this._placeAt(e); return; }                  // creating, not panning
+        if (this._sel.length) { this._sel = []; this._render(); }       // click away = deselect
         this._userView = true;
         const start = { x: e.clientX, y: e.clientY, vx: this._view.x, vy: this._view.y };
         const move = (ev) => {
@@ -313,6 +315,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
     d.allPorts().forEach((p) => this._renderPort(d, p));
 
+    // The selection ring sits in the overlay, so it is never painted over.
+    this._sel.forEach((sid) => {
+      if (!d.get(sid)) return;
+      const b = d.box(sid, this._overrides());
+      this._layer.overlay.appendChild(this._el('rect', {
+        class: 'slx-selected',
+        x: b.cx - b.w / 2 - 4, y: b.cy - b.h / 2 - 4,
+        width: b.w + 8, height: b.h + 8, rx: 3,
+      }));
+    });
+
     // Frame the model ONCE, when it first has content. Never re-frame after an
     // edit: adding or moving an element changes the bounding box, and a view
     // that re-scales every time you place something is unusable. Resizing the
@@ -414,7 +427,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     if (this._isDoubleClick(id)) {
       e.preventDefault();
       e.stopPropagation();
-      return this._editLabel(d, id);
+      // (c) A label sitting INSIDE its node's rectangle counts as part of the
+      // node, so double-clicking it opens the node's dialog. A label that has
+      // been dragged clear of the glyph is just a label — nothing to open.
+      const inside = this._insideBox(d.box(id), this._toWorld(e.clientX, e.clientY));
+      if (inside) return this._openDialog(d, id);
+      return;
     }
     e.preventDefault();
     e.stopPropagation();                          // not a drag of the element itself
@@ -438,10 +456,15 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const final = this._labelDrag && this._labelDrag.off;
       this._labelDrag = null;
       const moved = final && (final.dx !== start.dx || final.dy !== start.dy);
-      if (moved) d.moveLabel(id, final.dx, final.dy);   // one action per drag
-      // A click that moved nothing must NOT re-render: replacing the DOM node
-      // between the two halves of a double-click is what broke renaming.
-      if (final) this._render();
+      if (moved) {
+        d.moveLabel(id, final.dx, final.dy);      // one action per drag
+        this._render();
+        return;
+      }
+      // (b) A press on a label that never moved is a request to EDIT it — one
+      // click, not two. (A click that moved nothing must not re-render: that is
+      // what used to destroy the DOM node mid-double-click.)
+      this._editLabel(d, id);
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
@@ -727,7 +750,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     if (!this._tool && this._isDoubleClick(id)) {
       e.preventDefault();
       e.stopPropagation();
-      return this._editLabel(d, id);
+      return this._openDialog(d, id);            // (c) the node's own dialog
     }
     // With a placing tool armed, a press on an existing element is still a
     // placement, not a drag — otherwise nothing could ever be put INSIDE a
@@ -738,16 +761,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     e.preventDefault();
     e.stopPropagation();
 
+    // Dragging one of a multiple selection drags all of it.
+    const group = this._sel.indexOf(id) >= 0 && this._sel.length > 1 ? this._sel.slice() : [id];
     const isSub = id.indexOf('submodel') === 0;
-    const carried = isSub ? d.descendantsOf(id) : [];
-    const keys = [id].concat(carried);
+    let carried = [];
+    group.forEach((gid) => {
+      carried.push(gid);
+      if (gid.indexOf('submodel') === 0) carried = carried.concat(d.descendantsOf(gid));
+    });
+    const keys = carried.filter((v, i, a) => a.indexOf(v) === i);
     // A submodel's boundary ports travel with it, as do those of its contents.
     const portKeys = [];
-    if (isSub) {
-      [id].concat(carried).forEach((k) => {
-        if (k.indexOf('submodel') === 0) portKeys.push(...d.portsOn(k));
-      });
-    }
+    keys.forEach((k) => {
+      if (k.indexOf('submodel') === 0) portKeys.push(...d.portsOn(k));
+    });
 
     const start = {};
     keys.concat(portKeys).forEach((k) => {
@@ -756,6 +783,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     });
 
     const origin = this._toWorld(e.clientX, e.clientY);
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey;
     const handle = e.currentTarget;
     if (handle.setPointerCapture) {
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
@@ -780,6 +808,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._drag = null;
       const moved = drag && drag.moves[id]
         && (drag.moves[id].x !== start[id].x || drag.moves[id].y !== start[id].y);
+      // (a) A press that never moved is a SELECTION, not a drag.
+      if (!moved) {
+        this._select(id, additive);
+        this._render();
+        return;
+      }
       if (moved) {
         const newParent = drag.dropTarget !== undefined ? drag.dropTarget : null;
         const changed = !isSub && newParent !== d.parentOf(id);
@@ -817,10 +851,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _editLabel(d, id) {
     const el = d.get(id);
     if (!el || (id.indexOf('arc') === 0 && !d.arcType(el.type).label)) return;
-    // Position from the element as actually rendered, rather than recomputing
-    // the world->screen transform by hand: the glyph knows where it is, and
-    // this cannot drift out of step with pan/zoom or the palette's height.
-    const g = this.element[0].querySelector(`[data-id="${id}"]`);
+    // Position over the LABEL where it actually sits — which may have been
+    // dragged away from its glyph — falling back to the glyph when there is no
+    // label drawn. Taken from the rendered node rather than recomputing the
+    // world->screen transform, so it cannot drift out of step with pan/zoom or
+    // the palette's height.
+    const g = this.element[0].querySelector(`[data-label-for="${id}"]`)
+      || this.element[0].querySelector(`[data-id="${id}"]`);
     const host = this.element[0].getBoundingClientRect();
     const gr = g ? g.getBoundingClientRect() : null;
     const left = (gr ? gr.left + gr.width / 2 - host.left : 20) - 50;
@@ -870,6 +907,34 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _flash(text) {
     const note = $('<div class="slx-flash">').text(text).appendTo(this.element);
     setTimeout(() => note.fadeOut(200, () => note.remove()), 2200);
+  },
+
+  /**
+   * (a) Selection. A plain click replaces the selection; shift/ctrl/cmd adds to
+   * or removes from it. Selection is the hook everything else hangs off — a
+   * properties panel, dragging several elements at once, and later deletion.
+   */
+  _select(id, additive) {
+    if (!additive) {
+      this._sel = id ? [id] : [];
+      return;
+    }
+    if (!id) return;
+    const i = this._sel.indexOf(id);
+    if (i >= 0) this._sel.splice(i, 1);
+    else this._sel.push(id);
+  },
+
+  /**
+   * (c) The element's own dialog. NOT BUILT YET — deliberately says so rather
+   * than doing nothing, so the gesture is discoverable and cannot quietly fall
+   * back to renaming, which is what it used to do.
+   */
+  _openDialog(d, id) {
+    const el = d.get(id);
+    this._select(id, false);
+    this._render();
+    this._flash(`Dialog for ${(el && el.label) || id} (${el && el.type ? el.type : 'submodel'}) — not built yet`);
   },
 
   /**
