@@ -30,6 +30,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     path: 'models/growth',
     padding: 40,
     maxFitScale: 2,
+    /** Influence curvature: sagitta as a fraction of the chord (§ _bow). */
+    bowFraction: 0.12,
   },
 
   // Layers, painted in this order (SVG has no z-index).
@@ -393,7 +395,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // bend, which a flow gets from routing through its valve.
     const crossings = d.portsFor(id).length;
     const marker = arc.type === 'flow' ? 'slx-arrow-flow' : 'slx-arrow-influence';
-    const bowed = arc.type === 'influence' && !crossings && pts.length === 2;
+    // Influences are curved — including each segment of one that crosses a
+    // boundary. Flows and roles stay straight.
+    const bowed = arc.type === 'influence';
 
     for (let i = 0; i < pts.length - 1; i++) {
       const p1 = pts[i];
@@ -751,13 +755,35 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     return { x, y: y2 };
   },
 
-  /** A single-segment influence keeps Simile's slight bow. */
+  /**
+   * An influence is drawn as an ARC OF A CIRCLE through its two ends, bulging
+   * to one side by a fixed fraction of the chord.
+   *
+   * Geometry: for chord c and sagitta h, the radius is (c²/4 + h²) / 2h. The
+   * arc is always less than a semicircle (h < c/2), so large-arc-flag is 0; the
+   * sweep flag picks the side, and is derived from the sign of the cross
+   * product so the bulge lands consistently whichever way the arc is drawn.
+   *
+   * (Quadratic and spline alternatives are still open — this is the simple
+   * choice, deliberately.)
+   */
   _bow(p1, p2) {
-    const mx = (p1.x + p2.x) / 2;
-    const my = (p1.y + p2.y) / 2;
-    const nx = -(p2.y - p1.y) * 0.25;
-    const ny = (p2.x - p1.x) * 0.25;
-    return `M${p1.x},${p1.y} Q${mx + nx},${my + ny} ${p2.x},${p2.y}`;
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const c = Math.hypot(dx, dy);
+    if (c < 1) return `M${p1.x},${p1.y} L${p2.x},${p2.y}`;
+
+    const h = c * this.options.bowFraction;
+    if (h < 0.5) return `M${p1.x},${p1.y} L${p2.x},${p2.y}`;
+    const r = (c * c / 4 + h * h) / (2 * h);
+
+    // Bulge to the left of travel: centre lies on the other side of the chord.
+    const cxm = (p1.x + p2.x) / 2 - (-dy / c) * (r - h);
+    const cym = (p1.y + p2.y) / 2 - (dx / c) * (r - h);
+    const cross = (p1.x - cxm) * (p2.y - cym) - (p1.y - cym) * (p2.x - cxm);
+    const sweep = cross > 0 ? 1 : 0;
+
+    return `M${p1.x},${p1.y} A${r},${r} 0 0,${sweep} ${p2.x},${p2.y}`;
   },
 
   /**

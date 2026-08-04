@@ -139,6 +139,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
 3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-30 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
+5. **Influence curve geometry.** Influence arcs are drawn as curves, not straight lines — including each segment of one that crosses a boundary. **Provisionally an arc of a circle** (sagitta a fixed fraction of the chord, currently 0.12), chosen 2026-08-04 as the simple option. Quadratic Bézier and spline are the alternatives, and the choice interacts with user-dragged waypoints once those exist. Flows and role arcs stay straight.
 
 ## 8. Questions for the Simile developer **[ASK]**
 
