@@ -498,7 +498,10 @@
      * Everything that must go when `ids` go — the closure of a deletion.
      *
      * The lifecycle rules were settled in §4, and they differ per type:
-     *   - a **submodel** takes its contents with it, at any depth;
+     *   - a **submodel** takes its contents with it, at any depth. (Dissolving
+     *     the box but KEEPING its contents is a separate `ungroup` command,
+     *     planned, not built: it re-parents the contents to the submodel's own
+     *     parent and re-seeds ports, both of which already exist here.)
      *   - any element takes the **arcs** attached to it, since an arc with one
      *     missing end is not a thing;
      *   - a **flow** takes its valve, which is one-to-one with it;

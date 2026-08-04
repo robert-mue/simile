@@ -59,7 +59,9 @@ attached to it; a flow takes its valve and vice versa; a **cloud is refcounted**
 and goes only when the last flow touching it does. Layout owned by the removed
 elements goes too, ports included. One action, so one undo step however wide the
 cascade — and the count is reported, since a delete can reach much further than
-what was selected.
+what was selected. **Deleting a submodel deletes its contents** (ruled
+2026-08-04) — dissolving the box while keeping its contents is a separate
+**ungroup** command, planned but not built.
 
 **9. Property dialogs — `src/dialog.js`**
 Modal, per element type, driven by the schema's field model; an optional HTML
@@ -81,6 +83,11 @@ build against.
 
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.
+
+**Ungroup.** Dissolve a submodel but keep its contents, promoting them to its
+parent. Distinct from delete, which takes the contents with it. The mechanics
+already exist — re-parenting and port re-seeding — so this is mostly a command
+and a menu entry.
 
 ---
 
