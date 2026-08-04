@@ -87,6 +87,14 @@ Simile type by type.*
 
 ## Not started
 
+**Equation parser.** A separate utility at widget level. Two things to settle
+first: *which parser* (the no-build constraint allows a generator whose output
+is vendored, e.g. Peggy, or a hand-written recursive-descent one — the user has
+one he likes from webakt, identify that first) and *what it is for*, since the
+editor never evaluates equations: syntax checking for the red/black colouring,
+and extracting the names an equation references so they can be cross-checked
+against the influence arrows actually drawn. A big piece; not started.
+
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.
 
