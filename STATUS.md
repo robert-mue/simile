@@ -6,7 +6,7 @@ Last updated 2026-08-04.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Only the grammar engine and file save remain unstarted.**
+**Only file save, ungroup and the view commands remain unstarted.**
 
 ---
 
@@ -63,6 +63,18 @@ what was selected. **Deleting a submodel deletes its contents** (ruled
 2026-08-04) — dissolving the box while keeping its contents is a separate
 **ungroup** command, planned but not built.
 
+**8. Grammar engine — `src/grammar.js`**
+Evaluates the schema's rules; contains no rule of its own. All four §12.4
+callers exist: `mayConnect` (refuses an illegal arc mid-gesture), `mayContain`
+(placing and dropping), `validate` (whole model, reported never blocking, wired
+to a **check model** button), and `behaviour` (how to draw — read from the
+vocabulary). Rules quantify over derived facts: `parentKind` matches the
+inferred *conditional* and *association* kinds as well as the declared one.
+The escape hatch is a named predicate in `Sienna.grammar.predicates`; an unknown
+name throws rather than silently passing.
+*Note: submodel CAPTURE reports rather than refuses — boxing a flat model and
+then declaring the box a population passes through an illegal state on purpose.*
+
 **9. Property dialogs — `src/dialog.js`**
 Modal, per element type, driven by the schema's field model; an optional HTML
 template can replace the generated form, bound by the same `data-field` rule.
@@ -74,12 +86,6 @@ Simile type by type.*
 ---
 
 ## Not started
-
-**8. Grammar engine.** The rules exist in the schema and are **never consulted**,
-so any connection or containment can currently be made. Design is settled
-(§12): three enforcement classes — preventive, deferred, behavioural — and four
-callers. Awaiting more rules from the Simile developer, though enough exist to
-build against.
 
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.

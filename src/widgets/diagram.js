@@ -104,8 +104,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     $('<span class="slx-palette-group">').text('connect').appendTo(bar);
     Object.keys(schema.arcs).forEach((t) => add('arc', t, t));
 
+    $('<span class="slx-palette-group">').text('check').appendTo(bar);
+    $('<button type="button" data-act="validate">').text('check model').appendTo(bar);
+
     this._on(bar, {
       'click button': (e) => {
+        if ($(e.currentTarget).attr('data-act') === 'validate') return this._validate();
         const tool = $(e.currentTarget).attr('data-tool');
         this._tool = this._tool === tool ? null : tool;   // click again to drop it
         this._syncPalette();
@@ -215,6 +219,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const p = this._toWorld(e.clientX, e.clientY);
     const parent = this._dropTargetAt(d, p, null);
 
+    if (kind !== 'submodel') {
+      const verdict = Sienna.grammar.mayContain(d, type, parent);
+      if (!verdict.ok) { this._flash(verdict.message); return; }
+    }
+
     let id;
     if (kind === 'submodel') {
       id = d.addSubmodel({ parent, x: p.x, y: p.y, label: '' });
@@ -260,6 +269,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._syncPalette();
       const id = d.addSubmodel(Object.assign({ parent: this._dropTargetAt(d, origin, null), label: '' }, box));
       this._render();
+      // Capture is NOT refused when it creates an illegal containment: boxing a
+      // flat model and then declaring the box a population is a workflow we
+      // deliberately support, and it passes through exactly this state. So the
+      // breach is REPORTED, in the manner of the validation pass (§12.5).
+      const bad = Sienna.grammar.validate(d).filter((v) => d.parentOf(v.id) === id);
+      if (bad.length) this._flash(`${bad[0].message} (${bad.length} to fix)`);
       this._editLabel(d, id);
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
@@ -724,6 +739,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   _createArc(d, type, fromId, toId, dropPoint, anchor) {
+    // §12.3: structural rules are PREVENTIVE — refuse the gesture and say why.
+    const verdict = Sienna.grammar.mayConnect(d, type, fromId, toId);
+    if (!verdict.ok) { this._flash(verdict.message); return; }
+
     if (type === 'flow') {
       if (!fromId && !toId) return;                // a flow with neither end is nothing
       // Either blank end becomes a cloud: addFlow does that when an end is null,
@@ -826,6 +845,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (moved) {
         const newParent = drag.dropTarget !== undefined ? drag.dropTarget : null;
         const changed = !isSub && newParent !== d.parentOf(id);
+        if (changed) {
+          const verdict = Sienna.grammar.mayContain(d, id, newParent);
+          if (!verdict.ok) {
+            // Refuse the whole drop, not just the re-parenting: leaving the
+            // element sitting inside a submodel it does not belong to would be
+            // a diagram that lies about its own model.
+            this._flash(verdict.message);
+            this._render();
+            return;
+          }
+        }
         d.commitDrag(drag.moves, changed ? { id, parent: newParent } : null);
       }
       if (moved || drag) this._render();
@@ -932,6 +962,22 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const i = this._sel.indexOf(id);
     if (i >= 0) this._sel.splice(i, 1);
     else this._sel.push(id);
+  },
+
+  /**
+   * (3) The whole-model pass. Reports, never blocks — it catches states reached
+   * by routes the preventive checks do not sit on: a submodel capture, an
+   * import, or a kind changed under contents that were legal before (§12.5's
+   * non-monotonicity).
+   */
+  _validate() {
+    const d = this._diagram();
+    if (!d) return;
+    const found = Sienna.grammar.validate(d);
+    if (!found.length) { this._flash('No rule breaches found'); return; }
+    this._sel = found.map((v) => v.id);
+    this._render();
+    this._flash(`${found.length} breach${found.length > 1 ? 'es' : ''}: ${found[0].label} — ${found[0].message}`);
   },
 
   /**

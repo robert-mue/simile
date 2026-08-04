@@ -197,16 +197,12 @@
         enforcement: 'preventive', confidence: 'known',
         message: 'Population symbols may only appear inside a population submodel.' },
 
-      // Behavioural: no gesture can violate these, so they carry no message.
-      // They tell the arc-drawing routine what to do (§12.3, §12.4 q4).
-      { id: 'influence-branches', subject: 'arc:influence', branches: true,
-        enforcement: 'behavioural', confidence: 'known' },
-
-      { id: 'flow-role-no-branch', subject: 'arc:flow|arc:role', branches: false,
-        enforcement: 'behavioural', confidence: 'known' },
-
-      { id: 'no-arc-on-arc', subject: 'arc', endsOn: 'node|submodel',
-        enforcement: 'behavioural', confidence: 'known' },
+      // Behavioural facts — "an influence may branch", "a flow may not", "an
+      // arc never terminates on an arc" — are deliberately NOT listed here.
+      // They live in the VOCABULARY above, on each type (`branches`,
+      // `attachmentNode`), which is where the arc-drawing routine already reads
+      // them. Holding them here as well meant the same fact twice. Callers
+      // reach them through Sienna.grammar.behaviour(); see §12.3 and §12.4 q4.
     ],
 
     // =====================================================================
