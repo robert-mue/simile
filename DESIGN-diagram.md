@@ -78,7 +78,7 @@ Key points:
 - **Ids** are numerically incremented, prefixed by family: `node1`, `arc1`, `submodel1`. The prefix also names which map to look in.
 - **Arcs** carry `from`/`to` as element-id strings, and **no `parent`** — a cross-boundary arc is *one* arc, drawn as several segments (§13). Arcs never terminate on arcs: an influence into a flow targets the flow's **valve** (`arc2 → node5`). Only **role** arcs carry a `label`; flow and influence arcs do not (§14).
 - **Valves** are real, auto-created node elements, one per flow, holding the flow's label/name and its rate equation. They are the System Dynamics instance of a general **attachment node** — the node a notation creates so that things can be hung off an arc; in other notations (e.g. webakt causal links) the same node has no glyph. Visible-or-not is a **style** fact (§6), not a model fact.
-- **Submodel `kind`** = membership only (`single` / `fixed-membership` / `population`). *Conditional* and *association* are **inferred**, not stored: a submodel is conditional if it contains a condition node; it is an association if role arcs point into it. An association between S1 and S2 is modelled by adding a **third** submodel S3 with role arcs S1→S3 and S2→S3 — **never** S1→S2; S3 becomes the association by virtue of those arcs. (Per-record and special-grid kinds deferred.)
+- **Submodel `kind`** = membership only (`single` / `fixed-membership` / `population`). *Conditional* and *association* are **inferred**, not stored: a submodel is conditional if it contains a condition node — **any number** are allowed, AND-ed together (§12.8) — and it is an association if role arcs point into it. An association between S1 and S2 is modelled by adding a **third** submodel S3 with role arcs S1→S3 and S2→S3 — **never** S1→S2; S3 becomes the association by virtue of those arcs. (Per-record and special-grid kinds deferred.)
 - **Clouds** are real, auto-created node elements (created at a flow's blank end). Traditionally unnamed (a stock whose value we don't care about) but **optionally nameable** — e.g. "atmosphere"/"ocean" in a hydrological model. A cloud may carry **several** in/outflows, so it is deleted only when the flow being deleted was its **last** connection — unlike a valve, which is one-to-one with its flow and dies with it.
 - **Completeness** (Simile's red-until-defined, black-when-complete) is **derived** from whether props are filled, not stored.
 - **Enumerated types** live at model level.
@@ -149,7 +149,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 - **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference? *(Partly answered 2026-07-30: condition nodes do carry a label, indicating what the condition is based on.)*
 - **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? And is name-uniqueness scoped to the containing submodel?
 - **Completeness (red/black):** The precise rule for when an element flips from red (incomplete) to black — per element type.
-- **Vocabulary drift:** Are `event` / `state` / `squirt` / `satellite` / per-record & special-grid submodels genuinely later additions to the canonical set (compartment, variable, submodel, flow, influence, role, condition, initialiser, migrator, reproducer, exterminator)? Anything else we've missed?
+- **Vocabulary drift:** Are `event` / `state` / `squirt` / `satellite` / per-record & special-grid submodels genuinely later additions to the canonical set (compartment, variable, submodel, flow, influence, role, condition, initialiser, migrator, ~~reproducer~~ **reproduction** *(corrected 2026-08-04, §12.8)*, exterminator)? Anything else we've missed?
 - **Anything about the model that is hard to express as flat id-keyed maps + parent pointers** — deep nesting (FLORES: Village▸Household▸5 submodels, 900+ patches), associations between deeply-nested submodels, array access (`element()`/`index()`).
 
 ## 9. Test cases
@@ -344,9 +344,76 @@ Eventually each rule should therefore declare **what it depends on**, so re-chec
 
 ### 12.6 Left open
 
-- The **rule catalogue** — awaiting the Simile developer's list of specific checks and their timing. *Seeded 2026-07-31 with the first entries we know independently:* **influences may branch; flows and role arcs may not** (§13.3), and **an arc may not terminate on an arc** (influences into a flow resolve to its valve; §4). All are **behavioural**, not preventive — they carry no message and are consulted by the arc-drawing routine, per the third row of §12.3 and question 4 of §12.4. *(These were first recorded as preventive rules with refusal messages; corrected the same day — no gesture can violate them.)*
+- The **rule catalogue** — **first entries received from the Simile developer 2026-08-04, see §12.8**; more expected. *Seeded 2026-07-31 with the entries we knew independently:* **influences may branch; flows and role arcs may not** (§13.3), and **an arc may not terminate on an arc** (influences into a flow resolve to its valve; §4). All are **behavioural**, not preventive — they carry no message and are consulted by the arc-drawing routine, per the third row of §12.3 and question 4 of §12.4. *(These were first recorded as preventive rules with refusal messages; corrected the same day — no gesture can violate them.)*
 - The exact **rule vocabulary** (`ends` / `contains` / `parentKind` above are illustrative, not final) — best fixed against that catalogue plus the SBML cross-check, so it is not over-fitted to Simile.
 - Whether rules live **in the schema file** alongside vocabulary/dialogs/styling (§3's second face) or as a separable ruleset. Assumed in-schema for now.
+
+
+### 12.7 Starter rules (illustrative, deliberately incomplete)
+
+*Added 2026-07-31.* These exist to **populate the rule base so the engine can be built and exercised** — not to be a correct or complete grammar for Simile. Completeness is explicitly **not** a precondition for starting the diagramming code: rules are data, so adding the rest later is editing a file, not reworking the engine. Jasper's catalogue, when it arrives, replaces and extends this.
+
+Each is tagged **[known]** (we are confident) or **[guess]** (plausible, to be confirmed — safe because a wrong starter rule is one line to fix).
+
+```js
+// --- structural / preventive: connectivity ---
+{ id:"flow-ends", subject:"arc:flow", ends:["compartment","cloud"],              // [known]
+  message:"A flow must run between compartments or clouds." },
+
+{ id:"flow-not-cloud-to-cloud", subject:"arc:flow", not:{ ends:["cloud","cloud"] },   // [guess]
+  message:"A flow must have a compartment at at least one end." },
+
+{ id:"role-ends", subject:"arc:role", ends:["submodel","submodel"],              // [known]
+  message:"A role arc must run from a submodel to an association submodel." },
+
+{ id:"influence-target", subject:"arc:influence",                                // [guess]
+  toTypes:["variable","valve","condition","compartment"],
+  message:"An influence must end at a variable, valve, condition or compartment." },
+
+// --- structural / preventive: containment + cardinality ---
+{ id:"one-condition", subject:"submodel", contains:{ condition:{ max:1 } },      // [guess]
+  message:"A submodel may hold at most one condition." },
+
+{ id:"population-symbols", subject:"node:initialiser|migrator|exterminator",     // [known]
+  parentKind:"population",
+  message:"Population symbols may only appear inside a population submodel." },
+
+// --- behavioural (§12.3, silent — no message) ---
+{ id:"branching", subject:"arc:influence", branches:true },                      // [known]
+{ id:"no-branching", subject:"arc:flow|arc:role", branches:false },              // [known]
+```
+
+Two things this small set is *for*, beyond having rules at all:
+
+- it spans **all three enforcement classes minus content** — connectivity, containment/cardinality, and behavioural — so the engine's call signature (§12.4) is exercised by real cases rather than designed against one;
+- it includes a `not:` and a multi-type `subject:`, which is where a declarative rule shape usually first shows strain. Better to meet that now, with two rules, than after fifty.
+
+**The vocabulary in these rules is provisional** (§12.6): `ends` / `not` / `toTypes` / `contains` / `parentKind` / `branches` are working names, to be fixed against Jasper's catalogue plus the SBML cross-check so the shape is not over-fitted to Simile.
+
+### 12.8 Rules from the Simile developer (batch 1, 2026-08-04)
+
+Four rules, now in `src/schema/simile-v1.js`. All are **structural, hence preventive** (§12.3) — each is something a user can attempt and must be refused, unlike the behavioural entries of §12.6.
+
+1. **Population symbols only inside a population submodel.** We already had this, guessed correctly and tagged `known`. It brought a vocabulary addition with it: **`reproduction` is a fourth population symbol**, alongside initialiser, migrator and exterminator. Added to the schema's node types and to the rule's subject. *(Note the spelling: `reproduction`, not the "reproducer" of §8's vocabulary list — §8 asked whether that list was right, and this is part of the answer.)*
+2. **No reverse role arc.** Given a role arc S1→S2, the reverse S2→S1 is refused.
+3. **A conditional submodel may hold ANY NUMBER of condition symbols**, which are **AND-ed** together.
+4. **No condition symbol inside a population submodel.**
+
+**(3) corrects us, and the `guess` tagging did its job.** §12.7's starter set contained `one-condition` — *"a submodel may hold at most one condition"* — tagged `guess`. It is simply wrong: there is no limit. The rule is **removed rather than relaxed**, since with no cardinality bound there is nothing left for it to say. This is exactly the outcome the confidence tags were for (§12.7: "a wrong starter rule is one line to fix"), and it is worth recording that the mechanism paid for itself on the first contact with reality. The AND-ing of multiple conditions is a *semantic* fact for the engine, not a grammar rule — the editor stores the conditions and never combines them (§1).
+
+**(2) forced the rule vocabulary to grow, which is the useful signal here.** Every rule so far constrains an arc or element *in isolation* — its endpoint types, its parent's kind, what it may contain. "No reverse role" is the first that quantifies over **the arcs that already exist**: whether S1→S2 is legal depends on whether S2→S1 is already drawn. The endpoint tables of §12.1 cannot express that. It is recorded declaratively as a new term:
+
+```js
+{ id:"no-reverse-role", subject:"arc:role", noReverse:true,
+  enforcement:"preventive", confidence:"known",
+  message:"These two submodels already have a role arc in the other direction." }
+```
+
+rather than pushed into a named predicate (§12.2's escape hatch), because "this relation is one-directional between a pair" is a recognisable, reusable pattern that another notation could want — whereas the escape hatch is for genuine one-offs. Worth watching: if the next batch brings two or three more rules of this shape and each needs its own term, that is evidence the rule language wants a general way to talk about *existing* arcs, rather than a growing list of special terms. **Not generalising yet** — one instance is not a pattern (§12.6 keeps the vocabulary open pending exactly this kind of evidence).
+
+**(4) is the first rule that mixes a declared kind with an inferred one.** *Population* is a stored `kind`; *conditional* is inferred from containing a condition (decision #3). So this rule says: a submodel may not be both. It quantifies over derived facts in the way §12.5 anticipated, and it is non-monotonic in the same way — dropping a condition into a population submodel is refused, but *changing a submodel's kind to population* while it already holds a condition is the same violation reached from the other side, and only the second is a change to an element the rule does not mention. Whichever way the engine is built, both routes need checking.
+
+**Still nothing is enforced** — there is no grammar engine. These are declared, so that the engine has real rules to run against when it is written.
 
 ## 13. Arcs, segments and ports — cross-boundary connections
 
@@ -499,44 +566,3 @@ The point is that both are true, and the trade is about diagram legibility at sc
 This is a **discipline for code not yet written** (§11 decided we build the renderer ourselves), so it costs nothing today and must simply be honoured when the renderer is built. It is *not* a request to model appearances now: there is no appearance id, no appearance map, no second appearance — only one indirection, so that adding them later is a change in one place.
 
 **Likely trigger for revisiting:** importing legacy Simile models that already contain ghosts, or clutter becoming unmanageable in a large test model. Not a decision to re-open before then.
-
-### 12.7 Starter rules (illustrative, deliberately incomplete)
-
-*Added 2026-07-31.* These exist to **populate the rule base so the engine can be built and exercised** — not to be a correct or complete grammar for Simile. Completeness is explicitly **not** a precondition for starting the diagramming code: rules are data, so adding the rest later is editing a file, not reworking the engine. Jasper's catalogue, when it arrives, replaces and extends this.
-
-Each is tagged **[known]** (we are confident) or **[guess]** (plausible, to be confirmed — safe because a wrong starter rule is one line to fix).
-
-```js
-// --- structural / preventive: connectivity ---
-{ id:"flow-ends", subject:"arc:flow", ends:["compartment","cloud"],              // [known]
-  message:"A flow must run between compartments or clouds." },
-
-{ id:"flow-not-cloud-to-cloud", subject:"arc:flow", not:{ ends:["cloud","cloud"] },   // [guess]
-  message:"A flow must have a compartment at at least one end." },
-
-{ id:"role-ends", subject:"arc:role", ends:["submodel","submodel"],              // [known]
-  message:"A role arc must run from a submodel to an association submodel." },
-
-{ id:"influence-target", subject:"arc:influence",                                // [guess]
-  toTypes:["variable","valve","condition","compartment"],
-  message:"An influence must end at a variable, valve, condition or compartment." },
-
-// --- structural / preventive: containment + cardinality ---
-{ id:"one-condition", subject:"submodel", contains:{ condition:{ max:1 } },      // [guess]
-  message:"A submodel may hold at most one condition." },
-
-{ id:"population-symbols", subject:"node:initialiser|migrator|exterminator",     // [known]
-  parentKind:"population",
-  message:"Population symbols may only appear inside a population submodel." },
-
-// --- behavioural (§12.3, silent — no message) ---
-{ id:"branching", subject:"arc:influence", branches:true },                      // [known]
-{ id:"no-branching", subject:"arc:flow|arc:role", branches:false },              // [known]
-```
-
-Two things this small set is *for*, beyond having rules at all:
-
-- it spans **all three enforcement classes minus content** — connectivity, containment/cardinality, and behavioural — so the engine's call signature (§12.4) is exercised by real cases rather than designed against one;
-- it includes a `not:` and a multi-type `subject:`, which is where a declarative rule shape usually first shows strain. Better to meet that now, with two rules, than after fifty.
-
-**The vocabulary in these rules is provisional** (§12.6): `ends` / `not` / `toTypes` / `contains` / `parentKind` / `branches` are working names, to be fixed against Jasper's catalogue plus the SBML cross-check so the shape is not over-fitted to Simile.

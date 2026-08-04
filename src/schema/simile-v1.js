@@ -70,6 +70,7 @@
       initialiser:  { label: true,  fields: ['expr'] },
       migrator:     { label: true,  fields: ['expr'] },
       exterminator: { label: true,  fields: ['expr'] },
+      reproduction: { label: true,  fields: ['expr'] },
     },
 
     arcs: {
@@ -136,11 +137,27 @@
         enforcement: 'preventive', confidence: 'guess',
         message: 'An influence must end at a variable, valve, condition or compartment.' },
 
-      { id: 'one-condition', subject: 'submodel', contains: { condition: { max: 1 } },
-        enforcement: 'preventive', confidence: 'guess',
-        message: 'A submodel may hold at most one condition.' },
+      // NO cardinality limit on conditions: a submodel may hold any number, and
+      // they are AND-ed together (Simile developer, 2026-08-04). The earlier
+      // `one-condition` rule guessed max:1 and was simply wrong — removed rather
+      // than relaxed, since there is nothing left to constrain.
 
-      { id: 'population-symbols', subject: 'node:initialiser|migrator|exterminator',
+      // (4) A condition may not sit in a population submodel.
+      { id: 'condition-not-in-population', subject: 'node:condition',
+        not: { parentKind: 'population' },
+        enforcement: 'preventive', confidence: 'known',
+        message: 'A condition symbol may not appear inside a population submodel.' },
+
+      // (2) Roles between two submodels are one-directional: given S1->S2, the
+      // reverse S2->S1 is refused. `noReverse` is a new vocabulary term — the
+      // rule quantifies over the arcs that already exist, which the endpoint
+      // tables could not express.
+      { id: 'no-reverse-role', subject: 'arc:role', noReverse: true,
+        enforcement: 'preventive', confidence: 'known',
+        message: 'These two submodels already have a role arc in the other direction.' },
+
+      { id: 'population-symbols',
+        subject: 'node:initialiser|migrator|exterminator|reproduction',
         parentKind: 'population',
         enforcement: 'preventive', confidence: 'known',
         message: 'Population symbols may only appear inside a population submodel.' },
