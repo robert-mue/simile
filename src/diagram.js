@@ -552,26 +552,90 @@
     },
 
     /**
-     * Add a submodel. (Kept minimal — creating one *around* existing elements
-     * needs re-parenting, which is not built yet.)
+     * Add a submodel — which **captures whatever it encloses**.
+     *
+     * This is how structure gets imposed on a model that already exists: draw a
+     * box round part of a flat model and those parts become its contents; draw
+     * one round the whole thing and declare it a population, and you have many
+     * copies of what you drew. So:
+     *
+     *   - enclosed **nodes** (and enclosed submodels) take the new submodel as
+     *     their parent;
+     *   - **arcs** that now cross the new boundary are treated exactly as if
+     *     they had been drawn that way — their ports are seeded, so they split
+     *     into segments (§13) with no special case.
+     *
+     * Capture is part of the same action, so the whole thing is one undo step.
+     *
+     * Only **siblings** are captured — elements whose parent is the same as the
+     * new submodel's. Something already inside another submodel is not stolen
+     * merely because the boxes overlap on screen. Enclosure means FULLY inside:
+     * an element straddling the new edge is left alone, since it is ambiguous
+     * whether the user meant to include it.
      */
     addSubmodel: function (o) {
       var opt = o || {};
       this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('submodel');
+      var parent = opt.parent != null ? opt.parent : null;
+      var rect = this._geom(opt);
+      var captured = rect ? this._enclosedBy(rect, parent) : [];
+
       Sienna.actions.dispatch(
-        { type: 'diagram.addSubmodel', target: this.path, payload: { id: id, label: opt.label || '' } },
+        {
+          type: 'diagram.addSubmodel',
+          target: this.path,
+          payload: { id: id, label: opt.label || '', captured: captured.length },
+        },
         function () {
           self._put('submodels', id, {
             kind: opt.kind || 'single',
-            parent: opt.parent != null ? opt.parent : null,
+            parent: parent,
             label: opt.label || '',
             props: opt.props || {},
-          }, self._geom(opt));
+          }, rect);
+
+          captured.forEach(function (el) {
+            Sienna.userData.set(self.path + '/' + mapOf(el) + '/' + el + '/parent', id);
+          });
+
+          // Every arc may now cross a boundary it did not before. Re-seeding is
+          // idempotent — it only fills in ports that are missing.
+          if (captured.length) self._seedAllPorts();
         }
       );
       return id;
+    },
+
+    /**
+     * Ids of elements lying wholly within `rect` whose parent is `parent`.
+     * Used by submodel capture; the geometry test is on the element's box, so
+     * it matches what the user can see.
+     */
+    _enclosedBy: function (rect, parent) {
+      var self = this;
+      var x1 = rect.x - (rect.w || 0) / 2;
+      var x2 = rect.x + (rect.w || 0) / 2;
+      var y1 = rect.y - (rect.h || 0) / 2;
+      var y2 = rect.y + (rect.h || 0) / 2;
+      var out = [];
+      ['nodes', 'submodels'].forEach(function (fam) {
+        self.ids(fam).forEach(function (el) {
+          if (self.parentOf(el) !== parent) return;      // siblings only
+          var b = self.box(el);
+          if (b.cx - b.w / 2 < x1 || b.cx + b.w / 2 > x2) return;
+          if (b.cy - b.h / 2 < y1 || b.cy + b.h / 2 > y2) return;
+          out.push(el);
+        });
+      });
+      return out;
+    },
+
+    /** Seed ports for every arc (idempotent; used after containment changes). */
+    _seedAllPorts: function () {
+      var self = this;
+      this.ids('arcs').forEach(function (a) { self._seedPorts(a); });
     },
 
     /**

@@ -164,6 +164,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
           this._beginArcDraw(e, this._diagram(), null);                // from blank space
           return;
         }
+        if (this._tool === 'submodel:submodel') {
+          this._beginSubmodelDraw(e);                                  // drag out a box
+          return;
+        }
         if (this._tool) { this._placeAt(e); return; }                  // creating, not panning
         this._userView = true;
         const start = { x: e.clientX, y: e.clientY, vx: this._view.x, vy: this._view.y };
@@ -204,6 +208,45 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._syncPalette();
     this._render();
     this._editLabel(d, id);                        // straight into naming it
+  },
+
+  /**
+   * Draw a submodel by dragging out its rectangle — the gesture that matters,
+   * because a submodel is usually drawn AROUND things that already exist, and
+   * it captures whatever it encloses. A plain click (no drag) still gives a
+   * default-sized empty box.
+   */
+  _beginSubmodelDraw(e) {
+    const d = this._diagram();
+    if (!d) return;
+    const origin = this._toWorld(e.clientX, e.clientY);
+    const ghost = this._el('rect', { class: 'slx-ghost-box', rx: 4 });
+    this._layer.overlay.appendChild(ghost);
+
+    let cur = origin;
+    const move = (ev) => {
+      cur = this._toWorld(ev.clientX, ev.clientY);
+      ghost.setAttribute('x', Math.min(origin.x, cur.x));
+      ghost.setAttribute('y', Math.min(origin.y, cur.y));
+      ghost.setAttribute('width', Math.abs(cur.x - origin.x));
+      ghost.setAttribute('height', Math.abs(cur.y - origin.y));
+    };
+    const end = () => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      ghost.remove();
+      const w = Math.abs(cur.x - origin.x);
+      const h = Math.abs(cur.y - origin.y);
+      const dragged = w > 20 && h > 20;
+      const box = dragged
+        ? { x: (origin.x + cur.x) / 2, y: (origin.y + cur.y) / 2, w, h }
+        : { x: origin.x, y: origin.y };
+      this._tool = null;
+      this._syncPalette();
+      const id = d.addSubmodel(Object.assign({ parent: this._dropTargetAt(d, origin, null), label: '' }, box));
+      this._render();
+      this._editLabel(d, id);
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
 
   _applyView() {
@@ -558,6 +601,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // With a placing tool armed, a press on an existing element is still a
     // placement, not a drag — otherwise nothing could ever be put INSIDE a
     // submodel, since the submodel's own body covers its whole interior.
+    if (this._tool === 'submodel:submodel') { e.stopPropagation(); return this._beginSubmodelDraw(e); }
     if (this._tool) { e.stopPropagation(); return this._placeAt(e); }
     if (this._drag || this._portDrag) return;
     e.preventDefault();

@@ -237,3 +237,12 @@
   font: 12px/1.3 system-ui, sans-serif;
   z-index: 6;
 }
+
+/* The rectangle being dragged out for a new submodel. */
+.slx-ghost-box {
+  fill: rgba(74, 127, 181, 0.08);
+  stroke: #4a7fb5;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+  pointer-events: none;
+}
