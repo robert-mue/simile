@@ -265,3 +265,95 @@
   stroke-dasharray: 3 2;
   pointer-events: none;
 }
+
+/* --- property dialog ------------------------------------------------ */
+
+.slx-dlg-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 24, 30, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.slx-dlg {
+  min-width: 300px;
+  max-width: 420px;
+  max-height: 90%;
+  overflow: auto;
+  padding: 16px 18px;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.slx-dlg h2 {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a8290;
+}
+
+.slx-dlg-row { margin-bottom: 12px; }
+
+.slx-dlg-row label {
+  display: block;
+  margin-bottom: 3px;
+  color: #444;
+}
+
+.slx-dlg-row input[type='text'],
+.slx-dlg-row input[type='number'],
+.slx-dlg-row select,
+.slx-dlg-row textarea {
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid #ccd2da;
+  border-radius: 3px;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.slx-dlg-row textarea { resize: vertical; font-family: ui-monospace, monospace; }
+
+.slx-dlg-help {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: #8b929c;
+}
+
+.slx-dlg-error {
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: #fdeaea;
+  color: #a32b2b;
+  font-size: 12px;
+}
+
+.slx-dlg-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.slx-dlg-buttons button {
+  padding: 6px 14px;
+  border: 1px solid #ccd2da;
+  border-radius: 3px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.slx-dlg-buttons button[data-act='ok'] {
+  background: #2f7fd0;
+  border-color: #2f7fd0;
+  color: #fff;
+}

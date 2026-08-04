@@ -57,23 +57,55 @@
     // =====================================================================
     // 2. VOCABULARY (§3.1)
     // =====================================================================
-    // Per-type declarations. `label` says whether the type carries a
-    // user-editable label (which doubles as its equation name); `autoCreated`
+    // Per-type declarations. `has_label` says whether the type carries a
+    // user-editable label at all — distinct from a field descriptor's `label`,
+    // which is that field's display name. `autoCreated`
     // marks types the editor creates as a side effect of another gesture,
     // never from the palette.
     nodes: {
-      compartment:  { label: true,  fields: ['initial'] },
-      variable:     { label: true,  fields: ['value'] },
-      cloud:        { label: 'optional', autoCreated: true, fields: [] },
+      compartment:  { has_label: true,  fields: [
+        { name: 'initial', label: 'Initial value', type: 'expression',
+          help: 'Value at the start of the run.' },
+        { name: 'units',   label: 'Units', type: 'text' },
+      ] },
+      variable:     { has_label: true,  fields: [
+        { name: 'value', label: 'Value or expression', type: 'expression' },
+        { name: 'units', label: 'Units', type: 'text' },
+      ] },
+      cloud:        { has_label: 'optional', autoCreated: true, fields: [] },
       // A valve has no position of its own: it rides at the midpoint of its
       // flow, so dragging either end carries it along. Derived geometry is
       // never stored (§10.2).
-      valve:        { label: true,  autoCreated: true, positionedBy: 'arc', fields: ['rate'] },
-      condition:    { label: true,  fields: ['expr'] },
-      initialiser:  { label: true,  fields: ['expr'] },
-      migrator:     { label: true,  fields: ['expr'] },
-      exterminator: { label: true,  fields: ['expr'] },
-      reproduction: { label: true,  fields: ['expr'] },
+      valve:        { has_label: true,  autoCreated: true, positionedBy: 'arc', fields: [
+        { name: 'rate',  label: 'Rate', type: 'expression',
+          help: 'Amount flowing per unit time.' },
+        { name: 'units', label: 'Units', type: 'text' },
+      ] },
+      condition:    { has_label: true,  fields: [
+        { name: 'expr', label: 'Condition', type: 'expression',
+          help: 'The submodel exists for a member when this is true.' },
+      ] },
+      initialiser:  { has_label: true,  fields: [{ name: 'expr', label: 'Number created', type: 'expression' }] },
+      migrator:     { has_label: true,  fields: [{ name: 'expr', label: 'Migration condition', type: 'expression' }] },
+      exterminator: { has_label: true,  fields: [{ name: 'expr', label: 'Removal condition', type: 'expression' }] },
+      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Number of offspring', type: 'expression' }] },
+    },
+
+    // A submodel is one object whose KIND is a property (§2), so its dialog is
+    // where that gets chosen. `target: 'kind'` says the value is stored on the
+    // element itself rather than in its props.
+    submodel: {
+      has_label: true,
+      fields: [
+        { name: 'kind', label: 'Membership', type: 'choice', target: 'kind',
+          options: [
+            { value: 'single', label: 'Single instance' },
+            { value: 'fixed-membership', label: 'Fixed membership' },
+            { value: 'population', label: 'Population' },
+          ] },
+        { name: 'dimensions', label: 'Number of instances', type: 'expression',
+          help: 'Fixed-membership submodels only.' },
+      ],
     },
 
     arcs: {
@@ -83,7 +115,7 @@
       // to empty space. `branches:false` because branching a flow would divide
       // the quantity it carries (§13.3).
       flow: {
-        label: false,
+        has_label: false,
         branches: false,
         attachmentNode: 'valve',
         blankEnd: 'cloud',
@@ -93,7 +125,7 @@
       // freely. It has no label, but it does carry the local name (alias) the
       // target's equation uses for the imported value (§14.1).
       influence: {
-        label: false,
+        has_label: false,
         branches: true,
         alias: true,
         fields: [],
@@ -102,7 +134,7 @@
       // submodel that thereby becomes an association (§4: S1→S3 and S2→S3,
       // never S1→S2).
       role: {
-        label: true,
+        has_label: true,
         branches: false,
         fields: [],
       },

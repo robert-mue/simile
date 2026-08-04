@@ -850,7 +850,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    */
   _editLabel(d, id) {
     const el = d.get(id);
-    if (!el || (id.indexOf('arc') === 0 && !d.arcType(el.type).label)) return;
+    if (!el || (id.indexOf('arc') === 0 && !d.arcType(el.type).has_label)) return;
     // Position over the LABEL where it actually sits — which may have been
     // dragged away from its glyph — falling back to the glyph when there is no
     // label drawn. Taken from the rendered node rather than recomputing the
@@ -926,15 +926,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   /**
-   * (c) The element's own dialog. NOT BUILT YET — deliberately says so rather
-   * than doing nothing, so the gesture is discoverable and cannot quietly fall
-   * back to renaming, which is what it used to do.
+   * (c) The element's own settings dialog, built from the schema's field model
+   * for its type (see src/dialog.js). It writes through the model layer, so the
+   * widget re-renders from the resulting userData change like any other edit.
    */
   _openDialog(d, id) {
-    const el = d.get(id);
     this._select(id, false);
     this._render();
-    this._flash(`Dialog for ${(el && el.label) || id} (${el && el.type ? el.type : 'submodel'}) — not built yet`);
+    if (Sienna.propertyDialog) Sienna.propertyDialog(d, id, this.element);
   },
 
   /**

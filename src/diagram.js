@@ -64,11 +64,12 @@
    * A new element is born named after its own id ('node5'), not nameless.
    * A nameless element is invisible in equations and awkward to point at, and
    * an id is at least a legal, unique name the user can then improve on.
-   * Types the notation marks as optionally-labelled (clouds) are left blank.
+   * Types the notation marks as optionally-labelled (has_label:'optional', the
+   * clouds) are left blank.
    */
   function defaultLabel(spec, id, given) {
     if (given) return given;
-    return spec && spec.label === true ? id : '';
+    return spec && spec.has_label === true ? id : '';
   }
 
   function Diagram(path) {
@@ -454,6 +455,41 @@
         { type: 'diagram.setLabel', target: this.path, payload: { id: id, label: label } },
         function () {
           Sienna.userData.set(self.path + '/' + map + '/' + id + '/label', label || '');
+        }
+      );
+    },
+
+    /**
+     * Write an element's settings — label, props, and any fields that address
+     * the element itself (a submodel's `kind`) — as ONE action, so a visit to
+     * its dialog is a single undo step.
+     *
+     * Props are MERGED, not replaced: a dialog shows the fields its type
+     * declares, and must not silently drop anything it did not show.
+     *
+     * The label is validated (it is the equation name, §14); values and
+     * equations are not, because they are stored verbatim and never evaluated,
+     * and content rules report rather than block (§12.3).
+     */
+    setProperties: function (id, changes) {
+      var self = this;
+      var map = mapOf(id);
+      if (!map) return;
+      var c = changes || {};
+      if (c.label !== undefined) this.checkLabel(c.label);
+      var base = this.path + '/' + map + '/' + id;
+
+      Sienna.actions.dispatch(
+        { type: 'diagram.setProperties', target: this.path, payload: { id: id, fields: Object.keys(c.props || {}) } },
+        function () {
+          if (c.label !== undefined) Sienna.userData.set(base + '/label', c.label || '');
+          Object.keys(c.direct || {}).forEach(function (k) {
+            Sienna.userData.set(base + '/' + k, c.direct[k]);
+          });
+          if (c.props) {
+            var merged = Object.assign({}, self.get(id).props || {}, c.props);
+            Sienna.userData.set(base + '/props', merged);
+          }
         }
       );
     },
