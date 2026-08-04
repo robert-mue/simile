@@ -84,6 +84,24 @@ build against.
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.
 
+**View and selection commands.** A second row of controls — plain text buttons to
+begin with, possibly duplicated as right-click menu items later:
+
+| Command | Notes |
+|---|---|
+| Zoom in / Zoom out | Stepped equivalents of the wheel, which already works. |
+| Zoom to fit | The existing `_fit()`, which currently runs only on first paint and on panel resize; this exposes it as a command. |
+| Restore default | Back to the default zoom level (100%), as distinct from fitting. |
+| Re-centre | Centre the model in the panel without changing zoom. |
+| Select box | Rubber-band selection: drag a box, select what it encloses. |
+
+Two things to settle when building it. **Select box conflicts with panning**,
+since dragging blank canvas currently pans — arming it as a palette-style tool
+resolves that cleanly, and matches how the other tools already behave.
+And note that "enclosed" should probably mean the same here as it does for
+submodel capture (fully inside, siblings only), or the two will feel
+inconsistent.
+
 **Ungroup.** Dissolve a submodel but keep its contents, promoting them to its
 parent. Distinct from delete, which takes the contents with it. The mechanics
 already exist — re-parenting and port re-seeding — so this is mostly a command
