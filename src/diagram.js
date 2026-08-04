@@ -362,6 +362,29 @@
     },
 
     /**
+     * Rename an element. The label IS the equation name (§14), so this is a
+     * model change, validated against the notation's naming rule.
+     *
+     * Note what is deliberately NOT done: no equation anywhere is rewritten,
+     * and no influence alias is re-synced. Equations are stored verbatim and
+     * the editor never resolves them (§4), which is exactly why an alias is
+     * copied at arc creation rather than linked (§14.1) — so a rename cannot
+     * break a stored equation.
+     */
+    setLabel: function (id, label) {
+      this.checkLabel(label);
+      var self = this;
+      var map = mapOf(id);
+      if (!map) return;
+      Sienna.actions.dispatch(
+        { type: 'diagram.setLabel', target: this.path, payload: { id: id, label: label } },
+        function () {
+          Sienna.userData.set(self.path + '/' + map + '/' + id + '/label', label || '');
+        }
+      );
+    },
+
+    /**
      * Commit a drag: a map of layout keys to new positions, and optionally a
      * change of containment. ONE action, so however many elements moved — a
      * submodel carries its contents and its boundary's ports — the whole

@@ -39,7 +39,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this.element.addClass('slx-diagram');
 
     this._view = { x: 0, y: 0, k: 1 }; // pan/zoom: the one root transform
+    this._tool = null;                 // null = select/drag; else a palette tool
 
+    this._buildPalette();
     this._buildCanvas();
     this._bindView();
 
@@ -59,6 +61,57 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _diagram() {
     const path = this._bound() ? this._ref() : this.options.path;
     return Sienna.userData.get(path) ? new Sienna.Diagram(path) : null;
+  },
+
+  // ---- palette --------------------------------------------------------
+
+  /**
+   * The palette is generated from the schema's vocabulary, so a different
+   * notation gets a different palette with no code change (§3). Types marked
+   * `autoCreated` (cloud, valve) are omitted: they arrive as a side effect of
+   * drawing a flow and are never placed by hand.
+   */
+  _buildPalette() {
+    const bar = this._palette = $('<div class="slx-palette">').appendTo(this.element);
+    const d = this._diagram();
+    const schema = d ? d.schema() : null;
+    if (!schema) return;
+
+    const add = (kind, name, label, title) => {
+      $('<button type="button">')
+        .attr({ 'data-tool': kind + ':' + name, title: title || label })
+        .text(label)
+        .appendTo(bar);
+    };
+
+    $('<span class="slx-palette-group">').text('add').appendTo(bar);
+    Object.keys(schema.nodes).forEach((t) => {
+      if (!schema.nodes[t].autoCreated) add('node', t, t);
+    });
+    add('submodel', 'submodel', 'submodel');
+
+    $('<span class="slx-palette-group">').text('connect').appendTo(bar);
+    Object.keys(schema.arcs).forEach((t) => add('arc', t, t));
+
+    this._on(bar, {
+      'click button': (e) => {
+        const tool = $(e.currentTarget).attr('data-tool');
+        this._tool = this._tool === tool ? null : tool;   // click again to drop it
+        this._syncPalette();
+      },
+    });
+    this._on($(document), {
+      keydown: (e) => {
+        if (e.key === 'Escape') { this._tool = null; this._syncPalette(); }
+      },
+    });
+  },
+
+  _syncPalette() {
+    this._palette.find('button').each((i, b) => {
+      $(b).toggleClass('slx-active', $(b).attr('data-tool') === this._tool);
+    });
+    this.element.toggleClass('slx-placing', !!this._tool);
   },
 
   // ---- canvas ---------------------------------------------------------
@@ -103,6 +156,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       },
       pointerdown: (e) => {
         if (e.target !== this._svg && e.target !== this._root) return; // blank only
+        if (this._tool && this._tool.indexOf('arc:') === 0) {
+          this._beginArcDraw(e, this._diagram(), null);                // from blank space
+          return;
+        }
+        if (this._tool) { this._placeAt(e); return; }                  // creating, not panning
         this._userView = true;
         const start = { x: e.clientX, y: e.clientY, vx: this._view.x, vy: this._view.y };
         const move = (ev) => {
@@ -116,6 +174,32 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         $(document).on('pointermove', move).on('pointerup', up);
       },
     });
+  },
+
+  /**
+   * Place a new element where the user clicked. Its parent is whichever
+   * submodel it lands in — containment follows from the drop point, exactly as
+   * it does when an existing element is dragged in.
+   */
+  _placeAt(e) {
+    const d = this._diagram();
+    if (!d || !this._tool) return;
+    const [kind, type] = this._tool.split(':');
+    if (kind === 'arc') return;                    // arcs are drawn, not placed
+
+    const p = this._toWorld(e.clientX, e.clientY);
+    const parent = this._dropTargetAt(d, p, null);
+
+    let id;
+    if (kind === 'submodel') {
+      id = d.addSubmodel({ parent, x: p.x, y: p.y, label: '' });
+    } else {
+      id = d.addNode(type, { parent, x: p.x, y: p.y, label: '' });
+    }
+    this._tool = null;                             // one placement per pick
+    this._syncPalette();
+    this._render();
+    this._editLabel(d, id);                        // straight into naming it
   },
 
   _applyView() {
@@ -177,9 +261,15 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
     d.allPorts().forEach((p) => this._renderPort(d, p));
 
-    // Never re-frame mid-gesture: the drag changes the bounding box, and
-    // rescaling under the pointer makes the diagram squirm as you drag.
-    if (!this._drag && !this._portDrag) this._fit();
+    // Frame the model ONCE, when it first has content. Never re-frame after an
+    // edit: adding or moving an element changes the bounding box, and a view
+    // that re-scales every time you place something is unusable. Resizing the
+    // panel still re-fits (via the ResizeObserver), until the user takes the
+    // view over by panning or zooming.
+    if (!this._drag && !this._portDrag && !this._fittedOnce) {
+      this._fit();
+      if (this._root.getBBox && this._root.getBBox().width) this._fittedOnce = true;
+    }
   },
 
   /** A submodel: a box in the bodies layer, labelled along its top edge. */
@@ -191,6 +281,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     }));
     if (this._drag && this._drag.dropTarget === id) g.setAttribute('class', g.getAttribute('class') + ' slx-drop-target');
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
+    g.addEventListener('dblclick', () => this._editLabel(d, id));
     this._layer.bodies.appendChild(g);
 
     if (sub.label) {
@@ -226,6 +317,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         g.appendChild(this._el('circle', { cx: b.cx, cy: b.cy, r: Math.max(b.w, b.h) / 2 }));
     }
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
+    g.addEventListener('dblclick', () => this._editLabel(d, id));
     this._layer.nodes.appendChild(g);
 
     if (node.label) {
@@ -369,7 +461,84 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * undo step. On drop the element may also change parent, which is a model
    * change rather than a layout one.
    */
+  /**
+   * Draw an arc: press on the source, release on the target. A flow released
+   * over blank canvas gets a cloud there, because the schema says a flow's
+   * blank end is a cloud — the same path the API takes (§4).
+   *
+   * NOTE: nothing checks that the connection is legal. The grammar engine does
+   * not exist yet, so the rules in the schema are declared and unconsulted
+   * (§12.3 would make these preventive, refusing the gesture mid-drag).
+   */
+  _beginArcDraw(e, d, fromId) {
+    if (!d) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const type = this._tool.split(':')[1];
+    // A null source means the gesture began on blank canvas: the anchor is the
+    // press point, and a flow will grow a cloud there (the schema's blankEnd).
+    const start = fromId ? d.box(fromId) : (() => {
+      const w = this._toWorld(e.clientX, e.clientY);
+      return { cx: w.x, cy: w.y };
+    })();
+    const rubber = this._el('path', { class: 'slx-rubber' });
+    this._layer.overlay.appendChild(rubber);
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      rubber.setAttribute('d', `M${start.cx},${start.cy} L${w.x},${w.y}`);
+      const over = this._elementAt(ev);
+      this._layer.overlay.querySelectorAll('.slx-arc-target').forEach((n) => n.classList.remove('slx-arc-target'));
+      const g = over && this.element[0].querySelector(`[data-id="${over}"]`);
+      if (g) g.classList.add('slx-arc-target');
+    };
+    const end = (ev) => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      rubber.remove();
+      this.element[0].querySelectorAll('.slx-arc-target').forEach((n) => n.classList.remove('slx-arc-target'));
+      const toId = this._elementAt(ev);
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      this._tool = null;
+      this._syncPalette();
+      this._createArc(d, type, fromId, toId, w, { x: start.cx, y: start.cy });
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  _createArc(d, type, fromId, toId, dropPoint, anchor) {
+    if (type === 'flow') {
+      if (!fromId && !toId) return;                // a flow with neither end is nothing
+      // Either blank end becomes a cloud: addFlow does that when an end is null,
+      // and the valve sits midway between the two ends.
+      const a = fromId ? d.box(fromId) : anchor && { cx: anchor.x, cy: anchor.y };
+      const z = toId ? d.box(toId) : { cx: dropPoint.x, cy: dropPoint.y };
+      const made = d.addFlow({
+        from: fromId || null,
+        to: toId || null,
+        x: (a.cx + z.cx) / 2, y: (a.cy + z.cy) / 2,        // the valve
+        fromXY: fromId ? null : { x: anchor.x, y: anchor.y },
+        toXY: toId ? null : { x: dropPoint.x, y: dropPoint.y },
+        parent: d.parentOf(fromId || toId),
+      });
+      this._editLabel(d, made.valve);
+      return;
+    }
+    // An influence or role needs two real ends.
+    if (!fromId || !toId || toId === fromId) return;
+    if (type === 'influence') d.addInfluence(fromId, toId);
+    else if (type === 'role') d.addRole(fromId, toId, { label: '' });
+  },
+
+  /** The topmost model element under a pointer event, or null for blank canvas. */
+  _elementAt(ev) {
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    const g = el && el.closest('[data-id]');
+    return g ? g.getAttribute('data-id') : null;
+  },
+
   _beginElementDrag(e, d, id) {
+    if (this._tool && this._tool.indexOf('arc:') === 0) return this._beginArcDraw(e, d, id);
     if (this._drag || this._portDrag) return;
     e.preventDefault();
     e.stopPropagation();
@@ -441,6 +610,67 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (depth > bestDepth) { best = sid; bestDepth = depth; }
     });
     return best;
+  },
+
+  /**
+   * Rename in place. An HTML input floated over the glyph, NOT a browser
+   * prompt: a modal dialog blocks the page, and the label needs validating
+   * against the schema's naming rule as it is typed (§14 — no spaces).
+   */
+  _editLabel(d, id) {
+    const el = d.get(id);
+    if (!el || (id.indexOf('arc') === 0 && !d.arcType(el.type).label)) return;
+    // Position from the element as actually rendered, rather than recomputing
+    // the world->screen transform by hand: the glyph knows where it is, and
+    // this cannot drift out of step with pan/zoom or the palette's height.
+    const g = this.element[0].querySelector(`[data-id="${id}"]`);
+    const host = this.element[0].getBoundingClientRect();
+    const gr = g ? g.getBoundingClientRect() : null;
+    const left = (gr ? gr.left + gr.width / 2 - host.left : 20) - 50;
+    const top = (gr ? gr.top + gr.height / 2 - host.top : 20) - 10;
+
+    this.element.find('.slx-label-edit').remove();
+    const input = $('<input class="slx-label-edit" type="text">')
+      .val(el.label || '')
+      .css({ left, top })
+      .appendTo(this.element);
+
+    let live = false;
+    const commit = (save) => {
+      if (!input.parent().length) return;
+      const text = String(input.val() || '').trim();
+      input.remove();
+      if (!save) return;
+      try {
+        d.setLabel(id, text);
+      } catch (err) {
+        this._flash(err.message);                 // the schema refused the name
+      }
+      this._render();
+    };
+    input.on('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') commit(true);
+      else if (e.key === 'Escape') commit(false);
+    });
+    // Only honour a blur once the field has actually held focus: the mouseup of
+    // the very click that created the element would otherwise blur it away
+    // before the user can type.
+    input.on('focus', () => { live = true; });
+    input.on('blur', () => { if (live) commit(true); });
+    // preventScroll matters: this element is the panel's scrollable content, so
+    // focusing a field near the edge would otherwise scroll the whole diagram.
+    setTimeout(() => {
+      if (!input.parent().length) return;
+      input[0].focus({ preventScroll: true });
+      input[0].select();
+    }, 0);
+  },
+
+  /** Transient message — used for a rule the schema refused. */
+  _flash(text) {
+    const note = $('<div class="slx-flash">').text(text).appendTo(this.element);
+    setTimeout(() => note.fadeOut(200, () => note.remove()), 2200);
   },
 
   /** Nearest point on a rectangle's perimeter — a port lives ON its boundary. */
