@@ -261,6 +261,18 @@
     box: function (id, override) {
       var el = this.get(id);
       var geom = (override && override[id]) || this.appearanceOf(id) || { x: 0, y: 0 };
+
+      // Some types are positioned BY something else rather than in their own
+      // right — a valve rides at the midpoint of its flow, so dragging either
+      // end node carries it. Derived, hence never stored (§10.2).
+      if (el && mapOf(id) === 'nodes' && (this.schema().nodes[el.type] || {}).positionedBy === 'arc') {
+        var host = this.hostArcOf(id);
+        if (host) {
+          var a = this.box(host.from, override);
+          var z = this.box(host.to, override);
+          geom = { x: (a.cx + z.cx) / 2, y: (a.cy + z.cy) / 2 };
+        }
+      }
       var style = (this.schema().style || {})[el ? el.type : 'submodel'] || {};
       if (el && mapOf(id) === 'submodels') style = (this.schema().style || {}).submodel || style;
       return {
@@ -273,6 +285,37 @@
     },
 
     // ---- ports and segments (§13) ----
+
+    /** The arc an attachment node (e.g. a valve) belongs to, or null. */
+    hostArcOf: function (nodeId) {
+      var self = this;
+      var found = null;
+      this.ids('arcs').some(function (a) {
+        var arc = self.get(a);
+        if (arc && arc.valve === nodeId) { found = arc; return true; }
+        return false;
+      });
+      return found;
+    },
+
+    /**
+     * A label's offset from its element's default anchor, in world units.
+     * Absent means "wherever the notation puts it".
+     */
+    labelOffset: function (id) {
+      return this.layout('labels/' + id) || null;
+    },
+
+    /** Move a label relative to its element — one action, one undo step. */
+    moveLabel: function (id, dx, dy) {
+      var self = this;
+      Sienna.actions.dispatch(
+        { type: 'diagram.moveLabel', target: this.path, payload: { id: id, dx: dx, dy: dy } },
+        function () {
+          Sienna.userData.set(self.path + '/layout/labels/' + id, { dx: dx, dy: dy });
+        }
+      );
+    },
 
     /**
      * A port is named by **(boundary submodel, the element it serves)** — no
@@ -677,13 +720,14 @@
               label: '', props: {},
             }, self._geom(m.xy));
           });
-          // The valve: a real node, and the element that carries the name.
+          // The valve: a real node, and the element that carries the name. No
+          // layout is written — it rides at its flow's midpoint (see box()).
           self._put('nodes', valveId, {
             type: spec.attachmentNode,
             parent: opt.parent != null ? opt.parent : null,
             label: opt.label || '',
             props: opt.props || {},
-          }, self._geom(opt));
+          }, null);
           // The flow arc itself: no label (the valve has it), no parent (§13).
           self._put('arcs', arcId, {
             type: 'flow', from: fromId, to: toId, valve: valveId, props: {},

@@ -78,7 +78,7 @@
   font: 12px/1.2 system-ui, sans-serif;
   fill: #111;
   text-anchor: middle;
-  pointer-events: none;
+  cursor: grab;            /* labels are draggable (offset stored in layout) */
 }
 
 .slx-empty {

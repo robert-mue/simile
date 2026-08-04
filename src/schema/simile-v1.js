@@ -65,7 +65,10 @@
       compartment:  { label: true,  fields: ['initial'] },
       variable:     { label: true,  fields: ['value'] },
       cloud:        { label: 'optional', autoCreated: true, fields: [] },
-      valve:        { label: true,  autoCreated: true, fields: ['rate'] },
+      // A valve has no position of its own: it rides at the midpoint of its
+      // flow, so dragging either end carries it along. Derived geometry is
+      // never stored (§10.2).
+      valve:        { label: true,  autoCreated: true, positionedBy: 'arc', fields: ['rate'] },
       condition:    { label: true,  fields: ['expr'] },
       initialiser:  { label: true,  fields: ['expr'] },
       migrator:     { label: true,  fields: ['expr'] },

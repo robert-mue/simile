@@ -333,9 +333,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._layer.bodies.appendChild(g);
 
     if (sub.label) {
-      const t = this._text(b.cx - b.w / 2 + 8, b.cy - b.h / 2 + 15, sub.label, 'slx-label slx-submodel-label');
+      const t = this._placeLabel(d, id, sub.label, b.cx - b.w / 2 + 8, b.cy - b.h / 2 + 15,
+        'slx-label slx-submodel-label');
       t.setAttribute('text-anchor', 'start');
-      this._layer.labels.appendChild(t);
     }
   },
 
@@ -369,14 +369,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._layer.nodes.appendChild(g);
 
     if (node.label) {
-      // A compartment holds its label. A valve's goes BELOW its glyph, because
-      // influences into it bow overhead and would collide. Everything else sits
-      // above its glyph.
+      // The notation's default anchor: a compartment holds its label; a valve's
+      // goes BELOW its glyph, since influences into it bow overhead; everything
+      // else sits above. The user's own offset is added on top.
       let ly;
       if (b.shape === 'rect') ly = b.cy + 4;
       else if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13;
       else ly = b.cy - b.h / 2 - 6;
-      this._layer.labels.appendChild(this._text(b.cx, ly, node.label, 'slx-label'));
+      this._placeLabel(d, id, node.label, b.cx, ly);
     }
   },
 
@@ -387,6 +387,54 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * element, which is what later makes per-segment hit-testing and collapse
    * possible; only the last one carries the arrowhead.
    */
+  /**
+   * Draw a label at the notation's default anchor plus any offset the user has
+   * dragged it to, and make it draggable. The offset is layout, stored per
+   * element — the default stays the schema's business, so a label that has
+   * never been moved follows the notation if that changes.
+   */
+  _placeLabel(d, id, text, ax, ay, cls) {
+    const off = (this._labelDrag && this._labelDrag.id === id)
+      ? this._labelDrag.off
+      : (d.labelOffset(id) || { dx: 0, dy: 0 });
+    const t = this._text(ax + (off.dx || 0), ay + (off.dy || 0), text, cls || 'slx-label');
+    t.setAttribute('data-label-for', id);
+    t.addEventListener('pointerdown', (e) => this._beginLabelDrag(e, d, id, off));
+    this._layer.labels.appendChild(t);
+    return t;
+  },
+
+  _beginLabelDrag(e, d, id, off) {
+    if (this._tool) return;                       // placing/connecting takes precedence
+    e.preventDefault();
+    e.stopPropagation();                          // not a drag of the element itself
+    const origin = this._toWorld(e.clientX, e.clientY);
+    const start = { dx: off.dx || 0, dy: off.dy || 0 };
+    const handle = e.currentTarget;
+    if (handle.setPointerCapture) {
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
+    }
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      this._labelDrag = {
+        id,
+        off: { dx: start.dx + (w.x - origin.x), dy: start.dy + (w.y - origin.y) },
+      };
+      this._render();
+    };
+    const end = () => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      const final = this._labelDrag && this._labelDrag.off;
+      this._labelDrag = null;
+      if (final && (final.dx !== start.dx || final.dy !== start.dy)) {
+        d.moveLabel(id, final.dx, final.dy);      // one action per drag
+      }
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
   _renderArc(d, id, arc) {
     const pts = this._chainFor(d, id, arc);
     if (pts.length < 2) return;
@@ -415,8 +463,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   /**
    * The points an arc is drawn through, with the two ends pulled back to the
-   * glyph edges. A flow with no boundary to cross is routed through its valve;
-   * the valve of a *crossing* flow is left where it lies for now.
+   * glyph edges. A flow runs STRAIGHT from one end to the other: its valve sits
+   * at the midpoint (derived — see Diagram.box) and rides on the line rather
+   * than being a bend in it.
    */
   _chainFor(d, id, arc) {
     const pts = d.arcPoints(id, this._overrides()).slice();
@@ -425,11 +474,6 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // Every box lookup here must see the drag override, or a dragged glyph
     // slides away from the arc that is attached to it.
     const ov = this._overrides();
-
-    if (arc.type === 'flow' && arc.valve && pts.length === 2) {
-      const v = d.box(arc.valve, ov);
-      pts.splice(1, 0, { x: v.cx, y: v.cy });
-    }
 
     pts[0] = this._edge(d.box(arc.from, ov), pts[1]);
     pts[pts.length - 1] = this._edge(d.box(arc.to, ov), pts[pts.length - 2]);
