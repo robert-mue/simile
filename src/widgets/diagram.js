@@ -113,7 +113,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     });
     this._on($(document), {
       keydown: (e) => {
-        if (e.key === 'Escape') { this._tool = null; this._syncPalette(); }
+        // Never while typing: the rename box and the property dialog own the
+        // keyboard when they are open.
+        const tag = (e.target && e.target.tagName) || '';
+        if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || e.target.isContentEditable) return;
+        if (e.key === 'Escape') { this._tool = null; this._syncPalette(); return; }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          if (!this._sel.length) return;
+          e.preventDefault();
+          this._deleteSelection();
+        }
       },
     });
   },
@@ -923,6 +932,25 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const i = this._sel.indexOf(id);
     if (i >= 0) this._sel.splice(i, 1);
     else this._sel.push(id);
+  },
+
+  /**
+   * Delete what is selected, with everything the schema says must go with it —
+   * a submodel's contents, an element's arcs, a flow's valve, a cloud that has
+   * just lost its last flow. One action, so one undo step, however wide the
+   * cascade; the count is reported since a delete can reach much further than
+   * what was selected.
+   */
+  _deleteSelection() {
+    const d = this._diagram();
+    if (!d || !this._sel.length) return;
+    const asked = this._sel.length;
+    const gone = d.remove(this._sel);
+    this._sel = [];
+    this._render();
+    if (gone.length > asked) {
+      this._flash(`Deleted ${gone.length} elements (${asked} selected, ${gone.length - asked} attached)`);
+    }
   },
 
   /**

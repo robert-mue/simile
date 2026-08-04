@@ -495,6 +495,92 @@
     },
 
     /**
+     * Everything that must go when `ids` go — the closure of a deletion.
+     *
+     * The lifecycle rules were settled in §4, and they differ per type:
+     *   - a **submodel** takes its contents with it, at any depth;
+     *   - any element takes the **arcs** attached to it, since an arc with one
+     *     missing end is not a thing;
+     *   - a **flow** takes its valve, which is one-to-one with it;
+     *   - a **valve** takes its flow, for the same reason, from the other side;
+     *   - a **cloud** is REFCOUNTED: it goes only when the last flow touching
+     *     it goes, because a cloud may serve several (§4).
+     *
+     * Computed to a fixpoint, since removing one element can orphan another.
+     */
+    deletionClosure: function (ids) {
+      var self = this;
+      var set = {};
+      (ids || []).forEach(function (i) { if (self.get(i)) set[i] = true; });
+
+      var grew = true;
+      while (grew) {
+        grew = false;
+        var mark = function (id) {
+          if (id && !set[id] && self.get(id)) { set[id] = true; grew = true; }
+        };
+
+        Object.keys(set).forEach(function (id) {
+          if (mapOf(id) === 'submodels') self.descendantsOf(id).forEach(mark);
+        });
+
+        this.ids('arcs').forEach(function (a) {
+          var arc = self.get(a);
+          if (!arc) return;
+          if (set[a]) { mark(arc.valve); return; }              // a flow takes its valve
+          if (set[arc.from] || set[arc.to] || (arc.valve && set[arc.valve])) mark(a);
+        });
+
+        // Clouds last: a cloud goes only if every arc that touches it is going.
+        this.ids('nodes').forEach(function (n) {
+          var el = self.get(n);
+          if (!el || set[n]) return;
+          var spec = (self.schema().nodes[el.type] || {});
+          if (!spec.autoCreated || spec.positionedBy) return;   // clouds, not valves
+          var incident = self.arcsAt(n);
+          if (incident.length && incident.every(function (a) { return set[a]; })) mark(n);
+        });
+      }
+      return Object.keys(set);
+    },
+
+    /**
+     * Delete elements and everything that must go with them — ONE action, so a
+     * whole cascade is a single undo step. Layout owned by the removed elements
+     * goes too: their geometry, label offsets, arc curvature, and any ports
+     * they owned or hosted, since a port's existence is derived from the arcs
+     * and containment that no longer exist (§13.4).
+     */
+    remove: function (ids) {
+      var self = this;
+      var doomed = this.deletionClosure(Array.isArray(ids) ? ids : [ids]);
+      if (!doomed.length) return [];
+
+      Sienna.actions.dispatch(
+        { type: 'diagram.remove', target: this.path, payload: { ids: doomed } },
+        function () {
+          doomed.forEach(function (id) {
+            Sienna.userData.remove(self.path + '/' + mapOf(id) + '/' + id);
+            Sienna.userData.remove(self.path + '/layout/' + id);
+            Sienna.userData.remove(self.path + '/layout/labels/' + id);
+            Sienna.userData.remove(self.path + '/layout/arcs/' + id);
+            // Ports hosted BY a removed submodel.
+            Sienna.userData.remove(self.path + '/layout/ports/' + id);
+          });
+          // Ports OWNED by a removed element, on boundaries that survive.
+          Sienna.userData.keys(self.path + '/layout/ports').forEach(function (b) {
+            Sienna.userData.keys(self.path + '/layout/ports/' + b).forEach(function (owner) {
+              if (doomed.indexOf(owner) >= 0) {
+                Sienna.userData.remove(self.path + '/layout/ports/' + b + '/' + owner);
+              }
+            });
+          });
+        }
+      );
+      return doomed;
+    },
+
+    /**
      * Commit a drag: a map of layout keys to new positions, and optionally a
      * change of containment. ONE action, so however many elements moved — a
      * submodel carries its contents and its boundary's ports — the whole

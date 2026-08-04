@@ -6,6 +6,8 @@ Last updated 2026-08-04.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
+**Only the grammar engine and file save remain unstarted.**
+
 ---
 
 ## Done
@@ -50,6 +52,15 @@ one undo step per gesture, with nothing written until the drop. Dropping a node
 in a submodel re-parents it. Click selects (blue ring), shift/ctrl adds, and a
 multiple selection drags together.
 
+**6. Deletion**
+Select and press Delete/Backspace. The cascade follows the lifecycle rules of
+§4: a submodel takes its contents at any depth; any element takes the arcs
+attached to it; a flow takes its valve and vice versa; a **cloud is refcounted**
+and goes only when the last flow touching it does. Layout owned by the removed
+elements goes too, ports included. One action, so one undo step however wide the
+cascade — and the count is reported, since a delete can reach much further than
+what was selected.
+
 **9. Property dialogs — `src/dialog.js`**
 Modal, per element type, driven by the schema's field model; an optional HTML
 template can replace the generated form, bound by the same `data-field` rule.
@@ -61,10 +72,6 @@ Simile type by type.*
 ---
 
 ## Not started
-
-**6. Deletion.** No way to remove anything; undo is the only way back. Needs the
-lifecycle rules already decided: a valve dies with its flow, a cloud is
-refcounted, and an element's arcs must go with it.
 
 **8. Grammar engine.** The rules exist in the schema and are **never consulted**,
 so any connection or containment can currently be made. Design is settled
