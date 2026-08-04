@@ -539,6 +539,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   _beginElementDrag(e, d, id) {
     if (this._tool && this._tool.indexOf('arc:') === 0) return this._beginArcDraw(e, d, id);
+    // With a placing tool armed, a press on an existing element is still a
+    // placement, not a drag — otherwise nothing could ever be put INSIDE a
+    // submodel, since the submodel's own body covers its whole interior.
+    if (this._tool) { e.stopPropagation(); return this._placeAt(e); }
     if (this._drag || this._portDrag) return;
     e.preventDefault();
     e.stopPropagation();
