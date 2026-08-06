@@ -50,6 +50,16 @@
     return parser;
   }
 
+  // Parsing is pure, so the text is a sound cache key. This matters because the
+  // red/black colouring is DERIVED at every render (§19.9) rather than stored,
+  // which without a cache would re-parse every equation in the model on every
+  // frame of a drag. Bounded rather than unbounded: a model has a few hundred
+  // equations, but a rename box firing per keystroke would otherwise grow this
+  // without limit.
+  var CACHE_MAX = 500;
+  var cache = Object.create(null);
+  var cacheCount = 0;
+
   /**
    * @param {string} text
    * @returns {{ok: boolean, ast?: object, error?: {message: string, offset: number,
@@ -59,6 +69,16 @@
     if (text == null || String(text).trim() === '') {
       return { ok: false, error: { message: 'Empty equation', offset: 0, line: 1, column: 1, found: null } };
     }
+    var key = String(text);
+    if (cache[key]) return cache[key];
+    var result = uncached(key);
+    if (cacheCount >= CACHE_MAX) { cache = Object.create(null); cacheCount = 0; }
+    cache[key] = result;
+    cacheCount++;
+    return result;
+  }
+
+  function uncached(text) {
     try {
       return { ok: true, ast: compiled().parse(String(text)) };
     } catch (e) {

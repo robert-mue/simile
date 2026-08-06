@@ -160,7 +160,7 @@ Storing an *offset* rather than an absolute label position matters: a label the 
 - ~~**Ghosts:** How is a ghost stored, and confirm only nodes are ghostable?~~ **NOT ASKED — deferred 2026-07-31, see §15.** Jasper confirmed he uses ghosts, to reduce influence-arrow clutter; we are still leaving them out for now. The question returns if and when they do.
 - **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference? *(Partly answered 2026-07-30: condition nodes do carry a label, indicating what the condition is based on.)*
 - **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? And is name-uniqueness scoped to the containing submodel?
-- **Completeness (red/black):** The precise rule for when an element flips from red (incomplete) to black — per element type. *(The parser this needs is now built — §19 — so this is the only thing standing between us and the colouring.)*
+- ~~**Completeness (red/black):** the precise rule for when an element flips from red to black, per type.~~ **NOT ASKED — decided ourselves, 2026-08-06, §19.9.** The governing ruling is that we are not bound to reproduce Simile: where we think its behaviour wrong we change it. Our rule is in fact stricter than Simile's, since it also reddens an element whose equation disagrees with the influences drawn into it.
 - **Equation function arities:** we have a table of ~110 (schema `functions`), but only the 41 used by the reference models are confirmed; the rest come from the help pages alone. Which are wrong? And is the arity of the `pi(1)` / `time(1)` family really "optional dummy argument", as real models suggest and the help denies? *(§19.8)*
 - **Array vs list dimensional rules:** must a `{x}` reference always come from a variable-membership submodel and `[x]` from a fixed one? If so the cross-check can be made much sharper at no cost *(§19.8)*.
 - **Vocabulary drift:** Are `event` / `state` / `squirt` / `satellite` / per-record & special-grid submodels genuinely later additions to the canonical set (compartment, variable, submodel, flow, influence, role, condition, initialiser, migrator, ~~reproducer~~ **reproduction** *(corrected 2026-08-04, §12.8)*, exterminator)? Anything else we've missed?
@@ -715,4 +715,30 @@ The last two compare on the influence's **alias**, which is exactly the name the
 
 - **Form checking.** A reference carries its form — `x`, `{x}`, `[x]` — so the check could be sharper still: a `{x}` wants an influence out of a *variable-membership* submodel and `[x]` out of a fixed one, and the absence is a real error rather than a stylistic one. The parser already supplies everything needed. Held until the dimensional rules are settled with the Simile developer (§8).
 - **Function arities.** The 41 confirmed by the corpus are sound; the rest come from the help pages alone and are a first draft, to be checked type by type as the property lists must be. The corpus already exposed one discrepancy — the help calls `pi()` and `time()` nullary, real models write `pi(1)` and `time(1)`.
-- **The red/black rule itself** remains an open question for the Simile developer (§8): the parser is now in place, but *what makes an element complete* per type is not ours to decide.
+- ~~**The red/black rule itself.**~~ **RESOLVED 2026-08-06 → §19.9.** It was listed here as a question for the Simile developer; the ruling is that it is ours to decide, and it is decided.
+
+### 19.9 Red/black completeness
+
+*Ruled 2026-08-06. The governing decision first: **we are not bound to reproduce Simile.** Where its behaviour is worth keeping we keep it, and where we think it wrong we change it, deliberately.*
+
+**An element is red when it is not runnable.** Five counts, and the last is the one Simile does not make:
+
+| | |
+|---|---|
+| **missing** | a required field is empty — nothing has been written yet |
+| **syntax** | what is written does not parse |
+| **function** | a call to no such function, or with the wrong number of arguments |
+| **undeclared** | a name used that no influence supplies |
+| **unused** | an influence drawn in whose name the equation never mentions |
+
+The last deserves its reasoning recorded, because the obvious objection is that such an equation parses and the model would run. It is nevertheless wrong: **the diagram is the specification**. By drawing an influence the modeller has said what this element's value depends on, and an equation that ignores it contradicts that statement. One of the two is a mistake, and the editor cannot tell which — but it can say that they disagree. That is a stronger check than Simile's, and it is available only because the equations and the diagram are checked against each other.
+
+**Which fields are required is schema data**, not a rule in code: `required: true` on a field descriptor, and `requiredWhen: { kind: 'fixed-membership' }` for one that applies only to some kinds. The conditional form is not decoration — a submodel's `dimensions` applies only to fixed-membership submodels, and demanding it of all of them would leave every single-instance submodel permanently red. An element with no required fields, such as a cloud, is never red.
+
+**Completeness is DERIVED at render, never stored.** Simile keeps a `complete=true` flag in the saved file; we deliberately do not. Completeness depends on the *arrows* as much as on the equation, so drawing or deleting an influence elsewhere can change an element's colour without its equation being touched — and a stored flag would be wrong from that moment until someone reopened the dialogue. This is the same instinct as §10.2's refusal to store derived geometry.
+
+That has a cost worth recording, since it is the kind of thing that is discovered too late: colouring at render means parsing every equation on every frame of a drag. Measured, 200 distinct equations cost **46 ms** to parse and **0.2 ms** once cached, so `src/equation.js` memoises on the equation text — parsing being pure, the text is a sound key. Without it a 200-element model would drag at about 20 fps; with it the whole render is ~1.5 ms.
+
+**Leaving the dialogue.** Cancel reverts, as ever. **OK always commits** — in every one of the five cases above. Whatever the modeller typed is kept verbatim, the element is flagged, and it stays red and incomplete. Refusing to accept a wrong equation would mean the only way out is to lose the work, which is not a choice worth offering. This is also what the model layer already does (§4: equations stored verbatim, never validated), so the ruling confirms the code rather than changing it.
+
+One asymmetry, kept on purpose: **a bad label is still refused**, and the dialogue stays open. A label is not merely this element's business — it is the name *other* elements' equations use, so a label with a space in it breaks things elsewhere and can never be referenced at all. That is §12.3's split doing its job: naming is structural and preventive, equations are content and deferred.

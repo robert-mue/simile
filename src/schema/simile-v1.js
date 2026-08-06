@@ -62,14 +62,19 @@
     // which is that field's display name. `autoCreated`
     // marks types the editor creates as a side effect of another gesture,
     // never from the palette.
+    // `required: true` on a field means the element is INCOMPLETE (red, §19.9)
+    // until it is filled in. Units are not required — a model runs without
+    // them. `requiredWhen` makes it conditional on another field's value, which
+    // a submodel's `dimensions` needs: demanding it of every submodel would
+    // leave every single-instance one permanently red.
     nodes: {
       compartment:  { has_label: true,  fields: [
-        { name: 'initial', label: 'Initial value', type: 'expression',
+        { name: 'initial', label: 'Initial value', type: 'expression', required: true,
           help: 'Value at the start of the run.' },
         { name: 'units',   label: 'Units', type: 'text' },
       ] },
       variable:     { has_label: true,  fields: [
-        { name: 'value', label: 'Value or expression', type: 'expression' },
+        { name: 'value', label: 'Value or expression', type: 'expression', required: true },
         { name: 'units', label: 'Units', type: 'text' },
       ] },
       cloud:        { has_label: 'optional', autoCreated: true, fields: [] },
@@ -77,18 +82,18 @@
       // flow, so dragging either end carries it along. Derived geometry is
       // never stored (§10.2).
       valve:        { has_label: true,  autoCreated: true, positionedBy: 'arc', fields: [
-        { name: 'rate',  label: 'Rate', type: 'expression',
+        { name: 'rate',  label: 'Rate', type: 'expression', required: true,
           help: 'Amount flowing per unit time.' },
         { name: 'units', label: 'Units', type: 'text' },
       ] },
       condition:    { has_label: true,  fields: [
-        { name: 'expr', label: 'Condition', type: 'expression',
+        { name: 'expr', label: 'Condition', type: 'expression', required: true,
           help: 'The submodel exists for a member when this is true.' },
       ] },
-      initialiser:  { has_label: true,  fields: [{ name: 'expr', label: 'Number created', type: 'expression' }] },
-      migrator:     { has_label: true,  fields: [{ name: 'expr', label: 'Migration condition', type: 'expression' }] },
-      exterminator: { has_label: true,  fields: [{ name: 'expr', label: 'Removal condition', type: 'expression' }] },
-      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Number of offspring', type: 'expression' }] },
+      initialiser:  { has_label: true,  fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true }] },
+      migrator:     { has_label: true,  fields: [{ name: 'expr', label: 'Migration condition', type: 'expression', required: true }] },
+      exterminator: { has_label: true,  fields: [{ name: 'expr', label: 'Removal condition', type: 'expression', required: true }] },
+      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Number of offspring', type: 'expression', required: true }] },
     },
 
     // A submodel is one object whose KIND is a property (§2), so its dialog is
@@ -104,6 +109,7 @@
             { value: 'population', label: 'Population' },
           ] },
         { name: 'dimensions', label: 'Number of instances', type: 'expression',
+          requiredWhen: { kind: 'fixed-membership' },
           help: 'Fixed-membership submodels only.' },
       ],
     },

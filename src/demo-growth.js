@@ -25,7 +25,8 @@
 
     // 1. The compartment the flow runs into. (x/y are layout only — the model
     //    itself is position-free; see DESIGN-diagram.md §6.)
-    var biomass = d.addNode('compartment', { label: 'biomass', x: 340, y: 220, w: 36, h: 24 });
+    var biomass = d.addNode('compartment', { label: 'biomass', x: 340, y: 220, w: 36, h: 24,
+      props: { initial: '10' } });
 
     // 2. The flow. Drawn from blank space, so its source cloud is auto-created,
     //    as is its valve — the node that carries the name 'growth' and will

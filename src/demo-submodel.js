@@ -41,6 +41,7 @@
     // --- inside PLANT ---
     var biomass = d.addNode('compartment', {
       label: 'biomass', parent: plant, x: 330, y: 220, w: 36, h: 24,
+      props: { initial: '10' },
     });
     var flow = d.addFlow({
       to: biomass, label: 'growth', parent: plant,
@@ -51,11 +52,17 @@
 
     // --- outside PLANT ---
     var k = d.addNode('variable', { label: 'k', x: 150, y: 60, props: { value: '0.1' } });
-    var harvest = d.addNode('variable', { label: 'harvest', x: 560, y: 150 });
-    var cover = d.addNode('variable', { label: 'cover', x: 560, y: 300 });
+    var harvest = d.addNode('variable', { label: 'harvest', x: 560, y: 150,
+      props: { value: 'biomass * 0.2' } });
+    var cover = d.addNode('variable', { label: 'cover', x: 560, y: 300,
+      props: { value: 'biomass / 100' } });
 
     // 1. Crossing INTO the submodel: one arc, two segments.
     var inArc = d.addInfluence(k, flow.valve);
+    // The rate is `k * biomass`, so biomass must feed the valve as well —
+    // caught by the completeness check (§19.9), which reddened `growth` for a
+    // name no influence supplied. The fixture was simply wrong.
+    var inB = d.addInfluence(biomass, flow.valve);
 
     // 2. Crossing OUT, twice from the same source: the exit segment is shared.
     var outA = d.addInfluence(biomass, harvest);

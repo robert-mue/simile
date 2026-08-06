@@ -6,8 +6,7 @@ Last updated 2026-08-06.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Only file save remains unstarted** — plus the red/black colouring, for which
-the equation parser is now in place and wired to the model check.
+**Only file save remains unstarted.**
 
 ---
 
@@ -205,6 +204,35 @@ Five things the corpus taught that no document states, all now in the grammar:
 `&&` and `||`, bare `!`, `not` without brackets, the quoted `'!='`, and that a
 quoted `'name'` is a *name* (XSugar maps it to MathML `<ci>`), so
 `'Change_coefficient' != 0` is a reference and not a string.
+
+**13. Red/black completeness — `completeness()` + `_incomplete()` in the widget**
+*(Reasoning: `DESIGN-diagram.md` §19.9.)*
+An element is red when it is not runnable, on five counts: a required field left
+empty, an equation that does not parse, an unknown function or wrong arity, a
+name no influence supplies, and — the one Simile does not check — an influence
+whose name the equation never mentions. That last is a ruling: **the diagram is
+the specification**, so an equation that ignores an arrow contradicts what the
+modeller has said the value depends on. It parses; it is still wrong.
+
+Which fields are required is schema data — `required`, and `requiredWhen` for
+`dimensions`, which applies only to fixed-membership submodels and would
+otherwise leave every single-instance one permanently red. A cloud has no
+required fields and so is never red.
+
+**Derived at render, never stored.** Simile keeps `complete=true` in the file;
+we do not, because completeness depends on the arrows too — drawing an influence
+elsewhere can redden an element whose equation nobody touched. The cost is a
+parse per equation per render, so `src/equation.js` now memoises on the equation
+text: 200 distinct equations cost 46 ms cold and 0.2 ms cached, and a whole
+render of the demo model is ~1.5 ms.
+
+**Leaving the dialogue:** Cancel reverts; **OK always commits**, in all five
+cases, keeping what was typed and leaving the element red. A bad *label* is
+still refused, which is the deliberate asymmetry of §12.3 — naming is structural
+and preventive, equations are content and deferred.
+
+Both demo fixtures were wrong and are fixed: `growth`'s rate is `k * biomass`
+and only `k` had an influence — found by the check itself, not by reading.
 
 ---
 

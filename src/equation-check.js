@@ -188,14 +188,74 @@
     return out;
   }
 
-  /** Every element's equations, in one pass. */
+  /**
+   * Is this element complete — black rather than red (§19.9)?
+   *
+   * Incomplete on any of four counts, which is exactly the set of findings
+   * above plus one the findings cannot carry: a REQUIRED field left empty,
+   * since `element()` has nothing to say about an equation that was never
+   * written. Which fields are required is schema data (`required`, and
+   * `requiredWhen` for a field that only applies to some kinds), never decided
+   * here.
+   *
+   * An element with no required fields — a cloud — is never incomplete.
+   *
+   * DERIVED, never stored. Simile keeps a `complete=true` flag in the file; we
+   * do not, because completeness depends on the ARROWS as well as the equation
+   * (§19.9): drawing an influence into an element can make it incomplete
+   * without its equation changing, and a stored flag would be wrong the moment
+   * that happened. The cost of deriving it is a parse per equation per render,
+   * which is what the cache in `src/equation.js` is for.
+   *
+   * @returns {{complete: boolean, reasons: Array}}
+   */
+  function completeness(d, id) {
+    var el = d.get(id);
+    if (!el) return { complete: true, reasons: [] };
+
+    var reasons = [];
+    var props = el.props || {};
+    expressionFields(d, id).forEach(function (f) {
+      if (!isRequired(el, f)) return;
+      var text = props[f.name];
+      if (text == null || String(text).trim() === '') {
+        reasons.push({
+          id: id, label: el.label || id, kind: 'missing', field: f.name,
+          message: f.label + ' is not set',
+        });
+      }
+    });
+
+    var all = reasons.concat(element(d, id));
+    return { complete: !all.length, reasons: all };
+  }
+
+  /** A field is required outright, or required given another field's value. */
+  function isRequired(el, f) {
+    if (f.required) return true;
+    if (!f.requiredWhen) return false;
+    return Object.keys(f.requiredWhen).every(function (k) {
+      return (el[k] !== undefined ? el[k] : (el.props || {})[k]) === f.requiredWhen[k];
+    });
+  }
+
+  /**
+   * Every element, in one pass — the whole-model report behind "check model".
+   * Uses `completeness`, not `element`, so that an unwritten required equation
+   * is reported alongside a wrong one: both leave the model unable to run.
+   */
   function audit(d) {
     var out = [];
     ['nodes', 'submodels'].forEach(function (fam) {
-      d.ids(fam).forEach(function (id) { out = out.concat(element(d, id)); });
+      d.ids(fam).forEach(function (id) { out = out.concat(completeness(d, id).reasons); });
     });
     return out;
   }
 
-  Sienna.equationCheck = { element: element, audit: audit, calls: calls };
+  Sienna.equationCheck = {
+    element: element,
+    completeness: completeness,
+    audit: audit,
+    calls: calls,
+  };
 }(window.Sienna));

@@ -552,7 +552,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   /** A submodel: a box in the bodies layer, labelled along its top edge. */
   _renderSubmodel(d, id, sub) {
     const b = this._box(d, id);
-    const g = this._el('g', { class: 'slx-submodel slx-submodel-' + sub.kind, 'data-id': id });
+    const g = this._el('g', {
+      class: 'slx-submodel slx-submodel-' + sub.kind + (this._incomplete(d, id) ? ' slx-incomplete' : ''),
+      'data-id': id,
+    });
     g.appendChild(this._el('rect', {
       x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 4,
     }));
@@ -568,9 +571,23 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     }
   },
 
+  /**
+   * Red/black completeness (§19.9). Derived at render, never stored, because it
+   * depends on the arrows as much as on the equation: drawing an influence into
+   * an element can make it incomplete without its equation changing. The parse
+   * cache in `src/equation.js` is what makes deriving it per render affordable.
+   */
+  _incomplete(d, id) {
+    if (!Sienna.equationCheck) return false;
+    return !Sienna.equationCheck.completeness(d, id).complete;
+  },
+
   _renderNode(d, id, node) {
     const b = this._box(d, id);
-    const g = this._el('g', { class: 'slx-node slx-node-' + node.type, 'data-id': id });
+    const g = this._el('g', {
+      class: 'slx-node slx-node-' + node.type + (this._incomplete(d, id) ? ' slx-incomplete' : ''),
+      'data-id': id,
+    });
 
     switch (b.shape) {
       case 'rect':
@@ -627,7 +644,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const off = (this._labelDrag && this._labelDrag.id === id)
       ? this._labelDrag.off
       : (d.labelOffset(id) || { dx: 0, dy: 0 });
-    const t = this._text(ax + (off.dx || 0), ay + (off.dy || 0), text, cls || 'slx-label');
+    // The label carries the completeness class too: it lives in its own layer,
+    // so the class on the glyph's group does not reach it — and the NAME going
+    // red is the part of the convention a modeller actually reads.
+    const full = (cls || 'slx-label') + (this._incomplete(d, id) ? ' slx-incomplete' : '');
+    const t = this._text(ax + (off.dx || 0), ay + (off.dy || 0), text, full);
     t.setAttribute('data-label-for', id);
     t.addEventListener('pointerdown', (e) => this._beginLabelDrag(e, d, id, off));
     this._layer.labels.appendChild(t);
