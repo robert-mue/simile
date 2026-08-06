@@ -263,9 +263,17 @@ a file ours** (§18: the shell never inspects contents):
   `Diagram.create` were separately spelling out what a new model looks like, and
   the format stamp would have had to go in both.
 
-Left alone deliberately: `Sienna.files.download` swallows a failed download, so
-a browser that blocks it leaves the user with silence. That is shell code, so it
-belongs in the sienna repo, not here.
+**A real Save** (shell change, 2026-08-06, sienna `5bb8468`). Save was a
+download, so every save made `Plant.json`, `Plant (1).json`, `Plant (2).json` —
+a Blob download cannot overwrite. It now uses the **File System Access API**:
+the Save dialog returns a *handle*, which can be written through again without
+re-prompting, so File ▸ Save writes straight back to the file and File ▸ Save
+as… asks for a new one. The assumption that had gone unexamined here is that a
+page may not write files at all; the actual rule is that it may not write files
+the *user did not choose*, and a handle is that choice. Chromium-only, so
+Firefox and Safari keep the download and Save means Save as. The same change
+stopped `download()` swallowing a refused download, which had made a failed save
+indistinguishable from a successful one.
 
 ---
 
