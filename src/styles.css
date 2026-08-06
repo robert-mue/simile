@@ -49,6 +49,15 @@
   stroke: #888;
 }
 
+/* The open strokes of a population glyph — a zigzag, a stem, an axe handle —
+   are lines, not outlines, so they must not take the white fill that closed
+   glyph paths get. */
+.slx-node .slx-glyph-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Incomplete (§19.9): no equation where one is required, one that does not
    parse, or one that disagrees with the influences drawn. Red is Simile's own
    convention and it earns its place — one glance says which parts of a model

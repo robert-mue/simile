@@ -58,6 +58,10 @@
       label: 'leaves', parent: farmer, x: 270, y: 230,
       props: { expr: 'wealth<10' },
     });
+    d.addNode('reproduction', {
+      label: 'children', parent: farmer, x: 150, y: 232,
+      props: { expr: 'rand_var(0,1)<0.02' },
+    });
     // The exterminator reads wealth, so it needs the arrow that says so.
     d.addInfluence(wealth, leaves);
 

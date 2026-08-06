@@ -312,10 +312,8 @@ model would have shown**:
 Two more the models expose that are **notation questions, not bugs**, so they
 are left for a ruling rather than invented:
 
-- **The four population symbols have no glyph.** `style` has entries for six
-  types; initialiser, migrator, exterminator and reproduction fall through to
-  the renderer's default circle, so they are indistinguishable from a variable
-  and from each other. *Still open — the user is supplying the glyphs.*
+- ~~**The four population symbols have no glyph.**~~ **Built 2026-08-06** —
+  see item 16.
 - ~~**A submodel's kind is invisible.**~~ **RULED and built 2026-08-06** — see
   item 16.
 
@@ -323,10 +321,8 @@ are left for a ruling rather than invented:
 Ruled 2026-08-06, straight off the reference models, where `single`,
 `fixed-membership` and `population` were indistinguishable:
 
-- **fixed-membership** — a **stack four deep**, offset up and to the right. A
-  known number of instances, drawn as a deck seen from the front. Up-right
-  because the label sits at the top left and contents fill downwards, so that
-  corner is the free one.
+- **fixed-membership** — a **stack four deep**, offset **down and to the
+  right**: a known number of instances, drawn as a deck seen from the front.
 - **population** — an **open shadow**: one edge along top-and-left, another
   along bottom-and-right, deliberately *not* meeting at the two corners
   between. The gaps carry the meaning — an outline that does not close says the
@@ -336,6 +332,22 @@ Ruled 2026-08-06, straight off the reference models, where `single`,
 Which decoration is schema data (`style.submodel.byKind`); how to draw one is
 the renderer's, exactly as for the `cloud` and `valve` shapes. Decoration only:
 the box remains the hit target, so selection and dragging are untouched.
+
+**The four population symbols now have glyphs too**, taken from Simile's
+toolbar icons (`simulistics.com/help/concepts/object/`, read off the 16×15 GIFs
+themselves since the page describes them only by filename):
+
+| symbol | icon | drawn as |
+|---|---|---|
+| initialiser | a sprouting mound | dome on the baseline, stem and two rays above |
+| migrator | a wandering line | a zigzag |
+| reproduction | an egg | an oval narrower at the top |
+| exterminator | an axe | diagonal handle, wedge blade |
+
+They are the *idea* of each icon reduced to strokes, not a copy: the originals
+are colour bitmaps at one fixed size, these are ~18-unit line drawings that have
+to survive being zoomed out. Worth checking against the in-diagram symbols when
+convenient — only the toolbar versions were available.
 
 **17. Label ≡ name reaffirmed (§14)**
 Building land-use turned up that Simile does *not* do this — `landuse1b.pl`
@@ -383,9 +395,8 @@ Carried in `DESIGN-diagram.md` §8, still outstanding:
 
 - the remaining **label-typography** rules (beyond no-spaces), and whether
   name-uniqueness is submodel-scoped;
-- **glyphs for the four population symbols** — initialiser, migrator,
-  exterminator, reproduction — which currently fall through to the default
-  circle. The user is supplying these.
+- whether the **population glyphs** now drawn (item 16) are close enough to
+  Simile's, which only the toolbar icons were available for.
 - the remaining **grammar rules** — §12's catalogue is a starter set, each rule
   tagged `known` or `guess`;
 - **association and conditional inference**: stored flag or recoverable?

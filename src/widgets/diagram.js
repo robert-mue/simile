@@ -583,6 +583,54 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   /**
+   * The four population symbols (§6, glyphs chosen 2026-08-06).
+   *
+   * Simile's toolbar icons are the source — a sprouting mound for
+   * initialisation, a wandering zigzag for migration, an egg for reproduction,
+   * an axe for extermination — but they are 16×15 colour bitmaps and these are
+   * ~18-unit line drawings that must survive being zoomed out. So each is the
+   * *idea* of the toolbar icon reduced to strokes that stay legible: the
+   * silhouette, not the picture. All four were previously drawn as the
+   * renderer's default circle, indistinguishable from a variable and from each
+   * other, which the farmers & fields model made plain.
+   *
+   * Open paths carry `slx-glyph-line` so the stylesheet leaves them unfilled;
+   * closed ones take the usual white fill.
+   */
+  _populationGlyph(g, b) {
+    const w = b.w, h = b.h;
+    const x1 = b.cx - w / 2, y1 = b.cy - h / 2;
+    const x2 = b.cx + w / 2, y2 = b.cy + h / 2;
+    const line = (d) => g.appendChild(this._el('path', { class: 'slx-glyph-line', d }));
+    const solid = (d) => g.appendChild(this._el('path', { d }));
+
+    switch (b.shape) {
+      case 'sprout':                     // initialiser: something coming up
+        solid(`M${x1},${y2} A${w / 2},${h * 0.6} 0 0 1 ${x2},${y2} z`);
+        line(`M${b.cx},${y1} L${b.cx},${y1 + h * 0.3}`);
+        line(`M${x1 + w * 0.1},${y1 + h * 0.32} L${b.cx - w * 0.2},${y1 + h * 0.1}`);
+        line(`M${x2 - w * 0.1},${y1 + h * 0.32} L${b.cx + w * 0.2},${y1 + h * 0.1}`);
+        return;
+
+      case 'zigzag':                     // migrator: a wandering path
+        line(`M${x1},${y2} L${x1 + w * 0.25},${y1} L${b.cx},${y2}`
+           + ` L${b.cx + w * 0.25},${y1} L${x2},${y2}`);
+        return;
+
+      case 'egg':                        // reproduction: narrower at the top
+        solid(`M${b.cx},${y1} C${x2},${y1 + h * 0.3} ${x2},${y2} ${b.cx},${y2}`
+            + ` C${x1},${y2} ${x1},${y1 + h * 0.3} ${b.cx},${y1} z`);
+        return;
+
+      case 'axe':                        // exterminator
+        line(`M${x1 + w * 0.05},${y2} L${b.cx + w * 0.1},${y1 + h * 0.35}`);
+        solid(`M${b.cx - w * 0.05},${y1 + h * 0.45} L${b.cx + w * 0.15},${y1}`
+            + ` L${x2},${y1 + h * 0.15} L${b.cx + w * 0.3},${y1 + h * 0.6} z`);
+        return;
+    }
+  },
+
+  /**
    * Draw how many instances a submodel has (§6, ruled 2026-08-06).
    *
    *   stack        a known number: `layers` outlines stepped up and to the
@@ -606,11 +654,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     if (spec.decoration === 'stack') {
       const step = spec.step || 3;
-      // Back to front, so each sits over the one behind it.
+      // Back to front, so each sits over the one behind it. Down and to the
+      // right (ruled 2026-08-06).
       for (let i = (spec.layers || 3) - 1; i >= 1; i--) {
         g.appendChild(this._el('rect', {
           class: 'slx-kind-stack',
-          x: x1 + i * step, y: y1 - i * step, width: b.w, height: b.h, rx: 4,
+          x: x1 + i * step, y: y1 + i * step, width: b.w, height: b.h, rx: 4,
         }));
       }
       return;
@@ -667,6 +716,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         g.appendChild(this._el('path', {
           d: `M${b.cx},${b.cy - b.h / 2} L${b.cx + b.w / 2},${b.cy} L${b.cx},${b.cy + b.h / 2} L${b.cx - b.w / 2},${b.cy} z`,
         }));
+        break;
+      case 'sprout':
+      case 'zigzag':
+      case 'egg':
+      case 'axe':
+        this._populationGlyph(g, b);
         break;
       default:
         g.appendChild(this._el('circle', { cx: b.cx, cy: b.cy, r: Math.max(b.w, b.h) / 2 }));
