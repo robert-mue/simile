@@ -64,9 +64,18 @@
     return kinds;
   }
 
-  /** Does `subject` ('arc:flow', 'node:a|b', 'submodel', 'arc') match? */
+  /**
+   * Does `subject` ('arc:flow', 'node:a|b', 'submodel', 'arc', '*') match?
+   *
+   * `'*'` means every element whatever its family — added 2026-08-06 for the
+   * first rule that genuinely does not care (an element must be drawn inside
+   * the submodel it belongs to, which is as true of a submodel as of a node).
+   * The alternative was the same rule written once per family, which is the
+   * kind of duplication that later drifts apart.
+   */
   function subjectMatches(subject, family, type) {
     if (!subject) return false;
+    if (subject === '*') return true;
     var parts = String(subject).split(':');
     if (parts[0] !== family) return false;
     if (parts.length === 1) return true;
@@ -132,10 +141,23 @@
     return true;
   }
 
-  /** Structural rules applying to a candidate, in schema order. */
-  function rulesFor(d, cand) {
+  /**
+   * Rules applying to a candidate, in schema order.
+   *
+   * `alsoDeferred` is what separates the two kinds of caller (§12.3). A gesture
+   * asks only about **preventive** rules, because those are the ones that may
+   * refuse it. The whole-model pass asks about **deferred** ones as well, since
+   * reporting is exactly their job.
+   *
+   * Until 2026-08-06 nothing passed `alsoDeferred`, so a rule tagged `deferred`
+   * was evaluated by nobody — the class existed in the schema and in §12.3 and
+   * did nothing. It went unnoticed because every rule written so far happened
+   * to be preventive.
+   */
+  function rulesFor(d, cand, alsoDeferred) {
     return (d.schema().rules || []).filter(function (r) {
-      if (r.enforcement && r.enforcement !== 'preventive') return false;
+      var cls = r.enforcement || 'preventive';
+      if (cls !== 'preventive' && !(alsoDeferred && cls === 'deferred')) return false;
       return subjectMatches(r.subject, cand.family, cand.type);
     });
   }
@@ -188,6 +210,9 @@
      * its own family and type. Reported, never blocking — this is the pass that
      * catches states reached some other way (a capture, an import, a kind
      * changed under existing contents; §12.5's non-monotonicity).
+     *
+     * The only caller that evaluates **deferred** rules as well as preventive
+     * ones: reporting is what a deferred rule is for.
      */
     validate: function (d) {
       var out = [];
@@ -199,7 +224,7 @@
           id: id, from: el.from, to: el.to,
           parent: family === 'arc' ? d.nearestCommonAncestor(el.from, el.to) : el.parent,
         };
-        rulesFor(d, cand).forEach(function (r) {
+        rulesFor(d, cand, true).forEach(function (r) {
           if (!ruleHolds(d, r, cand)) {
             out.push({ id: id, label: el.label || id, rule: r.id, message: r.message });
           }

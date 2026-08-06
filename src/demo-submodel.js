@@ -46,7 +46,10 @@
     var flow = d.addFlow({
       to: biomass, label: 'growth', parent: plant,
       x: 220, y: 220,
-      fromXY: { x: 140, y: 220 },
+      // Inside PLANT, which is what the model says: the cloud's parent is the
+      // submodel, so it must be drawn in it. At x:140 it straddled the left
+      // edge — caught by `inside-its-parent` once that rule existed.
+      fromXY: { x: 175, y: 220 },
       props: { rate: 'k * biomass' },
     });
 

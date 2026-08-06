@@ -358,6 +358,40 @@ recorded in §14 because it is a judgement rather than a technical necessity —
 formality is worth a little unnaturalness, and there should not be two ways of
 expressing the same thing.
 
+**18. Geometry against containment — `src/predicates.js`, two deferred rules**
+Does the picture agree with the model about what is inside what? Two rules,
+`inside-its-parent` and `not-inside-a-stranger`: an element must be drawn inside
+the submodel it belongs to, and not inside one it doesn't. Ancestors are exempt
+— being inside your grandparent's box is expected.
+
+Ruled worth having 2026-08-06 even though a *dropped* element cannot disagree
+with itself, because dropping is not the only way a model gets built: **an AI
+assistant writing one, or an automatic graph layout moving things**, both bypass
+the gesture and have no reason to keep model and layout in step. The check
+exists for the ways of building a diagram we do not have yet.
+
+**Deferred, never preventive** — dragging an element out of a submodel is
+precisely how you re-parent it, and the drop decides; refusing mid-gesture would
+fight direct manipulation. Excluded from judgement: elements that do not exist
+yet (`mayContain` asks about prospective ones), and types positioned by
+something else — a valve rides its flow's midpoint, so a boundary-crossing flow
+strands it outside its parent and the modeller can do nothing about it.
+
+The predicates are code, so they live in their own file; the schema names them
+and stays plain data (§12.2's escape hatch, first real use).
+
+**Two things this turned up.** `rulesFor` filtered to preventive rules and
+`validate` used it, so **a rule tagged `deferred` was evaluated by nobody** —
+the class existed in §12.3 and in the schema and did nothing. Unnoticed because
+every rule written so far happened to be preventive. And `subject` gained `'*'`,
+for a rule that genuinely does not care about family; the alternative was the
+same rule written once per family, which drifts.
+
+It found a real fault on its first run: the plant fixture's cloud straddled
+PLANT's left edge while being parented to it. Fixed — the third fixture defect
+an automated check has caught this session, after growth's missing influence and
+`children` sitting outside FARMER.
+
 ---
 
 ## Known gaps and loose ends

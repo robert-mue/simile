@@ -215,6 +215,26 @@
         enforcement: 'preventive', confidence: 'known',
         message: 'Population symbols may only appear inside a population submodel.' },
 
+      // (5) The picture must agree with the model about containment. These are
+      // the first DEFERRED rules — reported by the model check, never blocking,
+      // because dragging an element out of a submodel is how you re-parent it
+      // and the drop is what decides. `subject: '*'` because the rule is as
+      // true of a submodel as of a node.
+      //
+      // Worth having even though a dropped element cannot disagree with itself:
+      // dropping is not the only way a model gets built. An AI assistant
+      // writing one, or an automatic layout moving things, both bypass the
+      // gesture and have no reason to keep model and layout in step (user,
+      // 2026-08-06). The predicates are code, so they live in
+      // `src/predicates.js`; this file stays plain data (§12.2).
+      { id: 'inside-its-parent', subject: '*', predicate: 'insideItsParent',
+        enforcement: 'deferred', confidence: 'known',
+        message: 'This is drawn outside the submodel it belongs to.' },
+
+      { id: 'not-inside-a-stranger', subject: '*', predicate: 'notInsideAStranger',
+        enforcement: 'deferred', confidence: 'known',
+        message: 'This is drawn inside a submodel it does not belong to.' },
+
       // Behavioural facts — "an influence may branch", "a flow may not", "an
       // arc never terminates on an arc" — are deliberately NOT listed here.
       // They live in the VOCABULARY above, on each type (`branches`,

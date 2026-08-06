@@ -320,6 +320,10 @@ There is a limit to what templates can express, and the un-expressed cases must 
 Sienna.grammar.predicates.notAncestorOfSelf = (ctx, el, model) => { … };
 ```
 
+**First real use, 2026-08-06 — and it is not the kind of case that was anticipated.** The two rules in `src/predicates.js` ask whether an element is *drawn* inside the submodel it *belongs to*. The vocabulary could not express that for a structural reason worth naming: every other term quantifies over the **model**, while this compares the model with the **layout** — the two halves §6 deliberately keeps apart. A predicate is the right home precisely because the question crosses that line, and one should be suspicious of any pressure to add layout terms to the rule language itself.
+
+Why check it, when a dropped element cannot disagree with itself: **dropping is not the only way a diagram gets built.** An AI assistant writing a model, or an automatic graph layout moving things about, both bypass the gesture and have no reason to keep model and layout in step (user, 2026-08-06). The rule is insurance against the ways of building a diagram we do not have yet — which is also why it is **deferred** rather than preventive: dragging out of a box is how re-parenting works, and the drop is what decides.
+
 *This is a refinement of the originally proposed single `check_action()` function holding a growing list of cases.* A predicate **registry** is preferred over one accumulating function because it keeps the ruleset **enumerable** (one can ask "what rules apply to a flow?" — needed for 12.4), keeps the message attached per case, and keeps the rules exportable to other tools even when a few of them delegate. The imperative part still lives in code, keyed by name; the schema stays declarative.
 
 **Hard constraint:** a rule may hold a predicate **name**, never a code **string**. Evaluating rule text at runtime is rejected outright — it is the `eval` road, and it would break the goal of a JSON-friendly, tool-friendly declarative format (§ project goals). Shipping predicates as code in the schema `.js` is not `eval` and carries none of its problems.
@@ -352,6 +356,8 @@ A consequence worth stating: **only the structural and behavioural rules are nee
 - **Capturing** by drawing a submodel around existing elements is **allowed and reported**. §5's own workflow requires it: box a flat model, *then* declare the box a population. The moment the box exists it is `single`, so every population symbol inside it breaches the rule — refusing the capture would block the very thing the feature is for. The breach is reported instead, in the manner of the validation pass (§12.4 q3).
 
 So enforcement has two axes, not one: the rule's **class** (structural / content / behavioural) and the gesture's **stance** (refuse / report). A structural rule refuses where the user is asserting the thing the rule governs, and reports where they are doing something else that happens to pass through an illegal state. §12.5's non-monotonicity is the general form of this: an edit elsewhere can invalidate elements it never touched, and those can only ever be reported.
+
+**(iii) The deferred class was never wired up — found 2026-08-06.** `rulesFor` filtered to preventive rules, and the whole-model pass used it, so a rule tagged `deferred` was evaluated by *nobody*. The row had existed in the table above since the section was written, and the schema had a `'deferred'` value for `enforcement`, and neither did anything. It went unnoticed for the plainest of reasons: every rule written until then happened to be preventive, so the dead branch was never taken. `validate` now asks for preventive **and** deferred; the gesture callers still ask only for preventive. Worth recording as a general caution — a class that nothing yet instantiates is a class nothing tests, and the first user of it is as likely to find the mechanism broken as to find it useful.
 
 ### 12.4 One engine, four questions
 
