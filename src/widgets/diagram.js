@@ -30,6 +30,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     path: 'models/growth',
     padding: 40,
     maxFitScale: 2,
+    /**
+     * What the view bar's "100%" restores. The notation's world units are small
+     * enough that a true 1:1 is unreadably tiny, so the default zoom is a
+     * setting rather than the identity — destined for the Diagram widget's
+     * Settings dialog when there is one.
+     */
+    defaultScale: 1.8,
     /** Influence curvature: sagitta as a fraction of the chord (§ _bow). */
     bowFraction: 0.12,
   },
@@ -57,6 +64,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._bindPathOption();
 
     this._buildPalette();
+    this._buildViewBar();
     this._buildCanvas();
     this._bindView();
 
@@ -136,10 +144,172 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   _syncPalette() {
-    this._palette.find('button').each((i, b) => {
+    // Both bars hold armable tools, so both show which one is armed.
+    this._palette.add(this._viewBar).find('button').each((i, b) => {
       $(b).toggleClass('slx-active', $(b).attr('data-tool') === this._tool);
     });
-    this.element.toggleClass('slx-placing', !!this._tool);
+    this.element.toggleClass('slx-placing', !!this._tool && this._tool !== 'select:box');
+    this.element.toggleClass('slx-banding', this._tool === 'select:box');
+  },
+
+  // ---- view bar --------------------------------------------------------
+
+  /**
+   * A second row: the view commands, plus rubber-band selection. These are
+   * notation-independent — unlike the palette above, nothing here is read from
+   * the schema, because zooming means the same thing whatever is being drawn.
+   *
+   * Select box is an ARMED TOOL rather than a modifier-drag, because dragging
+   * blank canvas already means pan. Arming it the way the palette tools are
+   * armed resolves that conflict with a mode the user can see, and one that
+   * Escape cancels like any other.
+   */
+  _buildViewBar() {
+    const bar = this._viewBar = $('<div class="slx-palette slx-viewbar">').appendTo(this.element);
+
+    $('<span class="slx-palette-group">').text('view').appendTo(bar);
+    const cmd = (act, label, title) =>
+      $('<button type="button">').attr({ 'data-act': act, title }).text(label).appendTo(bar);
+
+    cmd('zoom-in', '+', 'Zoom in');
+    cmd('zoom-out', '−', 'Zoom out');
+    cmd('fit', 'fit', 'Zoom to fit the whole model in the panel');
+    cmd('reset', '100%', 'Back to the default zoom level');
+    cmd('recentre', 're-centre', 'Centre the model without changing the zoom');
+
+    $('<span class="slx-palette-group">').text('select').appendTo(bar);
+    $('<button type="button" data-tool="select:box">')
+      .attr('title', 'Drag a box to select what it encloses')
+      .text('select box')
+      .appendTo(bar);
+
+    this._on(bar, {
+      'click button': (e) => {
+        const el = $(e.currentTarget);
+        const tool = el.attr('data-tool');
+        if (tool) {
+          this._tool = this._tool === tool ? null : tool;   // click again to drop it
+          this._syncPalette();
+          return;
+        }
+        switch (el.attr('data-act')) {
+          case 'zoom-in':   this._zoomStep(1.25); break;
+          case 'zoom-out':  this._zoomStep(1 / 1.25); break;
+          case 'fit':       this._fit(true); break;
+          case 'reset':     this._restoreDefault(); break;
+          case 'recentre':  this._recentre(); break;
+        }
+      },
+    });
+  },
+
+  /** The panel centre in client coordinates — the anchor the buttons zoom about. */
+  _centre() {
+    const r = this._svg.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  },
+
+  _zoomStep(factor) { this._zoomTo(this._view.k * factor); },
+
+  /**
+   * Zoom to an absolute scale, holding the panel's centre point still — the
+   * stepped counterpart of the wheel, which holds the pointer still instead.
+   */
+  _zoomTo(k) {
+    k = Math.min(4, Math.max(0.2, k));
+    const c = this._centre();
+    const p = this._toWorld(c.x, c.y);
+    this._userView = true;
+    this._view.x += p.x * (this._view.k - k);
+    this._view.y += p.y * (this._view.k - k);
+    this._view.k = k;
+    this._applyView();
+  },
+
+  /**
+   * Back to the default zoom — and centred, unlike the stepped buttons, which
+   * hold the panel centre still. That is deliberate: this is the command you
+   * reach for when the view has got away from you, so it must always end up
+   * looking at the model. Anchoring it to the centre instead would faithfully
+   * keep whatever distant spot happened to be there, which is the one outcome
+   * a restore-default is meant to rescue you from.
+   */
+  _restoreDefault() {
+    if (this._centreContent(this.options.defaultScale)) {
+      this._userView = true;
+      this._applyView();
+    }
+  },
+
+  /** Centre the content in the panel at the current zoom. */
+  _recentre() {
+    if (this._centreContent(this._view.k)) {
+      this._userView = true;
+      this._applyView();
+    }
+  },
+
+  /**
+   * Put the content's centre at the panel's centre, at scale `k`. Shared by
+   * re-centre and by fit, which is a scale followed by exactly this. Returns
+   * false when there is nothing to centre or nothing to centre it in.
+   */
+  _centreContent(k) {
+    const box = this._root.getBBox ? this._root.getBBox() : null;
+    if (!box || !box.width) return false;
+    // The SVG, not the whole widget: the toolbars above it are not canvas, and
+    // the view transform is measured from the SVG's own top-left (see _toWorld).
+    const r = this._svg.getBoundingClientRect();
+    if (!r.width) return false;
+    this._view = {
+      k,
+      x: r.width / 2 - (box.x + box.width / 2) * k,
+      y: r.height / 2 - (box.y + box.height / 2) * k,
+    };
+    return true;
+  },
+
+  /**
+   * Rubber-band selection. "Encloses" means exactly what it means for submodel
+   * capture — wholly inside, siblings only — so the same gesture over the same
+   * picture selects the same things it would have captured (see
+   * `Diagram.enclosedBy`). Which siblings is decided by where the drag STARTED:
+   * begin inside a submodel and you band its children, begin outside and you
+   * band the top level.
+   *
+   * Shift or Ctrl adds to the selection, as it does for a click.
+   */
+  _beginBandSelect(e) {
+    const d = this._diagram();
+    if (!d) return;
+    const origin = this._toWorld(e.clientX, e.clientY);
+    const parent = this._dropTargetAt(d, origin, null);
+    const add = e.shiftKey || e.ctrlKey || e.metaKey;
+    const band = this._el('rect', { class: 'slx-band', rx: 2 });
+    this._layer.overlay.appendChild(band);
+
+    let cur = origin;
+    const move = (ev) => {
+      cur = this._toWorld(ev.clientX, ev.clientY);
+      band.setAttribute('x', Math.min(origin.x, cur.x));
+      band.setAttribute('y', Math.min(origin.y, cur.y));
+      band.setAttribute('width', Math.abs(cur.x - origin.x));
+      band.setAttribute('height', Math.abs(cur.y - origin.y));
+    };
+    const end = () => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      band.remove();
+      const w = Math.abs(cur.x - origin.x);
+      const h = Math.abs(cur.y - origin.y);
+      if (w < 4 || h < 4) return;              // not a drag: tool stays armed
+      const rect = { x: (origin.x + cur.x) / 2, y: (origin.y + cur.y) / 2, w, h };
+      const hit = d.enclosedBy(rect, parent);
+      this._sel = add ? this._sel.concat(hit.filter((id) => this._sel.indexOf(id) < 0)) : hit;
+      this._tool = null;                       // one band per pick, as for placing
+      this._syncPalette();
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
 
   // ---- canvas ---------------------------------------------------------
@@ -190,6 +360,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         }
         if (this._tool === 'submodel:submodel') {
           this._beginSubmodelDraw(e);                                  // drag out a box
+          return;
+        }
+        if (this._tool === 'select:box') {
+          this._beginBandSelect(e);                                    // drag out a band
           return;
         }
         if (this._tool) { this._placeAt(e); return; }                  // creating, not panning
@@ -1130,19 +1304,23 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   /**
    * Frame the content (world coords; the view transform does the work). Re-runs
    * whenever the panel is resized — but stops as soon as the user pans or zooms,
-   * since after that the view is theirs, not ours.
+   * since after that the view is theirs, not ours. `force` is the view bar's
+   * "fit" command: asking for it explicitly overrides that, and leaves the view
+   * flagged as the user's, so the next resize does not silently re-fit.
    */
-  _fit() {
-    if (this._userView) return;
+  _fit(force) {
+    if (this._userView && !force) return;
     const box = this._root.getBBox ? this._root.getBBox() : null;
     if (!box || !box.width) return;
-    const r = this.element[0].getBoundingClientRect();
+    const r = this._svg.getBoundingClientRect();
     if (!r.width) return;
     const pad = this.options.padding;
     // Scale up to fill the panel, but only so far: a two-node model blown up
-    // to full screen looks absurd.
+    // to full screen looks absurd. Then CENTRE — with that cap in play, framing
+    // from the top-left corner leaves a small model stranded up there.
     const k = Math.min(this.options.maxFitScale, (r.width - pad * 2) / box.width, (r.height - pad * 2) / box.height);
-    this._view = { k, x: pad - box.x * k, y: pad - box.y * k };
+    if (!this._centreContent(k)) return;
+    if (force) this._userView = true;
     this._applyView();
   },
 

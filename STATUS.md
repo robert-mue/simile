@@ -1,12 +1,12 @@
 # simile — build status
 
 *A quick-reference companion to `DESIGN-diagram.md`, which remains the design record.
-Last updated 2026-08-04.*
+Last updated 2026-08-06.*
 
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Only file save, ungroup and the view commands remain unstarted.**
+**Only the equation parser, file save and ungroup remain unstarted.**
 
 ---
 
@@ -83,6 +83,40 @@ replaced. Labels are validated, equations are not (stored verbatim).
 *Caveat: the property lists themselves are first drafts — to be checked against
 Simile type by type.*
 
+**10. View and selection commands — a second row in `src/widgets/diagram.js`**
+Plain text buttons, notation-independent (nothing here is read from the schema,
+because zooming means the same whatever is drawn): zoom in / out (stepped, about
+the panel centre, where the wheel zooms about the pointer), **fit**, **100%**,
+**re-centre**, and **select box**.
+
+"100%" is not the identity: the notation's world units are small enough that a
+true 1:1 is unreadable, so what it restores is the `defaultScale` option,
+**1.8** (set 2026-08-06 by eye) — the first candidate for the Diagram widget's
+Settings dialog when there is one. And unlike the stepped buttons it re-centres
+as well as re-scales. That was a bug found in testing: hold the panel centre
+still and the command faithfully keeps whatever distant spot happens to be
+there, so a view that has got away from you — maximise a panel after panning
+and the stale transform maps the new centre a long way off — restores to blank
+canvas. Restore-default is the command you reach for when lost, so it now always
+ends up looking at the model.
+
+Both open questions were settled as the notes predicted. Select box is an
+**armed tool**, like a palette entry — that is what keeps it from colliding with
+pan, which owns a blank-canvas drag; Escape drops it, and it disarms after one
+band, as placing does. And "encloses" is now literally the same test as submodel
+capture: `_enclosedBy` was promoted to `Diagram.enclosedBy` and both call it, so
+wholly-inside/siblings-only cannot drift apart between the two. Which siblings
+is decided by where the drag *started* — begin inside a submodel and you band
+its children. Shift/ctrl adds, as for a click.
+
+Two changes fell out of exposing `_fit()` as a command. It now measures the
+**SVG** rather than the whole widget (the toolbars above it are not canvas, and
+the view transform is measured from the SVG's own origin — with two rows the old
+reckoning was visibly off), and it **centres** rather than framing from the
+top-left, since `maxFitScale` otherwise strands a small model in the corner.
+That also improves the automatic fit on first paint. An explicit fit counts as
+the user's view, so a later resize does not silently re-fit over it.
+
 ---
 
 ## Not started
@@ -97,24 +131,6 @@ against the influence arrows actually drawn. A big piece; not started.
 
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.
-
-**View and selection commands.** A second row of controls — plain text buttons to
-begin with, possibly duplicated as right-click menu items later:
-
-| Command | Notes |
-|---|---|
-| Zoom in / Zoom out | Stepped equivalents of the wheel, which already works. |
-| Zoom to fit | The existing `_fit()`, which currently runs only on first paint and on panel resize; this exposes it as a command. |
-| Restore default | Back to the default zoom level (100%), as distinct from fitting. |
-| Re-centre | Centre the model in the panel without changing zoom. |
-| Select box | Rubber-band selection: drag a box, select what it encloses. |
-
-Two things to settle when building it. **Select box conflicts with panning**,
-since dragging blank canvas currently pans — arming it as a palette-style tool
-resolves that cleanly, and matches how the other tools already behave.
-And note that "enclosed" should probably mean the same here as it does for
-submodel capture (fully inside, siblings only), or the two will feel
-inconsistent.
 
 **Ungroup.** Dissolve a submodel but keep its contents, promoting them to its
 parent. Distinct from delete, which takes the contents with it. The mechanics

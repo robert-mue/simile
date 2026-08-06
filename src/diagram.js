@@ -781,7 +781,7 @@
       var label = opt.label || id;
       var parent = opt.parent != null ? opt.parent : null;
       var rect = this._geom(opt);
-      var captured = rect ? this._enclosedBy(rect, parent) : [];
+      var captured = rect ? this.enclosedBy(rect, parent) : [];
 
       Sienna.actions.dispatch(
         {
@@ -811,10 +811,11 @@
 
     /**
      * Ids of elements lying wholly within `rect` whose parent is `parent`.
-     * Used by submodel capture; the geometry test is on the element's box, so
-     * it matches what the user can see.
+     * Used by submodel capture AND by the widget's rubber-band selection, so
+     * that "encloses" means one thing in the editor and not two. The geometry
+     * test is on the element's box, so it matches what the user can see.
      */
-    _enclosedBy: function (rect, parent) {
+    enclosedBy: function (rect, parent) {
       var self = this;
       var x1 = rect.x - (rect.w || 0) / 2;
       var x2 = rect.x + (rect.w || 0) / 2;

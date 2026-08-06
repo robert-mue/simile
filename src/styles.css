@@ -178,6 +178,14 @@
   color: #fff;
 }
 
+/* The second row: view commands and rubber-band selection. Same furniture as
+   the palette, one shade quieter — these do not change the model. */
+.slx-viewbar {
+  background: #fbfbfc;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
 /* The widget IS the shell's panel-content element, which ships with padding and
    overflow:auto. The diagram wants the full bleed and does its own panning, so
    both are cancelled here — otherwise the panel scrolls behind the canvas. */
@@ -194,6 +202,18 @@
 .slx-diagram.slx-placing { cursor: crosshair; }
 .slx-diagram.slx-placing .slx-node,
 .slx-diagram.slx-placing .slx-submodel { cursor: crosshair; }
+
+/* Select box armed: dragging blank canvas bands rather than pans. */
+.slx-diagram.slx-banding { cursor: crosshair; }
+
+.slx-band {
+  fill: rgba(74, 127, 181, 0.10);
+  stroke: #4a7fb5;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
 
 /* --- arc drawing ---------------------------------------------------- */
 
