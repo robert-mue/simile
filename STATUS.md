@@ -50,13 +50,6 @@ what it encloses** and re-seeds the ports of arcs that consequently cross.
 Arcs drawn source→target, with either end of a flow allowed to be blank canvas.
 New elements are born named after their id and open straight into a rename box.
 
-**7. Dragging, re-parenting, and direct manipulation**
-Nodes, submodels (carrying contents and boundary ports), labels (stored as an
-offset from the notation's default anchor), ports, and influence curvature — all
-one undo step per gesture, with nothing written until the drop. Dropping a node
-in a submodel re-parents it. Click selects (blue ring), shift/ctrl adds, and a
-multiple selection drags together.
-
 **6. Deletion**
 Select and press Delete/Backspace. The cascade follows the lifecycle rules of
 §4: a submodel takes its contents at any depth; any element takes the arcs
@@ -67,6 +60,13 @@ cascade — and the count is reported, since a delete can reach much further tha
 what was selected. **Deleting a submodel deletes its contents** (ruled
 2026-08-04) — dissolving the box while keeping its contents is the separate
 **ungroup** command, item 11.
+
+**7. Dragging, re-parenting, and direct manipulation**
+Nodes, submodels (carrying contents and boundary ports), labels (stored as an
+offset from the notation's default anchor), ports, and influence curvature — all
+one undo step per gesture, with nothing written until the drop. Dropping a node
+in a submodel re-parents it. Click selects (blue ring), shift/ctrl adds, and a
+multiple selection drags together.
 
 **8. Grammar engine — `src/grammar.js`**
 Evaluates the schema's rules; contains no rule of its own. All four §12.4
@@ -317,7 +317,7 @@ are left for a ruling rather than invented:
 - ~~**A submodel's kind is invisible.**~~ **RULED and built 2026-08-06** — see
   item 16.
 
-**16. Membership kind, drawn — `_decorateKind` + `style.submodel.byKind`**
+**16. Notation made visible — membership kinds, and the population glyphs**
 Ruled 2026-08-06, straight off the reference models, where `single`,
 `fixed-membership` and `population` were indistinguishable:
 
@@ -396,7 +396,10 @@ an automated check has caught this session, after growth's missing influence and
 
 ## Known gaps and loose ends
 
-- A flow that crosses a submodel boundary leaves its **valve** where it lies.
+- A flow that crosses a submodel boundary leaves its **valve** where it lies —
+  possibly outside its own parent. Types positioned by something else are
+  therefore exempt from the geometry rules of item 18, since the modeller can
+  do nothing about it; fixing the valve's placement would close both.
 - Models built before the valve became derived keep a dead `layout` entry for it.
 - **Ghosts** are deliberately out (§15); `appearanceOf()` is the seam for adding
   them later.
@@ -430,7 +433,7 @@ Carried in `DESIGN-diagram.md` §8, still outstanding:
 - the remaining **label-typography** rules (beyond no-spaces), and whether
   name-uniqueness is submodel-scoped;
 - whether the **population glyphs** now drawn (item 16) are close enough to
-  Simile's, which only the toolbar icons were available for.
+  the real in-diagram symbols — only the toolbar icons were available;
 - the remaining **grammar rules** — §12's catalogue is a starter set, each rule
   tagged `known` or `guess`;
 - **association and conditional inference**: stored flag or recoverable?
