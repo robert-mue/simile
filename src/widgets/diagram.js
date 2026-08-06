@@ -562,6 +562,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       class: 'slx-submodel slx-submodel-' + sub.kind + (this._incomplete(d, id) ? ' slx-incomplete' : ''),
       'data-id': id,
     });
+    // The kind's decoration goes on FIRST, so the box itself paints over it and
+    // the stack reads as sitting behind. Which decoration is the schema's to
+    // say (`style.submodel.byKind`); how to draw one is this renderer's.
+    this._decorateKind(g, b, ((d.schema().style || {}).submodel || {}).byKind, sub.kind);
+
     g.appendChild(this._el('rect', {
       x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 4,
     }));
@@ -574,6 +579,55 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const t = this._placeLabel(d, id, sub.label, b.cx - b.w / 2 + 8, b.cy - b.h / 2 + 15,
         'slx-label slx-submodel-label');
       t.setAttribute('text-anchor', 'start');
+    }
+  },
+
+  /**
+   * Draw how many instances a submodel has (§6, ruled 2026-08-06).
+   *
+   *   stack        a known number: `layers` outlines stepped up and to the
+   *                right, a deck seen from the front. Up-right rather than
+   *                down-right because the label sits at the top LEFT and the
+   *                contents fill downwards, so that corner is the free one.
+   *   open-shadow  an unknown, changing number: a shadow edge along top-and-left
+   *                and another along bottom-and-right, NOT meeting at the two
+   *                corners between them. The gaps are the point — an outline
+   *                that does not close says the membership is not fixed.
+   *
+   * Decoration only: the box itself remains the hit target, so selecting,
+   * dragging and dropping are untouched.
+   */
+  _decorateKind(g, b, byKind, kind) {
+    const spec = (byKind || {})[kind];
+    if (!spec) return;                       // `single` — one instance, no mark
+
+    const x1 = b.cx - b.w / 2, y1 = b.cy - b.h / 2;
+    const x2 = b.cx + b.w / 2, y2 = b.cy + b.h / 2;
+
+    if (spec.decoration === 'stack') {
+      const step = spec.step || 3;
+      // Back to front, so each sits over the one behind it.
+      for (let i = (spec.layers || 3) - 1; i >= 1; i--) {
+        g.appendChild(this._el('rect', {
+          class: 'slx-kind-stack',
+          x: x1 + i * step, y: y1 - i * step, width: b.w, height: b.h, rx: 4,
+        }));
+      }
+      return;
+    }
+
+    if (spec.decoration === 'open-shadow') {
+      const o = spec.offset || 4;
+      const gx = b.w * (spec.gap || 0.2);    // how far short of each open corner
+      const gy = b.h * (spec.gap || 0.2);
+      g.appendChild(this._el('path', {
+        class: 'slx-kind-shadow',
+        d: `M${x2 - gx - o},${y1 - o} L${x1 - o},${y1 - o} L${x1 - o},${y2 - gy - o}`,
+      }));
+      g.appendChild(this._el('path', {
+        class: 'slx-kind-shadow',
+        d: `M${x1 + gx + o},${y2 + o} L${x2 + o},${y2 + o} L${x2 + o},${y1 + gy + o}`,
+      }));
     }
   },
 

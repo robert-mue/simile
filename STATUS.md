@@ -315,10 +315,36 @@ are left for a ruling rather than invented:
 - **The four population symbols have no glyph.** `style` has entries for six
   types; initialiser, migrator, exterminator and reproduction fall through to
   the renderer's default circle, so they are indistinguishable from a variable
-  and from each other.
-- **A submodel's kind is invisible.** `single`, `fixed-membership` and
-  `population` all draw as the same rounded box, though which submodels have
-  many instances is arguably the most important thing about a Simile diagram.
+  and from each other. *Still open — the user is supplying the glyphs.*
+- ~~**A submodel's kind is invisible.**~~ **RULED and built 2026-08-06** — see
+  item 16.
+
+**16. Membership kind, drawn — `_decorateKind` + `style.submodel.byKind`**
+Ruled 2026-08-06, straight off the reference models, where `single`,
+`fixed-membership` and `population` were indistinguishable:
+
+- **fixed-membership** — a **stack four deep**, offset up and to the right. A
+  known number of instances, drawn as a deck seen from the front. Up-right
+  because the label sits at the top left and contents fill downwards, so that
+  corner is the free one.
+- **population** — an **open shadow**: one edge along top-and-left, another
+  along bottom-and-right, deliberately *not* meeting at the two corners
+  between. The gaps carry the meaning — an outline that does not close says the
+  membership is not fixed.
+- **single** — no mark at all. One instance needs none.
+
+Which decoration is schema data (`style.submodel.byKind`); how to draw one is
+the renderer's, exactly as for the `cloud` and `valve` shapes. Decoration only:
+the box remains the hit target, so selection and dragging are untouched.
+
+**17. Label ≡ name reaffirmed (§14)**
+Building land-use turned up that Simile does *not* do this — `landuse1b.pl`
+names a compartment `time under crop` while its equations say
+`time_under_crop`, so Simile keeps a display label and derives the name. Put to
+the user, the ruling stood: one string, underscores, no spaces. The reason is
+recorded in §14 because it is a judgement rather than a technical necessity —
+formality is worth a little unnaturalness, and there should not be two ways of
+expressing the same thing.
 
 ---
 
@@ -355,15 +381,11 @@ are left for a ruling rather than invented:
 
 Carried in `DESIGN-diagram.md` §8, still outstanding:
 
-- the full **label-typography** rules, and whether name-uniqueness is
-  submodel-scoped. Sharpened 2026-08-06 by reading `landuse1b.pl`: it names a
-  compartment `time under crop`, *with spaces*, while its equations say
-  `time_under_crop`. So in Simile the label and the equation name are two
-  strings, the second derived from the first. §14 rules them identical, which
-  forces the underscored form on the modeller — a departure made before we knew
-  this, and worth revisiting;
-- **glyphs for the population symbols**, and whether a submodel's kind should
-  be visible on the diagram (§9);
+- the remaining **label-typography** rules (beyond no-spaces), and whether
+  name-uniqueness is submodel-scoped;
+- **glyphs for the four population symbols** — initialiser, migrator,
+  exterminator, reproduction — which currently fall through to the default
+  circle. The user is supplying these.
 - the remaining **grammar rules** — §12's catalogue is a starter set, each rule
   tagged `known` or `guess`;
 - **association and conditional inference**: stored flag or recoverable?

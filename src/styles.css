@@ -124,6 +124,21 @@ text.slx-incomplete {
   stroke-width: 0.9;
 }
 
+/* Membership kind, drawn (§6). The stack is a known number of instances seen
+   as a deck; the open shadow is an unknown one, its unclosed corners saying so.
+   Both are lighter than the box itself — they qualify it, they are not it. */
+.slx-submodel .slx-kind-stack {
+  fill: none;
+  stroke: #999;
+  stroke-width: 0.7;
+}
+.slx-submodel .slx-kind-shadow {
+  fill: none;
+  stroke: #999;
+  stroke-width: 1.6;
+  stroke-linecap: butt;
+}
+
 .slx-submodel-label {
   font-weight: 600;
   fill: #444;

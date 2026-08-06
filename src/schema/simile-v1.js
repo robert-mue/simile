@@ -359,7 +359,25 @@
       cloud:        { shape: 'cloud',   resizable: false, w: 24, h: 16 },
       valve:        { shape: 'valve',   resizable: false, w: 12, h: 12 },
       condition:    { shape: 'diamond', resizable: false, w: 18, h: 18 },
-      submodel:     { shape: 'rect',    resizable: true,  w: 120, h: 84 },
+      // A submodel's MEMBERSHIP KIND is drawn, not just stored (ruled
+      // 2026-08-06, on building the reference models: the three kinds were
+      // indistinguishable, though how many instances a submodel has is
+      // arguably the most important thing a Simile diagram conveys).
+      //
+      // `byKind` says WHICH decoration; the renderer knows HOW to draw each,
+      // exactly as it does for the `cloud` and `valve` shapes. A kind with no
+      // entry — `single` — is drawn as a plain box, which is the point: one
+      // instance needs no mark.
+      submodel: {
+        shape: 'rect', resizable: true, w: 120, h: 84,
+        byKind: {
+          // A known number of instances: a deck of four, offset behind.
+          'fixed-membership': { decoration: 'stack', layers: 4, step: 3 },
+          // An unknown, changing number: two shadow edges that do not close,
+          // the open corners saying the membership is not fixed.
+          population: { decoration: 'open-shadow', offset: 4, gap: 0.22 },
+        },
+      },
     },
   });
 })(window.Sienna);
