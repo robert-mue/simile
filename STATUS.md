@@ -7,8 +7,9 @@ Ordering follows the implementation plan agreed on 2026-08-01: schema → model 
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
 **Everything on the implementation plan is now built.** What remains is the
-list of known gaps below, and the questions in `DESIGN-diagram.md` §8 that only
-the Simile developer can answer.
+**marker** below (try the replay mechanism — the next thing to look at), the
+list of known gaps, and the questions in `DESIGN-diagram.md` §8 that only the
+Simile developer can answer.
 
 ---
 
@@ -418,6 +419,48 @@ label. Rename a source and every downstream equation still works, verified.
 That ruling was made weeks ago for a different reason and this is it earning its
 keep. Rewriting equation text is no longer impossible either, now the parser can
 locate each identifier exactly — just unnecessary.
+
+---
+
+## Marker: try the replay mechanism (2026-08-06)
+
+*Put down by the user as the next thing to look at, not started. Recorded with
+what a cold start would need to know.*
+
+sienna records every dispatched action, and can **replay** a session — either
+instantly (testing) or honouring the recorded time gaps (a video of a modelling
+session). Every model edit in simile already goes through `actions.dispatch`, so
+in principle the whole of a session is on tape.
+
+**What exists.** The machinery is entirely the shell's:
+`Sienna.actions.replay(log, {speed, onStep})`, `onReplay(type, fn)`,
+`log()`/`toJSON()`/`fromJSON()`. Model edits need no handler at all — replay
+re-applies each entry's captured `changes`, and `_watchModel` re-renders the
+bound widgets, so the diagram redraws for free.
+
+**What simile is missing**, which is the whole of why this has never been seen
+working:
+
+1. **No way to trigger it.** The sienna demo has a Session menu — Replay,
+   export log, import log; simile's menu has Edit / Widgets / View and nothing
+   else. Replay can only be reached from the console today.
+2. **No `onReplay` handlers.** The demo registers six, for `panel.add`,
+   `panel.close`, `panel.move`, `panel.resize`, `panel.minimize`,
+   `panel.maximize` (`sienna/examples/demo/main.js`, ~line 34 — the model to
+   copy). simile registers none, so a replay would re-perform the model edits
+   onto **no panels**: correct data, invisible.
+
+**Known limits to expect** (from `sienna/CLAUDE.md`): replay assumes a clean
+start — clear workspace, userData and history first, or minted panel ids will
+not line up — and it does not reconstruct `panel.ref` or actions with no
+per-item record, such as Clear workspace.
+
+**Worth thinking about while trying it.** A replay of a *diagram* session is a
+more interesting artefact than a replay of the demo's counters: it is a
+screencast of a model being built, reproducible from a few KB of JSON, and it is
+also a test fixture — build a model once, replay it to check a refactor changed
+nothing. Whether that second use is worth formalising is the question to hold in
+mind.
 
 ---
 
