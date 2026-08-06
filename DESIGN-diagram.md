@@ -1,6 +1,6 @@
 # Diagram Library — Design Summary (restart / discussion draft)
 
-*Status: design in progress, no code yet. Draft for review — including a meeting with the Simile developer, 2026-07-28. Sections marked **[ASK]** are questions to put to him.*
+*Status: design and a working editor. §§1–15 were written before the code; §§16–18 record decisions taken while building it, 2026-08-04/05. Sections marked **[ASK]** are questions for the Simile developer. Build state — what exists, what does not — is in `STATUS.md`, which is kept current; this file is the reasoning behind it.*
 
 This is the design of a **diagramming library** and, on top of it, a **sienna diagram-editor widget**. The long-term aim is to replace the diagram editor of **Simile** (simulistics.com) with something notation-neutral and schema-driven. It sits inside sienna (static jQuery SPA, runs from `file://`, no build/server — see `CLAUDE.md`).
 
@@ -77,7 +77,7 @@ Key points:
 - **Three logical maps** (`nodes` / `arcs` / `submodels`) rather than one — chosen for familiarity (almost every graph library splits node/arc). The map *is* the family, so no `family` field is needed.
 - **Ids** are numerically incremented, prefixed by family: `node1`, `arc1`, `submodel1`. The prefix also names which map to look in.
 - **Arcs** carry `from`/`to` as element-id strings, and **no `parent`** — a cross-boundary arc is *one* arc, drawn as several segments (§13). Arcs never terminate on arcs: an influence into a flow targets the flow's **valve** (`arc2 → node5`). Only **role** arcs carry a `label`; flow and influence arcs do not (§14).
-- **Valves** are real, auto-created node elements, one per flow, holding the flow's label/name and its rate equation. They are the System Dynamics instance of a general **attachment node** — the node a notation creates so that things can be hung off an arc; in other notations (e.g. webakt causal links) the same node has no glyph. Visible-or-not is a **style** fact (§6), not a model fact.
+- **Valves** are real, auto-created node elements, one per flow, holding the flow's label/name and its rate equation. **A valve has no position of its own** *(2026-08-04)*: it rides at the midpoint of its flow, so dragging either end carries it — the schema marks the type `positionedBy:'arc'` and the geometry is derived, hence never stored (§10.2's rule applied to a *node*, not just to routing). A flow is therefore drawn **straight** end to end, with the valve sitting on the line rather than being a bend in it. They are the System Dynamics instance of a general **attachment node** — the node a notation creates so that things can be hung off an arc; in other notations (e.g. webakt causal links) the same node has no glyph. Visible-or-not is a **style** fact (§6), not a model fact.
 - **Submodel `kind`** = membership only (`single` / `fixed-membership` / `population`). *Conditional* and *association* are **inferred**, not stored: a submodel is conditional if it contains a condition node — **any number** are allowed, AND-ed together (§12.8) — and it is an association if role arcs point into it. An association between S1 and S2 is modelled by adding a **third** submodel S3 with role arcs S1→S3 and S2→S3 — **never** S1→S2; S3 becomes the association by virtue of those arcs. (Per-record and special-grid kinds deferred.)
 - **Clouds** are real, auto-created node elements (created at a flow's blank end). Traditionally unnamed (a stock whose value we don't care about) but **optionally nameable** — e.g. "atmosphere"/"ocean" in a hydrological model. A cloud may carry **several** in/outflows, so it is deleted only when the flow being deleted was its **last** connection — unlike a valve, which is one-to-one with its flow and dies with it.
 - **Completeness** (Simile's red-until-defined, black-when-complete) is **derived** from whether props are filled, not stored.
@@ -131,6 +131,17 @@ schema default (the notation defines its glyphs)
 
 Simile's red/black completeness colouring is a **computed** style layer on top of that cascade.
 
+**What `layout` actually holds** *(recorded 2026-08-05, after building it)*. The table above said "position, size, waypoints, collapsed". Implementation added three entries, each keyed by something other than a bare element id, which is worth seeing together:
+
+| Key | Holds | Why it is layout, not model |
+|---|---|---|
+| `<id>` | position, and size for resizable types | as planned |
+| `ports/<boundary>/<owner>` | where an arc crosses a boundary (§13) | a drawing fact; the model has one unsplit arc |
+| `labels/<id>` | a label's **offset** from the notation's default anchor | the anchor is the schema's business, the nudge is the user's |
+| `arcs/<id>` | an influence's **curvature** (signed sagitta fraction) | shape of the line, not of the relation |
+
+Storing an *offset* rather than an absolute label position matters: a label the user has never moved still follows the notation, so changing the schema's default anchor moves every untouched label and leaves the deliberate ones alone.
+
 **Costs nothing now** — we just keep the three unfused: never a colour in `layout`, never an `x` in the model. Whether they end up as sibling subtrees / separate userData paths / separate files (so two users can swap styles over one shared model) is deferred alongside #4. One resolved ripple: whether `layout` carries `w/h` is governed by the type's **style** — a compartment is a resizable box (has `w/h`); a cloud or variable is a fixed glyph (`x/y` only).
 
 ## 7. Open threads
@@ -139,7 +150,7 @@ Simile's red/black completeness colouring is a **computed** style layer on top o
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
 3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-30 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
 4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
-5. **Influence curve geometry.** Influence arcs are drawn as curves, not straight lines — including each segment of one that crosses a boundary. **Provisionally an arc of a circle** (sagitta a fixed fraction of the chord, currently 0.12), chosen 2026-08-04 as the simple option. Quadratic Bézier and spline are the alternatives, and the choice interacts with user-dragged waypoints once those exist. Flows and role arcs stay straight.
+5. **Influence curve geometry.** *(Partly resolved — see §13.6a for how the arc is defined and trimmed; the curve FAMILY is what remains open.)* Influence arcs are drawn as curves, not straight lines — including each segment of one that crosses a boundary. **Provisionally an arc of a circle** (sagitta a fixed fraction of the chord, currently 0.12), chosen 2026-08-04 as the simple option. Quadratic Bézier and spline are the alternatives, and the choice interacts with user-dragged waypoints once those exist. Flows and role arcs stay straight.
 
 ## 8. Questions for the Simile developer **[ASK]**
 
@@ -504,6 +515,14 @@ If a cross-boundary connection is one arc, `parent` on an arc is either derived 
 
 **Ruling #9, confirmed 2026-07-30 — and there is an existence proof, not merely an argument.** Simile's own saved model carries no arc-parent fact: the parentage of each of its split arcs is recoverable from that arc's endpoints. So a format that omits it demonstrably loses nothing. Our version derives the parent of the *whole* arc rather than of each split piece, but the same reasoning applies — endpoints determine containment, so containment need not be stored alongside them.
 
+### 13.6a How an influence is drawn *(2026-08-05)*
+
+An influence's arc is **defined through the two node centres** and then **trimmed** where it crosses each glyph — not drawn between points already on the two rims. The difference is visible: an arc defined by rim points leaves the glyph at an angle that has nothing to do with where it is going, so the arrow appears to start beside the node rather than to come from it. Simile does not do this; correcting it was cheap and is the sort of thing that is invisible when right and irritating when wrong.
+
+Trimming walks the arc rather than solving circle-against-glyph analytically, because the glyphs are rectangles, circles, clouds and bow-ties and one walk serves all of them.
+
+Curvature is per arc and **user-draggable** (stored in `layout`, §6), including bending the other way — a signed sagitta, clamped below half the chord, since at half the chord the arc is a semicircle and beyond it SVG's `large-arc-flag` can no longer express what is meant. Each arc carries a wide transparent twin beneath it, because a hairline cannot be hit with a pointer; that twin is also the selection handle when selection reaches arcs.
+
 ### 13.6 Status
 
 **Open thread #4 is closed** as of 2026-07-30: one arc in the model, shared source-side segments, no fan-in, ports auto-seeded then draggable and persisted, arc parentage not stored. Two small residues:
@@ -536,6 +555,7 @@ The rejected alternative was to store segments and reason over them with a small
 Four words were in circulation; three survive, with fixed meanings:
 
 - **ID** — system-generated, family-prefixed, e.g. `arc1`. Never user-facing, never user-editable, stable across re-parenting (§10.1).
+- **`has_label`** *(added 2026-08-04)* — a schema flag on a *type*, saying whether that type carries a label at all (`true` / `false` / `'optional'` for clouds). Named to keep it clear of a field descriptor's `label`, which is that field's display name in a dialog. Three uses of one word is two too many.
 - **Label** — the user-editable text attached to an element on the model diagram.
 - **Name** — the variable's name as used in equations.
 - **~~Identifier~~** — **dropped**; it was being used for both ID and name.
@@ -578,3 +598,48 @@ The point is that both are true, and the trade is about diagram legibility at sc
 This is a **discipline for code not yet written** (§11 decided we build the renderer ourselves), so it costs nothing today and must simply be honoured when the renderer is built. It is *not* a request to model appearances now: there is no appearance id, no appearance map, no second appearance — only one indirection, so that adding them later is a change in one place.
 
 **Likely trigger for revisiting:** importing legacy Simile models that already contain ghosts, or clutter becoming unmanageable in a large test model. Not a decision to re-open before then.
+
+## 16. Interaction model
+
+*Ruled 2026-08-04, after a first attempt put renaming on double-click and had nowhere left for a settings dialog.*
+
+| Gesture | On a node or submodel | On a label |
+|---|---|---|
+| **Click** (press, no movement) | select — a ring, and the hook everything else hangs off | edit the label in place |
+| **Drag** | move it | move the label, storing an offset (§6) |
+| **Double-click** | open the element's dialog (§3's third face) | the dialog too, if the label lies inside the glyph; otherwise nothing |
+
+Three things this settles, each of which cost something to learn:
+
+**Click and drag are told apart by movement, not by target.** A press only becomes a selection or an edit *on release*, once it is known that nothing moved. Any other rule collides with dragging, which the same press has to be able to start.
+
+**Double-click cannot rely on the browser.** Every gesture ends in a re-render that replaces the SVG element, so the browser sees two clicks on two different nodes and never pairs them into a `dblclick`. Detection is therefore keyed on the **element id**, not the DOM node — and a press that changes nothing must not re-render, or it destroys the node between the two halves of the gesture. This is the kind of defect that a test dispatching a synthetic `dblclick` will happily fail to find, because it skips the very mechanism that is broken.
+
+**Selection is the hook, not a feature.** It is what makes multiple elements draggable together, what Delete acts on, what the validation pass highlights, and where a properties panel will attach. Adding it late would have meant retrofitting all four.
+
+## 17. Deletion
+
+*Built 2026-08-04. The lifecycle rules were settled piecemeal in §4; this is them together.*
+
+Deleting an element deletes the **closure** of what cannot survive it, computed to a fixpoint since removing one element can orphan another:
+
+- a **submodel** takes its contents, at any depth;
+- any element takes the **arcs** attached to it — an arc with one missing end is not a thing;
+- a **flow** takes its valve, and a valve its flow: they are one-to-one;
+- a **cloud** is **refcounted**, going only when the last flow touching it goes (§4).
+
+Layout owned by the removed elements goes with them — geometry, label offset, curvature, and any port they owned or hosted, a port's existence being derived from arcs and containment that no longer exist (§13.4).
+
+The whole cascade is **one action**, hence one undo step; and the editor reports the count when it exceeds the selection, because deleting one element can reach a long way. Deleting a compartment in the reference model removes seven things.
+
+**Deleting a submodel deletes its contents** — ruled deliberately. Dissolving the box while *keeping* its contents is a different intention and will be a separate **ungroup** command. Its mechanics already exist: re-parent the contents to the submodel's own parent and re-seed ports, both of which capture and drop-into already do.
+
+## 18. Where the File menu lives — a boundary, not a feature
+
+*Ruled 2026-08-04. Recorded here because it settles what this design does NOT own.*
+
+sienna is a host that becomes a particular application (`?app=simile`, `?app=webakt`). The conventional furniture along the top of the window should not vary with which one — so **File belongs to the shell**, not to this app and emphatically not to the diagram widget. The second reason is the stronger one: a model will eventually be viewed by *several* widgets, and it would be arbitrary for one of them to own loading and saving it.
+
+The shell therefore owns New / Open / Save / the list of stored documents (`Sienna.documents`), and simile registers only the two things that cannot be generic: **what an empty model looks like**, and **which widget opens one**. The shell never inspects a document's contents — the same boundary `userData` already draws.
+
+The consequence for this design: a widget that views a model must declare it by setting its panel's **`ref`**, which is the shell's own binding. That is how File commands find the current model without knowing that a diagram widget exists, and it is what gives a widget `_model()` / `_watchModel` for nothing.
