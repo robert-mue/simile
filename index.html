@@ -15,6 +15,10 @@
     <script src="sienna/vendor/jquery.min.js"></script>
     <script src="sienna/vendor/jquery-ui.js"></script>
 
+    <!-- This app's own vendored library: the Peggy parser generator, which
+         compiles src/equation-grammar.js on first use. -->
+    <script src="vendor/peggy.min.js"></script>
+
     <!-- Shell core, in dependency order. Content widgets are NOT listed here;
          they are injected on demand by the widget registry. -->
     <script src="sienna/src/core/namespace.js"></script>
@@ -36,6 +40,9 @@
     <script src="src/diagram.js"></script>
     <script src="src/dialog.js"></script>
     <script src="src/grammar.js"></script>
+    <script src="src/equation-grammar.js"></script>
+    <script src="src/equation.js"></script>
+    <script src="src/equation-check.js"></script>
     <script src="src/demo-growth.js"></script>
     <script src="src/demo-submodel.js"></script>
     <script src="src/widgets/index.js"></script>

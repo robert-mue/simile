@@ -206,7 +206,129 @@
     ],
 
     // =====================================================================
-    // 4. STYLING (§6) — the cascade's base layer
+    // 4. EQUATION FUNCTIONS (§8) — name → how many arguments
+    // =====================================================================
+    // Deliberately NOT in the PEG (see src/equation-grammar.js). Keeping the
+    // vocabulary here rather than in the grammar means adding a function — or
+    // one day letting a user declare their own — is a line of data, and it lets
+    // "no such function" be reported differently from "that is not an
+    // expression". Ruled 2026-08-06.
+    //
+    // A number is an exact count. An ARRAY IS A SET OF ALLOWED COUNTS, not a
+    // range: `at_posn: [1, 3]` means one argument or three, never two.
+    //
+    // Provenance. The names and arities come from the five function pages under
+    // simulistics.com/help/equations/. The 41 marked ✓ are confirmed by use in
+    // the 72 reference models, whose arities also settled a discrepancy: the
+    // help documents `pi()`, `time()` and friends as nullary, while real models
+    // write `pi(1)` and `time(1)`, so those take an optional dummy argument.
+    // The unmarked ones are from the help pages alone and are a first draft, to
+    // be checked type by type like the property lists.
+    functions: {
+      // arithmetic
+      abs: 1,           // ✓
+      ceil: 1,          // ✓
+      exp: 1,           // ✓
+      floor: 1,         // ✓
+      fmod: 2,          // ✓
+      hypot: 2,         // ✓
+      inf: [0, 1],
+      int: 1,           // ✓
+      log: 1,           // ✓
+      log10: 1,
+      max: 2,           // ✓
+      min: 2,           // ✓
+      pi: [0, 1],       // ✓
+      pow: 2,           // ✓
+      round: 1,
+      sgn: 1,           // ✓
+      sqrt: 1,          // ✓
+
+      // trigonometric
+      acos: 1,
+      asin: 1,
+      atan: 1,          // ✓
+      cos: 1,           // ✓
+      sin: 1,           // ✓
+      tan: 1,           // ✓
+
+      // statistics and random
+      binome: 2,
+      exprnd: [1, 2],
+      gaussian_var: 2,
+      hypergeom: 3,
+      poidev: 1,
+      rand: 2,          // ✓ — used by the models, absent from the help pages
+      rand_const: 2,    // ✓
+      rand_var: 2,      // ✓
+
+      // list and array handling
+      all: 1,           // ✓
+      any: 1,           // ✓
+      colin: 1,
+      count: 1,         // ✓
+      element: 2,       // ✓
+      firsttrue: 1,
+      greatest: 1,      // ✓
+      howmanytrue: 1,
+      least: 1,         // ✓
+      makearray: 2,     // ✓
+      order: 1,
+      posgreatest: 1,
+      posleast: 1,      // ✓
+      product: 1,
+      rankings: 1,
+      subtotals: 1,
+      sum: 1,           // ✓
+      with_colin: 2,
+      with_greatest: 2,
+      with_least: 2,
+
+      // time and dynamics
+      at_init: 1,
+      const_delay: 2,
+      delay1: 2,
+      delay3: 2,
+      delayn: 3,
+      dt: [0, 1],       // ✓
+      forcst: [3, 4],
+      init_time: [0, 1],// ✓
+      last: 1,          // ✓
+      prev: 1,          // ✓
+      pulse: [2, 3],
+      ramp: 2,
+      smth1: 2,
+      smth3: 2,
+      smthn: 3,
+      step: 2,
+      time: [0, 1],     // ✓
+      var_delay: 2,
+
+      // model properties
+      at_posn: [1, 3],
+      channel_is: 1,
+      dies_of: 1,
+      first: 1,
+      following: 1,
+      in_preceding: 1,
+      in_progenitor: 1,
+      index: 1,         // ✓
+      iterations: 1,    // ✓
+      parent: 1,
+      place_in: 1,      // ✓
+      preceding: 1,
+      size: [1, 2],     // ✓
+      trigger_magnitude: [0, 1],
+
+      // graph, table and other lookups
+      graph: 1,         // ✓
+      interpolate: 3,
+      stop: 1,
+      table: 1,         // ✓
+    },
+
+    // =====================================================================
+    // 5. STYLING (§6) — the cascade's base layer
     // =====================================================================
     // Only the part that has a structural consequence is filled in: `resizable`
     // decides whether an element's layout carries w/h at all (§6). Glyphs,

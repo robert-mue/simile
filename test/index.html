@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>simile — equation grammar test</title>
+    <style>
+      body { font: 13px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+      h1 { font-size: 1.2rem; }
+      #summary { font-size: 1.1rem; padding: 0.6rem 0.9rem; border-radius: 4px; margin: 1rem 0; }
+      .pass { background: #e8f5e9; border: 1px solid #a5d6a7; }
+      .fail { background: #ffebee; border: 1px solid #ef9a9a; }
+      table { border-collapse: collapse; width: 100%; }
+      td { border-top: 1px solid #eee; padding: 4px 8px; vertical-align: top; }
+      td.model { color: #777; white-space: nowrap; }
+      td.eq { font-family: ui-monospace, monospace; }
+      td.why { color: #b71c1c; }
+      p.note { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>Equation grammar — corpus test</h1>
+    <p class="note">
+      Runs the real grammar over every equation in
+      <code>test/corpus.js</code>, harvested from the 72 Simile reference
+      models. No build step: this page IS the test. Open it and read the bar.
+    </p>
+    <div id="summary">running…</div>
+    <div id="detail"></div>
+
+    <!-- The parser hangs off window.Sienna, which the shell's namespace.js
+         normally creates. This page loads none of the shell, so it makes the
+         namespace itself rather than pulling in the whole app to test a PEG. -->
+    <script>window.Sienna = window.Sienna || {};</script>
+    <script src="../vendor/peggy.min.js"></script>
+    <script src="../src/equation-grammar.js"></script>
+    <script src="../src/equation.js"></script>
+    <script src="corpus.js"></script>
+    <script>
+      (function () {
+        var rows = window.Sienna.equationCorpus;
+        var t0 = performance.now();
+        var unexpectedFail = [];
+        var unexpectedPass = [];
+        var passed = 0;
+
+        rows.forEach(function (row) {
+          var model = row[0], text = row[1], expectedToFail = !!row[2];
+          var ok = window.Sienna.equation.parse(text).ok;
+          if (ok && !expectedToFail) passed++;
+          else if (!ok && !expectedToFail) unexpectedFail.push([model, text, window.Sienna.equation.parse(text).error.message]);
+          else if (ok && expectedToFail) unexpectedPass.push([model, text, 'expected NOT to parse, but did']);
+        });
+
+        var ms = Math.round(performance.now() - t0);
+        var bad = unexpectedFail.concat(unexpectedPass);
+        var known = rows.length - passed - unexpectedFail.length - unexpectedPass.length;
+        var el = document.getElementById('summary');
+        el.className = bad.length ? 'fail' : 'pass';
+        el.textContent =
+          (bad.length ? '✗ ' + bad.length + ' unexpected — ' : '✓ all as expected — ') +
+          passed + ' of ' + rows.length + ' parse (' +
+          ((passed / (rows.length - known)) * 100).toFixed(1) + '% of those expected to), ' +
+          known + ' known exclusions, ' + ms + ' ms';
+
+        if (bad.length) {
+          var html = '<table>';
+          bad.forEach(function (r) {
+            html += '<tr><td class="model">' + r[0] + '</td><td class="eq">' +
+              r[1].replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) +
+              '</td><td class="why">' + r[2] + '</td></tr>';
+          });
+          document.getElementById('detail').innerHTML = html + '</table>';
+        }
+      }());
+    </script>
+  </body>
+</html>

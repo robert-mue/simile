@@ -1157,15 +1157,23 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * by routes the preventive checks do not sit on: a submodel capture, an
    * import, or a kind changed under contents that were legal before (§12.5's
    * non-monotonicity).
+   *
+   * Two passes, deliberately kept apart and merely concatenated here: the graph
+   * rules from the schema (`Sienna.grammar`) and the equations against the
+   * diagram (`Sienna.equationCheck`). Neither knows about the other, and the
+   * user has no reason to care which found what — one report, graph breaches
+   * first because they are the structural ones.
    */
   _validate() {
     const d = this._diagram();
     if (!d) return;
-    const found = Sienna.grammar.validate(d);
-    if (!found.length) { this._flash('No rule breaches found'); return; }
-    this._sel = found.map((v) => v.id);
+    const found = Sienna.grammar.validate(d).concat(
+      Sienna.equationCheck ? Sienna.equationCheck.audit(d) : []
+    );
+    if (!found.length) { this._flash('No problems found'); return; }
+    this._sel = found.map((v) => v.id).filter((id, i, a) => a.indexOf(id) === i);
     this._render();
-    this._flash(`${found.length} breach${found.length > 1 ? 'es' : ''}: ${found[0].label} — ${found[0].message}`);
+    this._flash(`${found.length} problem${found.length > 1 ? 's' : ''}: ${found[0].label} — ${found[0].message}`);
   },
 
   /**

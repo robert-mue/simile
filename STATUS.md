@@ -6,7 +6,8 @@ Last updated 2026-08-06.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Only the equation parser and file save remain unstarted.**
+**Only file save remains unstarted** — plus the red/black colouring, for which
+the equation parser is now in place and wired to the model check.
 
 ---
 
@@ -138,17 +139,75 @@ The palette's first row now ends `… | EDIT ungroup | CHECK check model`, which
 keeps the division the two rows already had: row one changes the model, row two
 does not.
 
+**12. Equation parser — `src/equation-grammar.js` + `src/equation.js`**
+A PEG for the Simile expression language, compiled by the vendored Peggy
+(`vendor/peggy.min.js`, 4.2.0) on first use. Two calls: `parse(text)` for the
+red/black colouring, and `references(text)` for the cross-check against the
+influence arrows actually drawn — the latter being the valuable one, since a
+reference carries its **form** (`x`, `{x}`, `[x]`), so a `{x}` with no influence
+out of a variable-membership submodel is a real error, not a stylistic one.
+
+**Where the language came from.** Not invented: the ladder, the
+`if/then/elseif/else` and the local-variable form are from your own
+`SimileProlog_SimileXMLv3_MathML.xsg` (2007), which is the only complete
+statement of the language — simulistics.com documents the functions and the
+arithmetic operators but never the conditional or the boolean layer, whence
+`//` and `%`. Rulings of 2026-08-06: strict identifiers (the same rule §14
+enforces for element names); comma-as-`and` and semicolon-as-`or` dropped; the
+local-variable form kept; **parse only** — function names and arities belong in
+the schema, checked afterwards, so that adding a function (or letting a user
+declare one) never touches the grammar, and "no such function" reads as a
+different report from "that is not an expression".
+
+Four departures from the XSugar grammar, all deliberate: `+ - * / // %` are
+left-associative (XSugar writes them right-recursive, making `a-b-c` mean
+`a-(b-c)` — a bug); `^` stays right-associative; identifiers are strict; the
+Prolog boolean spellings are gone.
+
+**The function table** is `functions` in the schema: name → arity, where a
+number is exact and an array is the SET of allowed counts (`at_posn: [1,3]`
+means one or three, never two). Names and arities come from the five function
+pages of the help; the 41 marked ✓ are confirmed by use in the reference
+models, which also settled a discrepancy — the help calls `pi()` and `time()`
+nullary, real models write `pi(1)` and `time(1)`, so they take an optional
+dummy argument. The rest are a first draft, to check type by type like the
+property lists.
+
+**The cross-check** is `src/equation-check.js`, its own file because it is the
+only thing that knows all three of parser, model and schema — and expressly not
+part of `src/grammar.js`, whose contract is that it holds no rule of its own and
+evaluates only the schema's graph rules. Four findings, all deferred: `syntax`,
+`function` (unknown name or wrong arity), `undeclared` (a name no influence
+supplies) and `unused` (an influence whose name the equation never mentions).
+The last two are the point of the exercise and neither a parser nor a diagram
+could produce them alone; they compare on the influence's **alias**, which is
+exactly the name the target's equation is meant to use (§14.1). `unused` stays
+quiet until an equation exists, since arrows are normally drawn first, and both
+stay quiet when the equation does not parse — a missing bracket would otherwise
+report every arrow as unused. "Check model" now runs the graph pass and this
+one and concatenates them.
+
+It found a real error in our own demo fixture on first run: `growth`'s rate is
+`k * biomass`, and only `k` has an influence.
+
+**Testing — `test/index.html`.** Open it; it runs the grammar over
+`test/corpus.js` and colours a bar. 1500 distinct (model, equation) pairs
+harvested from the 72 reference models, of 1678 occurrences: **1488 parse, 12
+known exclusions, 0 unexpected, ~200 ms**. No build step, in keeping with the
+rest of the project. The corpus is committed because the models it came from
+are outside this repository.
+
+The 12 exclusions are all the dropped Prolog notation, `(a,b,c)` for and and
+`(a;b;c)` for or, in nine models — confirmed 2026-08-06 to stay out.
+
+Five things the corpus taught that no document states, all now in the grammar:
+`&&` and `||`, bare `!`, `not` without brackets, the quoted `'!='`, and that a
+quoted `'name'` is a *name* (XSugar maps it to MathML `<ci>`), so
+`'Change_coefficient' != 0` is a reference and not a string.
+
 ---
 
 ## Not started
-
-**Equation parser.** A separate utility at widget level. Two things to settle
-first: *which parser* (the no-build constraint allows a generator whose output
-is vendored, e.g. Peggy, or a hand-written recursive-descent one — the user has
-one he likes from webakt, identify that first) and *what it is for*, since the
-editor never evaluates equations: syntax checking for the red/black colouring,
-and extracting the names an equation references so they can be cross-checked
-against the influence arrows actually drawn. A big piece; not started.
 
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.

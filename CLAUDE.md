@@ -27,12 +27,20 @@ nor results-display widgets.
   widget registers here once built). A widget's `src` is resolved relative to
   `index.html`, so use `src/widgets/<name>.js`.
 - `src/styles.css` — app-specific styles, loaded after the shell's.
+- `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
+  `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
+  statement of the Simile expression language; there is no generated parser.
+- `test/` — `index.html` runs the grammar over `corpus.js`, 1500 equations
+  harvested from the reference models. A page, not a test framework.
 
 ## Running
 
 No build/server/npm. Open `index.html` in a browser. First checkout needs the
 submodule: `git clone --recurse-submodules …` (or `git submodule update --init`).
 Verify by opening the page and checking the devtools console.
+
+Touching the equation grammar? Open `test/index.html` and read the bar — green
+means every equation in the corpus still parses.
 
 ## Key constraints (inherited from sienna)
 
