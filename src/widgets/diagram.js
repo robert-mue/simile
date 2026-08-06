@@ -39,6 +39,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     defaultScale: 1.8,
     /** Influence curvature: sagitta as a fraction of the chord (§ _bow). */
     bowFraction: 0.12,
+    /**
+     * How far apart to fan arcs that share both endpoints, in the same units.
+     * Without this they are drawn identically and a two-role association looks
+     * like one arc (§7.5, and see `_bowFor`).
+     */
+    fanBow: 0.18,
   },
 
   // Layers, painted in this order (SVG has no z-index).
@@ -708,8 +714,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     const crossings = d.portsFor(id).length;
     const marker = arc.type === 'flow' ? 'slx-arrow-flow' : 'slx-arrow-influence';
-    const curved = arc.type === 'influence';
-    const bow = curved ? this._bowOf(d, id) : 0;
+    const bow = this._bowFor(d, id, arc);
+    const curved = Math.abs(bow) > 0.001;
     const head = this._ARROW_LEN[arc.type] || 4.5;
     const ov = this._overrides();
 
@@ -748,6 +754,63 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (last) path.setAttribute('marker-end', 'url(#' + marker + ')');
       this._layer.arcs.appendChild(path);
     }
+
+    // An arc type may carry a label — in this notation only `role` does (§14),
+    // and until the reference models were built nothing drew it, so a
+    // two-role association showed as two unnamed arcs. It sits at the middle of
+    // the chain, pushed out along the bow so that fanned siblings do not stack
+    // their labels on one another, and it is draggable like any other.
+    if (arc.label && d.arcType(arc.type).has_label) {
+      const mid = Math.max(0, Math.floor((pts.length - 1) / 2));
+      const a = pts[mid];
+      const z = pts[mid + 1] || pts[mid];
+      const len = Math.hypot(z.x - a.x, z.y - a.y) || 1;
+      this._placeLabel(
+        d, id, arc.label,
+        (a.x + z.x) / 2 - ((z.y - a.y) / len) * (len * bow) / 2,
+        (a.y + z.y) / 2 + ((z.x - a.x) / len) * (len * bow) / 2 - 3,
+        'slx-label slx-arc-label'
+      );
+    }
+  },
+
+  /**
+   * Where this arc sits among those sharing the same pair of endpoints, as
+   * {i, n}. Direction is ignored: A→B and B→A would still be drawn on top of
+   * one another.
+   */
+  _fanOf(d, id, arc) {
+    const key = [arc.from, arc.to].sort().join('|');
+    const set = d.ids('arcs').filter((a) => {
+      const x = d.get(a);
+      return x && [x.from, x.to].sort().join('|') === key;
+    });
+    return { i: Math.max(0, set.indexOf(id)), n: set.length };
+  },
+
+  /**
+   * How much this arc bows. Three sources, in order: what the user dragged or
+   * stored; a FAN, when several arcs share the same two endpoints; else the
+   * notation's default for the type (influences curve, everything else is
+   * straight — §7.5).
+   *
+   * The fan is why this exists. Two arcs between the same pair are otherwise
+   * drawn identically, pixel for pixel — which is exactly the shape of a
+   * self-association, where `me` and `my_neighbour` both run from PATCH to
+   * NEXT_TO. The land-use reference model rendered them as one arc until this
+   * was added (2026-08-06). Spreading them is a RENDERING decision, derived at
+   * paint time from the endpoint pairs, with nothing stored: drag one and the
+   * stored bow takes over, as it always did.
+   */
+  _bowFor(d, id, arc) {
+    if (this._bowDrag && this._bowDrag.id === id) return this._bowDrag.bow;
+    const stored = d.arcBow(id);
+    if (stored != null) return stored;
+
+    const base = arc.type === 'influence' ? this.options.bowFraction : 0;
+    const fan = this._fanOf(d, id, arc);
+    if (fan.n < 2) return base;
+    return base + (fan.i - (fan.n - 1) / 2) * this.options.fanBow;
   },
 
   /**

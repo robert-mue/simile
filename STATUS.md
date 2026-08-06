@@ -277,6 +277,49 @@ Firefox and Safari keep the download and Save means Save as. The same change
 stopped `download()` swallowing a refused download, which had made a failed save
 indistinguishable from a successful one.
 
+**15. The two reference models, built — `src/demo-landuse.js`, `src/demo-farmers.js`**
+§9's two test cases, built for real at last: **land-use change** (PATCH
+fixed-membership of 1600, FOREST and CROP conditional by containing a condition,
+NEXT_TO a **self**-association with two role arcs from the same submodel) and
+**farmers & fields** (VILLAGE holding FARMER population, FIELD
+fixed-membership, and OWNERSHIP as a **two-party** association). Between them
+they cover both association topologies, all three membership kinds, the
+population symbols, inferred conditionality, and influences crossing boundaries
+in both directions. Both now pass the graph rules and the equation check with
+nothing reported.
+
+They earned their keep immediately — **four defects, none of which any smaller
+model would have shown**:
+
+- **The `influence-target` rule was too narrow.** It refused an influence into
+  an exterminator, whose whole expression is `wealth<10`. It was tagged
+  `confidence: 'guess'`, so this is §12.7 working exactly as intended. The legal
+  targets are now the types that *carry an equation* — the four population
+  symbols included, with the reason written down so the next type added is
+  considered.
+- **Role arcs had no style at all.** No `.slx-arc-role` rule existed, so they
+  drew with the browser default: effectively invisible. Now dashed and
+  mid-weight — structural rather than a flow of anything.
+- **Role arc labels were never drawn**, though §14 calls role "the one arc type
+  with a label". An association's whole meaning is in `owns` / `owned`, so it
+  was unreadable.
+- **Two arcs sharing both endpoints were drawn pixel-identical.** That is
+  precisely the shape of a self-association, so land-use showed `me` and
+  `my_neighbour` as one arc. Arcs sharing a pair now **fan**, derived at paint
+  time from the endpoints with nothing stored; drag one and the stored bow takes
+  over as before. See §7.5.
+
+Two more the models expose that are **notation questions, not bugs**, so they
+are left for a ruling rather than invented:
+
+- **The four population symbols have no glyph.** `style` has entries for six
+  types; initialiser, migrator, exterminator and reproduction fall through to
+  the renderer's default circle, so they are indistinguishable from a variable
+  and from each other.
+- **A submodel's kind is invisible.** `single`, `fixed-membership` and
+  `population` all draw as the same rounded box, though which submodels have
+  many instances is arguably the most important thing about a Simile diagram.
+
 ---
 
 ## Known gaps and loose ends
@@ -313,7 +356,14 @@ indistinguishable from a successful one.
 Carried in `DESIGN-diagram.md` §8, still outstanding:
 
 - the full **label-typography** rules, and whether name-uniqueness is
-  submodel-scoped;
+  submodel-scoped. Sharpened 2026-08-06 by reading `landuse1b.pl`: it names a
+  compartment `time under crop`, *with spaces*, while its equations say
+  `time_under_crop`. So in Simile the label and the equation name are two
+  strings, the second derived from the first. §14 rules them identical, which
+  forces the underscored form on the modeller — a departure made before we knew
+  this, and worth revisiting;
+- **glyphs for the population symbols**, and whether a submodel's kind should
+  be visible on the diagram (§9);
 - the remaining **grammar rules** — §12's catalogue is a starter set, each rule
   tagged `known` or `guess`;
 - **association and conditional inference**: stored flag or recoverable?

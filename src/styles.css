@@ -80,6 +80,22 @@ text.slx-incomplete {
   stroke-width: 0.8;
 }
 
+/* A role says "this submodel plays this part in that association" — structural
+   rather than a flow of anything, so: dashed, and weightier than an influence.
+   It had NO rule at all until the land-use reference model was built, which
+   left role arcs drawn with the browser's default and effectively invisible. */
+.slx-arc-role {
+  stroke: #555;
+  stroke-width: 1.3;
+  stroke-dasharray: 5 3;
+}
+
+/* An arc's own label — only role arcs have one in this notation (§14). */
+.slx-arc-label {
+  fill: #555;
+  font-style: italic;
+}
+
 .slx-diagram-svg defs path {
   fill: #222;
   stroke: none;

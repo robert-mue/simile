@@ -118,6 +118,8 @@
   // and opened through the UI.
   if (!Sienna.userData.get('models/growth') && Sienna.demoGrowth) Sienna.demoGrowth();
   if (!Sienna.userData.get('models/plant') && Sienna.demoSubmodel) Sienna.demoSubmodel();
+  if (!Sienna.userData.get('models/landuse') && Sienna.demoLanduse) Sienna.demoLanduse();
+  if (!Sienna.userData.get('models/farmers') && Sienna.demoFarmers) Sienna.demoFarmers();
 
   app.restore();
 

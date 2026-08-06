@@ -173,10 +173,22 @@
         enforcement: 'preventive', confidence: 'known',
         message: 'A role arc must run from a submodel to an association submodel.' },
 
+      // The legal targets are the types that CARRY AN EQUATION — an influence
+      // exists to feed a value into one. Keep that reason in mind when adding a
+      // type: the list is data (so the schema stays exportable), which means it
+      // does not update itself.
+      //
+      // The population symbols were missing until the farmers & fields
+      // reference model was built (2026-08-06) and refused an influence into
+      // its exterminator — whose whole expression is `wealth<10`. Exactly what
+      // `confidence: 'guess'` is for. Still a guess: it now covers every type
+      // we know needs it, but whether a submodel may be influenced (to drive
+      // its `dimensions`) is unasked — see §8.
       { id: 'influence-target', subject: 'arc:influence',
-        toTypes: ['variable', 'valve', 'condition', 'compartment'],
+        toTypes: ['variable', 'valve', 'condition', 'compartment',
+                  'initialiser', 'migrator', 'exterminator', 'reproduction'],
         enforcement: 'preventive', confidence: 'guess',
-        message: 'An influence must end at a variable, valve, condition or compartment.' },
+        message: 'An influence must end at something that carries an equation.' },
 
       // NO cardinality limit on conditions: a submodel may hold any number, and
       // they are AND-ed together (Simile developer, 2026-08-04). The earlier
