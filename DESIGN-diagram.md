@@ -650,6 +650,18 @@ The shell therefore owns New / Open / Save / the list of stored documents (`Sien
 
 The consequence for this design: a widget that views a model must declare it by setting its panel's **`ref`**, which is the shell's own binding. That is how File commands find the current model without knowing that a diagram widget exists, and it is what gives a widget `_model()` / `_watchModel` for nothing.
 
+### 18.1 What simile must supply on its side of that boundary
+
+*Added 2026-08-06, on finding the answer was "not enough".*
+
+Because the shell never inspects a document's contents, **everything that makes a file recognisably ours is simile's job**, and there is more of it than "here is an empty model":
+
+- **A format version** — `Diagram.FORMAT`, stamped into every model. The point of having it from the start is that it cannot be added later: a file already saved without a version can never afterwards be told apart from one written by a future release. Files predating it have no key and are read as 1.
+- **A validate that actually refuses.** It first checked only that `nodes` and `arcs` existed, so a model in another notation imported happily, joined the model list, and failed only when a panel tried to draw it — leaving the user a document they could not open and no explanation. Validation must reject a foreign or unnamed notation, and a file from a newer format, each with a sentence that completes the shell's *"Could not open that file: …"*. Naming the notations we *do* have turns a dead end into a hint.
+- **One statement of the empty-model shape** — `Diagram.emptyModel`, used by both the shell's document factory and `Diagram.create`. They had been spelling it out separately, which the format stamp would have had to be added to twice.
+
+The general point, worth carrying to the next app built on sienna: a boundary that says "the host never looks inside" hands the guest the whole of the responsibility for what "inside" means, including the unglamorous parts — versioning and refusal.
+
 ## 19. Equations — the parser, and the check it exists for
 
 *Built 2026-08-06. This section records the decisions; `STATUS.md` carries the build state and the measurements, and the file headers of `src/equation-grammar.js` and `src/equation-check.js` carry the working detail.*

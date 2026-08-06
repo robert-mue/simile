@@ -6,7 +6,9 @@ Last updated 2026-08-06.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Only file save remains unstarted.**
+**Everything on the implementation plan is now built.** What remains is the
+list of known gaps below, and the questions in `DESIGN-diagram.md` §8 that only
+the Simile developer can answer.
 
 ---
 
@@ -16,8 +18,11 @@ render → §13 ports/segments → creation → deletion → dragging → gramma
 All four faces of §3 in one file: naming rule, vocabulary (node/arc types with
 per-type facts — `has_label`, `autoCreated`, `positionedBy`, `branches`,
 `attachmentNode`, `blankEnd`), the grammar rules, the styling defaults, and the
-dialog **field model**. Swapping this file is what changes notation.
-*Caveat: rules are declared but nothing consults them (see Not started).*
+dialog **field model**, and the equation **function table**. Swapping this file
+is what changes notation.
+*Caveat: the rules are a deliberately incomplete starter set, each tagged
+`known` or `guess` pending the Simile developer's catalogue (§12.7). The engine
+that runs them is item 8.*
 
 **2. Model layer — `src/diagram.js` (`Sienna.Diagram`)**
 A thin wrapper over `userData`: stores no diagram state of its own, so undo and
@@ -60,8 +65,8 @@ and goes only when the last flow touching it does. Layout owned by the removed
 elements goes too, ports included. One action, so one undo step however wide the
 cascade — and the count is reported, since a delete can reach much further than
 what was selected. **Deleting a submodel deletes its contents** (ruled
-2026-08-04) — dissolving the box while keeping its contents is a separate
-**ungroup** command, planned but not built.
+2026-08-04) — dissolving the box while keeping its contents is the separate
+**ungroup** command, item 11.
 
 **8. Grammar engine — `src/grammar.js`**
 Evaluates the schema's rules; contains no rule of its own. All four §12.4
@@ -234,13 +239,33 @@ and preventive, equations are content and deferred.
 Both demo fixtures were wrong and are fixed: `growth`'s rate is `k * biomass`
 and only `k` had an influence — found by the check itself, not by reading.
 
----
+**14. File save and open — mostly the shell's, and it already worked**
+This entry was stale: it said models lived in `localStorage` only, but the File
+work of 2026-08-04/05 had already moved New / Open / Save-as / the model list to
+`Sienna.documents`, with `Sienna.files` wrapping the download and the file
+chooser that `file://` forces. Verified by round-trip: save `models/plant`,
+re-import the captured JSON, and the model, layout, ports and props come back
+identical, at a fresh path so two saves of one original cannot collide.
 
-## Not started
+What was genuinely missing was on simile's side of that boundary — **what makes
+a file ours** (§18: the shell never inspects contents):
 
-**Saving to a file.** Models live in browser `localStorage` only. No export or
-import, so a hand-built model does not survive a different browser.
+- **A format version.** `Diagram.FORMAT`, stamped into every new model. Added
+  now precisely because it cannot be added later — a file already saved without
+  a version can never be told apart from a future one. Files predating it have
+  no key and are read as 1.
+- **A real `validate`.** It checked only for `nodes` and `arcs`, so a model in
+  another notation imported happily, joined the model list, and failed only when
+  a panel tried to draw it — a document you could not open and no reason given.
+  It now refuses a foreign or unnamed notation, and a file from a newer format,
+  each with a sentence that completes the shell's "Could not open that file: …".
+- **One empty-model shape.** `Diagram.emptyModel` — the File menu's factory and
+  `Diagram.create` were separately spelling out what a new model looks like, and
+  the format stamp would have had to go in both.
 
+Left alone deliberately: `Sienna.files.download` swallows a failed download, so
+a browser that blocks it leaves the user with silence. That is shell code, so it
+belongs in the sienna repo, not here.
 
 ---
 

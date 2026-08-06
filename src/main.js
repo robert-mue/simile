@@ -24,6 +24,38 @@
     };
   });
 
+  /**
+   * Is this parsed file a model this editor can open?
+   *
+   * Deliberately more than a shape check. The shell hands over anything the
+   * user picked, and without a schema test a file from another notation
+   * imports happily, joins the model list, and only fails when a panel tries
+   * to draw it — leaving the user a document they cannot open and no
+   * explanation. Refusing here means one clear sentence instead.
+   *
+   * Content validation belongs to simile and not to the shell (§18): the shell
+   * never inspects a document's contents.
+   */
+  function validateModel(obj) {
+    if (!obj || typeof obj !== 'object') throw new Error('that is not a model file');
+    if (!obj.nodes || !obj.arcs) throw new Error('expected a model with nodes and arcs');
+
+    var format = obj.format == null ? 1 : obj.format;
+    if (!(format <= Sienna.Diagram.FORMAT)) {
+      throw new Error('it was saved by a newer version of simile (format ' + format
+                      + '; this one reads up to ' + Sienna.Diagram.FORMAT + ')');
+    }
+
+    // A model names the notation it is written in, and we can only draw a
+    // notation we have. Naming what IS available turns a dead end into a hint.
+    var schema = obj.schema;
+    if (!schema) throw new Error('the file does not say which notation it uses');
+    if (!Sienna.schemas.has(schema)) {
+      throw new Error('it uses the notation "' + schema + '", which this editor does not have'
+                      + ' (available: ' + Sienna.schemas.list().join(', ') + ')');
+    }
+  }
+
   // Tell the shell what a simile document IS. The File menu itself — New,
   // Open, Save as, and the list of stored models — belongs to the shell
   // (Sienna.documents), because it is conventional furniture that should not
@@ -35,15 +67,10 @@
     root: 'models',
     label: 'model',
     widget: 'diagram',
-    create: function (id) {
-      return {
-        id: id, name: id, schema: 'simile-v1', enums: {},
-        submodels: {}, nodes: {}, arcs: {}, layout: {},
-      };
-    },
-    validate: function (obj) {
-      if (!obj.nodes || !obj.arcs) throw new Error('expected a model with nodes and arcs');
-    },
+    // The empty-model shape lives in the model layer, not here, so that a
+    // model made from the File menu and one made from code cannot differ.
+    create: function (id) { return Sienna.Diagram.emptyModel(id); },
+    validate: validateModel,
   });
 
   function buildMenu() {

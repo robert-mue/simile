@@ -78,6 +78,42 @@
   }
 
   /**
+   * The on-disk shape of a model. Stamped into every new model and checked on
+   * import (see `validateModel` in src/main.js), so a file written by a later
+   * version is refused with a sentence rather than half-loaded. Bump it when
+   * the stored shape changes in a way older code cannot read; files written
+   * before it existed have no `format` key and are read as 1.
+   *
+   * It exists from the start because it cannot be added retrospectively: a file
+   * already saved without a version can never be told apart from a future one.
+   */
+  Diagram.FORMAT = 1;
+
+  /**
+   * What an empty model looks like — the one statement of it. Both `create`
+   * below and the shell's document factory (src/main.js) go through here, so
+   * the shape cannot drift between "new model from the File menu" and "new
+   * model from code".
+   *
+   * @param {string} id
+   * @param {{name?:string, schema?:string}} [props]
+   */
+  Diagram.emptyModel = function (id, props) {
+    var p = props || {};
+    return {
+      id: id,
+      name: p.name || id,
+      format: Diagram.FORMAT,
+      schema: p.schema || 'simile-v1',
+      enums: {},
+      submodels: {},
+      nodes: {},
+      arcs: {},
+      layout: {},
+    };
+  };
+
+  /**
    * Create an empty model at `path` and return a Diagram on it.
    * @param {string} path e.g. 'models/growth'
    * @param {{name?:string, schema?:string}} [props]
@@ -87,18 +123,7 @@
     var id = String(path).split('/').pop();
     Sienna.actions.dispatch(
       { type: 'diagram.create', target: path, payload: { name: p.name || id } },
-      function () {
-        Sienna.userData.set(path, {
-          id: id,
-          name: p.name || id,
-          schema: p.schema || 'simile-v1',
-          enums: {},
-          submodels: {},
-          nodes: {},
-          arcs: {},
-          layout: {},
-        });
-      }
+      function () { Sienna.userData.set(path, Diagram.emptyModel(id, p)); }
     );
     return new Diagram(path);
   };
