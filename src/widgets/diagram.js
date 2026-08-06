@@ -52,6 +52,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._tool = null;                 // null = select/drag; else a palette tool
     this._sel = [];                    // selected element ids
 
+    // Declare what this panel is a view of, so the shell's File commands can
+    // find it (see widgetBase._bindPathOption).
+    this._bindPathOption();
+
     this._buildPalette();
     this._buildCanvas();
     this._bindView();
