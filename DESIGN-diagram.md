@@ -149,7 +149,7 @@ Storing an *offset* rather than an absolute label position matters: a label the 
 1. ~~**#4 — Arc parentage & cross-boundary arcs.**~~ **RESOLVED 2026-07-30 → see §13.** One arc, source-side-shared segments, no fan-in, ports auto-seeded then draggable and persisted, arc `parent` not stored.
 2. ~~**Build vs. buy.**~~ **RESOLVED 2026-07-30 → build. See §11.** (Was: from-scratch SVG vs. vendoring an engine such as JointJS. Note the original phrasing of this thread said "SVG + jQuery-UI draggable"; the jQuery-UI part is withdrawn — see §11.1.)
 3. **Grammar rule language.** **PARTLY RESOLVED 2026-07-30 → see §12**: the rule *shape*, the escape hatch and the enforcement split are decided; the rule **catalogue** stays open pending a list of specific checks from the Simile developer (requested).
-4. **Persistence shape** for model/layout/style (see §6) — deferred with #4.
+4. ~~**Persistence shape** for model/layout/style (see §6).~~ **RESOLVED → §10 (flat id-keyed maps + parent pointers, indices derived in memory), §6 (what `layout` holds), §18.1 (the file's `format` version).** Built and round-trip tested.
 5. **Influence curve geometry.** *(Partly resolved — see §13.6a for how the arc is defined and trimmed; the curve FAMILY is what remains open.)* Influence arcs are drawn as curves, not straight lines — including each segment of one that crosses a boundary. **Provisionally an arc of a circle** (sagitta a fixed fraction of the chord, currently 0.12), chosen 2026-08-04 as the simple option. Quadratic Bézier and spline are the alternatives, and the choice interacts with user-dragged waypoints once those exist. Flows and role arcs stay straight.
 
 ## 8. Questions for the Simile developer **[ASK]**
@@ -170,6 +170,8 @@ Storing an *offset* rather than an absolute label position matters: a label the 
 
 - **Land-use change** (reference; §4) — PATCH fixed-membership + FOREST/CROP conditional + NEXT TO **self-association** (both roles from the same submodel).
 - **Farmers & fields** (Muetzelfeldt 2010, CCAFS) — VILLAGE contains FARMER (population: initialiser/migrator/exterminator), FIELD (fixed-membership), OWNERSHIP (**two-party association**, roles "owns"/"owned" from two *different* submodels of *different* kinds). Complements land-use: covers the second association topology plus population-only nodes. Confirmed the strawman needs nothing new for it.
+
+Since 2026-08-06 there is also a **running** test: `test/index.html` parses the 1500 equations harvested from the 72 reference models (§19.2). Neither of the two cases above has yet been *built* in the editor, which is the obvious next check on the design — they are the two topologies the object model was reasoned about, so building them is what would confirm or refute §4.
 
 ## 10. Representation — flat vs tree, and file vs in-memory
 
@@ -661,6 +663,18 @@ Because the shell never inspects a document's contents, **everything that makes 
 - **One statement of the empty-model shape** — `Diagram.emptyModel`, used by both the shell's document factory and `Diagram.create`. They had been spelling it out separately, which the format stamp would have had to be added to twice.
 
 The general point, worth carrying to the next app built on sienna: a boundary that says "the host never looks inside" hands the guest the whole of the responsibility for what "inside" means, including the unglamorous parts — versioning and refusal.
+
+### 18.2 An inherited assumption, corrected
+
+*2026-08-06, prompted by the user asking why File ▸ Save was a download when webAKT's is a proper Save dialog.*
+
+Saving was a Blob download, on the strength of a comment in the shell reading *"under `file://` a browser cannot write files silently"*. That sentence is true, and it was read as settling the matter. It does not: it rules out writing **without asking**, and says nothing about a dialog. The actual rule is that a page may not write to a file **the user did not choose** — and `showSaveFilePicker` is that choice being made, in the browser's own dialog. It works under `file://`; webAKT had been doing it for years.
+
+The consequence is not cosmetic. The picker returns a **handle**, and a handle can be written through again without re-prompting, so there can be a real **Save** as distinct from **Save as** — where a download can only ever produce `Plant.json`, `Plant (1).json`, `Plant (2).json`. No amount of care over the download path could have reached that; it needed the assumption questioned.
+
+Recorded here because the failure was not technical but epistemic: a constraint was *inherited from a comment* and never tested, and the review that went over file save afterwards checked correctness — round-trip, validation, versioning — without ever asking whether the interaction was the best available. Worth a second look wherever else `file://` is cited as a limit; §3's "no `fetch`" and §11.2's vendoring note are the other two, and both do hold.
+
+The change itself is the shell's (sienna `5bb8468`), since File is the shell's; the Chromium-only reach of the API means Firefox and Safari keep the download, and there Save means Save as.
 
 ## 19. Equations — the parser, and the check it exists for
 

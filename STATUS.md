@@ -239,16 +239,18 @@ and preventive, equations are content and deferred.
 Both demo fixtures were wrong and are fixed: `growth`'s rate is `k * biomass`
 and only `k` had an influence — found by the check itself, not by reading.
 
-**14. File save and open — mostly the shell's, and it already worked**
-This entry was stale: it said models lived in `localStorage` only, but the File
-work of 2026-08-04/05 had already moved New / Open / Save-as / the model list to
-`Sienna.documents`, with `Sienna.files` wrapping the download and the file
-chooser that `file://` forces. Verified by round-trip: save `models/plant`,
-re-import the captured JSON, and the model, layout, ports and props come back
-identical, at a fresh path so two saves of one original cannot collide.
+**14. File save and open — mostly the shell's**
+New / Open / Save / Save as / the model list live in `Sienna.documents`, with
+`Sienna.files` wrapping the Save dialog and the file chooser. Verified by
+round-trip: save `models/plant`, re-import the captured JSON, and the model,
+layout, ports and props come back identical, at a fresh path so two saves of one
+original cannot collide.
+
+*(This item was listed as unstarted long after the shell's File work of
+2026-08-04/05 had landed — the entry, not the feature, was missing.)*
 
 What was genuinely missing was on simile's side of that boundary — **what makes
-a file ours** (§18: the shell never inspects contents):
+a file ours** (§18.1: the shell never inspects contents):
 
 - **A format version.** `Diagram.FORMAT`, stamped into every new model. Added
   now precisely because it cannot be added later — a file already saved without
@@ -294,12 +296,40 @@ indistinguishable from a successful one.
 - No waypoints on arcs yet — curvature is the only shape control.
 - Browser **script caching** bites during development: hard-reload (Ctrl-Shift-R)
   after pulling changes, or the injected widget script may be stale.
+- A model **forgets its file on reload**: the Save handle lives in memory only,
+  so the first Save after re-opening the page asks where again. Persisting
+  handles is possible (IndexedDB) but a document silently remembering a file
+  from a previous day wants deciding first.
+- A real Save needs the **File System Access API**, which is Chromium-only.
+  Firefox and Safari fall back to a download, where Save means Save as.
+- **Nothing warns of unsaved changes.** Edits autosave to `localStorage`
+  continuously, so nothing is lost, but the *file* on disk goes stale silently
+  until the next Save — and no window title or marker says so.
 
 ---
 
 ## Open questions for the Simile developer
 
-Carried in `DESIGN-diagram.md` §8, still outstanding: the full label-typography
-rules and whether name-uniqueness is submodel-scoped; how ghosts are stored (only
-if we revive them); the remaining grammar rules; and the exact per-type
-completeness (red/black) rule.
+Carried in `DESIGN-diagram.md` §8, still outstanding:
+
+- the full **label-typography** rules, and whether name-uniqueness is
+  submodel-scoped;
+- the remaining **grammar rules** — §12's catalogue is a starter set, each rule
+  tagged `known` or `guess`;
+- **association and conditional inference**: stored flag or recoverable?
+- whether the `.sml` format separates logical structure from **layout** at all;
+- **condition symbols**: placement constraints, and what the expression may
+  reference;
+- **vocabulary drift** — are `event` / `state` / `squirt` / `satellite` later
+  additions to the canonical set?
+- how **ghosts** are stored (only if we revive them, §15);
+- **equation function arities** — we have ~110, but only the 41 used by the
+  reference models are confirmed; the rest are from the help pages alone;
+- **array vs list dimensional rules** — must `{x}` always come from a
+  variable-membership submodel and `[x]` from a fixed one? If so the equation
+  cross-check gets sharper at no cost (§19.8).
+
+**No longer asked:** the per-type **red/black** rule. Ruled ours to decide
+(§19.9, 2026-08-06), on the governing principle that we are not bound to
+reproduce Simile — and ours is the stricter rule, since it also reddens an
+element whose equation disagrees with the influences drawn into it.
