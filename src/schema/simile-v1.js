@@ -206,7 +206,7 @@
     ],
 
     // =====================================================================
-    // 4. EQUATION FUNCTIONS (§8) — name → how many arguments
+    // 4. EQUATION FUNCTIONS (§19.5) — name → how many arguments
     // =====================================================================
     // Deliberately NOT in the PEG (see src/equation-grammar.js). Keeping the
     // vocabulary here rather than in the grammar means adding a function — or

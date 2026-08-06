@@ -10,7 +10,7 @@
  * is exactly two things —
  *
  *   `parse(text)`       does this parse, and if not, where? — the red/black
- *                       completeness colouring (§8).
+ *                       completeness colouring (§19.1).
  *   `references(text)`  which model elements does it name? — so the names an
  *                       equation uses can be cross-checked against the
  *                       influence arrows actually drawn into that element.

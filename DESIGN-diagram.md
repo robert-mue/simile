@@ -1,6 +1,6 @@
 # Diagram Library — Design Summary (restart / discussion draft)
 
-*Status: design and a working editor. §§1–15 were written before the code; §§16–18 record decisions taken while building it, 2026-08-04/05. Sections marked **[ASK]** are questions for the Simile developer. Build state — what exists, what does not — is in `STATUS.md`, which is kept current; this file is the reasoning behind it.*
+*Status: design and a working editor. §§1–15 were written before the code; §§16–19 record decisions taken while building it, 2026-08-04/06. Sections marked **[ASK]** are questions for the Simile developer. Build state — what exists, what does not — is in `STATUS.md`, which is kept current; this file is the reasoning behind it.*
 
 This is the design of a **diagramming library** and, on top of it, a **sienna diagram-editor widget**. The long-term aim is to replace the diagram editor of **Simile** (simulistics.com) with something notation-neutral and schema-driven. It sits inside sienna (static jQuery SPA, runs from `file://`, no build/server — see `CLAUDE.md`).
 
@@ -160,7 +160,9 @@ Storing an *offset* rather than an absolute label position matters: a label the 
 - ~~**Ghosts:** How is a ghost stored, and confirm only nodes are ghostable?~~ **NOT ASKED — deferred 2026-07-31, see §15.** Jasper confirmed he uses ghosts, to reduce influence-arrow clutter; we are still leaving them out for now. The question returns if and when they do.
 - **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference? *(Partly answered 2026-07-30: condition nodes do carry a label, indicating what the condition is based on.)*
 - **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? And is name-uniqueness scoped to the containing submodel?
-- **Completeness (red/black):** The precise rule for when an element flips from red (incomplete) to black — per element type.
+- **Completeness (red/black):** The precise rule for when an element flips from red (incomplete) to black — per element type. *(The parser this needs is now built — §19 — so this is the only thing standing between us and the colouring.)*
+- **Equation function arities:** we have a table of ~110 (schema `functions`), but only the 41 used by the reference models are confirmed; the rest come from the help pages alone. Which are wrong? And is the arity of the `pi(1)` / `time(1)` family really "optional dummy argument", as real models suggest and the help denies? *(§19.8)*
+- **Array vs list dimensional rules:** must a `{x}` reference always come from a variable-membership submodel and `[x]` from a fixed one? If so the cross-check can be made much sharper at no cost *(§19.8)*.
 - **Vocabulary drift:** Are `event` / `state` / `squirt` / `satellite` / per-record & special-grid submodels genuinely later additions to the canonical set (compartment, variable, submodel, flow, influence, role, condition, initialiser, migrator, ~~reproducer~~ **reproduction** *(corrected 2026-08-04, §12.8)*, exterminator)? Anything else we've missed?
 - **Anything about the model that is hard to express as flat id-keyed maps + parent pointers** — deep nesting (FLORES: Village▸Household▸5 submodels, 900+ patches), associations between deeply-nested submodels, array access (`element()`/`index()`).
 
@@ -647,3 +649,70 @@ sienna is a host that becomes a particular application (`?app=simile`, `?app=web
 The shell therefore owns New / Open / Save / the list of stored documents (`Sienna.documents`), and simile registers only the two things that cannot be generic: **what an empty model looks like**, and **which widget opens one**. The shell never inspects a document's contents — the same boundary `userData` already draws.
 
 The consequence for this design: a widget that views a model must declare it by setting its panel's **`ref`**, which is the shell's own binding. That is how File commands find the current model without knowing that a diagram widget exists, and it is what gives a widget `_model()` / `_watchModel` for nothing.
+
+## 19. Equations — the parser, and the check it exists for
+
+*Built 2026-08-06. This section records the decisions; `STATUS.md` carries the build state and the measurements, and the file headers of `src/equation-grammar.js` and `src/equation-check.js` carry the working detail.*
+
+### 19.1 What it is for — and what it is not
+
+The editor **never evaluates an equation**. That single fact settles most of the design. There is no evaluator, no environment, no units arithmetic, and no error recovery, because one error position is all an underline needs. Two uses justify the whole piece:
+
+1. **Does it parse** — feeding the red/black completeness colouring.
+2. **Which model elements does it name** — so the names an equation uses can be cross-checked against the influence arrows actually drawn into that element.
+
+The second is the valuable one, and it is worth being explicit about why: it is a check **Simile's own red/black does not make**. It catches errors in both directions — a name used with no arrow feeding it, and an arrow feeding a name the equation never mentions. Nothing but this combination of parser and diagram can see either.
+
+### 19.2 The language is discovered, not designed
+
+Simile's expression language already exists, so the job was archaeology rather than invention, and the sources disagree in instructive ways:
+
+- **`SimileProlog_SimileXMLv3_MathML.xsg`** (R. Muetzelfeldt, 2007; adapted from the Virtual Cell grammar) turns out to be **the only complete statement of the language**. Its ladder, its `if/then/elseif/else`, and its local-variable form are the backbone of ours.
+- **simulistics.com/help/equations/** documents the ~90 functions and the arithmetic operators — including `//` and `%`, which the XSugar ladder lacks — but says nothing whatever about the conditional or the boolean operators.
+- **The 72 reference models** are the third and decisive source. Five constructs appear in real equations that *no document mentions*: `&&` and `||`, a bare `!`, `not` without brackets, the quoted `'!='`, and — the one most easily got wrong — that a quoted `'name'` is a **name**, not a string, XSugar mapping it to MathML `<ci>`.
+
+The methodological ruling that follows: **the corpus outranks the documentation**, and a grammar change is justified by a failing real equation rather than by a reading of the help. `test/index.html` exists to keep that honest.
+
+### 19.3 A declarative grammar, compiled at run time
+
+The requirement was a declarative grammar, which rules out the hand-written recursive-descent parser (there the grammar *is* code). That leaves a generator, and PEG — Peggy, the maintained PEG.js — is both the standard answer for expressions and the one already in use in webakt.
+
+The real question was **when generation happens**, and there were three answers. *Generate ahead of time via the Peggy playground* (webakt's workflow) leaves two files to keep in step by hand, and every iteration blocks on a manual browser task. *Generate ahead of time but locally*, driving Peggy from Node, removes the manual step but keeps the two files. *Compile at run time* keeps one artefact and makes drift impossible.
+
+**Ruled: compile at run time.** The grammar text is the only artefact; there is no generated parser that can silently go stale while someone edits the `.peg`. It costs ~70 ms, paid lazily on the first equation parsed rather than at page load. Two consequences worth recording: the grammar has to live in a `.js` template literal rather than a `.peg` file, because `file://` cannot `fetch` (§ the no-build constraint); and the decision is **reversible in two lines** if start-up cost ever becomes visible, which is why it did not warrant more deliberation than it got.
+
+### 19.4 Four deliberate departures from the 2007 grammar
+
+1. **Associativity.** XSugar writes the additive and multiplicative rules right-recursive, so `a-b-c` parses as `a-(b-c)` and `a/b/c` as `a/(b/c)`. That is a bug, not a convention — it never bit because the grammar converted known-good files rather than diagnosing bad ones. Ours are left-associative; `^` stays right-associative, which XSugar has correct.
+2. **Strict identifiers.** XSugar's `Name` admits spaces, hyphens and `%`, which cannot coexist with `-` as subtraction. Ours is `[A-Za-z_][A-Za-z0-9_]*` — deliberately **the same rule §14 already enforces for element names**, so that a name legal on the canvas is legal in an equation by construction, and the two can never drift apart.
+3. **The Prolog boolean spellings are dropped.** XSugar admits `,` for *and* and `;` for *or*; both collide head-on with argument separators and array literals. Twelve equations in nine reference models use them, and the exclusion was reaffirmed knowing that. Reinstating them is a small, contained change — the collision is avoidable, since it is confined to bare brackets — so this stays cheap to revisit.
+4. **Function names are not in the grammar.** See below.
+
+### 19.5 Grammar fixed, vocabulary in the schema
+
+This is §12's principle applied again: the engine holds no notation knowledge, the schema holds it as data. The **expression syntax** — operators, precedence, call form, the conditional, the brackets — is universal enough to fix in one PEG. The **function vocabulary** is not, so it is `functions` in the schema: name → arity, a number meaning exactly that many and an array meaning the *set* of allowed counts.
+
+Three things follow, and they are the reason for the split. Adding a function is a line of data. **Letting a user declare their own functions** becomes possible without touching a grammar. And "no such function" can be reported as something quite different from "that is not an expression" — a distinction the user cares about and a single grammar could not draw.
+
+### 19.6 What the parser deliberately cannot decide
+
+`[weight]` is either the array variable `weight` or a one-element array built from the scalar `weight`; `{volume}` is likewise either a list reference or a one-element list. The syntax is identical and **only the model knows which**. So both parse to one node type, and the caller resolves them using the influences actually drawn. This is the same instinct as everywhere else here — derived facts are derived at the point of use, not frozen into the thing that cannot know them.
+
+### 19.7 The cross-check is its own module
+
+`Sienna.equationCheck` is the only thing that knows all three of the parser, the model layer and the schema; each of those stays ignorant of the others. It is expressly **not** part of `src/grammar.js`, whose contract is that it holds no rule of its own and evaluates only the schema's graph rules — an equation is not a graph rule. This is the same kind of boundary as §18: recorded because it says what a module does *not* own.
+
+Four findings, all **deferred** in §12.3's sense — reported, never blocking, since an equation is stored verbatim however wrong it is (§4): `syntax`, `function` (unknown name or wrong arity), `undeclared` (a name no influence supplies) and `unused` (an influence whose name the equation never mentions).
+
+The last two compare on the influence's **alias**, which is exactly the name the target's equation is meant to use (§14.1), defaulting to the source's label. Two silences are as important as the findings, and both were learnt by running the check rather than by reasoning about it:
+
+- **`unused` says nothing until an equation exists.** While a model is being built the arrows arrive first, and a report that fires on every fresh arrow is a report nobody reads.
+- **Neither name check runs when the equation does not parse.** An unreadable equation tells us nothing about which names it uses, so a single missing bracket would otherwise accuse every arrow into that element.
+
+"Check model" runs this pass beside the graph pass and concatenates them; the user has no reason to care which found what.
+
+### 19.8 Deferred, and why
+
+- **Form checking.** A reference carries its form — `x`, `{x}`, `[x]` — so the check could be sharper still: a `{x}` wants an influence out of a *variable-membership* submodel and `[x]` out of a fixed one, and the absence is a real error rather than a stylistic one. The parser already supplies everything needed. Held until the dimensional rules are settled with the Simile developer (§8).
+- **Function arities.** The 41 confirmed by the corpus are sound; the rest come from the help pages alone and are a first draft, to be checked type by type as the property lists must be. The corpus already exposed one discrepancy — the help calls `pi()` and `time()` nullary, real models write `pi(1)` and `time(1)`.
+- **The red/black rule itself** remains an open question for the Simile developer (§8): the parser is now in place, but *what makes an element complete* per type is not ours to decide.

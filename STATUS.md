@@ -140,6 +140,7 @@ keeps the division the two rows already had: row one changes the model, row two
 does not.
 
 **12. Equation parser — `src/equation-grammar.js` + `src/equation.js`**
+*(Full account of the reasoning: `DESIGN-diagram.md` §19.)*
 A PEG for the Simile expression language, compiled by the vendored Peggy
 (`vendor/peggy.min.js`, 4.2.0) on first use. Two calls: `parse(text)` for the
 red/black colouring, and `references(text)` for the cross-check against the

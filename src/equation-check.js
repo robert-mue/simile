@@ -35,7 +35,7 @@
  * A reference's FORM is not checked yet — that a `{x}` wants an influence out
  * of a variable-membership submodel and `[x]` out of a fixed one is a sharper
  * check the parser already provides the information for. Left until the
- * dimensional rules are settled with the Simile developer (§8).
+ * dimensional rules are settled with the Simile developer (§8, §19.8).
  *
  * Classic script; no imports/exports. Load after `src/equation.js`.
  */
