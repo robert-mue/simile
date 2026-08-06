@@ -4,3 +4,7 @@
 # Rendered documents (exported transcripts, PDF builds of the .md notes) —
 # the markdown source is tracked, the render is not.
 *.pdf
+
+# Local Claude Code settings, and the temp files it writes beside them — one of
+# which was swept into a commit by `git add -A` and had to be stripped out.
+.claude/
