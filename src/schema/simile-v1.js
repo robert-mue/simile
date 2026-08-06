@@ -235,6 +235,17 @@
         enforcement: 'deferred', confidence: 'known',
         message: 'This is drawn inside a submodel it does not belong to.' },
 
+      // (6) Names are unique among SIBLINGS, not across the model — the same
+      // name may, and often will, be used in different submodels (confirmed
+      // 2026-08-06 against the reference models: 493 repeats across submodels,
+      // 3 within one). Deferred because the editor already stops the two ways
+      // a user can cause a clash — a rename is refused, a move renames the
+      // incomer — so what is left to catch is a model that arrived some other
+      // way.
+      { id: 'sibling-names-unique', subject: '*', predicate: 'siblingNameUnique',
+        enforcement: 'deferred', confidence: 'known',
+        message: 'Another element in the same submodel already has this name.' },
+
       // Behavioural facts — "an influence may branch", "a flow may not", "an
       // arc never terminates on an arc" — are deliberately NOT listed here.
       // They live in the VOCABULARY above, on each type (`branches`,

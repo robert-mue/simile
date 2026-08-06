@@ -159,7 +159,7 @@ Storing an *offset* rather than an absolute label position matters: a label the 
 - **Storage separation:** Does the `.sml` (Prolog) format separate logical structure from diagram layout at all? Any notion of style separate from layout?
 - ~~**Ghosts:** How is a ghost stored, and confirm only nodes are ghostable?~~ **NOT ASKED — deferred 2026-07-31, see §15.** Jasper confirmed he uses ghosts, to reduce influence-arrow clutter; we are still leaving them out for now. The question returns if and when they do.
 - **Condition symbol:** At most one per submodel? Any placement constraints? What exactly may its expression reference? *(Partly answered 2026-07-30: condition nodes do carry a label, indicating what the condition is based on.)*
-- **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? And is name-uniqueness scoped to the containing submodel? *(Narrowed 2026-08-06: `landuse1b.pl` shows Simile itself allows spaces in a display label — `time under crop` — and derives the equation name from it. §14 nonetheless rules label ≡ name, deliberately; what remains asked is the rest of the character rules and the uniqueness scope.)*
+- **Label typography:** the full rule set for legal variable names — spaces are excluded (confirmed 2026-07-30); what else? *(Narrowed twice on 2026-08-06. First: `landuse1b.pl` shows Simile itself allows spaces in a display label — `time under crop` — and derives the equation name from it; §14 nonetheless rules label ≡ name, deliberately. Second: **uniqueness is scoped to the containing submodel** — ANSWERED from the corpus rather than asked, see §14.2. What remains open is only the rest of the character rules.)*
 - ~~**Completeness (red/black):** the precise rule for when an element flips from red to black, per type.~~ **NOT ASKED — decided ourselves, 2026-08-06, §19.9.** The governing ruling is that we are not bound to reproduce Simile: where we think its behaviour wrong we change it. Our rule is in fact stricter than Simile's, since it also reddens an element whose equation disagrees with the influences drawn into it.
 - **Equation function arities:** we have a table of ~110 (schema `functions`), but only the 41 used by the reference models are confirmed; the rest come from the help pages alone. Which are wrong? And is the arity of the `pi(1)` / `time(1)` family really "optional dummy argument", as real models suggest and the help denies? *(§19.8)*
 - **Array vs list dimensional rules:** must a `{x}` reference always come from a variable-membership submodel and `[x]` from a fixed one? If so the cross-check can be made much sharper at no cost *(§19.8)*.
@@ -594,6 +594,26 @@ An influence carries the name under which the target's equation refers to the im
 - **It is also what makes rename safe.** §4 stores equations verbatim and never resolves them, so the editor *cannot* rewrite equation text when a source is renamed. Because the alias is copied at arc creation and not re-synced, renaming a source changes only that element — no downstream equation breaks. (Accepted cost: the alias may go stale relative to the source's new label; mouseover still tells the truth.)
 - **Path-qualified names never appear in equation text** (`S1:growth_rate + S2:growth_rate` is rejected). It solves the collision problem but locks an equation to the presence of S1 and S2, which defeats modularity — an equation must survive being lifted into another model.
 - The alias lives on the **arc**, which is exactly one source→target pair — correctly *not* on a segment, which may be shared (§13.3).
+
+### 14.2 Name uniqueness — scoped to the submodel, and what happens when a move breaks it
+
+*Settled 2026-08-06. The scope was **measured, not asked**: §8 had carried it as a question for the Simile developer since July.*
+
+**Names are unique among SIBLINGS, not across the model.** Across the 72 reference models, a name repeats in *different* submodels **493** times and within one submodel **3** times (those three being two top-level `fn1`s in `daisyworld1.pl` and one in `animal1.pl` — sloppy models or a mis-read, either way not a counter-case). `AntsWorld.pl` has a variable `x` in four different submodels. Better still, Simile's own auto-generated names restart at `fn1` inside each submodel — the name generator declaring the scope it works in. So the same name may, and often will, appear in several places.
+
+**Three enforcement points, and they differ on purpose.**
+
+| how the clash arises | what happens | why |
+|---|---|---|
+| the user **types** a name a sibling has | **refused** | typing a name is asserting that name; being told it is taken is the answer they need |
+| the user **drops** an element beside a same-named sibling | **auto-renamed** `biomass` → `biomass_1` | dropping asserts *containment*; the clash is incidental, and halting the drag to argue about a name would be obstructive |
+| a model **arrives** with clashes (import, or something that is not this editor) | **reported** by the model check | nothing to intervene in; a deferred rule is exactly the channel |
+
+Ungroup promotes children into their grandparent's scope and takes the same auto-rename path, for the same reason. The rename happens *inside* the action that moved the element, so one undo puts back both the move and the name.
+
+**No equation is rewritten, and none needs to be.** The instinct on first meeting this is that renaming `biomass` obliges the editor to hunt down every equation referring to it — and under most designs it would. Not here: §14.1's alias is copied at arc creation and never re-synced, so a target's equation refers to *its own local name for the imported value*, never to the source's current label. Rename the source and every downstream equation still says what it said and still works. This is that ruling earning its keep, some weeks after it was made for a different reason.
+
+The cost, accepted knowingly in §14.1 and now slightly sharper: the alias may read `biomass` while the source is called `biomass_1`. For a *manual* rename that is the modeller's own doing; for an automatic one it is not, so this is the place to look first if the staleness ever proves confusing in practice. Note that rewriting equation text is no longer *impossible* as §14.1 assumed — the parser can locate each identifier exactly (`references()` returns offsets) — so cascading the rename is now an available option rather than a barred one. It is simply not needed for correctness.
 
 ## 15. Ghosts — deferred, deliberately
 

@@ -166,6 +166,58 @@
       return label;
     },
 
+    /**
+     * Is any SIBLING of `id` already called `label`?
+     *
+     * Uniqueness is scoped to the containing submodel, not to the model — the
+     * same name may, and often will, appear in several submodels (confirmed
+     * 2026-08-06 from the reference models: 493 names repeat across submodels,
+     * 3 within one). So the question is only ever about siblings.
+     */
+    siblingNamed: function (parent, label, exceptId) {
+      if (!label) return null;
+      var self = this;
+      var found = null;
+      ['nodes', 'submodels'].forEach(function (fam) {
+        self.ids(fam).forEach(function (el) {
+          if (found || el === exceptId) return;
+          if (self.parentOf(el) !== (parent == null ? null : parent)) return;
+          if ((self.get(el) || {}).label === label) found = el;
+        });
+      });
+      return found;
+    },
+
+    /**
+     * Refuse a rename that collides with a sibling.
+     *
+     * PREVENTIVE here, where the same clash arising from a MOVE is silently
+     * resolved (see `commitDrag`) — and the difference is the user's intent.
+     * Typing a name is asserting that name, so being told it is taken is the
+     * answer they need. Dragging an element into a submodel is asserting
+     * containment; the name clash is incidental, and stopping the drag to
+     * argue about it would be obstructive.
+     */
+    checkSiblingName: function (id, label) {
+      var clash = this.siblingNamed(this.parentOf(id), label, id);
+      if (clash) {
+        throw new Error('There is already something called "' + label + '" here.');
+      }
+      return label;
+    },
+
+    /**
+     * `label`, or the first free `label_1`, `label_2`, … among `parent`'s
+     * children. Used when a move creates a clash the user did not ask for and
+     * cannot be asked about mid-gesture (see `commitDrag`).
+     */
+    freeSiblingName: function (parent, label, exceptId) {
+      if (!label || !this.siblingNamed(parent, label, exceptId)) return label;
+      var n = 1;
+      while (this.siblingNamed(parent, label + '_' + n, exceptId)) n++;
+      return label + '_' + n;
+    },
+
     // ---- reads (straight through to userData) ----
 
     /** The whole model object. */
@@ -473,6 +525,7 @@
      */
     setLabel: function (id, label) {
       this.checkLabel(label);
+      this.checkSiblingName(id, label);
       var self = this;
       var map = mapOf(id);
       if (!map) return;
@@ -501,7 +554,10 @@
       var map = mapOf(id);
       if (!map) return;
       var c = changes || {};
-      if (c.label !== undefined) this.checkLabel(c.label);
+      if (c.label !== undefined) {
+        this.checkLabel(c.label);
+        this.checkSiblingName(id, c.label);   // the dialog renames through here too
+      }
       var base = this.path + '/' + map + '/' + id;
 
       Sienna.actions.dispatch(
@@ -663,6 +719,10 @@
             var kids = self.childrenOf(id);
             kids.forEach(function (k) {
               Sienna.userData.set(self.path + '/' + mapOf(k) + '/' + k + '/parent', up);
+              // Same reasoning as a drop: promotion is asserting containment,
+              // and a name that was unique inside the box may not be unique
+              // outside it.
+              self._renameIfClashing(k, up);
               promoted.push(k);
             });
             // Read AFTER the promotion, so the closure no longer sees contents.
@@ -715,6 +775,14 @@
           if (reparent) {
             var map = mapOf(reparent.id);
             Sienna.userData.set(self.path + '/' + map + '/' + reparent.id + '/parent', reparent.parent);
+            // Landing next to a sibling of the same name: rename rather than
+            // refuse. The user asserted CONTAINMENT by dropping here, not a
+            // name, so the clash is incidental and the drop should not fail
+            // over it (ruled 2026-08-06). Renaming the incomer is safe because
+            // an influence's alias is copied at arc creation and never
+            // re-synced (§14.1): every equation downstream refers to its own
+            // alias, not to this label, so nothing breaks.
+            self._renameIfClashing(reparent.id, reparent.parent);
           }
           ids.forEach(function (k) {
             Sienna.userData.set(self.path + '/layout/' + k, moves[k]);
@@ -934,6 +1002,20 @@
         });
       });
       return out;
+    },
+
+    /**
+     * Give `id` a free name among its new siblings, if the one it has is
+     * taken. Must be called INSIDE the action that re-parented it, so the
+     * rename is part of the same undo step as the move that caused it.
+     */
+    _renameIfClashing: function (id, parent) {
+      var el = this.get(id);
+      if (!el || !el.label) return;
+      var free = this.freeSiblingName(parent, el.label, id);
+      if (free !== el.label) {
+        Sienna.userData.set(this.path + '/' + mapOf(id) + '/' + id + '/label', free);
+      }
     },
 
     /** Seed ports for every arc (idempotent; used after containment changes). */

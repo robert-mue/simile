@@ -76,6 +76,28 @@
    * says it is a child of PATCH. Ancestors are exempt — being inside your
    * grandparent's box is expected, since your parent is in there too.
    */
+  /**
+   * A name must be unique among SIBLINGS — not across the model.
+   *
+   * Scoped, not global: confirmed from the 72 reference models, where 493
+   * names repeat across different submodels against 3 within one. `x` appears
+   * in four submodels of AntsWorld, and auto-generated names restart at `fn1`
+   * inside each submodel, which is Simile's own name generator telling us the
+   * scope it works in.
+   *
+   * Deferred, because the editor already prevents the two ways a user can
+   * cause a clash: renaming is refused outright (`checkSiblingName`), and a
+   * move renames the incomer (`commitDrag`). What is left for a rule to catch
+   * is a model that arrived some other way — imported, or written by something
+   * that is not this editor.
+   */
+  Sienna.grammar.predicates.siblingNameUnique = function (cand, d) {
+    if (!cand.id || !d.get(cand.id)) return true;
+    if (cand.family !== 'node' && cand.family !== 'submodel') return true;
+    var label = (d.get(cand.id) || {}).label;
+    return !label || !d.siblingNamed(cand.parent, label, cand.id);
+  };
+
   Sienna.grammar.predicates.notInsideAStranger = function (cand, d) {
     if (!judgeable(d, cand)) return true;
     var mine = d.box(cand.id);

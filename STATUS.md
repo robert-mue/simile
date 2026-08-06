@@ -358,7 +358,7 @@ recorded in §14 because it is a judgement rather than a technical necessity —
 formality is worth a little unnaturalness, and there should not be two ways of
 expressing the same thing.
 
-**18. Geometry against containment — `src/predicates.js`, two deferred rules**
+**18. Geometry against containment — `src/predicates.js`, deferred rules**
 Does the picture agree with the model about what is inside what? Two rules,
 `inside-its-parent` and `not-inside-a-stranger`: an element must be drawn inside
 the submodel it belongs to, and not inside one it doesn't. Ancestors are exempt
@@ -391,6 +391,33 @@ It found a real fault on its first run: the plant fixture's cloud straddled
 PLANT's left edge while being parented to it. Fixed — the third fixture defect
 an automated check has caught this session, after growth's missing influence and
 `children` sitting outside FARMER.
+
+**19. Name uniqueness — scoped to the submodel (§14.2)**
+The scope was **measured, not asked**: across the 72 reference models a name
+repeats in *different* submodels 493 times and within one submodel 3 times, and
+Simile's own auto-generated names restart at `fn1` inside each submodel. So the
+same name may, and often will, appear in several submodels — §8 has carried this
+as an open question since July and it is now closed.
+
+Three enforcement points, deliberately different:
+
+- **typing** a name a sibling already has — **refused**, on both paths (inline
+  rename and the property dialog). Typing a name asserts that name.
+- **dropping** an element beside a same-named sibling — **auto-renamed**,
+  `biomass` → `biomass_1`, `_2`… A drop asserts containment; the clash is
+  incidental and halting the gesture over it would be obstructive. Ungroup's
+  promotion takes the same path. The rename happens inside the action that
+  moved the element, so one undo restores both.
+- a model that **arrives** with clashes — **reported**, by a third deferred
+  rule (`sibling-names-unique`).
+
+**No equation is rewritten, and none needs to be** — the surprise here. §14.1's
+alias is copied at arc creation and never re-synced, so a target's equation
+refers to its own local name for the imported value, never to the source's
+label. Rename a source and every downstream equation still works, verified.
+That ruling was made weeks ago for a different reason and this is it earning its
+keep. Rewriting equation text is no longer impossible either, now the parser can
+locate each identifier exactly — just unnecessary.
 
 ---
 
@@ -430,8 +457,9 @@ an automated check has caught this session, after growth's missing influence and
 
 Carried in `DESIGN-diagram.md` §8, still outstanding:
 
-- the remaining **label-typography** rules (beyond no-spaces), and whether
-  name-uniqueness is submodel-scoped;
+- the remaining **label-typography** rules, beyond no-spaces. *(The uniqueness
+  half of this question is answered — scoped to the submodel, measured from the
+  corpus rather than asked; item 19.)*
 - whether the **population glyphs** now drawn (item 16) are close enough to
   the real in-diagram symbols — only the toolbar icons were available;
 - the remaining **grammar rules** — §12's catalogue is a starter set, each rule
