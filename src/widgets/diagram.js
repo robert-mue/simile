@@ -116,12 +116,22 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     $('<span class="slx-palette-group">').text('connect').appendTo(bar);
     Object.keys(schema.arcs).forEach((t) => add('arc', t, t));
 
+    // Acts on the selection the moment it is clicked, so it is a command and
+    // not an armable tool — the palette above arms, this does.
+    $('<span class="slx-palette-group">').text('edit').appendTo(bar);
+    $('<button type="button" data-act="ungroup">')
+      .attr('title', 'Dissolve the selected submodel, keeping its contents')
+      .text('ungroup')
+      .appendTo(bar);
+
     $('<span class="slx-palette-group">').text('check').appendTo(bar);
     $('<button type="button" data-act="validate">').text('check model').appendTo(bar);
 
     this._on(bar, {
       'click button': (e) => {
-        if ($(e.currentTarget).attr('data-act') === 'validate') return this._validate();
+        const act = $(e.currentTarget).attr('data-act');
+        if (act === 'validate') return this._validate();
+        if (act === 'ungroup') return this._ungroupSelection();
         const tool = $(e.currentTarget).attr('data-tool');
         this._tool = this._tool === tool ? null : tool;   // click again to drop it
         this._syncPalette();
@@ -1175,6 +1185,36 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     if (gone.length > asked) {
       this._flash(`Deleted ${gone.length} elements (${asked} selected, ${gone.length - asked} attached)`);
     }
+  },
+
+  /**
+   * Ungroup the selected submodels: dissolve the box, keep the contents. The
+   * counterpart to deleting one, which takes the contents with it.
+   *
+   * The promoted contents are left SELECTED — they are what the user still has
+   * in hand, and the box they were selected inside no longer exists. Anything
+   * that had to go with the box (an arc attached to the box itself) is
+   * reported, as a delete's cascade is, since it is more than was asked for.
+   * A breach of containment created by the promotion is reported too, never
+   * refused, in the manner of submodel capture (§12.5).
+   */
+  _ungroupSelection() {
+    const d = this._diagram();
+    if (!d) return;
+    const boxes = this._sel.filter((id) => id.indexOf('submodel') === 0 && d.get(id));
+    if (!boxes.length) { this._flash('Select a submodel to ungroup'); return; }
+
+    const { promoted, removed } = d.ungroup(boxes);
+    this._sel = promoted.filter((id) => d.get(id));
+    this._render();
+
+    const extra = removed.length - boxes.length;
+    if (extra > 0) {
+      this._flash(`Ungrouped, keeping ${promoted.length} — ${extra} attached element${extra > 1 ? 's' : ''} went with the box`);
+      return;
+    }
+    const bad = Sienna.grammar.validate(d).filter((v) => promoted.indexOf(v.id) >= 0);
+    if (bad.length) this._flash(`${bad[0].message} (${bad.length} to fix)`);
   },
 
   /**

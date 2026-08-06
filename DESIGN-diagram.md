@@ -632,7 +632,11 @@ Layout owned by the removed elements goes with them — geometry, label offset, 
 
 The whole cascade is **one action**, hence one undo step; and the editor reports the count when it exceeds the selection, because deleting one element can reach a long way. Deleting a compartment in the reference model removes seven things.
 
-**Deleting a submodel deletes its contents** — ruled deliberately. Dissolving the box while *keeping* its contents is a different intention and will be a separate **ungroup** command. Its mechanics already exist: re-parent the contents to the submodel's own parent and re-seed ports, both of which capture and drop-into already do.
+**Deleting a submodel deletes its contents** — ruled deliberately. Dissolving the box while *keeping* its contents is a different intention, so it is the separate **ungroup** command (built 2026-08-06), which re-parents the contents to the submodel's own parent and re-seeds ports, both of which capture and drop-into already do.
+
+Two things ungroup had to settle that delete does not raise. Only the **immediate children** move: anything deeper stays inside its own submodel, which is promoted intact. And an arc attached to the **box itself** — a role arc to a submodel — cannot survive it, since one of its ends is going; so ungroup promotes the contents *first* and then asks for the deletion closure of the box, which by then covers the box and its arcs but not its contents. That reuse is the point: the closure's per-type lifecycle rules (a flow's valve, a refcounted cloud) apply to the fallout of an ungroup without being restated. The extra departures are reported, as a delete's cascade is.
+
+Ungroup **reports** a containment breach rather than refusing it, as submodel capture does (§12.5): promoting a child to its grandparent can break a rule, and refusing would trap the contents in the box for good.
 
 ## 18. Where the File menu lives — a boundary, not a feature
 

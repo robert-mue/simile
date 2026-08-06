@@ -6,7 +6,7 @@ Last updated 2026-08-06.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Only the equation parser, file save and ungroup remain unstarted.**
+**Only the equation parser and file save remain unstarted.**
 
 ---
 
@@ -117,6 +117,27 @@ top-left, since `maxFitScale` otherwise strands a small model in the corner.
 That also improves the automatic fit on first paint. An explicit fit counts as
 the user's view, so a later resize does not silently re-fit over it.
 
+**11. Ungroup — `Diagram.ungroup` + an `edit` group in the palette**
+Dissolve a submodel, keep its contents: the opposite intention to deleting it,
+which takes them with it, hence a command of its own rather than a modifier on
+delete. Only the **immediate children** move — anything deeper stays inside its
+own submodel, which is promoted intact — and the promoted contents are left
+selected, being what the user still has in hand.
+
+The reuse that made it small: promote the contents *first*, then ask
+`deletionClosure` about the box, which by then covers the box and the arcs
+attached to it but not its contents. So an arc that cannot survive the box (a
+role arc *to* the submodel) goes with the usual valve/cloud consequences,
+without any of those rules being restated. The removal writes were factored out
+of `remove` into `_purge` so both can share them inside one action — ungroup
+promotes, deletes and re-seeds ports in a single dispatch, so a gesture is one
+undo step. A breach created by the promotion is reported, never refused, as
+submodel capture is (§12.5); the button flashes when nothing is selected.
+
+The palette's first row now ends `… | EDIT ungroup | CHECK check model`, which
+keeps the division the two rows already had: row one changes the model, row two
+does not.
+
 ---
 
 ## Not started
@@ -132,10 +153,6 @@ against the influence arrows actually drawn. A big piece; not started.
 **Saving to a file.** Models live in browser `localStorage` only. No export or
 import, so a hand-built model does not survive a different browser.
 
-**Ungroup.** Dissolve a submodel but keep its contents, promoting them to its
-parent. Distinct from delete, which takes the contents with it. The mechanics
-already exist — re-parenting and port re-seeding — so this is mostly a command
-and a menu entry.
 
 ---
 

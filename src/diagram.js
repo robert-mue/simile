@@ -499,9 +499,9 @@
      *
      * The lifecycle rules were settled in §4, and they differ per type:
      *   - a **submodel** takes its contents with it, at any depth. (Dissolving
-     *     the box but KEEPING its contents is a separate `ungroup` command,
-     *     planned, not built: it re-parents the contents to the submodel's own
-     *     parent and re-seeds ports, both of which already exist here.)
+     *     the box but KEEPING its contents is the separate `ungroup` command
+     *     below, which promotes them first and then asks for this closure —
+     *     which by then covers the box and its arcs, but not the contents.)
      *   - any element takes the **arcs** attached to it, since an arc with one
      *     missing end is not a thing;
      *   - a **flow** takes its valve, which is one-to-one with it;
@@ -561,26 +561,103 @@
 
       Sienna.actions.dispatch(
         { type: 'diagram.remove', target: this.path, payload: { ids: doomed } },
+        function () { self._purge(doomed); }
+      );
+      return doomed;
+    },
+
+    /**
+     * The writes of a removal, with no action of their own — so that a command
+     * which deletes as PART of a larger gesture (ungroup) stays one undo step.
+     * Must be called inside a dispatched action.
+     */
+    _purge: function (doomed) {
+      var self = this;
+      doomed.forEach(function (id) {
+        Sienna.userData.remove(self.path + '/' + mapOf(id) + '/' + id);
+        Sienna.userData.remove(self.path + '/layout/' + id);
+        Sienna.userData.remove(self.path + '/layout/labels/' + id);
+        Sienna.userData.remove(self.path + '/layout/arcs/' + id);
+        // Ports hosted BY a removed submodel.
+        Sienna.userData.remove(self.path + '/layout/ports/' + id);
+      });
+      // Ports OWNED by a removed element, on boundaries that survive.
+      Sienna.userData.keys(self.path + '/layout/ports').forEach(function (b) {
+        Sienna.userData.keys(self.path + '/layout/ports/' + b).forEach(function (owner) {
+          if (doomed.indexOf(owner) >= 0) {
+            Sienna.userData.remove(self.path + '/layout/ports/' + b + '/' + owner);
+          }
+        });
+      });
+    },
+
+    /**
+     * Dissolve a submodel but KEEP its contents, promoting them to the
+     * submodel's own parent. The opposite intention to deleting it, which takes
+     * the contents with it (§17) — hence a separate command rather than a
+     * modifier on delete.
+     *
+     * Only the IMMEDIATE children move: anything deeper stays inside its own
+     * submodel, which is itself promoted intact. The box's own layout goes, and
+     * so do the ports hosted on the boundary being dissolved, a port's existence
+     * being derived from a boundary that no longer exists (§13.4).
+     *
+     * Arcs attached to the BOX ITSELF cannot survive it — a role arc to a
+     * submodel has no end once the submodel is gone — so those go, with the
+     * usual valve/cloud consequences. That is what `deletionClosure` computes,
+     * and by the time it is asked the contents have already been promoted out,
+     * so the closure covers the box and its arcs but not the contents. The
+     * caller is told what went, since it is more than the box.
+     *
+     * One dispatched action however many submodels are dissolved, so a gesture
+     * is one undo step. Ports are re-seeded afterwards for every arc touching
+     * what moved: port existence is derived from containment, which has changed.
+     *
+     * Legality is REPORTED, not refused, exactly as submodel capture is (§12.5):
+     * promoting a child to its grandparent can break a containment rule, and
+     * refusing here would trap the contents inside the box for good.
+     *
+     * @param {string|string[]} ids  submodels to dissolve; anything else ignored
+     * @returns {{promoted: string[], removed: string[]}}
+     */
+    ungroup: function (ids) {
+      var self = this;
+      var list = (Array.isArray(ids) ? ids : [ids]).filter(function (id) {
+        return mapOf(id) === 'submodels' && self.get(id);
+      });
+      if (!list.length) return { promoted: [], removed: [] };
+
+      var promoted = [];
+      var removed = [];
+      Sienna.actions.dispatch(
+        { type: 'diagram.ungroup', target: this.path, payload: { ids: list } },
         function () {
-          doomed.forEach(function (id) {
-            Sienna.userData.remove(self.path + '/' + mapOf(id) + '/' + id);
-            Sienna.userData.remove(self.path + '/layout/' + id);
-            Sienna.userData.remove(self.path + '/layout/labels/' + id);
-            Sienna.userData.remove(self.path + '/layout/arcs/' + id);
-            // Ports hosted BY a removed submodel.
-            Sienna.userData.remove(self.path + '/layout/ports/' + id);
+          list.forEach(function (id) {
+            if (!self.get(id)) return;              // an earlier step took it
+            var up = self.parentOf(id);
+            var kids = self.childrenOf(id);
+            kids.forEach(function (k) {
+              Sienna.userData.set(self.path + '/' + mapOf(k) + '/' + k + '/parent', up);
+              promoted.push(k);
+            });
+            // Read AFTER the promotion, so the closure no longer sees contents.
+            var doomed = self.deletionClosure([id]);
+            self._purge(doomed);
+            removed = removed.concat(doomed);
           });
-          // Ports OWNED by a removed element, on boundaries that survive.
-          Sienna.userData.keys(self.path + '/layout/ports').forEach(function (b) {
-            Sienna.userData.keys(self.path + '/layout/ports/' + b).forEach(function (owner) {
-              if (doomed.indexOf(owner) >= 0) {
-                Sienna.userData.remove(self.path + '/layout/ports/' + b + '/' + owner);
-              }
+
+          var seen = {};
+          promoted.forEach(function (el) {
+            if (!self.get(el)) return;              // promoted, then deleted with an arc
+            [el].concat(self.descendantsOf(el)).forEach(function (sub) {
+              self.arcsAt(sub).forEach(function (a) {
+                if (!seen[a] && self.get(a)) { seen[a] = true; self._seedPorts(a); }
+              });
             });
           });
         }
       );
-      return doomed;
+      return { promoted: promoted, removed: removed };
     },
 
     /**
