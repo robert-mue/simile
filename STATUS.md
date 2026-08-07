@@ -1,7 +1,7 @@
 # simile — build status
 
 *A quick-reference companion to `DESIGN-diagram.md`, which remains the design record.
-Last updated 2026-08-06.*
+Last updated 2026-08-07.*
 
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
@@ -475,7 +475,9 @@ in both directions.
 
 **The lesson worth keeping:** checking the end state cannot tell a faithful
 replay from a lucky one. The earlier verification passed because the first entry
-already contained everything. Only watching the middle catches that.
+already contained everything. Only watching the middle catches that — see §20.4,
+which also draws out the wider point about anything that keeps a copy of user
+data (a log, an undo stack, a cache) given that `userData` stores by reference.
 
 ---
 

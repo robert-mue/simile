@@ -832,3 +832,18 @@ Two things, one of which was not the point:
 - **A session is a test fixture.** Build a model once, save the log, and replay it after a refactor to check nothing moved. This only became practical when the shell stopped putting a timer between steps (sienna `414c10a`): an unpaced replay now runs in microtasks, 82 ms for 54 actions where it had been ~54 seconds in a background tab. Whether to adopt this as a real testing practice — alongside `test/index.html`, which does the same job for the equation grammar — is open.
 
 **Known limits**, inherited: replay does not reconstruct `panel.ref` changes made after a panel exists, nor actions with no per-item record such as Clear workspace. Neither has bitten yet, because simile's panels are created with their `ref` already set.
+
+### 20.4 A history has to be immutable — and end-state checks cannot tell you it is
+
+*The most useful thing this exercise produced, and it came from **watching** the replay rather than testing it.*
+
+The first time the land-use model was replayed to be looked at, it did not build up. The panel opened empty, the entire finished model appeared in a single step, and the remaining fifteen actions changed nothing.
+
+**`userData` stores values by reference, and the log captured them by reference too.** So editing a model mutated the very object the log was holding: the recorded *"create an empty model"* had, by the time anyone read it, become the finished model. Replay therefore reproduced the end state at the creating action, and everything after it was a no-op. The log was not a history at all — it was a bundle of live pointers, and it agreed with the present by construction.
+
+The same fault mirrored on the way out: re-applying handed the recorded object straight back to `userData`, so replaying a log put the log's own values into the live store, where the next write mutated them. A log was thus **faithful the first time it was replayed and wrong every time after** — and `history` shared the defect, so undo could rewrite its own stack. All three are fixed by snapshotting, on capture and on apply (sienna `6c47320`).
+
+Two things worth carrying beyond this section:
+
+- **"Stored by reference" is a contract with a long reach.** `userData`'s documentation says it plainly, and the consequence still went unnoticed in two separate places, because both looked like they were storing a *value*. Any component that keeps a copy of user data for later — a log, an undo stack, a cache, a diff — is exposed to it, and the fix is always the same: detach at the boundary.
+- **An end-state check cannot distinguish a faithful replay from a lucky one.** Replay had already been "verified": clear everything, replay, compare — identical. That test passed *because* the corruption put the whole answer in the first entry. It was a real check that happened to be blind to the only interesting failure. Where a process is supposed to reach a result *by a particular route*, the route is what has to be observed: here, sampling the model after each step, which is a three-line `onStep` and would have caught it immediately.
