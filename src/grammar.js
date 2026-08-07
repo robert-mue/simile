@@ -56,11 +56,19 @@
       return n && n.type === 'condition';
     });
     if (isConditional) kinds.push('conditional');
-    var isAssociation = d.ids('arcs').some(function (a) {
+
+    // How MANY role arcs point in decides which kind this is, not merely
+    // whether any do (corrected 2026-08-08, Simile developer):
+    //   one  — a SATELLITE submodel, hanging off a single other one;
+    //   two  — an ASSOCIATION, relating its two parties (§4);
+    //   more — not legal, and refused when the third is drawn.
+    // Both are inferred and never stored, like `conditional`.
+    var roles = d.ids('arcs').filter(function (a) {
       var arc = d.get(a);
       return arc && arc.type === 'role' && arc.to === submodelId;
-    });
-    if (isAssociation) kinds.push('association');
+    }).length;
+    if (roles === 1) kinds.push('satellite');
+    else if (roles >= 2) kinds.push('association');
     return kinds;
   }
 

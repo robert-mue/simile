@@ -479,25 +479,38 @@ already contained everything. Only watching the middle catches that — see §20
 which also draws out the wider point about anything that keeps a copy of user
 data (a log, an undo stack, a cache) given that `userData` stores by reference.
 
-**21. An association needs two roles — `association-needs-two-roles`**
-Noticed while watching the farmers & fields replay, at the frame where `owns`
-existed and `owned` did not: OWNERSHIP was, for that instant, an association
-with one party. §4 says an association is a third submodel with a role arc from
-*each* party, so one arc is a half-built one — but nothing checked it.
+**21. Role-arc counts name the kind — and there is a ceiling**
+Corrected 2026-08-08 by the Simile developer, replacing a rule written the day
+before that had it backwards. **The number of role arcs pointing at a submodel
+is what it means:**
 
-Counted as **arcs, not distinct partners**, because a self-association takes
-both roles from the same submodel: land-use's NEXT_TO has `me` and
-`my_neighbour` both from PATCH, and that is a canonical case rather than an edge
-one. Zero roles is not an association at all, so the rule does not apply.
+| roles in | kind | legal |
+|---|---|---|
+| 0 | an ordinary submodel | yes |
+| 1 | a **satellite**, hanging off a single other submodel | yes |
+| 2 | an **association**, relating its two parties (§4) | yes |
+| 3+ | — | **no** |
 
-**Deferred of necessity.** Role arcs are drawn one at a time, so every
-association passes through having exactly one; a preventive rule would refuse
-the first arc and make associations impossible to build. §12.3(ii) again — the
-same fact is a breach at rest and an ordinary intermediate state mid-gesture.
+Yesterday's rule reported a one-role association as half-built. It is not half
+of anything: a satellite is its own kind. Worth recording as a mistake in
+reasoning rather than in code — a count that looks like an incomplete version of
+a larger count may be a case in its own right, and the schema said nothing
+either way because §4 only ever described the two-party shape.
 
-Tagged `guess`: §4 states the two-party topology as how an association is
-modelled but never says two is a minimum the editor should enforce, so this
-follows from our reading rather than from the Simile developer.
+So **`satellite` joins `conditional` and `association` as an inferred kind**, in
+`kindsOf`, never stored. Verified through a throwaway rule quantifying on
+`parentKind`: an element in a one-role submodel matches `satellite` and one in a
+two-role submodel matches `association`, each and only each.
+
+The remaining rule is the **ceiling**, and it flips enforcement with the meaning.
+A floor had to be deferred, because every association passes through having one
+role; a ceiling has no legitimate intermediate state, so the third arc is simply
+refused as it is drawn (§12.3: cardinality is structural). Only the arc that
+would be third fails, so an imported model with too many reports once rather
+than once per arc — verified.
+
+Still `guess`: this came from the developer directly, but as "I am pretty sure",
+so it is flagged for correction rather than settled.
 
 ---
 

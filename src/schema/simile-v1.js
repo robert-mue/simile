@@ -246,24 +246,22 @@
         enforcement: 'deferred', confidence: 'known',
         message: 'Another element in the same submodel already has this name.' },
 
-      // (7) An association is a third submodel with a role arc from EACH party
-      // (§4), so one role arc means a half-built one. Counted as arcs rather
-      // than distinct partners, since a self-association takes both roles from
-      // the same submodel — NEXT_TO in the land-use model is exactly that.
+      // (7) How many role arcs point at a submodel is what decides its kind
+      // (Simile developer, 2026-08-08): ONE makes it a **satellite**, TWO an
+      // **association** (§4), and more than two is not legal. Both kinds are
+      // inferred in `kindsOf`, never stored, alongside `conditional`.
       //
-      // Deferred of necessity: role arcs are drawn one at a time, so every
-      // association passes through having exactly one, and a preventive rule
-      // would refuse the first. Noticed watching the farmers & fields model
-      // replay, at the frame where `owns` existed and `owned` did not.
+      // PREVENTIVE, because a ceiling has no legitimate intermediate state —
+      // nobody passes through three roles on the way to something valid, so the
+      // third arc is refused as it is drawn (§12.3: cardinality is structural).
       //
-      // `guess`, deliberately: §4 states the two-party topology as the way an
-      // association is modelled, but never says two is a minimum the editor
-      // should enforce. It follows from our reading, not from the Simile
-      // developer.
-      { id: 'association-needs-two-roles', subject: 'submodel',
-        predicate: 'associationHasTwoRoles',
-        enforcement: 'deferred', confidence: 'guess',
-        message: 'An association needs a role arc from each party; this has only one.' },
+      // This corrects a rule written the day before which had it the other way
+      // up — that an association *needs* two, so one was a half-built one.
+      // One role is not half of anything.
+      { id: 'role-arcs-at-most-two', subject: 'arc:role',
+        predicate: 'roleCountWithinLimit',
+        enforcement: 'preventive', confidence: 'guess',
+        message: 'A submodel may take at most two role arcs — one makes it a satellite, two an association.' },
 
       // Behavioural facts — "an influence may branch", "a flow may not", "an
       // arc never terminates on an arc" — are deliberately NOT listed here.

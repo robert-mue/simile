@@ -77,33 +77,40 @@
    * grandparent's box is expected, since your parent is in there too.
    */
   /**
-   * An association needs at least TWO role arcs pointing into it.
+   * A submodel may take at most TWO role arcs.
    *
-   * §4: an association between S1 and S2 is a *third* submodel with a role arc
-   * from each — never an arc between the two. A submodel becomes an association
-   * by virtue of those arcs, so one arc means a half-built one: something is
-   * declared to play a part in a relation that has no other party.
+   * The counts are the whole meaning (Simile developer, 2026-08-08):
+   *   one  — a **satellite** submodel, hanging off a single other one;
+   *   two  — an **association**, relating its two parties (§4);
+   *   more — not legal.
    *
-   * Counted as ARCS, not as distinct partners, because a self-association is
-   * two roles from the same submodel — land-use's NEXT_TO takes `me` and
-   * `my_neighbour` both from PATCH, and that is the canonical case, not an edge
-   * one. Three or more parties are fine; two is the floor.
+   * This replaces a rule written the day before that had it backwards, on the
+   * reading that an association needs two roles and one was therefore a
+   * half-built one. One role is not half of anything: it is a different and
+   * perfectly good kind of submodel. The lesson is in §4 — a count that looks
+   * like an incomplete version of a bigger count may be its own case.
    *
-   * Zero role arcs is not an association at all, so the rule does not apply.
+   * PREVENTIVE, unlike the two-roles rule it replaces, and for a reason that
+   * inverts with it. A ceiling has no legitimate intermediate state: nobody
+   * needs to pass through three roles on the way to something valid, so the
+   * third arc can simply be refused as it is drawn (§12.3, cardinality is
+   * structural). The floor did need deferring, because every association passes
+   * through having one role.
    *
-   * Necessarily DEFERRED: role arcs are drawn one at a time, so every
-   * association passes through having exactly one. A preventive rule here would
-   * refuse the first arc and make associations impossible to build. This is the
-   * §12.3(ii) point again — the same fact is a breach when the model is at rest
-   * and an ordinary intermediate state mid-gesture.
+   * Only the arc that would be the THIRD fails, not all three, so an imported
+   * model with too many reports once rather than once per arc. A candidate with
+   * no id yet — `mayConnect` asking mid-gesture — counts as newest.
    */
-  Sienna.grammar.predicates.associationHasTwoRoles = function (cand, d) {
-    if (cand.family !== 'submodel' || !cand.id || !d.get(cand.id)) return true;
-    var roles = d.ids('arcs').filter(function (a) {
+  Sienna.grammar.predicates.roleCountWithinLimit = function (cand, d) {
+    if (cand.type !== 'role' || !cand.to) return true;
+    var order = d.ids('arcs');
+    var mine = cand.id ? order.indexOf(cand.id) : Infinity;
+    var earlier = order.filter(function (a) {
       var arc = d.get(a);
-      return arc && arc.type === 'role' && arc.to === cand.id;
+      if (!arc || arc.type !== 'role' || arc.to !== cand.to || a === cand.id) return false;
+      return order.indexOf(a) < mine;
     });
-    return roles.length !== 1;
+    return earlier.length < 2;
   };
 
   /**
