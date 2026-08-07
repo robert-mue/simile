@@ -487,6 +487,34 @@ also makes the replay-as-test-fixture idea practical rather than theoretical.
 - **Nothing warns of unsaved changes.** Edits autosave to `localStorage`
   continuously, so nothing is lost, but the *file* on disk goes stale silently
   until the next Save — and no window title or marker says so.
+- **The action log does not survive a reload**, while the models do — the
+  asymmetry item 20's guard exists to protect against. Session ▸ Save session
+  log is the workaround, and it may be answer enough.
+
+  Persisting it automatically is a **sienna** decision, not ours, and a bigger
+  one than it looks:
+
+  - *Size.* The log is a history of VALUES, not of references: each entry
+    carries the before and after of every path it touched. Measured on nothing
+    but the four demo models being seeded — 50 actions, no editing — the log is
+    **23.4 KB against 6.3 KB of actual model data, 3.7×**, the largest single
+    entry being a `diagram.create` at 2.4 KB. Editing is cheaper (~218 bytes a
+    drag), but thousands of actions in an afternoon is ordinary, so ~5,000
+    actions ≈ 1 MB. Nothing caps or trims it; `log` is only ever pushed to.
+  - *Where it would hurt.* `localStorage` is ~5 MB per origin, SHARED with
+    `userData`, which already rewrites its whole blob on every mutation. A
+    persisted log would do the same, so edits slow as it grows — and when the
+    quota goes, `persistence.js` degrades to a silent no-op. The failure mode is
+    that **models stop saving because history filled the disk**, with no error.
+  - *It drags undo with it.* `Sienna.history` builds undo from the same entries,
+    so "persist the log" immediately asks "does undo survive a reload?" —
+    undoing into last week's state is a much larger semantic change, and wants
+    separating before either is touched.
+  - *The shell has evidently chosen.* `userData` persists, the workspace
+    persists, the log does not: two out of three is a pattern, not an oversight.
+
+  If it is ever wanted, the shapes worth considering are a byte cap with
+  oldest-first eviction, or persisting only on unload.
 
 ---
 
