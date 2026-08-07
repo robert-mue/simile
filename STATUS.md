@@ -479,6 +479,26 @@ already contained everything. Only watching the middle catches that — see §20
 which also draws out the wider point about anything that keeps a copy of user
 data (a log, an undo stack, a cache) given that `userData` stores by reference.
 
+**21. An association needs two roles — `association-needs-two-roles`**
+Noticed while watching the farmers & fields replay, at the frame where `owns`
+existed and `owned` did not: OWNERSHIP was, for that instant, an association
+with one party. §4 says an association is a third submodel with a role arc from
+*each* party, so one arc is a half-built one — but nothing checked it.
+
+Counted as **arcs, not distinct partners**, because a self-association takes
+both roles from the same submodel: land-use's NEXT_TO has `me` and
+`my_neighbour` both from PATCH, and that is a canonical case rather than an edge
+one. Zero roles is not an association at all, so the rule does not apply.
+
+**Deferred of necessity.** Role arcs are drawn one at a time, so every
+association passes through having exactly one; a preventive rule would refuse
+the first arc and make associations impossible to build. §12.3(ii) again — the
+same fact is a breach at rest and an ordinary intermediate state mid-gesture.
+
+Tagged `guess`: §4 states the two-party topology as how an association is
+modelled but never says two is a minimum the editor should enforce, so this
+follows from our reading rather than from the Simile developer.
+
 ---
 
 ## Known gaps and loose ends

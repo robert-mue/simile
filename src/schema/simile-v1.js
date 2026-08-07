@@ -246,6 +246,25 @@
         enforcement: 'deferred', confidence: 'known',
         message: 'Another element in the same submodel already has this name.' },
 
+      // (7) An association is a third submodel with a role arc from EACH party
+      // (§4), so one role arc means a half-built one. Counted as arcs rather
+      // than distinct partners, since a self-association takes both roles from
+      // the same submodel — NEXT_TO in the land-use model is exactly that.
+      //
+      // Deferred of necessity: role arcs are drawn one at a time, so every
+      // association passes through having exactly one, and a preventive rule
+      // would refuse the first. Noticed watching the farmers & fields model
+      // replay, at the frame where `owns` existed and `owned` did not.
+      //
+      // `guess`, deliberately: §4 states the two-party topology as the way an
+      // association is modelled, but never says two is a minimum the editor
+      // should enforce. It follows from our reading, not from the Simile
+      // developer.
+      { id: 'association-needs-two-roles', subject: 'submodel',
+        predicate: 'associationHasTwoRoles',
+        enforcement: 'deferred', confidence: 'guess',
+        message: 'An association needs a role arc from each party; this has only one.' },
+
       // Behavioural facts — "an influence may branch", "a flow may not", "an
       // arc never terminates on an arc" — are deliberately NOT listed here.
       // They live in the VOCABULARY above, on each type (`branches`,
