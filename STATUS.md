@@ -440,6 +440,9 @@ way to run it and any way to put the *panels* back.
 Replay at once through the actual menu — 52 actions, and the result is identical
 in models, nodes, arcs, ports, labels, and the panel with its `ref`.
 
+*That check was necessary but not sufficient, as watching a replay then showed
+— see below.*
+
 **The guard, which is the interesting part.** The log lives in memory while the
 models live in `localStorage`, so the two part company at every reload: come
 back later and you have four models and an empty log, and replay — which must
@@ -450,11 +453,29 @@ rebuildable only if some change writes the WHOLE of it (`models/growth`), never
 merely something inside it: a log holding one rename would otherwise claim it
 could rebuild the model and replay a stub with a single label in it.
 
-**One shell fix fell out** (sienna `414c10a`): replay put a `setTimeout` between
-steps even at speed 0. A background tab clamps timers to ~1/second, so a
-54-action replay took the better part of a minute and looked hung — which is how
-it was found. Unpaced replay now stays in microtasks: **~54 s → 82 ms**. That
-also makes the replay-as-test-fixture idea practical rather than theoretical.
+**Two shell fixes fell out.**
+
+*Timers* (sienna `414c10a`): replay put a `setTimeout` between steps even at
+speed 0. A background tab clamps timers to ~1/second, so a 54-action replay took
+the better part of a minute and looked hung. Unpaced replay now stays in
+microtasks: **~54 s → 82 ms**, which also makes replay-as-test-fixture practical
+rather than theoretical.
+
+*The log was not immutable* (sienna `6c47320`) — the serious one, and found only
+by **watching** a replay instead of checking its end state. The land-use model
+did not build up: the panel opened empty, the whole finished model appeared in
+one step, and the remaining fifteen actions changed nothing. `userData` stores
+by reference and the log captured by reference, so writing deeper into a model
+mutated the very object the log held: the recorded "create an empty model"
+quietly became the finished model. The same on the way out — `applyChanges`
+handed the recorded object straight back to `userData`, so a log was faithful
+the *first* time it was replayed and wrong every time after, and `history` had
+it too, so undo could rewrite its own stack. Captured values are now snapshots
+in both directions.
+
+**The lesson worth keeping:** checking the end state cannot tell a faithful
+replay from a lucky one. The earlier verification passed because the first entry
+already contained everything. Only watching the middle catches that.
 
 ---
 
