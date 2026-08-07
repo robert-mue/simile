@@ -542,6 +542,12 @@ came through and the workspace restored.
 dead weight once every app has migrated, and something should eventually clear
 them.
 
+The question that led here — whether a conventional server-backed app would have
+avoided the replay log's limitations — is written up in
+**`NOTE-static-vs-dynamic.md`**, along with the measurements: IndexedDB does work
+from `file://` and does persist, so the log's durability gap is fixable without a
+server.
+
 ---
 
 ## Known gaps and loose ends

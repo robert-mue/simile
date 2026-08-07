@@ -237,6 +237,8 @@ Both unknowns that were blocking the decision resolved **in JointJS's favour** �
 
 Two claims made earlier **against** buying are also withdrawn as wrong:
 
+*(On what `file://` does and does not constrain, see `NOTE-static-vs-dynamic.md` — written 2026-08-08 after the replay work, and the place where the shared-`file://`-origin behaviour was measured.)*
+
 - **`file://` does not block vendoring.** A library would go in `sienna/vendor` like the existing vendored ones. (It *does* rule out loading from an external URL at runtime — that breaks offline use, which matters for field/teaching use — but local vendoring was never obstructed.)
 - **"jQuery-UI draggable"** was never the plan and is withdrawn as a straw man; see 11.3, dragging is easy but not via that plugin.
 
