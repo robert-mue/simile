@@ -512,6 +512,36 @@ than once per arc — verified.
 Still `guess`: this came from the developer directly, but as "I am pretty sure",
 so it is flagged for correction rather than settled.
 
+**22. Storage keys namespaced per app** (shell change, sienna `a63dde4`)
+Found by testing whether IndexedDB works from `file://` — it does, and persists
+across sessions, but the test turned up something more important on the way:
+**every `file://` page shares one origin.** `location.origin` is literally
+`"file://"`, and a page in one directory reads what a page in another wrote —
+measured on Chrome 149, for localStorage and IndexedDB alike.
+
+So two sienna apps opened from disk shared `sienna.userData.v1` and
+`sienna.workspace.v1`. Not a collision between models: between *applications*,
+silently overwriting whole stores. §18 anticipates exactly that future
+(`?app=simile`, `?app=webakt`), so it was a live risk rather than a hypothetical
+one — and it bites only in the `file://` mode the project is built for, since
+served over http each origin is distinct.
+
+Keys are now `sienna.<app>.<slot>`, the id settled in `namespace.js` because
+nothing later is early enough — `persistence` and `userData` name their keys at
+load time and `userData` reads its store as it loads. `index.html` declares
+`window.SIENNA_APP = 'simile'` before the shell scripts. An app that declares
+nothing keeps the old key names, so nothing breaks by omission.
+
+**Existing data is adopted, once**, for both userData and the workspace, when
+the app's own slot is empty — copied rather than moved, so a rollback still
+finds it. Without that, the first run after upgrading would look as though every
+model had vanished. Verified by planting a store under the old key: the model
+came through and the workspace restored.
+
+*Loose end:* the legacy keys are left behind forever. Harmless, but they are
+dead weight once every app has migrated, and something should eventually clear
+them.
+
 ---
 
 ## Known gaps and loose ends

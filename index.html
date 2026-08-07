@@ -11,6 +11,12 @@
   <body>
     <div id="app"></div>
 
+    <!-- Who we are, before anything reads storage. Every file:// page shares
+         one origin, so without this two sienna apps opened from disk would
+         share `sienna.userData.v1` and overwrite each other's models. Must come
+         before the shell: user-data.js reads its store as it loads. -->
+    <script>window.SIENNA_APP = 'simile';</script>
+
     <!-- Vendored libraries from the shell (classic scripts; set global jQuery). -->
     <script src="sienna/vendor/jquery.min.js"></script>
     <script src="sienna/vendor/jquery-ui.js"></script>
