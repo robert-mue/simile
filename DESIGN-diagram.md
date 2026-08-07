@@ -1,6 +1,6 @@
 # Diagram Library — Design Summary (restart / discussion draft)
 
-*Status: design and a working editor. §§1–15 were written before the code; §§16–19 record decisions taken while building it, 2026-08-04/06. Sections marked **[ASK]** are questions for the Simile developer. Build state — what exists, what does not — is in `STATUS.md`, which is kept current; this file is the reasoning behind it.*
+*Status: design and a working editor. §§1–15 were written before the code; §§16–20 record decisions taken while building it, 2026-08-04/07. Sections marked **[ASK]** are questions for the Simile developer. Build state — what exists, what does not — is in `STATUS.md`, which is kept current; this file is the reasoning behind it.*
 
 This is the design of a **diagramming library** and, on top of it, a **sienna diagram-editor widget**. The long-term aim is to replace the diagram editor of **Simile** (simulistics.com) with something notation-neutral and schema-driven. It sits inside sienna (static jQuery SPA, runs from `file://`, no build/server — see `CLAUDE.md`).
 
@@ -803,3 +803,32 @@ That has a cost worth recording, since it is the kind of thing that is discovere
 **Leaving the dialogue.** Cancel reverts, as ever. **OK always commits** — in every one of the five cases above. Whatever the modeller typed is kept verbatim, the element is flagged, and it stays red and incomplete. Refusing to accept a wrong equation would mean the only way out is to lose the work, which is not a choice worth offering. This is also what the model layer already does (§4: equations stored verbatim, never validated), so the ruling confirms the code rather than changing it.
 
 One asymmetry, kept on purpose: **a bad label is still refused**, and the dialogue stays open. A label is not merely this element's business — it is the name *other* elements' equations use, so a label with a space in it breaks things elsewhere and can never be referenced at all. That is §12.3's split doing its job: naming is structural and preventive, equations are content and deferred.
+
+## 20. Replay — a session as an artefact
+
+*Built 2026-08-07, from the marker put down the day before. The mechanism is the shell's (`Sienna.actions.replay`); what is recorded here is the part simile had to decide.*
+
+Every model edit already goes through `actions.dispatch`, so a modelling session was always on tape without anything being added for it — and model edits need no replay handler at all, since replay re-applies each entry's captured `changes` and `_watchModel` redraws the bound widgets. What simile had to supply was the **layout** half (six handlers, for panel add/close/move/resize/minimize/maximize) and a way to run the thing.
+
+### 20.1 Pacing is a policy, and belongs to the app
+
+Real timings make poor video. A modeller thinks for two minutes and then fires six actions in a second; replayed faithfully that is two minutes of nothing followed by a blur. The shell offers a `speed` multiplier, which cannot fix it — scaling every gap equally leaves the pauses dominating whatever number you choose.
+
+So simile **clamps every gap into 150–1200 ms** before handing the log over, and asks for `speed: 1`. That is a judgement about what a viewer wants, not a fact about replay, which is why it lives here and not in the shell: a different app might want the true timings, or none.
+
+### 20.2 A destructive command should name what it will destroy
+
+Replay must start from a clean slate — freshly minted panel ids have to line up with the recorded ones — so it clears the workspace and **every stored model** before rebuilding. That is a genuinely destructive act, and it sits on a fault line: **the action log lives in memory while the models live in `localStorage`, so the two part company at every reload.** Come back the next day and you have four models and an empty log; replaying then would delete all four and rebuild nothing.
+
+The ruling: a general warning is not good enough when the condition is *exactly checkable*. The confirmation names the models the log cannot rebuild. And "can rebuild" is tested strictly — a change must write the **whole** model (`models/growth`), never merely something inside it, because a log holding one rename would otherwise claim it could rebuild the model and then replay a stub with a single label in it.
+
+The general form, worth carrying: when a command destroys work, compute what will be lost and say so by name. Anything vaguer leaves the user to guess, and they will guess wrong in the direction that costs them.
+
+### 20.3 What this makes possible
+
+Two things, one of which was not the point:
+
+- **A session is a screencast** — a model being built, reproducible from a few KB of JSON, and shareable as a file.
+- **A session is a test fixture.** Build a model once, save the log, and replay it after a refactor to check nothing moved. This only became practical when the shell stopped putting a timer between steps (sienna `414c10a`): an unpaced replay now runs in microtasks, 82 ms for 54 actions where it had been ~54 seconds in a background tab. Whether to adopt this as a real testing practice — alongside `test/index.html`, which does the same job for the equation grammar — is open.
+
+**Known limits**, inherited: replay does not reconstruct `panel.ref` changes made after a panel exists, nor actions with no per-item record such as Clear workspace. Neither has bitten yet, because simile's panels are created with their `ref` already set.

@@ -6,10 +6,10 @@ Last updated 2026-08-06.*
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
 
-**Everything on the implementation plan is now built.** What remains is the
-**marker** below (try the replay mechanism — the next thing to look at), the
-list of known gaps, and the questions in `DESIGN-diagram.md` §8 that only the
-Simile developer can answer.
+**Everything on the implementation plan is now built**, and so is the replay
+marker that followed it (item 20). What remains is the list of known gaps, and
+the questions in `DESIGN-diagram.md` §8 that only the Simile developer can
+answer.
 
 ---
 
@@ -420,47 +420,41 @@ That ruling was made weeks ago for a different reason and this is it earning its
 keep. Rewriting equation text is no longer impossible either, now the parser can
 locate each identifier exactly — just unnecessary.
 
----
+**20. Replay — a Session menu, and six handlers**
+The marker of 2026-08-06, done. Every model edit already went through
+`actions.dispatch`, so a session was always on tape; what was missing was any
+way to run it and any way to put the *panels* back.
 
-## Marker: try the replay mechanism (2026-08-06)
+- **Six `onReplay` handlers** for `panel.add` / `close` / `move` / `resize` /
+  `minimize` / `maximize`. Model edits still need none — replay re-applies each
+  entry's captured `changes` and `_watchModel` redraws.
+- **A Session menu**: Watch replay, Replay at once, Save session log…, Open
+  session log… Saving is not a nicety: the log is in memory only, so it is the
+  only way a session outlives its tab.
+- **Paced timing for "watch".** Real timings are useless as video — think for
+  two minutes, then fire six actions in a second. Every gap is clamped into
+  150–1200 ms before replaying, which gives an even cadence. A speed multiplier
+  cannot do this: it scales every gap equally, so the pauses still dominate.
 
-*Put down by the user as the next thing to look at, not started. Recorded with
-what a cold start would need to know.*
+**Verified:** build a session (demo seeding + a panel + edits + a rename), then
+Replay at once through the actual menu — 52 actions, and the result is identical
+in models, nodes, arcs, ports, labels, and the panel with its `ref`.
 
-sienna records every dispatched action, and can **replay** a session — either
-instantly (testing) or honouring the recorded time gaps (a video of a modelling
-session). Every model edit in simile already goes through `actions.dispatch`, so
-in principle the whole of a session is on tape.
+**The guard, which is the interesting part.** The log lives in memory while the
+models live in `localStorage`, so the two part company at every reload: come
+back later and you have four models and an empty log, and replay — which must
+start from a clean slate — would delete all four and rebuild nothing. A general
+warning is not good enough when the condition is exactly checkable, so the
+confirmation names the models the log *cannot* rebuild. A model counts as
+rebuildable only if some change writes the WHOLE of it (`models/growth`), never
+merely something inside it: a log holding one rename would otherwise claim it
+could rebuild the model and replay a stub with a single label in it.
 
-**What exists.** The machinery is entirely the shell's:
-`Sienna.actions.replay(log, {speed, onStep})`, `onReplay(type, fn)`,
-`log()`/`toJSON()`/`fromJSON()`. Model edits need no handler at all — replay
-re-applies each entry's captured `changes`, and `_watchModel` re-renders the
-bound widgets, so the diagram redraws for free.
-
-**What simile is missing**, which is the whole of why this has never been seen
-working:
-
-1. **No way to trigger it.** The sienna demo has a Session menu — Replay,
-   export log, import log; simile's menu has Edit / Widgets / View and nothing
-   else. Replay can only be reached from the console today.
-2. **No `onReplay` handlers.** The demo registers six, for `panel.add`,
-   `panel.close`, `panel.move`, `panel.resize`, `panel.minimize`,
-   `panel.maximize` (`sienna/examples/demo/main.js`, ~line 34 — the model to
-   copy). simile registers none, so a replay would re-perform the model edits
-   onto **no panels**: correct data, invisible.
-
-**Known limits to expect** (from `sienna/CLAUDE.md`): replay assumes a clean
-start — clear workspace, userData and history first, or minted panel ids will
-not line up — and it does not reconstruct `panel.ref` or actions with no
-per-item record, such as Clear workspace.
-
-**Worth thinking about while trying it.** A replay of a *diagram* session is a
-more interesting artefact than a replay of the demo's counters: it is a
-screencast of a model being built, reproducible from a few KB of JSON, and it is
-also a test fixture — build a model once, replay it to check a refactor changed
-nothing. Whether that second use is worth formalising is the question to hold in
-mind.
+**One shell fix fell out** (sienna `414c10a`): replay put a `setTimeout` between
+steps even at speed 0. A background tab clamps timers to ~1/second, so a
+54-action replay took the better part of a minute and looked hung — which is how
+it was found. Unpaced replay now stays in microtasks: **~54 s → 82 ms**. That
+also makes the replay-as-test-fixture idea practical rather than theoretical.
 
 ---
 

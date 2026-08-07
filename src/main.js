@@ -73,6 +73,137 @@
     validate: validateModel,
   });
 
+  // =======================================================================
+  // REPLAY
+  // =======================================================================
+  // Every model edit already goes through `Sienna.actions.dispatch`, so a whole
+  // modelling session is on tape without anything being added for it. What the
+  // shell cannot know is how to re-perform this app's LAYOUT actions, so those
+  // get handlers here; model edits need none, since replay re-applies each
+  // entry's captured `changes` and `_watchModel` redraws the bound widgets.
+
+  function panelById(id) {
+    return app.$workspace.workspace('panelById', id);
+  }
+
+  Sienna.actions.onReplay('panel.add', function (e) {
+    // `ref` is what makes a replayed diagram panel view the right model.
+    return app.addPanel({
+      title: e.payload.title,
+      widget: e.payload.widget || undefined,
+      ref: e.payload.ref || '',
+    });
+  });
+  Sienna.actions.onReplay('panel.close', function (e) {
+    var $p = panelById(e.target);
+    if ($p) $p.panel('close');
+  });
+  function replayGeometry(e) {
+    var $p = panelById(e.target);
+    if ($p) $p.panel('setGeometry', e.payload);
+  }
+  Sienna.actions.onReplay('panel.move', replayGeometry);
+  Sienna.actions.onReplay('panel.resize', replayGeometry);
+  Sienna.actions.onReplay('panel.minimize', function (e) {
+    var $p = panelById(e.target);
+    if ($p) $p.panel('minimize', !!e.payload.minimized);
+  });
+  Sienna.actions.onReplay('panel.maximize', function (e) {
+    var $p = panelById(e.target);
+    if ($p) $p.panel('maximize', !!e.payload.maximized);
+  });
+
+  /**
+   * Rewrite the timestamps so a session is worth watching.
+   *
+   * Real timings are useless as video: a modeller thinks for two minutes, then
+   * fires off six actions in a second. Replayed faithfully that is two minutes
+   * of nothing followed by a blur. Clamping every gap into a narrow band gives
+   * an even pace — which is what someone watching a model being built actually
+   * wants, and it costs only a copy of the log.
+   *
+   * A speed multiplier alone cannot do this: it scales every gap equally, so
+   * the pauses still dominate whatever number you pick.
+   */
+  function paced(entries, minGap, maxGap) {
+    var t = entries.length ? entries[0].ts : 0;
+    var prev = null;
+    return entries.map(function (e) {
+      if (prev != null) t += Math.min(Math.max(e.ts - prev, minGap), maxGap);
+      prev = e.ts;
+      return Object.assign({}, e, { ts: t });
+    });
+  }
+
+  /**
+   * Replay onto a clean slate — which means DESTROYING the current one. Replay
+   * needs it: freshly minted panel ids must line up with the recorded ones.
+   *
+   * Hence the confirmation, and hence its wording. The action log lives in
+   * memory only, so it does not survive a reload: after one, the log is empty
+   * while `localStorage` still holds the models, and replaying then would clear
+   * everything and put nothing back. That is the trap this guards.
+   */
+  /**
+   * Which stored models this log could NOT put back.
+   *
+   * The trap this exists for: the action log lives in memory, `localStorage`
+   * holds the models, and the two part company at every reload. Come back the
+   * next day and you have four models and an empty log — and a replay, which
+   * must start from a clean slate, would delete all four and rebuild nothing.
+   *
+   * A general warning is not good enough for that, because the condition is
+   * exactly checkable: a model is safe if the log contains the action that
+   * created it. So say which ones are about to be lost, by name.
+   */
+  function modelsNotInLog(session) {
+    var created = {};
+    session.forEach(function (e) {
+      (e.changes || []).forEach(function (c) {
+        // The WHOLE model being written — `models/growth`, not
+        // `models/growth/nodes/node3/label`. Creating a model writes the whole
+        // object at once, whereas an edit writes deep inside one that must
+        // already exist. Counting edits would be the dangerous mistake: a log
+        // holding nothing but a rename would claim it could rebuild the model,
+        // and replaying it would leave a stub with a single label in it.
+        var m = /^models\/([^/]+)$/.exec(c.ref || '');
+        if (m && c.value !== undefined) created[m[1]] = true;
+      });
+    });
+    return (Sienna.userData.keys('models') || []).filter(function (id) {
+      return !created[id];
+    });
+  }
+
+  function replaySession(watch) {
+    var session = Sienna.actions.log();
+    if (!session.length) {
+      window.alert('Nothing recorded to replay.\n\n'
+        + 'The action log is kept in memory only, so it starts empty after a '
+        + 'reload. Build something first, or open a saved session log.');
+      return;
+    }
+    var doomed = modelsNotInLog(session);
+    if (!window.confirm(
+      'Replay ' + session.length + ' recorded actions?\n\n'
+      + 'This first CLEARS the workspace and every stored model, then rebuilds '
+      + 'from the log.'
+      + (doomed.length
+        ? '\n\nTHIS LOG CANNOT REBUILD: ' + doomed.join(', ')
+          + '.\nThose models will be deleted permanently. Save them first '
+          + '(File ▸ Save model) if you want to keep them.'
+        : '\n\nEvery stored model is in the log, so all of them come back.'))) return;
+
+    app.clearWorkspace();
+    Sienna.userData.clear();
+    Sienna.history.clear();
+    Sienna.actions
+      .replay(watch ? paced(session, 150, 1200) : session, watch ? { speed: 1 } : {})
+      .catch(function (e) {
+        window.alert('Replay stopped: ' + (e && e.message ? e.message : e));
+      });
+  }
+
   function buildMenu() {
     return [
     {
@@ -90,6 +221,35 @@
       label: 'View',
       items: [
         { label: 'Clear workspace', onSelect: function () { app.clearWorkspace(); } },
+      ],
+    },
+    {
+      // Saving the log is not a nicety: the log is in memory only, so this is
+      // the only way a session outlives the tab it was made in.
+      label: 'Session',
+      items: [
+        { label: 'Watch replay', onSelect: function () { replaySession(true); } },
+        { label: 'Replay at once', onSelect: function () { replaySession(false); } },
+        { label: '—' },
+        {
+          label: 'Save session log…',
+          onSelect: function () {
+            Sienna.files.saveAs('simile-session.json', Sienna.actions.toJSON());
+          },
+        },
+        {
+          label: 'Open session log…',
+          onSelect: function () {
+            Sienna.files.pickFile(function (obj) {
+              if (!Array.isArray(obj)) {
+                window.alert('That is not a session log.');
+                return;
+              }
+              Sienna.actions.fromJSON(obj);
+              window.alert(obj.length + ' actions loaded. Session ▸ Watch replay to run them.');
+            });
+          },
+        },
       ],
     },
     ];
