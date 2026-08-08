@@ -585,6 +585,12 @@ Much worse than the structure, and now measured instead of guessed. Simile's
 end-to-end, so a direct diff gives zero matches for representational reasons
 (§13) rather than for wrong ones.
 
+**LAMOS is deliberately left RED** *(ruled 2026-08-08)*. Its 71 findings are
+not a to-do list: the other four fixtures are authored green and would stay
+green if the checker stopped working altogether, so this is the only one that
+demonstrates it runs. Correcting the tracing against `lamos1a.pl` would throw
+that away.
+
 **And it found a hole in our own naming rule** (§14). `check_spark`'s equation
 reads `spark_` while the element is labelled `spark?`: Simile keeps the question
 mark to display and substitutes an underscore in the name. Our grammar rejects
