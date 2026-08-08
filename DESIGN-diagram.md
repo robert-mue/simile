@@ -2,7 +2,7 @@
 
 *Status: design and a working editor. §§1–15 were written before the code; §§16–20 record decisions taken while building it, 2026-08-04/07. Sections marked **[ASK]** are questions for the Simile developer. Build state — what exists, what does not — is in `STATUS.md`, which is kept current; this file is the reasoning behind it.*
 
-This is the design of a **diagramming library** and, on top of it, a **sienna diagram-editor widget**. The long-term aim is to replace the diagram editor of **Simile** (simulistics.com) with something notation-neutral and schema-driven. It sits inside sienna (static jQuery SPA, runs from `file://`, no build/server — see `CLAUDE.md`).
+This is the design of a **diagramming library** (`src/diagram.js` — `Sienna.Diagram`) and, on top of it, a **sienna diagram-editor widget** (`src/widgets/diagram.js`). The two names are confusingly alike; the split between them is real, and the library contains no reference to the DOM or to jQuery. *One honest qualification (2026-08-09): "library" describes the shape, not yet the packaging. `Sienna.Diagram` reaches directly for `Sienna.userData` and `Sienna.actions` on every mutation — 32 and 15 call sites — which is exactly what buys undo, replay and autosave for free, and equally what stops the file being lifted into another project unchanged. Extracting it behind an injected store is deliberately deferred until a second host actually wants it; see §21.* The long-term aim is to replace the diagram editor of **Simile** (simulistics.com) with something notation-neutral and schema-driven. It sits inside sienna (static jQuery SPA, runs from `file://`, no build/server — see `CLAUDE.md`).
 
 ---
 
@@ -15,7 +15,7 @@ This is the design of a **diagramming library** and, on top of it, a **sienna di
 
 ## 2. The core idea
 
-A node-and-arc diagram in which the **vocabulary and rules are declared in a schema, not hard-wired in code**. One library can render Simile today and other notations (e.g. SBML) tomorrow by swapping the schema — this was proven before in the user's earlier tool **Systo** (a `.js` schema switched System Dynamics ↔ SBML).
+A node-and-arc diagram in which the **vocabulary and rules are declared in a schema, not hard-wired in code** — true of node types from the start, and of arc types since `addArc` replaced three hard-wired methods (§21.1). One library can render Simile today and other notations (e.g. SBML) tomorrow by swapping the schema — this was proven before in the user's earlier tool **Systo** (a `.js` schema switched System Dynamics ↔ SBML).
 
 Three first-class object **families**:
 
@@ -857,3 +857,63 @@ Two things worth carrying beyond this section:
 
 - **"Stored by reference" is a contract with a long reach.** `userData`'s documentation says it plainly, and the consequence still went unnoticed in two separate places, because both looked like they were storing a *value*. Any component that keeps a copy of user data for later — a log, an undo stack, a cache, a diff — is exposed to it, and the fix is always the same: detach at the boundary.
 - **An end-state check cannot distinguish a faithful replay from a lucky one.** Replay had already been "verified": clear everything, replay, compare — identical. That test passed *because* the corruption put the whole answer in the first entry. It was a real check that happened to be blind to the only interesting failure. Where a process is supposed to reach a result *by a particular route*, the route is what has to be observed: here, sampling the model after each step, which is a three-line `onStep` and would have caught it immediately.
+
+## 21. The library boundary — how much of a library is it? *(2026-08-09)*
+
+Prompted by a fair challenge: the design opens by calling this "the design of a
+diagramming library", the original sketch was `var diag = new Diagram(...);
+diag.add('node', ...)`, and yet a reader opening `diagram.js` finds a jQuery UI
+widget. Where is the library?
+
+**It is there, and it is the other file of the same name.** `src/diagram.js`
+(1140 lines) is `Sienna.Diagram`: `new Diagram(path)`, `addNode`, `addSubmodel`,
+`addArc`, and around them the things a diagramming library owes its caller —
+`parentOf`, `ancestorsOf`, `descendantsOf`, `nearestCommonAncestor`, `arcsAt`,
+`deletionClosure`, `box`, `arcPoints`, `portsFor`, `commitDrag`. The original
+`diag.add('node', …)` became typed methods rather than string dispatch, which is
+the only real departure from the sketch. `src/widgets/diagram.js` (1615 lines) is
+the widget, and the only place that knows about pixels. Two files, near-identical
+names — worth saying out loud, because it is the likeliest reason to conclude the
+library is missing.
+
+**The split is genuine, and cheap to verify:** the library mentions the DOM and
+jQuery zero times. It could not draw anything if it tried.
+
+### 21.1 Where it fell short, and what was fixed
+
+Node types have always come from the schema — `addNode(type, …)` asks
+`nodeType(type)` what exists. **Arcs did not.** There were three hard-wired
+methods, `addFlow` / `addInfluence` / `addRole`, each with its type string baked
+in, so a notation with a fourth kind of arc needed a code change. §2's claim that
+the vocabulary is declared in the schema was therefore true for nodes and
+two-thirds true for arcs.
+
+`addArc(type, from, to, opts)` closes that, and it is not a switch: everything
+the three differed on was already declared in the schema, and now drives one
+path — `blankEnd` (what a blank end auto-creates), `attachmentNode` (a node the
+arc brings with it, which carries the label and its equation), `has_label`, and
+`alias` (§14.1). The three named methods remain as thin wrappers, since they read
+better at 34 call sites and keep the action log's `diagram.addFlow` entries
+unchanged.
+
+Verified two ways. **Inertness:** all five demo models, their completeness scores
+and every dispatched action are byte-for-byte identical before and after.
+**The point of it:** declaring a fourth arc type `constraint` in the schema *at
+runtime*, touching no code, produces a correctly stored labelled arc, a sensibly
+named `diagram.addConstraint` action, seeded ports — and a refusal of a blank end,
+because the new type declares no `blankEnd`.
+
+### 21.2 Where it is still not a library, deliberately
+
+**It cannot leave home.** `Sienna.userData` appears 32 times and
+`Sienna.actions` 15; there is no store to inject, because the shell *is* the
+store. That coupling is not an oversight — it is what makes every mutation
+undoable, replayable and autosaved without the library knowing those features
+exist. Decoupling means inventing a persistence interface to hand in, which is
+real work for a benefit nothing yet asks for. **Deferred until a second host
+wants it**, and recorded here so it is a decision rather than a drift.
+
+**It is not packaged as anything**: no repository, no namespace of its own, no
+published surface. If a second notation or a second app ever arrives, that is the
+moment to extract it — and §21.1's work is what makes the extraction plausible,
+since the notation-specific vocabulary is now data rather than method names.

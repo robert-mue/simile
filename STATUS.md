@@ -635,6 +635,30 @@ the negation of the equation grammar's identifier, so the two cannot drift.
 Verified: with the fix, `check_spark` resolves its reference and reports
 nothing.
 
+**25. `addArc` — arc types come from the schema too** *(2026-08-09)*
+`addNode(type, …)` always asked the schema what node types exist; arcs had three
+hard-wired methods (`addFlow`/`addInfluence`/`addRole`), so a fourth kind of arc
+meant a code change and §2's schema-driven claim was only two-thirds true.
+
+`Sienna.Diagram.addArc(type, from, to, opts)` is now the general form, driven by
+what the schema already declared — `blankEnd`, `attachmentNode`, `has_label`,
+`alias`. The three names survive as thin wrappers: they read better at the 34
+call sites, and the action log keeps its `diagram.addFlow` entries.
+
+Verified both directions. **Inert:** all five demo models, their completeness
+scores and every dispatched action are byte-for-byte identical before and after
+(key order included — the arc record is assembled in the old order on purpose).
+**Effective:** declaring a `constraint` arc type in the schema at runtime, with
+no code touched, gives a correctly stored labelled arc, a `diagram.addConstraint`
+action, seeded ports, and a refused blank end since the type declares no
+`blankEnd`.
+
+Raised by the question "where is the diagramming library?" — answered in
+DESIGN-diagram §21, along with the two ways it is still not one: it reaches for
+`Sienna.userData`/`Sienna.actions` directly (32 and 15 call sites), which is what
+buys undo and replay for nothing, and it is not packaged for reuse. Both left
+alone until a second host asks.
+
 ---
 
 ## Known gaps and loose ends

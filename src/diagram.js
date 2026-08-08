@@ -1025,60 +1025,124 @@
     },
 
     /**
+     * Draw an arc of any type the notation declares — the general form, of
+     * which `addFlow`, `addInfluence` and `addRole` are named shorthands.
+     *
+     * Everything those three used to differ on is DECLARED in the schema's arc
+     * entry, so this is one path and not a switch:
+     *
+     *   - `blankEnd`       — what a blank end auto-creates (a flow's cloud);
+     *   - `attachmentNode` — a node the arc brings with it, which then carries
+     *                        the label and its equation (a flow's valve);
+     *   - `has_label`      — the arc itself carries a label (a role);
+     *   - `alias`          — the arc carries the local name the target's
+     *                        equation uses for the imported value (§14.1).
+     *
+     * So a notation with a fourth kind of arc needs a schema entry and no code
+     * here. That is the point of it: `addNode` has always taken its type from
+     * the schema, while arcs had three hard-wired methods, which made the claim
+     * that the vocabulary lives in the schema only two-thirds true.
+     *
+     * @param {string} type an arc type the schema declares
+     * @param {?string} from source id, or null for a blank end
+     * @param {?string} to target id, or null for a blank end
+     * @param {{label?:string, alias?:string, props?:object, parent?:string,
+     *          fromXY?:object, toXY?:object}} [o]
+     * @returns {{arc:string, from:string, to:string, attachment:?string}}
+     */
+    addArc: function (type, from, to, o) {
+      var opt = o || {};
+      var self = this;
+      var spec = this.arcType(type);   // the notation decides what this arc brings
+      var parent = opt.parent != null ? opt.parent : null;
+
+      // A blank end auto-creates a node, but only where the notation says what
+      // to create. Anywhere else a missing end is a mistake, not a gesture.
+      var blank = { from: from == null, to: to == null };
+      if ((blank.from || blank.to) && !spec.blankEnd) {
+        throw new Error('a ' + type + ' arc needs both ends');
+      }
+
+      this.checkLabel(opt.label);
+      var alias;
+      if (spec.alias) {
+        alias = opt.alias != null ? opt.alias : this.label(from);
+        this.checkLabel(alias);
+      }
+
+      // Ids are minted up-front, all at once, so the action's payload can name
+      // them: nothing reaches userData until the dispatch below runs.
+      var want = (blank.from ? 1 : 0) + (blank.to ? 1 : 0) + (spec.attachmentNode ? 1 : 0);
+      var ids = want ? this._mintIds('node', want) : [];
+      var made = [];
+      var fromId = from;
+      var toId = to;
+      if (blank.from) { fromId = ids.shift(); made.push({ id: fromId, xy: opt.fromXY }); }
+      if (blank.to) { toId = ids.shift(); made.push({ id: toId, xy: opt.toXY }); }
+      var attachId = spec.attachmentNode ? ids.shift() : null;
+      var arcId = this._mintId('arc');
+
+      // The action type stays `diagram.addFlow` / `addInfluence` / `addRole`,
+      // so existing session logs keep reading as they did.
+      var payload = { id: arcId, from: fromId, to: toId };
+      if (attachId) payload[spec.attachmentNode] = attachId;
+      if (spec.has_label || spec.attachmentNode) payload.label = opt.label || '';
+      if (alias !== undefined) payload.alias = alias;
+
+      Sienna.actions.dispatch(
+        {
+          type: 'diagram.add' + type.charAt(0).toUpperCase() + type.slice(1),
+          target: this.path,
+          payload: payload,
+        },
+        function () {
+          // Auto-created nodes at blank ends.
+          made.forEach(function (m) {
+            self._put('nodes', m.id, {
+              type: spec.blankEnd, parent: parent, label: '', props: {},
+            }, self._geom(m.xy));
+          });
+          // The attachment node is a real node, and the element that carries
+          // the name. No layout is written — it rides at its arc's midpoint
+          // (see box()).
+          if (attachId) {
+            self._put('nodes', attachId, {
+              type: spec.attachmentNode,
+              parent: parent,
+              label: defaultLabel(self.nodeType(spec.attachmentNode), attachId, opt.label),
+              props: opt.props || {},
+            }, null);
+          }
+          // The arc itself. Where there is an attachment node it holds the
+          // label and the properties, so the arc carries neither (§4).
+          var el = { type: type, from: fromId, to: toId };
+          if (attachId) el[spec.attachmentNode] = attachId;
+          if (spec.has_label) el.label = opt.label || '';
+          el.props = attachId ? {} : (opt.props || {});
+          if (alias !== undefined) el.alias = alias;
+          self._put('arcs', arcId, el, null);
+          self._seedPorts(arcId);   // §13: ports are placed when the arc is drawn
+        }
+      );
+      return { arc: arcId, from: fromId, to: toId, attachment: attachId };
+    },
+
+    /**
      * Draw a flow. Mimics the GUI gesture: a blank end auto-creates a cloud,
      * and the flow's **valve** is auto-created as a real node carrying the
      * flow's label and rate equation (§4). All of it is one undo step.
      *
      * @param {{from?:string, to?:string, label?:string, props?:object,
-     *          x?:number, y?:number, fromXY?:object, toXY?:object}} o
+     *          parent?:string, fromXY?:object, toXY?:object}} o
      *   `from`/`to` omitted or null => a cloud is created at that end.
-     *   `x`/`y` position the valve; `fromXY`/`toXY` position auto-clouds.
+     *   `fromXY`/`toXY` position the auto-created clouds.
      * @returns {{arc:string, valve:string, from:string, to:string}}
      */
     addFlow: function (o) {
       var opt = o || {};
-      this.checkLabel(opt.label);
-      var self = this;
-      var spec = this.arcType('flow');   // the notation decides what a flow brings
-
-      // Ids are minted up-front, all at once, so the action's payload can name
-      // them: nothing reaches userData until the dispatch below runs.
-      var needCloud = { from: opt.from == null, to: opt.to == null };
-      var ids = this._mintIds('node', 1 + (needCloud.from ? 1 : 0) + (needCloud.to ? 1 : 0));
-      var made = [];
-      var fromId = opt.from;
-      var toId = opt.to;
-      if (needCloud.from) { fromId = ids.shift(); made.push({ id: fromId, xy: opt.fromXY }); }
-      if (needCloud.to) { toId = ids.shift(); made.push({ id: toId, xy: opt.toXY }); }
-      var valveId = ids.shift();
-      var arcId = this._mintId('arc');
-
-      Sienna.actions.dispatch(
-        { type: 'diagram.addFlow', target: this.path, payload: { id: arcId, from: fromId, to: toId, valve: valveId, label: opt.label || '' } },
-        function () {
-          // Auto-created clouds at blank ends.
-          made.forEach(function (m) {
-            self._put('nodes', m.id, {
-              type: spec.blankEnd, parent: opt.parent != null ? opt.parent : null,
-              label: '', props: {},
-            }, self._geom(m.xy));
-          });
-          // The valve: a real node, and the element that carries the name. No
-          // layout is written — it rides at its flow's midpoint (see box()).
-          self._put('nodes', valveId, {
-            type: spec.attachmentNode,
-            parent: opt.parent != null ? opt.parent : null,
-            label: defaultLabel(self.nodeType(spec.attachmentNode), valveId, opt.label),
-            props: opt.props || {},
-          }, null);
-          // The flow arc itself: no label (the valve has it), no parent (§13).
-          self._put('arcs', arcId, {
-            type: 'flow', from: fromId, to: toId, valve: valveId, props: {},
-          }, null);
-          self._seedPorts(arcId);
-        }
-      );
-      return { arc: arcId, valve: valveId, from: fromId, to: toId };
+      var r = this.addArc('flow', opt.from == null ? null : opt.from,
+                          opt.to == null ? null : opt.to, opt);
+      return { arc: r.arc, valve: r.attachment, from: r.from, to: r.to };
     },
 
     /**
@@ -1093,46 +1157,18 @@
      * @returns {string} the new arc id
      */
     addInfluence: function (from, to, o) {
-      var opt = o || {};
-      var self = this;
-      // The notation says whether this arc type carries a local name at all.
-      var alias = this.arcType('influence').alias
-        ? (opt.alias != null ? opt.alias : this.label(from))
-        : undefined;
-      this.checkLabel(alias);
-      var id = this._mintId('arc');
-      Sienna.actions.dispatch(
-        { type: 'diagram.addInfluence', target: this.path, payload: { id: id, from: from, to: to, alias: alias } },
-        function () {
-          var el = { type: 'influence', from: from, to: to, props: opt.props || {} };
-          if (alias !== undefined) el.alias = alias;
-          self._put('arcs', id, el, null);
-          self._seedPorts(id);   // §13: ports are placed when the arc is drawn
-        }
-      );
-      return id;
+      return this.addArc('influence', from, to, o).arc;
     },
 
     /**
      * Draw a role arc, from a submodel to the submodel that thereby becomes an
-     * association (§4: S1→S3 and S2→S3, never S1→S2). Roles are the one arc
+     * association (§4: S1->S3 and S2->S3, never S1->S2). Roles are the one arc
      * type that carries a label.
+     *
+     * @returns {string} the new arc id
      */
     addRole: function (from, to, o) {
-      var opt = o || {};
-      this.checkLabel(opt.label);
-      var self = this;
-      var id = this._mintId('arc');
-      Sienna.actions.dispatch(
-        { type: 'diagram.addRole', target: this.path, payload: { id: id, from: from, to: to, label: opt.label || '' } },
-        function () {
-          self._put('arcs', id, {
-            type: 'role', from: from, to: to, label: opt.label || '', props: opt.props || {},
-          }, null);
-          self._seedPorts(id);
-        }
-      );
-      return id;
+      return this.addArc('role', from, to, o).arc;
     },
   };
 
