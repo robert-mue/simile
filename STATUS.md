@@ -523,8 +523,20 @@ So two sienna apps opened from disk shared `sienna.userData.v1` and
 `sienna.workspace.v1`. Not a collision between models: between *applications*,
 silently overwriting whole stores. §18 anticipates exactly that future
 (`?app=simile`, `?app=webakt`), so it was a live risk rather than a hypothetical
-one — and it bites only in the `file://` mode the project is built for, since
-served over http each origin is distinct.
+one.
+
+**Correction, 2026-08-08 — this was first recorded as a `file://`-only hazard,
+and that is wrong.** Measured on the live GitHub Pages deployment (item 24):
+`https://robert-mue.github.io` is ONE origin for *every* repo published under
+that account, so simile at `/simile/` and webakt at `/webakt-bangor-msc/` share
+a single localStorage. Reading it on the live site returns simile's
+`sienna.simile.userData.v1` alongside webakt's `ego`, `current_kb`,
+`recent_kbs`, `current_action_log` and `atwima`. So the fix is load-bearing in
+the *deployed* environment too, not merely when opening files from disk. It is
+only a distinct-domain deployment that makes the problem go away. simile is safe
+because its keys are namespaced; webakt's are bare names, which is fine today
+solely because simile does not use them — `current_action_log` would collide the
+day webakt moves onto sienna.
 
 Keys are now `sienna.<app>.<slot>`, the id settled in `namespace.js` because
 nothing later is early enough — `persistence` and `userData` name their keys at
@@ -547,6 +559,29 @@ avoided the replay log's limitations — is written up in
 **`NOTE-static-vs-dynamic.md`**, along with the measurements: IndexedDB does work
 from `file://` and does persist, so the log's durability gap is fixable without a
 server.
+
+**24. Published to GitHub Pages** *(2026-08-08)*
+Live at **https://robert-mue.github.io/simile/**, rebuilt automatically on every
+push to `main` (~1 minute). Two things were needed and one was a trap:
+
+- **`.nojekyll`** at the repo root. Pages runs Jekyll by default and Jekyll's
+  default exclude list contains `vendor` — without this, `vendor/peggy.min.js`
+  and `sienna/vendor/*` 404 and the app does not load at all.
+- **The submodule is checked out at the SHA this repo pins.** A sienna fix does
+  not reach the live site until the bumped pointer is committed here too, and
+  the local page looks perfect meanwhile. Push sienna first: a pointer naming an
+  unpushed commit breaks the build outright.
+
+Verified on the deployed site rather than assumed: every asset serves, the app
+boots with `appId: "simile"`, the PEG compiles and parses (95 ms), all five demo
+models seed, the diagram renders, `isSecureContext` is true so File ▸ Save
+works, and the completeness checker scores LAMOS 23/29/18/1 — identical to
+local.
+
+Two consequences worth keeping in mind. **The live site's storage is a separate
+world**: `localStorage` is per-origin, so models built locally are not there and
+never will be — File ▸ Save and File ▸ Open are the only transfer. And it turned
+up the origin-sharing correction now recorded in item 22.
 
 **23. LAMOS — a model reconstructed from a screenshot**
 `src/demo-lamos.js`, 2026-08-08. Given a PNG of a medium-complexity Simile

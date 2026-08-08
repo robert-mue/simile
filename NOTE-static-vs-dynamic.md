@@ -125,8 +125,18 @@ The consequence is not about replay at all:
 
 §18 of `DESIGN-diagram.md` anticipates exactly that future (*"sienna is a host that becomes a
 particular application (`?app=simile`, `?app=webakt`)"*), so this was a live risk rather than a
-hypothetical one. It is also specific to the mode the project is built for: served over http each
-origin is distinct and the problem does not exist.
+hypothetical one. It was first written up as specific to the mode the project is built for, on the reasoning that
+served over http each origin is distinct.
+
+> **Correction, 2026-08-08.** That last clause is wrong, and the live deployment disproves it.
+> `https://robert-mue.github.io` is a single origin shared by **every repository published under
+> the account** — the path (`/simile/`, `/webakt-bangor-msc/`) does not separate storage. Reading
+> `localStorage` on the live simile site returns webakt's `ego`, `current_kb`, `recent_kbs`,
+> `current_action_log` and `atwima` sitting beside simile's own namespaced key. So the hazard is
+> not a `file://` curiosity that hosting would have cured: hosting on `github.io` reproduces it
+> exactly. Only a deployment on distinct domains removes it. The namespacing fix protects the
+> published site as much as the local one, which makes it a better piece of work than this note
+> originally credited.
 
 **Fixed** in sienna `a63dde4`: storage keys are namespaced `sienna.<app>.<slot>`, the id settled in
 `namespace.js` because nothing later is early enough, with a one-time adoption of any
