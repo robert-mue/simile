@@ -548,6 +548,52 @@ avoided the replay log's limitations — is written up in
 from `file://` and does persist, so the log's durability gap is fixable without a
 server.
 
+**23. LAMOS — a model reconstructed from a screenshot**
+`src/demo-lamos.js`, 2026-08-08. Given a PNG of a medium-complexity Simile
+model, rebuilt from the image alone; `lamos1a.pl` sits in the reference corpus
+on the same machine and was deliberately not opened until afterwards, so the
+result could be **scored** rather than copied.
+
+| | original | reconstructed |
+|---|---|---|
+| submodels, with parents | 11 | **11 — all correct** |
+| named nodes, in the right submodel | 66 | **66 — all correct** |
+| compartments / conditions / clouds | 4 / 2 / 8 | 4 / 2 / 8 |
+| flows | 9 | 9 |
+| role arcs | 2 | 2, both named right |
+
+Reading the picture needed one inference worth recording: **a submodel's label
+sits above-left, OUTSIDE its box**, which is what settles `patch ▸ plants ▸
+plant_species` — the alternative reading puts the labels one level out.
+
+**Equations were recovered afterwards** from the `.pl`, and how they are stored
+is not obvious: a drawn variable is TWO nodes — a `variable` holding name and
+graphics, immediately followed by a `function` holding units and equation. The
+`fnN` names are those second halves, not, as first supposed, intermediates
+standing on submodel boundaries. Equations reference NAMES, so Simile's
+segmented storage of cross-boundary influences (§13) does not obstruct recovery
+at all. **57 of 58 parse with our grammar** — the one failure is comma-as-`and`,
+a known exclusion — and there were **no unknown functions**, the best evidence
+yet that the schema's function table is sound.
+
+**Attaching real equations turned the cross-check into a marker for the
+influence tracing**, which nothing else could have scored. Of 72 influences
+traced from the picture: 18 unused (drawn but referenced by nothing) and 29
+undeclared (required but not drawn) — roughly 74% precision and 64% recall.
+Much worse than the structure, and now measured instead of guessed. Simile's
+`.pl` cannot score this directly: it stores segments, we store one arc
+end-to-end, so a direct diff gives zero matches for representational reasons
+(§13) rather than for wrong ones.
+
+**And it found a hole in our own naming rule** (§14). `check_spark`'s equation
+reads `spark_` while the element is labelled `spark?`: Simile keeps the question
+mark to display and substitutes an underscore in the name. Our grammar rejects
+`?` in identifiers, correctly — but the naming rule forbade only spaces, so
+`spark?` was a legal label that nothing could reference. `forbidPattern` is now
+the negation of the equation grammar's identifier, so the two cannot drift.
+Verified: with the fix, `check_spark` resolves its reference and reports
+nothing.
+
 ---
 
 ## Known gaps and loose ends

@@ -280,6 +280,7 @@
   if (!Sienna.userData.get('models/plant') && Sienna.demoSubmodel) Sienna.demoSubmodel();
   if (!Sienna.userData.get('models/landuse') && Sienna.demoLanduse) Sienna.demoLanduse();
   if (!Sienna.userData.get('models/farmers') && Sienna.demoFarmers) Sienna.demoFarmers();
+  if (!Sienna.userData.get('models/lamos') && Sienna.demoLamos) Sienna.demoLamos();
 
   app.restore();
 

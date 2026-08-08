@@ -46,12 +46,26 @@
     // =====================================================================
     // 1. NAMING (§14)
     // =====================================================================
-    // A label IS the equation name (they are enforced identical), so equation
-    // syntax constrains what a user may type. Only the no-spaces rule is
-    // confirmed; the rest of Simile's rules are still to come.
+    // A label IS the equation name (§14), so what may be typed is exactly what
+    // the equation grammar will accept as an identifier — `[A-Za-z_][A-Za-z0-9_]*`.
+    // This pattern is its negation: any character outside that set, or a
+    // leading digit.
+    //
+    // Tightened 2026-08-08, from `\s` (spaces only). Reconstructing LAMOS
+    // showed the hole: Simile labels an element `spark?` and its own equations
+    // then refer to `spark_`, substituting the illegal character — so `?` was
+    // legal as a label here while being unusable in any equation, which is
+    // precisely the split §14 exists to prevent. The rule and the grammar now
+    // agree by construction.
+    //
+    // The cost is the same one §14 already accepted for spaces: `spark?`
+    // becomes `spark_`, and the question mark's hint that a value is boolean is
+    // lost. Simile makes the same substitution internally; the difference is
+    // that it keeps the prettier form to display and we do not.
     naming: {
-      forbidPattern: '\\s',
-      message: 'Labels may not contain spaces.',
+      forbidPattern: '[^A-Za-z0-9_]|^[0-9]',
+      message: 'A label is also the equation name: letters, digits and '
+             + 'underscores only, and it may not start with a digit.',
     },
 
     // =====================================================================
