@@ -1,7 +1,7 @@
 # simile — build status
 
 *A quick-reference companion to `DESIGN-diagram.md`, which remains the design record.
-Last updated 2026-08-07.*
+Last updated 2026-08-08.*
 
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
@@ -608,6 +608,13 @@ nothing.
 - Whether a **role arc** can join submodels at different nesting levels is
   unanswered — nothing depends on it, since flows already prove segments are
   needed.
+- **A future `.pl` importer has to walk chains, not map arcs.** Measured on
+  `lamos1a.pl`: 239 influence arcs, of which only 72 join two user-named,
+  non-function nodes — the rest run to or from a submodel boundary or through
+  one of the file's 100 `function` nodes (the equation halves of variable
+  records). An importer that takes arcs at face value gets the node set right
+  and the connectivity unreadable. Not a defect in §13's one-arc ruling; the
+  cost of it, recorded so nobody rediscovers it mid-import.
 - When the last arc through a port is deleted, is a dragged port position
   forgotten or remembered? Undecided (§13.4).
 - Influence curve geometry is an **arc of a circle** provisionally; quadratic and
@@ -660,9 +667,14 @@ nothing.
 
 Carried in `DESIGN-diagram.md` §8, still outstanding:
 
-- the remaining **label-typography** rules, beyond no-spaces. *(The uniqueness
-  half of this question is answered — scoped to the submodel, measured from the
-  corpus rather than asked; item 19.)*
+- **label typography — now a decision to challenge rather than a question
+  outstanding** (§8, §14; closed 2026-08-08). The rule is the exact negation of
+  the equation grammar's identifier, so a label is legal precisely when an
+  equation can reference it. Simile itself does otherwise — it keeps `time under
+  crop` and `spark?` to display and derives `time_under_crop` / `spark_` for the
+  name — so what is worth asking is whether ruling label ≡ name costs anything
+  real. *(The uniqueness half was answered separately — scoped to the submodel,
+  measured from the corpus rather than asked; item 19.)*
 - whether the **population glyphs** now drawn (item 16) are close enough to
   the real in-diagram symbols — only the toolbar icons were available;
 - the remaining **grammar rules** — §12's catalogue is a starter set, each rule

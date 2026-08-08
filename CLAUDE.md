@@ -21,11 +21,26 @@ nor results-display widgets.
   the panel/workspace/menu widgets, and the content-widget contract).
 - `index.html` — loads the shell from `sienna/vendor` + `sienna/src/core` (in
   dependency order), then this app's `src/widgets/index.js` and `src/main.js`.
-- `src/main.js` — the app bootstrap: constructs `Sienna.App`, builds the menu,
-  restores saved panels. Minimal skeleton for now.
-- `src/widgets/index.js` — the widget **manifest** (currently empty; the diagram
-  widget registers here once built). A widget's `src` is resolved relative to
-  `index.html`, so use `src/widgets/<name>.js`.
+- `src/main.js` — the app bootstrap: constructs `Sienna.App`, tells the shell
+  what a simile document IS (`Sienna.documents.configure`), builds the Edit /
+  Widgets / View / Session menus, registers the replay handlers for this app's
+  layout actions, and seeds the demo models.
+- `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
+  relative to `index.html`, so use `src/widgets/<name>.js`.
+- `src/widgets/diagram.js` — the diagram widget: renders the model as SVG and
+  handles every editing gesture. The one place that knows about pixels.
+- `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,
+  submodels, parentage, naming. Notation-neutral; knows nothing about drawing.
+- `src/schema/simile-v1.js` — the **notation**, as plain data: vocabulary,
+  grammar rules, field model, styling, and the function table. Changing how
+  Simile is drawn or what it permits should mean changing this file.
+- `src/grammar.js` + `src/predicates.js` — evaluate the schema's rules; named
+  predicates are the escape hatch for what data cannot express (§12.2).
+- `src/equation-grammar.js` / `equation.js` / `equation-check.js` — the PEG, the
+  parser wrapper with its cache, and the join of parser + model + schema that
+  produces the red/black completeness findings.
+- `src/demo-*.js` — fixtures seeded on first run: `growth`, `submodel`, and the
+  three reference models `landuse`, `farmers` and `lamos` (§9).
 - `src/styles.css` — app-specific styles, loaded after the shell's.
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
