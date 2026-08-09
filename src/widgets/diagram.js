@@ -570,7 +570,6 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     g.appendChild(this._el('rect', {
       x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 4,
     }));
-    if (this._drag && this._drag.dropTarget === id) g.setAttribute('class', g.getAttribute('class') + ' slx-drop-target');
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     g.addEventListener('dblclick', () => this._editLabel(d, id));
     this._layer.bodies.appendChild(g);
@@ -1172,7 +1171,6 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     // Dragging one of a multiple selection drags all of it.
     const group = this._sel.indexOf(id) >= 0 && this._sel.length > 1 ? this._sel.slice() : [id];
-    const isSub = id.indexOf('submodel') === 0;
     let carried = [];
     group.forEach((gid) => {
       carried.push(gid);
@@ -1198,17 +1196,29 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
     }
 
+    let legal = { dx: 0, dy: 0 };   // the drag's origin is legal by definition
+
+    // The elements whose own parent is NOT also being dragged: those are the
+    // ones a boundary can stop. Anything carried along inside them is already
+    // constrained by whatever stops its ancestor.
+    const primaries = group.filter((g) => !group.some(
+      (o) => o !== g && d.descendantsOf(o).indexOf(g) >= 0));
+
     const move = (ev) => {
       const w = this._toWorld(ev.clientX, ev.clientY);
-      const dx = w.x - origin.x;
-      const dy = w.y - origin.y;
+      // Preventive geometry: the drag stops at the submodel boundary (§12.3).
+      const c = this._clampDrag(d, primaries, start,
+        w.x - origin.x, w.y - origin.y, legal);
+      const dx = c.dx;
+      const dy = c.dy;
+      legal = c;                       // the last position known to be legal
       const moves = {};
       Object.keys(start).forEach((k) => {
         moves[k] = Object.assign({}, start[k], { x: start[k].x + dx, y: start[k].y + dy });
         if (moves[k].w === undefined) delete moves[k].w;
         if (moves[k].h === undefined) delete moves[k].h;
       });
-      this._drag = { id, moves, dropTarget: isSub ? null : this._dropTargetAt(d, w, id) };
+      this._drag = { id, moves };
       this._render();
     };
     const end = () => {
@@ -1223,22 +1233,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         this._render();
         return;
       }
-      if (moved) {
-        const newParent = drag.dropTarget !== undefined ? drag.dropTarget : null;
-        const changed = !isSub && newParent !== d.parentOf(id);
-        if (changed) {
-          const verdict = Sienna.grammar.mayContain(d, id, newParent);
-          if (!verdict.ok) {
-            // Refuse the whole drop, not just the re-parenting: leaving the
-            // element sitting inside a submodel it does not belong to would be
-            // a diagram that lies about its own model.
-            this._flash(verdict.message);
-            this._render();
-            return;
-          }
-        }
-        d.commitDrag(drag.moves, changed ? { id, parent: newParent } : null);
-      }
+      // A drag moves things; it never re-parents. The clamp in `move` has
+      // already made an illegal position unreachable, so there is nothing left
+      // to judge here — and an element cannot have crossed into a submodel it
+      // does not belong to. Changing an element's parent is cut-and-paste.
+      if (moved) d.commitDrag(drag.moves, null);
       if (moved || drag) this._render();
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
@@ -1249,6 +1248,78 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * nesting resolves inward. `exclude` keeps an element from being dropped into
    * itself or its own contents.
    */
+  /**
+   * Stop a drag at the submodel boundary — §12.3 PREVENTIVE geometry.
+   *
+   * Simile refuses to let an element leave its parent: the drag simply stops
+   * when it reaches the boundary (confirmed against Simile itself, 2026-08-09).
+   * So parentage is never changed by dragging, in either direction — moving an
+   * element between submodels is a cut-and-paste, not a drag.
+   *
+   * Clamping beats refusing-on-drop: the user sees the limit as they meet it,
+   * rather than making a whole gesture that is then thrown away. Each axis is
+   * clamped independently so the element SLIDES along a boundary it is pressed
+   * against, instead of freezing whenever a diagonal move is partly illegal.
+   *
+   * Two constraints, and the second is deliberately forgiving:
+   *   - an element must stay within its parent's box;
+   *   - it must not move INTO a submodel it does not belong to — but only if it
+   *     was clear of that submodel to begin with. An element already overlapping
+   *     one (a valve stranded by a boundary-crossing flow, a model built before
+   *     this rule) must stay draggable, or it could never be tidied up.
+   */
+  _clampDrag(d, primaries, start, dx, dy, prev) {
+    const rect = (b) => ({ l: b.cx - b.w / 2, r: b.cx + b.w / 2, t: b.cy - b.h / 2, bo: b.cy + b.h / 2 });
+    const hits = (a, b) => a.l < b.r && a.r > b.l && a.t < b.bo && a.bo > b.t;
+    const boxAt = (id, ddx, ddy) => {
+      const s0 = start[id];
+      if (!s0) return null;
+      const mv = {};
+      mv[id] = Object.assign({}, s0, { x: s0.x + ddx, y: s0.y + ddy });
+      return d.box(id, mv);
+    };
+
+    primaries.forEach((id) => {
+      if (!start[id]) return;
+      // (a) stay inside the parent — an exact interval, so clamp rather than veto.
+      const parent = d.parentOf(id);
+      if (parent && !start[parent]) {
+        const p = rect(d.box(parent));
+        const b = rect(boxAt(id, 0, 0));
+        dx = Math.min(Math.max(dx, p.l - b.l), p.r - b.r);
+        dy = Math.min(Math.max(dy, p.t - b.t), p.bo - b.bo);
+        if (p.r - b.r < p.l - b.l) dx = 0;   // wider than its parent: do not fight
+        if (p.bo - b.bo < p.t - b.t) dy = 0;
+      }
+      // (b) do not enter a stranger. Per axis, so sliding past still works.
+      const strangers = d.ids('submodels').filter((sid) => {
+        if (sid === id || start[sid]) return false;                 // itself, or moving too
+        if (d.ancestorsOf(id).indexOf(sid) >= 0) return false;      // own ancestor: expected
+        if (d.descendantsOf(id).indexOf(sid) >= 0) return false;    // own content
+        return !hits(rect(boxAt(id, 0, 0)), rect(d.box(sid)));      // already inside: leave alone
+      });
+      if (!strangers.length) return;
+      const blocked = (ddx, ddy) => {
+        const b = rect(boxAt(id, ddx, ddy));
+        return strangers.some((sid) => hits(b, rect(d.box(sid))));
+      };
+      // Fall back to the last offset known to be legal, NOT to zero. Two
+      // reasons. Zero would snap the element back to where the drag started
+      // the moment both axes were blocked, when what the user expects is for
+      // it to rest against the boundary. And because each event is computed
+      // from the drag's origin rather than from the previous event, a fast
+      // flick would otherwise sample only positions beyond an obstacle and
+      // sail through it — the end state stays legal either way, but the
+      // element visibly jumps the boundary instead of stopping at it.
+      if (blocked(dx, dy)) {
+        if (!blocked(dx, prev.dy)) dy = prev.dy;
+        else if (!blocked(prev.dx, dy)) dx = prev.dx;
+        else { dx = prev.dx; dy = prev.dy; }
+      }
+    });
+    return { dx, dy };
+  },
+
   _dropTargetAt(d, pt, exclude) {
     let best = null;
     let bestDepth = -1;

@@ -8,3 +8,4 @@
 # Local Claude Code settings, and the temp files it writes beside them — one of
 # which was swept into a commit by `git add -A` and had to be stripped out.
 .claude/
+.~lock.*#

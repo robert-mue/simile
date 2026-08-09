@@ -368,6 +368,46 @@ So enforcement has two axes, not one: the rule's **class** (structural / content
 
 **(iii) The deferred class was never wired up — found 2026-08-06.** `rulesFor` filtered to preventive rules, and the whole-model pass used it, so a rule tagged `deferred` was evaluated by *nobody*. The row had existed in the table above since the section was written, and the schema had a `'deferred'` value for `enforcement`, and neither did anything. It went unnoticed for the plainest of reasons: every rule written until then happened to be preventive, so the dead branch was never taken. `validate` now asks for preventive **and** deferred; the gesture callers still ask only for preventive. Worth recording as a general caution — a class that nothing yet instantiates is a class nothing tests, and the first user of it is as likely to find the mechanism broken as to find it useful.
 
+
+#### Geometry is structural, and prevented by clamping *(corrected 2026-08-09)*
+
+The two geometry rules — `inside-its-parent`, `not-inside-a-stranger` — were
+originally filed as **deferred**, on the reasoning that blocking a gesture
+mid-drag would fight the user, and that an automatic layout pass wants freedom to
+be momentarily wrong. Testing exposed what that actually meant in the editor: a
+submodel could be dragged clean out of its parent, and nothing said so until
+**check model** was pressed.
+
+**Simile was then consulted directly, and does the opposite: the drag stops dead
+at the boundary.** Parentage is never changed by dragging in either direction;
+moving an element between submodels is a cut-and-paste. Having seen it, the
+preventive version is plainly the better feel — it does not read as being fought,
+it reads as the boundary being solid. The rules are re-tagged `preventive`.
+
+Three details matter in the implementation, and all three came from testing:
+
+- **Clamp, do not refuse.** Refusing at drop-time throws away a whole gesture;
+  clamping shows the limit at the moment it is met.
+- **Clamp each axis independently**, so an element pressed against a boundary
+  *slides* along it rather than freezing whenever a diagonal move is partly
+  illegal.
+- **Fall back to the last legal offset, not to zero.** Zero snaps the element
+  back to where the drag began the instant both axes block. It also matters for
+  a different reason: each pointer event is computed from the drag's origin
+  rather than from the previous event, so without a last-legal memory a fast
+  flick samples only positions beyond an obstacle and sails through it.
+
+The original worry about layout algorithms was not wrong, merely misdirected: it
+is an argument about **producers other than the editor**, and those do not drag.
+An importer, a graph-layout pass or an AI assistant builds geometry directly, and
+for them the rules remain exactly what §12 is for — a check to run over a
+finished diagram. Keeping the rules in the catalogue while the editor prevents
+them interactively serves both.
+
+**Consequence, and it is not small:** with drag no longer re-parenting, nothing
+in the editor can change an element's parent except drawing a new submodel round
+it. Cut-and-paste stops being a convenience and becomes the missing gesture.
+
 ### 12.4 One engine, four questions
 
 The same rules are consulted by four callers, and the call signature should be fixed with all of them in mind:

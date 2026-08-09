@@ -241,12 +241,17 @@
       // gesture and have no reason to keep model and layout in step (user,
       // 2026-08-06). The predicates are code, so they live in
       // `src/predicates.js`; this file stays plain data (§12.2).
+      // PREVENTIVE since 2026-08-09: the editor clamps a drag at the boundary,
+      // so this cannot be reached by dragging (confirmed as Simile's own
+      // behaviour). It stays in the catalogue because a diagram can arrive by
+      // other means — an importer, a layout pass, an AI assistant — and those
+      // are exactly the producers §12 exists to judge.
       { id: 'inside-its-parent', subject: '*', predicate: 'insideItsParent',
-        enforcement: 'deferred', confidence: 'known',
+        enforcement: 'preventive', confidence: 'known',
         message: 'This is drawn outside the submodel it belongs to.' },
 
       { id: 'not-inside-a-stranger', subject: '*', predicate: 'notInsideAStranger',
-        enforcement: 'deferred', confidence: 'known',
+        enforcement: 'preventive', confidence: 'known',
         message: 'This is drawn inside a submodel it does not belong to.' },
 
       // (6) Names are unique among SIBLINGS, not across the model — the same

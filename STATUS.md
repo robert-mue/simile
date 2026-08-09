@@ -659,6 +659,45 @@ DESIGN-diagram §21, along with the two ways it is still not one: it reaches for
 buys undo and replay for nothing, and it is not packaged for reuse. Both left
 alone until a second host asks.
 
+**26. Drag is preventive: it stops at the submodel boundary** *(2026-08-09)*
+Reported from testing — nodes and submodels could be dragged clean out of their
+parent. Two different faults sat behind it.
+
+- Submodels **never re-parented at all**: `dropTarget` was hard-wired to `null`
+  for them and then excluded from the check anyway, so a submodel could be left
+  drawn outside a parent it still belonged to. A diagram that lies about its
+  model.
+- Nodes *did* re-parent, correctly — but the geometry rules were tagged
+  `deferred`, so nothing was prevented and nothing was said until **check
+  model** was pressed. The checks were running; they were just silent.
+
+**The policy changed on evidence.** Simile itself was consulted (first time on
+this machine — most of this project has been built from memory) and it is
+**preventive**: a drag simply stops at the boundary, and parentage is never
+changed by dragging. That is now what we do, for nodes and submodels alike, and
+`inside-its-parent` / `not-inside-a-stranger` are re-tagged `preventive`. They
+stay in the catalogue because a diagram can arrive from an importer, a layout
+pass or an AI assistant, which is exactly what §12 exists to judge.
+
+Clamping, not refusing-on-drop: the limit is felt as it is met rather than a
+whole gesture being discarded. Each axis clamps independently, so an element
+**slides** along a boundary instead of freezing on a diagonal. The fallback when
+both axes are blocked is the last legal offset, not zero — otherwise the element
+snaps back to the start of the drag, and a fast flick could sample only
+positions beyond an obstacle and sail through it.
+
+Verified by driving synthetic drags at real models: a node stops at its
+submodel's edge and a 900px hurl moves it no further; a submodel stops at its
+parent's edge and refuses to slide down into a sibling while still sliding
+across; contents travel with their submodel; a root-level submodel aimed
+dead-centre at PATCH travels the whole way and stops outside it. Parentage
+unchanged throughout, `grammar.validate` clean, and the five demo models are
+byte-identical.
+
+*Two things this leaves.* An element rests one pointer-sample short of the
+boundary rather than flush against it — invisible with a real mouse, an artefact
+of sampling. And re-parenting now has **no gesture at all**: see the gap below.
+
 ---
 
 ## Known gaps and loose ends
@@ -673,6 +712,14 @@ alone until a second host asks.
 - Whether a **role arc** can join submodels at different nesting levels is
   unanswered — nothing depends on it, since flows already prove segments are
   needed.
+- **There is now no way to change an element's parent.** Drag used to do it
+  (accidentally, and only for nodes); it no longer does, deliberately. The only
+  remaining route is drawing a new submodel round something, which captures it.
+  Simile's answer is **cut-and-paste** — cut an element inside a submodel, paste
+  it outside — and that is the gesture to build. It is a bigger job than it
+  sounds: what a cut takes with it (contents, arcs, ports), what a paste does
+  about name clashes (§14.2 already renames on re-parent), and whether a paste
+  into a different model is allowed at all.
 - **A future `.pl` importer has to walk chains, not map arcs.** Measured on
   `lamos1a.pl`: 239 influence arcs, of which only 72 join two user-named,
   non-function nodes — the rest run to or from a submodel boundary or through
