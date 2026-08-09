@@ -712,6 +712,8 @@ of sampling. And re-parenting now has **no gesture at all**: see the gap below.
 - Whether a **role arc** can join submodels at different nesting levels is
   unanswered — nothing depends on it, since flows already prove segments are
   needed.
+- **DEFERRED 2026-08-09, pending the Simile developer's input.** Not the next
+  job: the design choices deserve a proper run at it rather than a quick answer.
 - **There is now no way to change an element's parent.** Drag used to do it
   (accidentally, and only for nodes); it no longer does, deliberately. The only
   remaining route is drawing a new submodel round something, which captures it.
