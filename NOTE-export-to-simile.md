@@ -86,49 +86,72 @@ fixed one, or are there cases where that does not hold?
    to SimiLive's own interface: that gets models *running*, but not results inside our application.
 4. **The 25-equation limit** for non-Enterprise use — our reference models are well past it. What
    does testing at realistic size require?
+5. **Which Prolog dialect is the generator written in, and how separable is its C++ back end?** See
+   §6 — this now decides the whole deployment shape.
 
-## 6. Where the converter runs — and the C++ question
+## 6. Where it runs — and what changes now the generator is Prolog
 
-This is the architectural decision, and it is worth stating carefully because two separate things are
-easily conflated.
+This is the architectural decision, and one answer has already reshaped it: **the C++ generation is
+done by Prolog.** That matters more than it may appear, so the reasoning is set out in full.
 
-Our editor is a **static** application: files opened from disk or served as static assets, no server,
-works offline. The attraction of compiling the converter to **WASM** is that it keeps that property
-while running the same stand-alone Prolog — SWI-Prolog has a WASM build, so stage two could run
-in the browser with no install and no AI.
+Our editor is a **static** application: opened from disk or served as static files, no server, works
+offline. The attraction of **WASM** is that it preserves that while running a genuine stand-alone
+Prolog — SWI-Prolog has a WASM build.
 
-**But conversion is not simulation, and the pipeline has three stages, not one:**
+The pipeline has three stages, and it is worth separating them because "run it in the browser" means
+something different at each:
 
-| Stage | What it does | In the browser? |
-|---|---|---|
-| 1. Convert | our JSON → Simile Prolog | **Yes** — SWI-Prolog WASM, straightforward |
-| 2. Generate | Simile engine produces C++ from the model | Depends entirely on what the generator is written in |
-| 3. Build & run | compile that C++, execute it | **This is the hard one** |
+| Stage | What it does | Written in | In the browser? |
+|---|---|---|---|
+| 1. Convert | our JSON → Simile Prolog | new code, ours | **Yes** — SWI-Prolog WASM |
+| 2. Generate | model → simulation code | **Prolog (yours)** | **Yes, in principle — same process** |
+| 3. Build & run | compile and execute that code | C++ toolchain | **The obstacle** |
 
-Stage 3 is the real obstacle. Compiling C++ in a browser means shipping a compiler as WASM
-(clang/LLVM builds exist, but they are tens of megabytes and slow to start) — technically possible,
-practically unattractive.
+Stage 3 was the sticking point: compiling C++ in a browser means shipping clang/LLVM as WASM — tens
+of megabytes, slow to start, unattractive. WASM removes the *install*, not the *compiler*.
 
-So there are four honest options, and the choice is yours rather than ours:
+**But if stage 2 is Prolog, stages 1 and 2 collapse into one process.** Our converter's output would
+feed your generator inside the *same* SWI-Prolog instance — no file handoff, no second tool. And the
+interesting consequence follows: what stage 2 emits is a *choice*. **A back end emitting JavaScript
+instead of C++ would need no compiler at all** — the browser runs it directly. That turns the whole
+pipeline into one WASM Prolog instance producing runnable code, with no server anywhere.
 
-**(a) Keep simulation server-side.** SimiLive already does this. Worth being clear that **a static
-application calling an HTTP API is still a static application** — you keep zero-install hosting and
-lose only *offline running*. Editing, and conversion, would still work with no network.
+So the options, re-ordered now that we know:
 
-**(b) Give the code generator a JavaScript or WASM backend.** If the generator emits C++ from a model
-by fairly mechanical means, an alternative backend emitting JavaScript would run natively in the
-browser at respectable speed with no compiler needed. This is the option we find most interesting,
-and the one we are least able to judge — it depends on how separable the generator's back end is.
+**(a) A JavaScript back end for the existing generator — now the most promising.** It is a new back
+end for existing Prolog code rather than a new program. Two things determine whether it is realistic,
+and both are questions for you:
 
-**(c) A single interpreting kernel instead of per-model code generation.** One fixed WASM engine that
-walks the model structure as data. Slower than compiled C++, but likely ample for typical models. A
-substantial engine change, so probably only of interest if it serves other purposes too.
+  - **How separable is the back end?** If emitting C++ is a distinct layer over an internal
+    representation, adding a second emitter is modest. If C++ assumptions are spread through the
+    generator, much less so.
+  - **How big is the runtime the generated code links against?** This is the part we suspect is the
+    real work. The emitted code presumably calls a library — integration methods, array and
+    aggregation operations, random-number functions, the submodel instance machinery. *That library
+    would have to be re-implemented in JavaScript*, and its size, not the code emission, sets the
+    cost. Could you say roughly how large it is, and how much of it a typical model touches?
 
-**(d) Hybrid, and probably the pragmatic first step**: conversion in the browser, simulation on the
-server. Offline editing and export; network needed only to *run*.
+**(b) Keep simulation server-side** — SimiLive already does this. Worth stating plainly: **a static
+application calling an HTTP API is still a static application.** You keep zero-install hosting and
+lose only *offline running*; editing and conversion still work with no network.
 
-**The question we would put to you: is the C++ generation itself Prolog?** If it is, option (b) is a
-new back end for existing code rather than a new program, and the picture changes considerably.
+**(c) A single interpreting kernel** instead of per-model code generation — one fixed engine walking
+the model as data. Slower, likely ample for typical models, but a substantial engine change.
+
+**(d) Hybrid**: conversion in the browser, simulation on the server. The pragmatic first step, and
+compatible with (a) arriving later.
+
+### The pivotal unknown: which Prolog?
+
+Everything above assumes your Prolog can become **SWI-Prolog**, since that is what has a maintained
+WASM build. The saved models identify the program as `AME`, and we do not know what dialect the
+generator is written in. If it is close to SWI, this is straightforward; if it depends on a
+particular vendor's modules, foreign-language interface or string handling, porting is the dominant
+cost and options (b)/(d) look better.
+
+**A cheap experiment would settle it**, and would be worth doing before committing to anything: try
+loading the generator into SWI-Prolog and see how far it gets. Dialect distance is usually obvious
+within an hour, and it decides which of (a)–(d) is actually available.
 
 ## 7. Suggested order of work
 
