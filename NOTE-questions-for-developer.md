@@ -6,8 +6,13 @@ in minutes rather than hours.
 *Why so few.* An earlier draft of this note had eleven questions. Then the 72
 `.pl` files of the model catalogue arrived on disk, and **four of them answered
 themselves** — including most of the one we had called the blocker. They are kept
-below, marked ANSWERED, with what the corpus says, because a derived rule wants
-confirming and because the derivation is the evidence for it.
+below with what the corpus says, because a derived rule wants confirming and
+because the derivation is the evidence for it.
+
+*The exception is A2, the population symbols, which is the one we would most like
+answered.* Reading what those symbols HOLD rather than only what they are called
+turned up a probable error in our own field model — so a census can settle a
+spelling, but not a meaning.
 
 This is the pattern worth noting: the hardest question in
 `NOTE-export-to-simile.md` — §4's dimensional term, "the one thing we cannot
@@ -66,22 +71,45 @@ are the `obsolete` and `ancestor(0)` entries we see in some `references` lists �
 must we ever emit them? (c) Anything different about a self-association (both
 relation arcs from the same base, as in `ranking1`) that we would not see there?
 
-## A2 — The population symbols *(answered)*
+## A2 — The population symbols *(spellings inferred; semantics need you)*
 
-The corpus census settles the spellings. Ours → Simile's:
+**This is the one we would most like answered**, because looking at what the
+symbols HOLD rather than only what they are called turned up a probable error of
+ours.
 
-| ours | Simile | seen as |
-|---|---|---|
-| initialiser | `creation` | "initial number", "initial pop size" |
-| exterminator | `loss` | "death", "tanks destroyed" |
-| migrator | `immigration` | "new tanks constructed" |
-| reproduction | `reproduction` | "birth" |
+A census across all 72 models gives five node types we do not emit. Ours on the
+left:
 
-**Confirm the middle two**, which are the ones we are inferring from names rather
-than from anything structural.
+| ours | we think | seen in the corpus as | what its function holds |
+|---|---|---|---|
+| initialiser | `creation` | "initial number", "initial pop size" | plain counts: `100`, `10`, `4` |
+| exterminator | `loss` | "death", "tanks destroyed" | `0.6`, `(x<0)`, `if rand_var(0,1)<opposition/25/360 then 1 else 0` |
+| migrator | `immigration` | "new tanks constructed" | `10`, `0.1`, `if effort<=0 then 0 else labour_input/effort` |
+| reproduction | `reproduction` | "birth" | `rand(0,2*0.7)`, `if rand_var(0,1)<r then 1 else 0` |
 
-**And one we do not have at all: `alarm`** (3 in the corpus — "done checks",
-"found prime"). What is it, and does the diagram editor need it?
+**(a) Are the first three spellings right?** `reproduction` matches by name so we
+are confident of it; the others we are inferring. We refuse to export any of them
+until we know, because a wrong guess gives a model that loads and quietly means
+something else.
+
+**(b) We think OUR `migrator` is mis-labelled — please confirm.** Our dialog asks
+for a "migration condition", i.e. a boolean. Every `immigration` node in the
+corpus holds a **number**. That reads as "how many new instances arrive per time
+unit", not a condition. If so it is our field model that is wrong, not our
+spelling, and it would have produced a misleading dialog for every user of the
+editor.
+
+**(c) Is `loss` a probability or a condition?** The corpus shows both — a bare
+`0.6`, a `(x<0)`, and an explicit `if … then 1 else 0`. Is it a per-instance
+probability per time unit, with the boolean forms just people writing 1/0 by
+hand?
+
+**(d) What is `alarm`?** We have no equivalent and had not known it existed.
+Three in the corpus, always `units=boolean`: `not found_divisor` and
+`(found_divisor or quotient>check_limit)` in a prime-number model,
+`(abs('Gs'-'Gs_0')<0.001)` in BallBerry. It looks like "fire when this becomes
+true" — a convergence or termination signal. Right? And should a general-purpose
+Simile editor offer it?
 
 ## A3 — `references(…)` *(answered — see A1)*
 
