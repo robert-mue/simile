@@ -11,7 +11,7 @@ marker that followed it (item 20). What remains is the list of known gaps, and
 the questions in `DESIGN-diagram.md` §8 that only the Simile developer can
 answer.
 
-**A second strand opened on 2026-08-12: RUNNING a model** (items 27–31). It sits
+**A second strand opened on 2026-08-12: RUNNING a model** (items 27–32). It sits
 outside the implementation plan above, and `CLAUDE.md`'s scope line was widened
 to say what was always meant: the diagram editor **plus a client for the
 existing engine**, the test being that we compute nothing — no integrator, no
@@ -916,6 +916,46 @@ having as a *control*, not just as documentation to read.
 Also corrected on corpus evidence: a condition's function carries `units=boolean`
 (all 37 in the corpus do), never `units=1`.
 
+**32. Mixed association/containment crossings — which needed no new machinery**
+*(2026-08-12)*
+An influence may now cross a containment boundary AND an association boundary in
+one arc. `src/demo-mixed.js` nests a two-instance `traits` submodel inside a
+four-instance `individual`, relates individuals pairwise and compares trait
+**sums**: four segments for one arc of ours, and ranks [4,3,2,1] from trait pairs
+[[1,1],[2,2],[3,3],[4,4]].
+
+**This was written down as the next big export job and turned out to be a
+deletion.** A base and an association are ordinary scopes, so the segment walk
+already produced the right chain; only the role on the final segment differs, and
+the only new code was the dimensional term — one `list(…)` wrapper per
+multi-instance boundary left BEFORE the association hop.
+
+**The premise was wrong too**, which is the part worth recording. `feeding1.pl`'s
+two-`use` roles were cited as evidence that this case needed a `use(…)` per
+route. They are nothing of the kind: its four submodels are all at the root, and
+what they show is one final segment SHARED between two influences — a different
+phenomenon, and one our per-arc target-side borders avoid. A gap can be
+mis-described as well as unfilled, and this one was.
+
+Running it settled a detail no reference model shows: when a value reaches an
+association **already a list**, the role's alias stays BARE and the equation
+brackets it — `use(0,in_base,attribute_higher,list(1))` beside
+`sum([attribute_higher])`. That is the opposite of a containment crossing, where
+the brackets live in the alias. A guess would have gone the other way.
+
+### The fixtures, and what each is for
+
+| fixture | covers | checks |
+|---|---|---|
+| `demo-growth` | flat model | 73.16017851829946 vs Euler 73.16017851829953 |
+| `demo-stand` | submodel, both crossing directions | 36.76162553969603 vs 36.761625539694414 |
+| `demo-rank` | association, two roles | ranks [4,3,2,1] |
+| `demo-mixed` | containment + association, carrying a list | ranks [4,3,2,1] from [[1,1],[2,2],[3,3],[4,4]] |
+
+All four check **numbers**, not merely that a model loads — which matters more
+than it sounds, since the parenthesis bug of item 31 compiled, ran, and was
+wrong.
+
 ---
 
 ## Known gaps and loose ends
@@ -995,11 +1035,12 @@ Also corrected on corpus evidence: a condition's function carries `units=boolean
 
 ### On running a model (items 27–30)
 
-- **An influence that crosses an association AND a containment boundary in one
-  arc is refused.** The corpus shows those carry a `use(…)` per route
+- **One final segment is never shared between two influences.** Simile merges
+  them, listing a `use(…)` per influence on one arc
   (`use(0,in_base,pop_size,1),use(none,in_hierarchy,[pop_size_0],…)` in
-  `feeding1`); we emit one route. Common in real models, so this is the next
-  export job.
+  `feeding1`); we give each influence its own target-side border and its own
+  final arc. Both should be valid — ours is what our per-arc port rule implies —
+  but it is a difference from what Simile writes, and untested at scale.
 - **The editor cannot name a value per role.** An association renames — one
   alias in, one name per role out — and our model holds a single alias per
   influence, so the exporter derives `<alias>_<role>`. That works, but the
