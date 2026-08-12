@@ -11,7 +11,7 @@ marker that followed it (item 20). What remains is the list of known gaps, and
 the questions in `DESIGN-diagram.md` §8 that only the Simile developer can
 answer.
 
-**A second strand opened on 2026-08-12: RUNNING a model** (items 27–30). It sits
+**A second strand opened on 2026-08-12: RUNNING a model** (items 27–31). It sits
 outside the implementation plan above, and `CLAUDE.md`'s scope line was widened
 to say what was always meant: the diagram editor **plus a client for the
 existing engine**, the test being that we compute nothing — no integrator, no
@@ -19,7 +19,9 @@ equation, no numerical method in this repo.
 
 As of 2026-08-12 the loop is closed: a model built in this editor is converted to
 Simile Prolog, uploaded, compiled and run on the Simile engine, and its results
-are drawn in this app's own panels.
+are drawn in this app's own panels. Flat models, nested submodels and
+associations all convert; three fixtures (`growth`, `stand`, `rank`) check the
+numbers rather than merely that it loads.
 
 ---
 
@@ -866,6 +868,54 @@ plants, one influence crossing inward and one outward, reaching 36.761625539695
 at t = 40 against 5·1.005⁴⁰⁰ = 36.761625539694. A nested two-boundary version
 agrees to every digit it prints.
 
+**31. Associations export — and the parenthesis that silently broke them**
+*(2026-08-12)*
+The `rank` fixture (`src/demo-rank.js`) — four individuals related pairwise, a
+pair existing only where the first beats the second — returns ranks **[4,3,2,1]**
+from attributes [1,2,3,4]. This was the last thing standing between us and the
+reference models.
+
+**The mapping**, read off `ranking1.pl` and `feeding1.pl` rather than guessed. A
+role arc is Simile's **`relation`** (not `role`), its label the role name. An
+association is not a stored kind in either system: it is a submodel that relation
+arcs point AT, inferred — which is our §4 decision independently arrived at.
+`references(S,[local(arc),…])` lists the relation arcs a submodel takes part in,
+**all** of them on the association and **its own** on each base. The index in
+`use(N,in_base|in_assoc,…)` is the position in the **association's** list, which
+`landuse1b` proves by starting its list with two `obsolete` placeholders and
+using indices 2 and 3.
+
+**An association renames, and our model cannot say so.** We hold one alias per
+influence; Simile needs one per ROLE. So `attribute` crossing in arrives as
+`attribute_higher` AND `attribute_lower`, and crossing back out as `{one_lower}`.
+The exporter derives `<alias>_<role>` — Simile's own convention — and **refuses**
+when the consumer's equation uses none of the derived names. Giving the editor a
+place to hold a name per role is the obvious follow-up.
+
+### The bug worth remembering
+
+**`value=a>b` is not legal Prolog.** `=` and `>` are both `xfx` priority 700, so
+the right argument of `=` may not itself be a 700 operator; it needs
+`value=(a>b)`, which is what Simile writes. **Simile does not complain — it drops
+the property.** The component then vanishes from the model, the membership
+condition stops filtering, the association returns every pair, and the model
+answers 5,5,5,5 with complete confidence. It compiled, it ran, and it was wrong.
+
+Equations are now parenthesised unconditionally, which is harmless around
+anything and removes the class. Nothing before this had exercised it — `growth`
+and `stand` top out at `*` and a function call, well below 700 — so **any model
+with a comparison at the top of an equation would have been silently wrong.**
+
+Two lessons are worth more than the fix. **A structural diff cannot see inside a
+property value**: comparing our file with `ranking1.pl` fact-for-fact said they
+matched, and they did. What found it was **one-thing-at-a-time against a
+known-good control** — units, base submodel kind, border style, `spec=`, the
+properties line, then the parentheses. And a reference implementation is worth
+having as a *control*, not just as documentation to read.
+
+Also corrected on corpus evidence: a condition's function carries `units=boolean`
+(all 37 in the corpus do), never `units=1`.
+
 ---
 
 ## Known gaps and loose ends
@@ -945,14 +995,23 @@ agrees to every digit it prints.
 
 ### On running a model (items 27–30)
 
-- **Role arcs / association submodels do not export.** Their roles use a
-  different form — `use(0,in_base,…)`, `use(2,in_assoc,…)`, with per-end indices
-  and several `use(…)` terms in one role — and nothing in the editor produces
-  them yet. This is what stands between us and the reference models.
-- **Four node types have no confirmed Simile spelling**: initialiser, migrator,
-  exterminator, reproduction. `forest.sml` shows `loss` and `immigration`, which
-  are probably two of them, but guessing which would export a model that loads
-  and means something else. Refused by name until the developer confirms.
+- **An influence that crosses an association AND a containment boundary in one
+  arc is refused.** The corpus shows those carry a `use(…)` per route
+  (`use(0,in_base,pop_size,1),use(none,in_hierarchy,[pop_size_0],…)` in
+  `feeding1`); we emit one route. Common in real models, so this is the next
+  export job.
+- **The editor cannot name a value per role.** An association renames — one
+  alias in, one name per role out — and our model holds a single alias per
+  influence, so the exporter derives `<alias>_<role>`. That works, but the
+  modeller has to know the convention and type matching equations; the editor
+  should hold the names and offer them.
+- **Four node types have no confirmed spelling.** *(census, 2026-08-12)* The
+  corpus census settles them as `creation`, `loss`, `immigration`,
+  `reproduction` — but only `reproduction` matches by name, so the other three
+  are still inference. Not emitted until confirmed. The census also turned up
+  **`alarm`**, a node type we have no equivalent for, and two membership kinds we
+  cannot make: `type=records` and `count=[size(Patch)]`.
+
 - **Simile is a stricter checker than we are, and finding that out cost a round
   trip.** The first `stand` fixture failed to compile because a flow's rate used
   `biomass` with no influence drawn from it — a real modelling error, reported
@@ -990,6 +1049,9 @@ agrees to every digit it prints.
 - **Three demo models in the Run control list have no display** (diffusion,
   three-body, branching plant). They load and run correctly; nothing but the
   clock will move.
+- **`spec=` is not emitted.** Simile stores the user's typed equation text as
+  character codes beside the parsed value. Our models run without it, but it is
+  the obvious place for a round-trip to lose the modeller's own formatting.
 - **The dimensional rule is derived, not confirmed.** "Multi-instance or
   conditional ⇒ outward references are lists" fits every crossing in the
   reference models on hand, but it is our inference. Worth putting to the
