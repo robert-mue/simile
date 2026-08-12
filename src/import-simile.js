@@ -504,8 +504,18 @@
       var src = (f && f.p.value != null) ? f.p : (own && own.p.value != null ? own.p : (f || {}).p);
       if (!src) return out;
       if (field && src.value != null) out[field] = strip(src.value);
+
+      // `units` is dropped when it is exactly what the exporter would have
+      // supplied anyway — `1` for a valued element, `boolean` for a condition.
+      // Keeping it would put a `units` field on every element of every imported
+      // model and make the round trip differ from itself: our four fixtures
+      // hold no units and came back holding `1`. A real unit (`kg/ha`, `Kl`)
+      // is kept, which is the whole distinction worth drawing.
       var units = src.units != null ? src.units : ((own && own.p.units) || null);
-      if (units != null && units !== '') out.units = unquote(units);
+      if (units != null && units !== '') {
+        var u = unquote(units);
+        if (u !== (type === 'condition' ? 'boolean' : '1')) out.units = u;
+      }
       return out;
     },
 
@@ -644,7 +654,15 @@
             + '" has an equation on ' + valued.length + ' of its segments; kept the first');
         }
 
-        var p = self.parent[head.from];
+        // The valve belongs in the scope of the segment that holds the rate,
+        // not necessarily the first — and a segment's scope is the parent of
+        // either of its ends, which for every chain in the corpus agree
+        // (`node00156` and `node00033` are both inside `River`).
+        var rateSeg = segs.filter(function (s) {
+          return self.rateOf[s] && self.N[self.rateOf[s]]
+            && String(self.N[self.rateOf[s]].p.value || '').trim();
+        })[0] || segs[0];
+        var p = self.parent[self.A[rateSeg].from];
         var valve = self.put('node', {
           type: 'valve',
           parent: p == null ? null : (self.ours[p] || null),

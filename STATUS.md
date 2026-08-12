@@ -1019,17 +1019,51 @@ end to end**.
 
 ---
 
+**34. Cross-boundary flows export** — `src/demo-drain.js`
+*(2026-08-12)*
+The gap item 33 opened, closed the same day. A flow now segments exactly as an
+influence does: one Simile flow arc per level, each repeating the flow's name,
+paired in `links` under the boundary crossed.
+
+One thing is genuinely different, and it is why this was not simply reusing the
+influence walk. **The rate rides on one segment only — the one lying in the
+valve's own scope** — and that segment also keeps the arc id the valve was
+allocated, so an influence whose source is the rate still starts from the right
+place. `segScopes` walks the chain without emitting anything, because the flow
+has to know which segment that is before it writes the first one.
+
+`demo-drain` is the fixture: a compartment inside a single-instance `TANK`, both
+clouds outside, so one flow crosses inward and one outward — and both valves sit
+INSIDE the submodel, which puts the rate on `inflow`'s **second** segment and
+`outflow`'s **first**. A fixture where every rate landed on segment 0 would have
+tested nothing.
+
+Run on the public server: dS/dt = 3 − 0.1·S from S(0) = 0 gives
+**18.964168607012084** at t = 10, against an exact-Euler 30(1 − 0.9999¹⁰⁰⁰⁰) =
+18.9641686… — every figure. (The *analytic* answer is 18.963617; the gap is
+Euler at step 0.001, not us.)
+
+Simile's `Describe` lists each segment as its own component (`/inflow` at the
+root, `/TANK/inflow` inside), which is worth knowing before a display widget
+offers a flow as a target.
+
+*Also closed here:* the importer was storing `units` even when it was exactly
+the default the exporter supplies — `1`, or `boolean` for a condition — so every
+fixture came back carrying a `units` field it never had. Dropped, and all six
+fixtures are now true fixed points, not merely equal in structure.
+
+---
+
 ## Known gaps and loose ends
 
-- **A flow that crosses a submodel boundary does not export.** The importer
-  joins the segments (`johadP`); the exporter still writes one arc, so a model
-  with such a flow converts to something Simile will read differently. The
-  segment walk in `emitArc` is already general — it is the flow branch that
-  returns early. Found by item 33.
 - **One alias per influence, where an association needs one per role.** See item
   33: six catalogue models re-export with equations naming ends that no longer
   exist, and the exporter refuses rather than shipping them. The fix is a model
   change, not a converter change.
+- **A non-rate segment of a crossing flow gets `attached=[]`.** Simile writes an
+  empty function node on each (`node(node00100,function,[],[name=fn3_1],[])`).
+  Ours compiled and ran without them, so they are read as editor bookkeeping —
+  but that is an inference from one model, not something confirmed.
 
 - A flow that crosses a submodel boundary leaves its **valve** where it lies —
   possibly outside its own parent. Types positioned by something else are

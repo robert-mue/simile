@@ -33,7 +33,9 @@
  *   3. **A flow has no valve node.** Our valve carries the flow's name and its
  *      rate equation; Simile puts the name on the flow ARC and the rate in a
  *      function node listed in the arc's `attached=[…]`. So a valve emits no
- *      visible node at all.
+ *      visible node at all — but it does get an id, because a rate can be an
+ *      INPUT to something else and Simile draws that influence from the flow
+ *      ARC (`edinburgh1`). The flow's id is therefore the valve's.
  *
  * The alias each of our influences carries maps exactly onto Simile's
  * `role=[use(none,in_hierarchy,ALIAS,DIM)]` — both are "the local name the
@@ -61,6 +63,12 @@
  * Read off `landuse1b.pl` and `forest.pl` rather than guessed, including the
  * three-segment case (`Next to` → `Patch`) which pins the ordering and shows
  * the pairs recorded under two different submodels.
+ *
+ * **Flows segment the same way**, which was missed until the importer read
+ * `johadP.pl` back: one `overflow` leaves a population, crosses the root and
+ * enters another submodel as three flow arcs, every one repeating the flow's
+ * name, paired by `links` under the two boundaries. Only the rate differs — it
+ * sits on the segment in the valve's own scope. See `emitFlow`.
  *
  * A happy correspondence: Simile shares the inner segment of an outward
  * crossing between several consumers (`arc00022` appears in two `links` pairs)
@@ -586,6 +594,82 @@
       return this.fn[ourId] || this.vis[ourId];
     },
 
+    /**
+     * The scope each segment of a crossing arc lies in, source-side first.
+     *
+     * Walked without emitting anything, because a flow has to know WHICH of its
+     * segments will carry the rate before it starts writing them — that segment
+     * keeps the id the valve was allocated (see `allocate`).
+     */
+    segScopes: function (from, to) {
+      var cross = this.crossings(from, to);
+      var scope = this.scopeOf(from);
+      var out = [];
+      var self = this;
+      cross.out.forEach(function (sub) { out.push(scope); scope = self.parentOf(sub); });
+      cross.into.forEach(function (sub) { out.push(scope); scope = sub; });
+      out.push(scope);
+      return out;
+    },
+
+    /**
+     * A flow, which may cross boundaries exactly as an influence does.
+     *
+     * `johadP.pl` runs one `overflow` out of a population `Johad`, across the
+     * root and into `River` as THREE flow arcs paired by `links` under two
+     * submodels — the same shape as an influence chain, and read off the file
+     * rather than guessed. Every segment repeats the flow's `name`.
+     *
+     * The RATE sits on one segment only: the one lying in the valve's own
+     * scope. Simile's other segments carry an empty function apiece
+     * (`node(node00100,function,[],[name=fn3_1],[])`); we write `attached=[]`
+     * instead, on the grounds that an empty function is a placeholder for the
+     * editor rather than something the engine reads — and if that turns out to
+     * be wrong it is one line here.
+     *
+     * That segment also keeps the arc id the valve was given, so an influence
+     * whose SOURCE is this rate still starts from the right place.
+     */
+    emitFlow: function (id, a) {
+      var self = this;
+      var valve = this.m.nodes[a.valve] || {};
+      var name = atom(valve.label || 'flow');
+      var scopes = this.segScopes(a.from, a.to);
+      var at = scopes.indexOf(this.parentOf(a.valve));
+      if (at < 0) at = 0;          // a valve out of its flow's scopes: use the first
+
+      var cross = this.crossings(a.from, a.to);
+      var cursor = this.vis[a.from];
+      var segs = [];
+      var bounds = [];
+      var k = 0;
+
+      function seg(from, to) {
+        var sid = k === at ? self.flowArc[id] : simId('arc', ++self.arcN);
+        self.arcLines.push('arc(' + sid + ',' + from + ',' + to + ',flow,' + list([
+          'attached=' + list(k === at && self.fn[a.valve] ? [self.fn[a.valve]] : []),
+          'complete=true',
+          'name=' + name,
+        ]) + ',' + list(['caption_offset=[0,0]']) + ').');
+        k++;
+        return sid;
+      }
+
+      cross.out.forEach(function (sub) {
+        segs.push(seg(cursor, self.border(sub, a.from)));
+        bounds.push(sub);
+        cursor = self.vis[sub];
+      });
+      cross.into.forEach(function (sub) {
+        segs.push(seg(cursor, self.vis[sub]));
+        bounds.push(sub);
+        cursor = self.border(sub, id);
+      });
+      segs.push(seg(cursor, this.vis[a.to]));
+
+      for (var j = 0; j < bounds.length; j++) this.link(bounds[j], segs[j], segs[j + 1]);
+    },
+
     emitArc: function (id) {
       var a = this.m.arcs[id];
 
@@ -600,17 +684,7 @@
         return;
       }
 
-      if (a.type === 'flow') {
-        var valve = this.m.nodes[a.valve] || {};
-        var props = [
-          'attached=' + list(this.fn[a.valve] ? [this.fn[a.valve]] : []),
-          'complete=true',
-          'name=' + atom(valve.label || 'flow'),
-        ];
-        this.arcLines.push('arc(' + this.flowArc[id] + ',' + this.vis[a.from] + ','
-          + this.vis[a.to] + ',flow,' + list(props) + ',' + list(['caption_offset=[0,0]']) + ').');
-        return;
-      }
+      if (a.type === 'flow') { this.emitFlow(id, a); return; }
 
       // An influence, possibly crossing boundaries — see the header. One arc of
       // ours becomes one Simile arc per level, with the role on the last.

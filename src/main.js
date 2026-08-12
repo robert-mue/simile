@@ -396,6 +396,7 @@
   if (!Sienna.userData.get('models/farmers') && Sienna.demoFarmers) Sienna.demoFarmers();
   if (!Sienna.userData.get('models/lamos') && Sienna.demoLamos) Sienna.demoLamos();
   if (!Sienna.userData.get('models/stand') && Sienna.demoStand) Sienna.demoStand();
+  if (!Sienna.userData.get('models/drain') && Sienna.demoDrain) Sienna.demoDrain();
   if (!Sienna.userData.get('models/rank') && Sienna.demoRank) Sienna.demoRank();
   if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
 
