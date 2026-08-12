@@ -19,9 +19,9 @@ equation, no numerical method in this repo.
 
 As of 2026-08-12 the loop is closed: a model built in this editor is converted to
 Simile Prolog, uploaded, compiled and run on the Simile engine, and its results
-are drawn in this app's own panels. Flat models, nested submodels and
-associations all convert; three fixtures (`growth`, `stand`, `rank`) check the
-numbers rather than merely that it loads.
+are drawn in this app's own panels. Flat models, nested submodels, associations
+and both at once all convert; four fixtures (`growth`, `stand`, `rank`, `mixed`)
+check the NUMBERS rather than merely that a model loads.
 
 ---
 
