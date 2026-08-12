@@ -251,6 +251,21 @@
           dataType: 'text',
         }));
       }).then(function (html) {
+        return self._startSession(html);
+      }).catch(function (err) {
+        self._setStatus('error', err.message || String(err));
+        throw err;
+      });
+    },
+
+    /**
+     * Everything after the model has been handed over, however it was handed
+     * over: find the session id, compile, attach, read the structure, reset.
+     */
+    _startSession: function (html) {
+      var self = this;
+
+      return Promise.resolve().then(function () {
         // The session id is embedded in a script tag of an HTML page meant for
         // a browser. Scraping it is not elegant, but it is the only way in: the
         // endpoint has no JSON form.
@@ -298,6 +313,52 @@
       }).then(function () {
         self._firstReset = true;
         return self.reset();
+      }).catch(function (err) {
+        self._setStatus('error', err.message || String(err));
+        throw err;
+      });
+    },
+
+    /**
+     * Load a model of OUR OWN: convert it and upload the bytes, rather than
+     * naming something already on the server.
+     *
+     * This is the step the whole exercise was for. It shares everything after
+     * the first request with `load` — the difference is one multipart POST
+     * instead of a form field, which is why `create_model.php` accepting an
+     * uploaded file was worth confirming before any of this was written.
+     */
+    loadOwn: function (path) {
+      var self = this;
+      var model = Sienna.userData.get(path);
+      if (!model) return Promise.reject(new Error('no model at ' + path));
+
+      var sml;
+      try {
+        sml = Sienna.exportSimile.sml(model);
+      } catch (err) {
+        // A refusal to export is a message about the MODEL, written for the
+        // modeller. Surface it as-is rather than wrapping it in transport talk.
+        this._setStatus('error', err.message || String(err));
+        return Promise.reject(err);
+      }
+
+      return this.unload().then(function () {
+        self.modelLink = model.name || model.id || path;
+        self._setStatus('loading', 'Uploading model…');
+
+        var fd = new FormData();
+        fd.append('model_src', 'file');
+        fd.append('model', new Blob([sml], { type: 'application/octet-stream' }), 'model.sml');
+        fd.append('param_src', 'none');
+        fd.append('helper_src', 'none');
+
+        return Promise.resolve($.ajax({
+          type: 'POST', url: SERVER + 'create_model.php', data: fd,
+          processData: false, contentType: false, dataType: 'text',
+        }));
+      }).then(function (html) {
+        return self._startSession(html);
       }).catch(function (err) {
         self._setStatus('error', err.message || String(err));
         throw err;

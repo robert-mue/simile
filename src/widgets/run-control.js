@@ -74,12 +74,9 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     $('<span class="slx-palette-group">').text('model').appendTo(bar);
 
     this._demo = $('<select class="slx-run-demo">')
-      .attr('title', 'Demo models on the SimiLive server')
+      .attr('title', 'A model of ours, or one of SimiLive\'s demos')
       .appendTo(bar);
-    this._DEMOS.forEach((d, i) => {
-      $('<option>').val(String(i)).text(d.label).appendTo(this._demo);
-    });
-    $('<option>').val('custom').text('other…').appendTo(this._demo);
+    this._fillSources();
 
     this._path = $('<input type="text" class="slx-run-path">')
       .attr('title', 'Path to a model on the SimiLive server')
@@ -92,15 +89,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
       .text('unload')
       .appendTo(bar);
 
-    this._on(this._demo, {
-      change: () => {
-        const v = this._demo.val();
-        if (v === 'custom') return;
-        const d = this._DEMOS[Number(v)];
-        this._path.val(d.model);
-        this.options.params = d.params || '';
-      },
-    });
+    this._on(this._demo, { change: () => this._sourceChanged() });
     this._on(this._path, { input: () => this._demo.val('custom') });
     this._on(this._loadBtn, { click: () => this._load() });
     this._on(this._unloadBtn, { click: () => this._sim.unload() });
@@ -156,16 +145,67 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     });
   },
 
+  // ---- the model to run -----------------------------------------------
+
+  /**
+   * Two kinds of source in one menu: models built HERE, which are converted and
+   * uploaded, and SimiLive's demos, which are named to the server. They are
+   * listed together because from the modeller's side they are the same choice —
+   * what shall I run? — however different the machinery behind them.
+   */
+  _fillSources() {
+    const ours = (Sienna.userData.keys('models') || []);
+    this._demo.empty();
+
+    if (ours.length) {
+      const grp = $('<optgroup label="Our models">').appendTo(this._demo);
+      ours.forEach((id) => {
+        const m = Sienna.userData.get('models/' + id) || {};
+        $('<option>').val('own:models/' + id).text(m.name || id).appendTo(grp);
+      });
+    }
+
+    const demos = $('<optgroup label="SimiLive demos">').appendTo(this._demo);
+    this._DEMOS.forEach((d, i) => {
+      $('<option>').val('demo:' + i).text(d.label).appendTo(demos);
+    });
+    $('<option>').val('custom').text('other server path…').appendTo(this._demo);
+  },
+
+  /** Keep the path box showing what will actually be sent. */
+  _sourceChanged() {
+    const v = String(this._demo.val());
+    if (v.indexOf('demo:') === 0) {
+      const d = this._DEMOS[Number(v.slice(5))];
+      this._path.val(d.model).prop('disabled', false);
+      this.options.params = d.params || '';
+    } else if (v.indexOf('own:') === 0) {
+      // Nothing to type: the model is here, and its name is in the menu.
+      this._path.val('(converted from this app)').prop('disabled', true);
+    } else {
+      this._path.prop('disabled', false);
+    }
+  },
+
   // ---- actions --------------------------------------------------------
 
   _load() {
+    const v = String(this._demo.val());
+
+    if (v.indexOf('own:') === 0) {
+      const path = v.slice(4);
+      return this._action('load', { own: path }, () => {
+        this._sim.loadOwn(path).catch(() => { /* reported through status */ });
+      });
+    }
+
     const model = String(this._path.val()).trim();
-    if (!model) return;
-    const v = this._demo.val();
-    const params = v === 'custom' ? this.options.params : (this._DEMOS[Number(v)].params || '');
+    if (!model) return undefined;
+    const params = v.indexOf('demo:') === 0
+      ? (this._DEMOS[Number(v.slice(5))].params || '') : this.options.params;
     this.options.model = model;
 
-    this._action('load', { model, params }, () => {
+    return this._action('load', { model, params }, () => {
       this._sim.load(model, params).catch(() => { /* reported through status */ });
     });
   },

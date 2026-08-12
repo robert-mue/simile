@@ -612,3 +612,11 @@ text.slx-incomplete {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* An export refusal is a list of what is wrong with the model, so the status
+   line has to be allowed to be several lines. */
+.slx-run-status { white-space: pre-line; }
+.slx-run-source .slx-run-path:disabled {
+  background: #f2f4f7;
+  color: #888;
+}

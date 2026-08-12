@@ -29,8 +29,27 @@ free.
 
 ## 2. What is already settled
 
-- **`.sml` is Simile Prolog in hex, and Simile will equally load raw Prolog.** So the converter's
-  output is directly loadable with no encoding step. This removes the main risk from the plan.
+- **`.sml` is a MIME container, and Simile will equally load raw Prolog.** So the converter's output
+  is directly loadable with no encoding step. This removes the main risk from the plan.
+
+  *Corrected 2026-08-12: an earlier draft of this note said `.sml` was Prolog in hex. It is a
+  **MIME multipart document with base64 parts**, verified across files written in 2003, 2010 and
+  2024. The parts of a v7.1 `.sml`:*
+
+  | part | content |
+  |---|---|
+  | model | `source(program='Simile v7.1',…)` — the Simile Prolog, plain |
+  | looks | Tcl `LoadModelLooks` — the diagram's visual state |
+  | shf / spf / sxf | XML — helper layout, parameter values, extras |
+  | code | the generated C++ |
+  | binary | a compiled ELF executable of the model |
+  | exec | `execTime 10.0 timeUnit unit displayInt 1 intMethod Euler resetTo 2500000 phaseList 0.1` |
+
+  *Two practical points fall out. A reader must find the model part **by content** (the part
+  beginning `source(program=`) rather than by position, since the order varies between files and
+  some parts carry no `Content-Transfer-Encoding` header at all. And the last part is exactly the
+  run-defaults blob `BuildShareLib` returns over HTTP — the run control's initial settings come from
+  the saved model itself.*
 - **`.smx` is an edit log**, not a snapshot — a list of `add(...)` / `remove(...)` operations. We
   noticed because our own editor records every change as an action and can replay a whole modelling
   session from that log. The parallel is close enough to be worth remarking on, and it raises a
