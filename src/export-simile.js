@@ -183,6 +183,7 @@
     this.vis = {};      // our id -> Simile id of the VISIBLE node
     this.fn = {};       // our id -> Simile id of the FUNCTION node
     this.relArc = {};   // our role arc id -> Simile relation arc id
+    this.flowArc = {};  // our flow arc id -> Simile flow arc id (= its valve's id)
     this.borders = {};  // key -> {id, sub} for boundary stubs
     this.extra = {};    // our submodel id -> [Simile ids of borders inside it]
     this.links = {};    // our submodel id -> ['arcA-arcB', …]
@@ -301,6 +302,22 @@
         // will carry as `attached`.
         if (n.type !== 'valve') self.vis[id] = simId('node', ++self.nodeN);
         if (self.exprField(n.type)) self.fn[id] = simId('node', ++self.nodeN);
+      });
+
+      // Flow arc ids up front, because a valve can be the SOURCE of an
+      // influence — a rate feeding some other equation — and Simile draws that
+      // from the flow ARC (`arc(arc00047,arc00045,node00027,influence,…)` in
+      // `edinburgh1`). So the flow's id is the valve's "visible" id, and it has
+      // to exist before any influence is emitted.
+      //
+      // Found by the round trip, not by a fixture: none of the four has a rate
+      // used elsewhere, and this wrote `arc(…,undefined,…)` for six catalogue
+      // models before that.
+      Object.keys(m.arcs).forEach(function (id) {
+        var a = m.arcs[id];
+        if (a.type !== 'flow') return;
+        self.flowArc[id] = simId('arc', ++self.arcN);
+        if (a.valve) self.vis[a.valve] = self.flowArc[id];
       });
     },
 
@@ -590,7 +607,7 @@
           'complete=true',
           'name=' + atom(valve.label || 'flow'),
         ];
-        this.arcLines.push('arc(' + simId('arc', ++this.arcN) + ',' + this.vis[a.from] + ','
+        this.arcLines.push('arc(' + this.flowArc[id] + ',' + this.vis[a.from] + ','
           + this.vis[a.to] + ',flow,' + list(props) + ',' + list(['caption_offset=[0,0]']) + ').');
         return;
       }

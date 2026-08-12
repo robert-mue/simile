@@ -204,6 +204,110 @@
       });
   }
 
+  /**
+   * Pick a file and hand back its TEXT.
+   *
+   * `Sienna.files.pickFile` parses JSON, which a `.pl` is not. A raw-text
+   * picker is generic furniture and belongs in the shell rather than here; it
+   * is local for now because sienna is a submodule and this is the first app
+   * that has wanted one.
+   */
+  function pickText(accept, cb) {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () { cb(String(reader.result), file.name); };
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+
+  /** A model id from a filename: `landuse1b.pl` → `landuse1b`. */
+  function idFromFilename(name) {
+    var base = String(name).replace(/\.(pl|sml)$/i, '').replace(/[^A-Za-z0-9_-]+/g, '-');
+    return base.replace(/^-+|-+$/g, '').toLowerCase() || 'imported';
+  }
+
+  /**
+   * What the import did, in the order that matters: what it could not do, then
+   * what it guessed, then what it threw away. An import that quietly loses
+   * something is the failure mode worth spending a dialog on.
+   */
+  function importReport(r, id) {
+    var by = {};
+    r.notes.forEach(function (n) { (by[n.kind] = by[n.kind] || []).push(n.text); });
+    var lines = ['Imported as "' + id + '": ' + r.stats.nodes + ' nodes, '
+      + r.stats.arcs + ' arcs, ' + r.stats.submodels + ' submodels.'];
+    ['dropped', 'unsupported', 'incomplete', 'inferred', 'ambiguous', 'renamed', 'ignored']
+      .forEach(function (kind) {
+        var list = by[kind];
+        if (!list) return;
+        lines.push('');
+        lines.push(kind.toUpperCase() + ' (' + list.length + ')');
+        list.slice(0, 6).forEach(function (t) { lines.push('  • ' + t); });
+        if (list.length > 6) lines.push('  …and ' + (list.length - 6) + ' more');
+      });
+    return lines.join('\n');
+  }
+
+  function importSimileFile() {
+    pickText('.pl,.sml,text/plain', function (text, filename) {
+      var r;
+      try {
+        r = Sienna.importSimile.read(text);
+      } catch (e) {
+        window.alert('Could not read that file: ' + (e && e.message ? e.message : e));
+        return;
+      }
+      var id = idFromFilename(filename);
+      var path = 'models/' + id;
+      // Never overwrite a stored model without being asked — an import is not
+      // a reason to lose work that happens to share a filename.
+      if (Sienna.userData.get(path)) {
+        var alt = window.prompt('A model called "' + id + '" already exists.\n'
+          + 'Name for the imported one (or Cancel):', id + '-imported');
+        if (!alt) return;
+        id = idFromFilename(alt);
+        path = 'models/' + id;
+        if (Sienna.userData.get(path)) { window.alert('"' + id + '" is taken too.'); return; }
+      }
+      Sienna.importSimile.install(path, r.model);
+      window.alert(importReport(r, id));
+      app.addPanel({ title: r.model.name || id, widget: 'diagram', ref: path });
+    });
+  }
+
+  /**
+   * The frontmost model, as Prolog, into a file the user picks. The exporter
+   * refuses a model it cannot faithfully convert, and that message is worth
+   * showing whole — it names the elements to fix.
+   */
+  function exportSimileFile() {
+    var path = Sienna.documents.currentPath(app);
+    if (!path) { window.alert('Open a model first — this exports the frontmost one.'); return; }
+    var model = Sienna.userData.get(path);
+    var text;
+    try {
+      text = Sienna.exportSimile.prolog(model);
+    } catch (e) {
+      window.alert(e && e.message ? e.message : String(e));
+      return;
+    }
+    var name = String(path).split('/').pop() + '.pl';
+    // `Sienna.files` serialises to JSON; Prolog is text, so this writes its own
+    // Blob. Same gap as `pickText` above, and the same reason.
+    var url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
   function buildMenu() {
     return [
     {
@@ -211,6 +315,16 @@
       items: [
         { label: 'Undo', onSelect: function () { Sienna.history.undo(); } },
         { label: 'Redo', onSelect: function () { Sienna.history.redo(); } },
+      ],
+    },
+    {
+      // Simile's own formats, in and out. The shell's File menu handles OUR
+      // format; these two are about the other program, so they are the app's.
+      label: 'Simile',
+      items: [
+        { label: 'Import model (.pl / .sml)…', onSelect: importSimileFile },
+        { label: '—' },
+        { label: 'Export current model as .pl…', onSelect: exportSimileFile },
       ],
     },
     {

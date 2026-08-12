@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>simile — Simile round-trip test</title>
+    <style>
+      body { font: 13px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 72rem; }
+      h1 { font-size: 1.2rem; }
+      h2 { font-size: 1rem; margin-top: 2rem; }
+      #summary { font-size: 1.1rem; padding: 0.6rem 0.9rem; border-radius: 4px; margin: 1rem 0; }
+      .pass { background: #e8f5e9; border: 1px solid #a5d6a7; }
+      .fail { background: #ffebee; border: 1px solid #ef9a9a; }
+      .idle { background: #f4f4f2; border: 1px solid #ddd; }
+      table { border-collapse: collapse; width: 100%; }
+      td, th { border-top: 1px solid #eee; padding: 4px 8px; vertical-align: top; text-align: left; }
+      th { border-top: none; color: #666; font-weight: 600; }
+      td.model { white-space: nowrap; }
+      td.why { font-family: ui-monospace, monospace; font-size: 12px; }
+      tr.ok td.model { color: #1b5e20; }
+      tr.differs td { background: #fff8e1; }
+      tr.differs td.model, tr.broke td.model { color: #b71c1c; }
+      p.note { color: #666; }
+      #pick { padding: 0.5rem 0.9rem; font: inherit; }
+      details { margin-top: 0.4rem; }
+      summary { cursor: pointer; color: #555; }
+      pre { font-size: 12px; background: #fafaf8; padding: 0.5rem; overflow-x: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Simile round trip — <code>.pl</code> → our model → <code>.pl</code></h1>
+    <p class="note">
+      The strongest check available without running a model: import a Simile
+      file, export it again, import THAT, and compare the two models
+      structurally. A fixed point means every element, equation, containment,
+      crossing and alias survived both directions. It is what caught the
+      exporter writing <code>arc(…,undefined,…)</code> for an influence coming
+      out of a flow — something none of the four fixtures does.
+    </p>
+    <p class="note">
+      The corpus is 72 <code>.pl</code> files outside this repo
+      (<code>~/Projects/Simile_model_catalogue</code>), and <code>file://</code>
+      forbids reading a directory, so the files are chosen rather than found.
+      <strong>Press the button and select them all.</strong>
+    </p>
+
+    <p><input type="file" id="pick" multiple accept=".pl,.sml" /></p>
+    <div id="summary" class="idle">waiting for files…</div>
+    <div id="detail"></div>
+
+    <!-- No shell: the two converters and the schema hang off window.Sienna,
+         and nothing here needs userData, actions or a DOM widget. -->
+    <script>window.Sienna = window.Sienna || {};</script>
+    <script src="../src/schema/simile-v1.js"></script>
+    <script src="../src/diagram.js"></script>
+    <script src="../src/export-simile.js"></script>
+    <script src="../src/import-simile.js"></script>
+    <script>
+      (function (Sienna) {
+        'use strict';
+
+        /**
+         * A model reduced to what a run depends on: structure, equations and
+         * names. Ids are ours and arbitrary — they are minted in file order and
+         * will differ between the two passes — so every element is keyed by its
+         * PATH from the root instead.
+         */
+        function shape(m) {
+          function pathOf(id) {
+            var e = m.nodes[id] || m.submodels[id];
+            if (!e) return '?' + id;
+            return (e.parent ? pathOf(e.parent) + '/' : '') + (e.label || '·' + (e.type || 'sub'));
+          }
+          return {
+            subs: Object.keys(m.submodels).map(function (id) {
+              var s = m.submodels[id];
+              return ['sub', pathOf(id), s.kind, JSON.stringify(s.props)].join('|');
+            }).sort(),
+            nodes: Object.keys(m.nodes).map(function (id) {
+              var n = m.nodes[id];
+              return [n.type, pathOf(id), JSON.stringify(n.props)].join('|');
+            }).sort(),
+            arcs: Object.keys(m.arcs).map(function (id) {
+              var a = m.arcs[id];
+              return [a.type, pathOf(a.from), pathOf(a.to), a.alias || '', a.label || '',
+                a.valve ? pathOf(a.valve) : ''].join('|');
+            }).sort(),
+          };
+        }
+
+        function diff(a, b, what) {
+          var A = {}, B = {}, out = [];
+          a.forEach(function (x) { A[x] = 1; });
+          b.forEach(function (x) { B[x] = 1; });
+          a.forEach(function (x) { if (!B[x]) out.push('lost   ' + what + ' ' + x); });
+          b.forEach(function (x) { if (!A[x]) out.push('gained ' + what + ' ' + x); });
+          return out;
+        }
+
+        /** Why the exporter refused, in a phrase rather than its whole list. */
+        function cause(msg) {
+          var t = String(msg);
+          if (/no confirmed Simile spelling/.test(t)) return 'population symbol — spelling unconfirmed (§A2)';
+          if (/has no /.test(t)) return 'element left unfinished in the source file';
+          if (/across the association/.test(t)) return 'association — role-alias convention we do not share';
+          if (/arrives as a LIST/.test(t)) return 'outward alias not bracketed';
+          return t.split('\n').slice(1, 2).join('') || t;
+        }
+
+        function run(files) {
+          var rows = [];
+          var counts = { ok: 0, differs: 0, refused: 0, broke: 0 };
+
+          files.forEach(function (f) {
+            var row = { name: f.name };
+            var m1, pl, m2;
+            try {
+              m1 = Sienna.importSimile.read(f.text).model;
+            } catch (e) {
+              row.state = 'broke'; row.why = 'import failed: ' + e.message;
+              counts.broke++; rows.push(row); return;
+            }
+            try {
+              pl = Sienna.exportSimile.prolog(m1);
+            } catch (e) {
+              row.state = 'refused'; row.why = cause(e.message); row.full = e.message;
+              counts.refused++; rows.push(row); return;
+            }
+            try {
+              m2 = Sienna.importSimile.read(pl).model;
+            } catch (e) {
+              row.state = 'broke'; row.why = 're-import failed: ' + e.message;
+              counts.broke++; rows.push(row); return;
+            }
+            var s1 = shape(m1), s2 = shape(m2);
+            var d = diff(s1.subs, s2.subs, 'sub')
+              .concat(diff(s1.nodes, s2.nodes, 'node'))
+              .concat(diff(s1.arcs, s2.arcs, 'arc'));
+            if (d.length) {
+              row.state = 'differs'; row.why = d.length + ' difference(s)'; row.full = d.join('\n');
+              counts.differs++;
+            } else {
+              row.state = 'ok';
+              row.why = Object.keys(m1.nodes).length + ' nodes, '
+                + Object.keys(m1.arcs).length + ' arcs, '
+                + Object.keys(m1.submodels).length + ' submodels';
+              counts.ok++;
+            }
+            rows.push(row);
+          });
+
+          report(rows, counts, files.length);
+        }
+
+        function report(rows, counts, total) {
+          var el = document.getElementById('summary');
+          // A refusal is a known limit, stated by the exporter; a DIFFERENCE is
+          // a bug. So the bar is green when nothing differs, whatever the
+          // refusal count, and the refusals are itemised below.
+          var bad = counts.differs + counts.broke;
+          el.className = bad ? 'fail' : 'pass';
+          el.textContent = (bad ? '✗ ' + bad + ' failed — ' : '✓ no differences — ')
+            + counts.ok + ' of ' + total + ' round-tripped identically, '
+            + counts.refused + ' refused by the exporter'
+            + (counts.broke ? ', ' + counts.broke + ' could not be read' : '');
+
+          var order = { broke: 0, differs: 1, refused: 2, ok: 3 };
+          rows.sort(function (a, b) {
+            return order[a.state] - order[b.state] || a.name.localeCompare(b.name);
+          });
+
+          var html = ['<table><tr><th>model</th><th>result</th><th>detail</th></tr>'];
+          var label = { ok: 'identical', differs: 'DIFFERS', refused: 'refused', broke: 'FAILED' };
+          rows.forEach(function (r) {
+            html.push('<tr class="' + r.state + '"><td class="model">' + esc(r.name)
+              + '</td><td>' + label[r.state] + '</td><td class="why">' + esc(r.why)
+              + (r.full ? '<details><summary>detail</summary><pre>' + esc(r.full) + '</pre></details>' : '')
+              + '</td></tr>');
+          });
+          html.push('</table>');
+          document.getElementById('detail').innerHTML = html.join('');
+        }
+
+        function esc(s) {
+          return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        document.getElementById('pick').addEventListener('change', function () {
+          var list = Array.prototype.slice.call(this.files);
+          if (!list.length) return;
+          document.getElementById('summary').textContent = 'reading ' + list.length + ' files…';
+          var read = [];
+          var left = list.length;
+          list.forEach(function (file, i) {
+            var fr = new FileReader();
+            fr.onload = function () {
+              read[i] = { name: file.name, text: String(fr.result) };
+              if (--left === 0) run(read);
+            };
+            fr.readAsText(file);
+          });
+        });
+      })(window.Sienna);
+    </script>
+  </body>
+</html>

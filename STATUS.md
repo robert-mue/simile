@@ -956,9 +956,80 @@ All four check **numbers**, not merely that a model loads — which matters more
 than it sounds, since the parenthesis bug of item 31 compiled, ran, and was
 wrong.
 
+**33. The importer, and the round trip it buys** — `src/import-simile.js`
+*(2026-08-12)*
+Simile Prolog read back into our model: `.pl` directly, `.sml` by finding the
+model part **by content** (the part beginning `source(program=`) rather than by
+position. Every correspondence in `src/export-simile.js`'s header is run
+backwards — the variable/function pair, influences terminating on functions,
+flows with their attached rate, `border`/`links` segmentation, `references`
+associations, the dimensional brackets. `Simile ▸ Import model…` in the menu;
+`test/roundtrip.html` is the test page.
+
+**Measured over all 72 catalogue models: 45 round-trip to an identical model,
+0 differ, 27 are refused by the exporter with reasons we already knew.** The
+comparison is structural and id-free — every element keyed by its path from the
+root — so a fixed point means containment, equations, aliases, crossings and
+role indices all survived both directions.
+
+*What it caught immediately.* Building it found four things four fixtures could
+not, because the fixtures were written by the same hand as the exporter:
+
+- **The exporter wrote `arc(…,undefined,…)`.** A valve is the one element with
+  no visible node, so an influence whose SOURCE is a flow's rate had no id to
+  start from. Simile draws it from the flow ARC (`edinburgh1`), and now so do we
+  — flow arc ids are allocated up front and the valve's "visible" id IS its
+  flow's. Six catalogue models were affected; not one of the four fixtures has a
+  rate feeding anything else.
+- **A variable may carry its `value` directly**, with no function node —
+  `node(node00060,variable,…,[…,units=1,value= 1.5],…)` in `chao.pl`. That is
+  what Simile does for a constant; the function node is what it does for an
+  expression. Eleven models read as "has no value" until this was handled.
+- **Flows are segmented too.** `johadP` runs one `overflow` out of a population,
+  across the root and into another submodel as three arcs paired by `links` —
+  exactly the influence machinery, which the exporter does not yet do. The
+  importer joins them; **the exporter still emits a single flow arc**, so a flow
+  crossing a boundary is a real remaining gap (below).
+- **`ageclass5` points its rate influences at the flow ARC**, not at the arc's
+  function. Both spellings are in the corpus and both now read.
+
+*The 27 refusals, by cause.* All are limits already recorded, now counted rather
+than estimated:
+
+| n | cause |
+|---|---|
+| 14 | an element left **unfinished in the source file** — `node(node00016,variable,[],[name=var5],[])`, no equation and no position. Imported unfinished (our completeness colouring shows it red); refused on the way out, which is right, since it would not run in Simile either. |
+| 7 | **population symbols**, whose spellings are unconfirmed — the subject of `NOTE-email-population-symbols.md`. |
+| 6 | **associations**, and this one is new. |
+
+*The new finding, and it is a design one.* Simile has used **two conventions**
+for naming the ends of an association crossing: the role name
+(`class_this` / `class_next`, `ageclass6`, 2008) and an ordinal
+(`var12` / `var12_0`, `hexagon`, 2003). The importer undoes both. What it cannot
+undo is that **we hold one alias per influence and Simile holds one per role** —
+so the equations arrive naming ends that our exporter will not write, and the
+exporter's own check says so and refuses. Six models. Fixing it means a
+per-role alias in the model layer, which is a schema and dialog change, not an
+exporter one. Recorded here rather than done.
+
+*The claim this replaces.* Item 32 could say the four fixtures ran correctly.
+"60 of 72 contain no feature on our refuse-list" was never the same claim as
+"60 models we handle", and the number that means something is now **45 measured
+end to end**.
+
 ---
 
 ## Known gaps and loose ends
+
+- **A flow that crosses a submodel boundary does not export.** The importer
+  joins the segments (`johadP`); the exporter still writes one arc, so a model
+  with such a flow converts to something Simile will read differently. The
+  segment walk in `emitArc` is already general — it is the flow branch that
+  returns early. Found by item 33.
+- **One alias per influence, where an association needs one per role.** See item
+  33: six catalogue models re-export with equations naming ends that no longer
+  exist, and the exporter refuses rather than shipping them. The fix is a model
+  change, not a converter change.
 
 - A flow that crosses a submodel boundary leaves its **valve** where it lies —
   possibly outside its own parent. Types positioned by something else are

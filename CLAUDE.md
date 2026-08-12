@@ -43,14 +43,22 @@ footing (`src/widgets/grid.js` is the first).
 - `src/equation-grammar.js` / `equation.js` / `equation-check.js` — the PEG, the
   parser wrapper with its cache, and the join of parser + model + schema that
   produces the red/black completeness findings.
+- `src/export-simile.js` / `src/import-simile.js` — the converters to and from
+  **Simile Prolog** (`.pl`, and `.sml`'s MIME wrapper). The exporter's header is
+  the specification of the mapping; the importer reads it backwards. Menu:
+  `Simile ▸ Import model… / Export current model…`.
+- `src/simulation.js` — the SimiLive session layer (no DOM): upload, compile,
+  step, query. Its results feed the `plotter` and `grid` widgets.
 - `src/demo-*.js` — fixtures seeded on first run: `growth`, `submodel`, and the
   three reference models `landuse`, `farmers` and `lamos` (§9).
 - `src/styles.css` — app-specific styles, loaded after the shell's.
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
   statement of the Simile expression language; there is no generated parser.
-- `test/` — `index.html` runs the grammar over `corpus.js`, 1500 equations
-  harvested from the reference models. A page, not a test framework.
+- `test/` — pages, not a test framework. `index.html` runs the grammar over
+  `corpus.js`, 1500 equations harvested from the reference models.
+  `roundtrip.html` takes `.pl` files (select the whole model catalogue) and
+  checks that `.pl` → our model → `.pl` reaches a fixed point.
 
 ## Running
 
