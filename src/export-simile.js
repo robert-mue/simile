@@ -86,9 +86,34 @@
  * inventing the brackets here would edit the modeller's equations behind their
  * back.
  *
- * What is still refused: **role arcs / association submodels**. Their roles use
- * a different form (`use(0,in_base,…)`, `use(2,in_assoc,…)`) with per-end
- * indices, and nothing in the editor produces them yet.
+ * ## Associations
+ *
+ * A role arc is Simile's **`relation`**, its label the role name. An association
+ * is not a stored kind in either system — it is a submodel that relation arcs
+ * point AT, inferred (our §4, and Simile's too). `references(S,[local(arc),…])`
+ * lists the relation arcs a submodel takes part in: all of them on the
+ * association, its own on each base. The index in `use(N,in_base|in_assoc,…)`
+ * is the position in the ASSOCIATION's list — `landuse1b` proves it by starting
+ * its list with two `obsolete` placeholders and using indices 2 and 3.
+ *
+ * The segment machinery above needs no change for an association: base and
+ * association are ordinary scopes, so the walk already produces the right
+ * chain — even when the influence ALSO climbs the containment tree first. Only
+ * the role on the last segment differs.
+ *
+ * An association RENAMES. We hold one alias per influence; Simile needs one per
+ * role, so `attribute` crossing in arrives as `attribute_higher` AND
+ * `attribute_lower`. Those are derived here as `<alias>_<role>` (Simile's own
+ * convention) and the consumer's equation must use them, which `check`
+ * verifies — the alternative being a model that compiles and means something
+ * else.
+ *
+ * One asymmetry, established by running it rather than by reading: when a value
+ * reaches an association already a list (because it left a multi-instance
+ * submodel on the way), the role's alias stays BARE and the equation brackets
+ * it — `use(0,in_base,attribute_higher,list(1))` beside
+ * `sum([attribute_higher])`. That is the opposite of the containment case,
+ * where the brackets live in the alias.
  *
  * Classic script; no imports/exports.
  */
@@ -205,14 +230,7 @@
         }
         if (a.type !== 'influence') return;
 
-        // An influence that both crosses an association AND climbs the
-        // containment tree carries a `use(…)` per route. We emit one route.
         var cr = self.crossings(a.from, a.to);
-        if (self.assocPair(cr) && (cr.out.length > 1 || cr.into.length > 1)) {
-          problems.push('an influence crosses an association boundary AND a containment '
-            + 'boundary in one arc, which is not converted yet');
-          return;
-        }
 
         // An outward crossing of a multi-instance submodel produces a LIST, and
         // the alias has to say so, because the consumer's equation uses the
@@ -436,18 +454,30 @@
      * own convention (`attribute` + `role1` → `attribute_role1`), and the
      * equation must use those names, which `check` verifies.
      */
-    assocRole: function (a, pair) {
+    assocRole: function (a, pair, cross) {
       var self = this;
       var refs = this.rolesOf(pair.assoc);
       var mine = refs.filter(function (r) { return self.m.arcs[r].from === pair.base; });
       var alias = (a.alias || '').trim();
 
+      // The association hop is the LAST boundary left; anything left before it
+      // is ordinary containment, and each multi-instance one makes the value a
+      // list on the way past — so a value from a submodel nested inside the
+      // base arrives at the association already a list, and the role has to say
+      // so. Entering boundaries never do this, which is why only `out` counts.
+      var extra = cross.out.slice(0, -1).filter(function (s) { return self.isMulti(s); }).length;
+
       return mine.map(function (r) {
         var idx = refs.indexOf(r);
         var name = self.roleAlias(alias, r);
-        return pair.dir === 'in_assoc'
-          ? 'use(' + idx + ',in_assoc,{' + name + '},list(1))'
-          : 'use(' + idx + ',in_base,' + name + ',1)';
+        var dim = '1';
+        var i;
+        if (pair.dir === 'in_assoc') {
+          for (i = 0; i < extra + 1; i++) dim = 'list(' + dim + ')';
+          return 'use(' + idx + ',in_assoc,{' + name + '},' + dim + ')';
+        }
+        for (i = 0; i < extra; i++) dim = 'list(' + dim + ')';
+        return 'use(' + idx + ',in_base,' + name + ',' + dim + ')';
       }).join(',');
     },
 
@@ -589,7 +619,7 @@
       var pair = this.assocPair(cross);
       var role;
       if (pair) {
-        role = this.assocRole(a, pair);
+        role = this.assocRole(a, pair, cross);
       } else {
         var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
         var dim = '1';
