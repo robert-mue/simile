@@ -1109,14 +1109,60 @@ over all 72 models rather than by reading code:
 33 of 72 models now audit completely clean, up from 31 before the fixes and from
 a checker that could not be trusted at all on any model with a list crossing.
 
+**36. The 135 syntax findings were 111 of mine and 20 of ours**
+*(2026-08-12)*
+Item 35 reported 135 syntax findings and blamed the equation grammar. Wrong on
+both counts: 111 of them were one importer bug, and what remains is not a hole
+but a decision already taken and written down.
+
+**The bug.** `unquote` tested only the first and last characters. `'A_Q'*'Gs'`
+starts and ends with a quote and is an EXPRESSION, not an atom — so the quotes
+came off and the equation became `A_Q'*'Gs'`, which is nothing at all. It hit
+every model whose element names need quoting in Prolog, which is every model
+using capitals: BallBerry, Mod1, SolarRadiation, Jarvis, Thornthwaite,
+Molusc. The test is now whether the opening quote CLOSES at the very end, using
+the same scanner that reads them everywhere else.
+
+Corrupting an equation is worse than dropping one, because it survives: the
+round trip stayed a clean fixed point throughout, both directions consistently
+mangling the same text. The completeness audit is what caught it — and only
+because it was pointed at all 72 models rather than at the fixtures.
+
+*The grammar already accepts quoted identifiers.* That was the assumption item
+35 recorded, and it was never tested.
+
+**What is actually left: 21 equations in 1565 (1.3%), across 8 models, and two
+constructs.**
+
+| n | construct | example |
+|---|---|---|
+| 12 | **comma as `and`, semicolon as `or`** | `if (x<0;x>100;y<0;y>100) then 1 else 0` |
+| 8 | **local bindings** — `name=expr, expr` | `off=sqrt(3/4), x+element([0,off,off,0,-off,-off],index(1))` |
+| 1 | a double-quoted string literal | `"false"` |
+
+Both are Prolog heritage, and **both were dropped deliberately** —
+`src/equation-grammar.js` §3 says comma and semicolon "collide head-on with
+argument separators and array literals", which is true. What is new is the
+price: 20 equations in 72 models, not a handful.
+
+They also collide with **each other**: `a=1, b` is a local binding under one
+reading and a conjunction under the other, so accepting both means a
+disambiguation rule (LHS is a bare name followed by a single `=`) rather than
+two independent additions. That is a change to the notation's expression
+language, so it is recorded here and NOT made.
+
 ---
 
 ## Known gaps and loose ends
 
-- **The equation grammar's corpus is not representative.** 135 syntax findings
-  across the 72 catalogue models, against 12 known exclusions in
-  `test/corpus.js`. Local bindings and quoted identifiers are the two visible
-  classes. Item 35.
+- **20 equations in the catalogue do not parse, by a decision worth revisiting.**
+  Comma-as-`and` / semicolon-as-`or` (12) and local bindings (8), the two
+  colliding with each other as well as with argument separators. Item 36 has the
+  numbers and the disambiguation rule they would need.
+- **`test/corpus.js` is not representative.** It was harvested from three
+  reference models; the full 72 exercise 1565 equations and reach constructs the
+  corpus never does. Rebuilding it from the catalogue is cheap now that the
+  importer can read all of them.
 - **87 `undeclared` and 68 `unused` findings across the corpus are
   uncharacterised.** Some will be real (Simile models do carry idle arrows),
   some will be further alias-spelling bugs of the kind item 35 found three of.

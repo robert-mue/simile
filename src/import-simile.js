@@ -200,7 +200,13 @@
    */
   function unquote(raw) {
     var t = String(raw == null ? '' : raw).trim();
-    if (t.charAt(0) !== "'" || t.charAt(t.length - 1) !== "'" || t.length < 2) return t;
+    if (t.charAt(0) !== "'" || t.length < 2) return t;
+    // The opening quote must close at the very END, or this is not one atom.
+    // `'A_Q'*'Gs'` starts and ends with a quote and is an EXPRESSION; testing
+    // only the two end characters stripped them and left `A_Q'*'Gs`, which
+    // corrupted 111 of the catalogue's equations and looked from the outside
+    // like a hole in our grammar.
+    if (quoteEnd(t, 0) !== t.length) return t;
     return t.slice(1, -1).replace(/''/g, "'").replace(/\\(.)/g, function (m, c) {
       return Object.prototype.hasOwnProperty.call(ESCAPE, c) ? ESCAPE[c] : c;
     });
