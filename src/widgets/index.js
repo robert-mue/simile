@@ -32,6 +32,12 @@
     title: 'Run control',
   });
 
+  reg.register('plotter', {
+    src: 'src/widgets/plotter.js',
+    label: 'Plotter',
+    title: 'Plotter',
+  });
+
   reg.register('grid', {
     src: 'src/widgets/grid.js',
     label: 'Spatial grid',

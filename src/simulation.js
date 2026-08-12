@@ -529,6 +529,26 @@
     // ---- reading the model ----------------------------------------------
 
     /**
+     * Components that are one number — what a plotter can draw against time.
+     * `dims` is `[0]` for a scalar; anything longer is a value per submodel
+     * instance, which is a different chart and not this one.
+     */
+    scalarComponents: function () {
+      var comps = this.components;
+      if (!comps) return [];
+      return Object.keys(comps).filter(function (id) {
+        var c = comps[id];
+        return c.type !== 'VALUELESS' && (c.dims || []).length === 1;
+      }).map(function (id) {
+        return {
+          id: id,
+          label: String(comps[id].captpath || comps[id].text).replace(/\s+/g, ' '),
+          units: comps[id].units || '',
+        };
+      }).sort(function (a, b) { return a.label.localeCompare(b.label); });
+    },
+
+    /**
      * Components that could be shown on a spatial grid: a value-bearing
      * variable two dimensions deep. `dims` is [rows, cols, 0] for a scalar per
      * cell and [rows, cols, n, 0] for an array per cell, so the width is only
