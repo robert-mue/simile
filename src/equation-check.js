@@ -85,7 +85,40 @@
     if (!el) return [];
     var schema = d.schema();
     var spec = String(id).indexOf('submodel') === 0 ? schema.submodel : (schema.nodes[el.type] || schema.arcs[el.type]);
-    return ((spec && spec.fields) || []).filter(function (f) { return f.type === 'expression'; });
+    return ((spec && spec.fields) || []).filter(function (f) {
+      return f.type === 'expression' || f.type === 'expression-list';
+    });
+  }
+
+  /**
+   * The expressions a field holds: one, or several separated by top-level
+   * commas when the schema says `expression-list`.
+   *
+   * Each part carries its offset within the field, so an error still underlines
+   * the right characters — the reason this returns positions rather than just
+   * strings.
+   *
+   * The split respects brackets, because `count=[size(a,b),4]` is two sizes and
+   * `size(a,b)` is one of them. That is the whole reason it is not `.split(',')`.
+   */
+  function parts(text, field) {
+    var t = String(text);
+    if (field.type !== 'expression-list') return [{ text: t, at: 0 }];
+
+    var out = [];
+    var depth = 0;
+    var start = 0;
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charAt(i);
+      if (c === '(' || c === '[' || c === '{') depth++;
+      else if (c === ')' || c === ']' || c === '}') depth--;
+      else if (c === ',' && depth === 0) {
+        out.push({ text: t.slice(start, i), at: start });
+        start = i + 1;
+      }
+    }
+    out.push({ text: t.slice(start), at: start });
+    return out.filter(function (p) { return p.text.trim() !== ''; });
   }
 
   /**
@@ -140,33 +173,36 @@
       if (text == null || String(text).trim() === '') return;
       anyEquation = true;
 
-      var parsed = Sienna.equation.parse(String(text));
-      if (!parsed.ok) {
-        anyBroken = true;
-        out.push({
-          id: id, label: label, kind: 'syntax', field: f.name, at: parsed.error.offset,
-          message: f.label + ': ' + describe(parsed.error),
-        });
-        return;                                  // no tree, so nothing further to say
-      }
-
-      calls(parsed.ast).forEach(function (c) {
-        if (!Object.prototype.hasOwnProperty.call(table, c.name)) {
+      parts(text, f).forEach(function (part) {
+        var parsed = Sienna.equation.parse(part.text);
+        if (!parsed.ok) {
+          anyBroken = true;
           out.push({
-            id: id, label: label, kind: 'function', field: f.name, at: c.at,
-            message: f.label + ': no such function "' + c.name + '"',
+            id: id, label: label, kind: 'syntax', field: f.name,
+            at: part.at + parsed.error.offset,
+            message: f.label + ': ' + describe(parsed.error),
           });
-        } else if (!arityOk(table[c.name], c.count)) {
-          out.push({
-            id: id, label: label, kind: 'function', field: f.name, at: c.at,
-            message: f.label + ': ' + c.name + '() takes ' + arityText(table[c.name]) +
-                     ', not ' + c.count,
-          });
+          return;                                // no tree, so nothing further to say
         }
-      });
 
-      Sienna.equation.references(parsed.ast).forEach(function (ref) {
-        usedNames[ref.name] = true;
+        calls(parsed.ast).forEach(function (c) {
+          if (!Object.prototype.hasOwnProperty.call(table, c.name)) {
+            out.push({
+              id: id, label: label, kind: 'function', field: f.name, at: part.at + c.at,
+              message: f.label + ': no such function "' + c.name + '"',
+            });
+          } else if (!arityOk(table[c.name], c.count)) {
+            out.push({
+              id: id, label: label, kind: 'function', field: f.name, at: part.at + c.at,
+              message: f.label + ': ' + c.name + '() takes ' + arityText(table[c.name]) +
+                       ', not ' + c.count,
+            });
+          }
+        });
+
+        Sienna.equation.references(parsed.ast).forEach(function (ref) {
+          usedNames[ref.name] = true;
+        });
       });
     });
 

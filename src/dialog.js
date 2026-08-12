@@ -69,8 +69,11 @@
         + (value ? ' checked' : '') + '>';
     } else if (f.type === 'number') {
       control = '<input type="number" id="' + id + '" data-field="' + esc(f.name) + '" value="' + esc(value) + '">';
-    } else if (f.type === 'expression') {
-      // Expressions can be long and are stored verbatim, so give them room.
+    } else if (f.type === 'expression' || f.type === 'expression-list') {
+      // Expressions can be long and are stored verbatim, so give them room. A
+      // LIST of them is edited the same way — it is one piece of text with
+      // commas in it, which is also how Simile stores a multi-dimensional
+      // membership; the field's `help` says so.
       control = '<textarea id="' + id + '" rows="2" data-field="' + esc(f.name) + '">' + esc(value) + '</textarea>';
     } else {
       control = '<input type="text" id="' + id + '" data-field="' + esc(f.name) + '" value="' + esc(value) + '">';

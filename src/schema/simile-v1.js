@@ -122,9 +122,22 @@
             { value: 'fixed-membership', label: 'Fixed membership' },
             { value: 'population', label: 'Population' },
           ] },
-        { name: 'dimensions', label: 'Number of instances', type: 'expression',
+        // `expression-list`, not `expression`, because Simile's membership is
+        // per DIMENSION: `count=[4,44]` is a 4×44 grid of instances, two sizes
+        // and not one expression. Held as the comma-separated text the modeller
+        // typed, since that is also exactly what `count=[…]` wants; the
+        // completeness check splits it on top-level commas and reads each part
+        // as an expression of its own.
+        //
+        // It was `expression` until 2026-08-12, which meant every
+        // multi-dimensional submodel in the catalogue — `hexagon`'s `9,9`, the
+        // three `test02` files' `4,44` — was drawn RED with a syntax error on a
+        // model that is perfectly legal. Found by harvesting the corpus through
+        // the importer (STATUS item 37).
+        { name: 'dimensions', label: 'Number of instances', type: 'expression-list',
           requiredWhen: { kind: 'fixed-membership' },
-          help: 'Fixed-membership submodels only.' },
+          help: 'Fixed-membership submodels only. One size per dimension, '
+              + 'separated by commas — "4,44" is a 4 × 44 grid.' },
       ],
     },
 

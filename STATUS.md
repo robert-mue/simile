@@ -1187,17 +1187,35 @@ all. Rows carry the element name too, so a failure says where to look.
 multi-dimensional submodel is drawn RED with a syntax error. Not harvested into
 the corpus, and not fixed — see below.
 
+**38. Multi-dimensional submodels — a new field type, not a special case**
+*(2026-08-12)*
+`count=[4,44]` is a 4 × 44 grid of instances: **two sizes, not one expression.**
+Our `dimensions` field was declared `type: 'expression'`, so the importer's
+comma-joined `4,44` was parsed as an equation and failed — drawing every
+multi-dimensional submodel in the catalogue RED with a syntax error on a model
+that is perfectly legal. `hexagon` (`9,9`) and the three `test02` files.
+
+The schema now declares it `type: 'expression-list'`, and the completeness check
+splits such a field on **top-level** commas and reads each part as an expression
+of its own — top-level because `count=[size(a,b),4]` is two sizes and `size(a,b)`
+is one of them, so `.split(',')` would have traded one wrong answer for another.
+Each part carries its offset within the field, so an error still underlines the
+right characters: `4, 9)` reports at character 4, which is the bracket.
+
+The alternative was to special-case the field NAME in the checker, and the whole
+point of the schema is that the checker does not know what a submodel is. A type
+is data; a name is a hard-wire. The dialog treats the two the same way (a
+textarea) and the field's `help` now says what the commas mean.
+
+Verified in the browser rather than only in the harness: `hexagon` draws black,
+the property dialog reads "Number of instances / 9,9", and a deliberately broken
+`4, 9)` is still caught. Corpus-wide syntax findings 25 → 21, which is exactly
+the four bogus ones.
+
 ---
 
 ## Known gaps and loose ends
 
-- **A multi-dimensional submodel draws red.** `count=[4,44]` is a list of
-  dimension sizes; our `dimensions` field is one expression, so the importer
-  joins them with a comma and the equation check reports a syntax error. Three
-  catalogue models. The clean fix is a schema field type (`expression-list`)
-  that the checker splits on top-level commas — data-driven, rather than
-  special-casing a field name in the checker — but it changes the notation's
-  field model, so it is recorded rather than done. Item 37.
 - **20 equations in the catalogue do not parse, by a decision worth revisiting.**
   Comma-as-`and` / semicolon-as-`or` (12) and local bindings (8), the two
   colliding with each other as well as with argument separators. Item 36 has the
