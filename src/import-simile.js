@@ -922,12 +922,18 @@
       var id = String(path).split('/').pop();
       var m = JSON.parse(JSON.stringify(model));
       m.id = id;
+      var d = new Sienna.Diagram(path);
       Sienna.actions.dispatch(
         { type: 'diagram.import', target: path, payload: { name: m.name } },
-        function () { Sienna.userData.set(path, m); }
+        function () {
+          Sienna.userData.set(path, m);
+          // Inside the same transaction, so an import is ONE undo step and the
+          // seeded port positions go with it. Ports exist the moment the arcs
+          // do (they are derived from containment, §13); only their positions
+          // are written, and only where the model does not already have one.
+          d._seedAllPorts();
+        }
       );
-      var d = new Sienna.Diagram(path);
-      d._seedAllPorts();
       return d;
     },
 
