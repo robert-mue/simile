@@ -1151,10 +1151,53 @@ disambiguation rule (LHS is a bare name followed by a single `=`) rather than
 two independent additions. That is a change to the notation's expression
 language, so it is recorded here and NOT made.
 
+**37. The corpus rebuilt through the importer — and a premise corrected**
+*(2026-08-12)*
+Item 36 said `test/corpus.js` was harvested from three reference models and was
+therefore unrepresentative. **That was wrong**: it always covered all 72, 1500
+pairs across 72 filenames. The claim was inferred from
+`NOTE-export-to-simile.md` and never checked against the file.
+
+There was still a real gap, a different one. The old corpus was harvested by
+reading `value=` out of the files directly, so it tested **a string the app
+never sees**:
+
+- it kept leading whitespace (` 0.01`) and the outer parentheses Simile always
+  writes (`(if …)`), neither of which survives import;
+- and it **missed every equation stored on a visible node** rather than in a
+  function node — what Simile does for a constant. 504 equations were absent on
+  that count.
+
+So it is now generated through `Sienna.importSimile`, each row being the exact
+text a field holds after import. **1409 distinct pairs from 1565 occurrences
+across 72 models; 1388 parse; 21 expected-to-fail**, in the three classes item
+36 measured (12 comma/semicolon booleans, 8 local bindings, 1 string literal).
+The generator **refuses to mark anything outside those classes**, so a new
+failure fails the page instead of being absorbed.
+
+The point of the change is that this is now a test of the pipeline and not only
+of the PEG. The bug that corrupted 111 equations by stripping the quotes off
+`'A_Q'*'Gs'` would have failed this file loudly; it did not fail the old one at
+all. Rows carry the element name too, so a failure says where to look.
+
+*Found while doing it:* four "equations" in the harvest were submodel
+`dimensions` — `9,9` in `hexagon`, `4,44` in the three `test02` files. Simile's
+`count=[4,44]` is a **list of dimension sizes**, and our field model has one
+`dimensions` field declared `type: 'expression'`, so a legitimate
+multi-dimensional submodel is drawn RED with a syntax error. Not harvested into
+the corpus, and not fixed — see below.
+
 ---
 
 ## Known gaps and loose ends
 
+- **A multi-dimensional submodel draws red.** `count=[4,44]` is a list of
+  dimension sizes; our `dimensions` field is one expression, so the importer
+  joins them with a comma and the equation check reports a syntax error. Three
+  catalogue models. The clean fix is a schema field type (`expression-list`)
+  that the checker splits on top-level commas — data-driven, rather than
+  special-casing a field name in the checker — but it changes the notation's
+  field model, so it is recorded rather than done. Item 37.
 - **20 equations in the catalogue do not parse, by a decision worth revisiting.**
   Comma-as-`and` / semicolon-as-`or` (12) and local bindings (8), the two
   colliding with each other as well as with argument separators. Item 36 has the

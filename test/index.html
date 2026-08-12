@@ -21,8 +21,11 @@
     <h1>Equation grammar — corpus test</h1>
     <p class="note">
       Runs the real grammar over every equation in
-      <code>test/corpus.js</code>, harvested from the 72 Simile reference
-      models. No build step: this page IS the test. Open it and read the bar.
+      <code>test/corpus.js</code> — the 72 Simile catalogue models, read
+      <em>through the importer</em>, so each row is the exact text an element's
+      field holds rather than the raw bytes of the file. That makes this a test
+      of the pipeline as well as of the PEG. No build step: this page IS the
+      test. Open it and read the bar.
     </p>
     <div id="summary">running…</div>
     <div id="detail"></div>
@@ -44,11 +47,14 @@
         var passed = 0;
 
         rows.forEach(function (row) {
+          // [model, equation, expectedToFail, element] — the element name is
+          // what turns "something in lamos1a fails" into somewhere to look.
           var model = row[0], text = row[1], expectedToFail = !!row[2];
+          var where = model + (row[3] ? ' · ' + row[3] : '');
           var ok = window.Sienna.equation.parse(text).ok;
           if (ok && !expectedToFail) passed++;
-          else if (!ok && !expectedToFail) unexpectedFail.push([model, text, window.Sienna.equation.parse(text).error.message]);
-          else if (ok && expectedToFail) unexpectedPass.push([model, text, 'expected NOT to parse, but did']);
+          else if (!ok && !expectedToFail) unexpectedFail.push([where, text, window.Sienna.equation.parse(text).error.message]);
+          else if (ok && expectedToFail) unexpectedPass.push([where, text, 'expected NOT to parse, but did']);
         });
 
         var ms = Math.round(performance.now() - t0);
