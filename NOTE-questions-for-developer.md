@@ -1,228 +1,188 @@
 # Questions for the Simile developer — drafted as issues
 
 **2026-08-12.** A first batch, in priority order. Each is written to be answerable
-in minutes rather than hours, because each asks for **one small model** rather
-than an explanation.
+in minutes rather than hours.
 
-*Why models rather than prose.* The single hardest question in
-`NOTE-export-to-simile.md` — §4's dimensional term, called "the one thing we
-cannot resolve ourselves" — was answered on 2026-08-12 by reading two `.sml`
-files and nothing else. The rule fell straight out of `landuse1b.pl` and
-`fire_rect.sml`. Segmentation (`links`, `border` nodes, which segment carries the
-role) came the same way. So a two-minute model exercising one feature transfers
-more, and more reliably, than twenty minutes of writing — and it doubles as a
-regression fixture we keep forever.
+*Why so few.* An earlier draft of this note had eleven questions. Then the 72
+`.pl` files of the model catalogue arrived on disk, and **four of them answered
+themselves** — including most of the one we had called the blocker. They are kept
+below, marked ANSWERED, with what the corpus says, because a derived rule wants
+confirming and because the derivation is the evidence for it.
 
-Where we state a belief, **it is offered to be broken.** "Is this complete?" is a
-thirty-second answer; "how do dimensions work?" is an essay nobody writes.
+This is the pattern worth noting: the hardest question in
+`NOTE-export-to-simile.md` — §4's dimensional term, "the one thing we cannot
+resolve ourselves" — was settled by reading two files. Segmentation (`links`,
+`border` nodes, which segment carries the role) came the same way. Now
+associations have too. **Models transfer this knowledge better than prose**, and
+they double as regression fixtures we keep.
 
-Context: we have built a schema-driven diagram editor that now converts its
-models to Simile Prolog, uploads them to SimiLive and runs them, with results
-drawn in our own panels. `growth` and a five-instance submodel both agree with
-Euler to thirteen figures. What stops us handling *production* models is a short
-list of features we can see in saved files but cannot safely reproduce.
+So where a belief is stated below, **it is offered to be broken.** "Is this
+right?" is a thirty-second answer; "how do associations work?" is an essay nobody
+writes.
 
----
-
-## 0 — The catalogue, in bulk *(no design work at all)*
-
-**What we need.** A zip of the model catalogue's `.sml` files, or the URL pattern
-to fetch them.
-
-**Why.** The catalogue is indexed by feature keyword — "Association submodel",
-"Age-class modelling", "Disaggregated population" — which is already the
-conformance suite we would otherwise ask you to build. Individual files are not
-at guessable URLs (the path in `landuse1b.pl`'s own `file_name` 404s) and there
-is a login wall.
-
-**This may answer half the list below before you write a word**, so it is first.
+*Context.* We have built a schema-driven diagram editor that converts its models
+to Simile Prolog, uploads them to SimiLive and runs them, with results drawn in
+our own panels. A flat model and a five-instance submodel both agree with Euler
+to thirteen figures.
 
 ---
 
-## 1 — Association submodels and role arcs *(the blocker)*
+# Answered by the corpus — please confirm or correct
 
-**What we need.** Two minimal models: one association between two different
-submodels, and one association of a submodel with itself (neighbours).
+## A0 — The catalogue *(withdrawn)*
 
-**Why.** This is the single thing standing between us and the reference models.
-We refuse role arcs rather than guess.
+We have it: 72 `.pl` files. Nothing needed.
 
-**What we believe, from `landuse1b.pl` and `fire_rect.sml`.** A role term can
-hold several `use(…)`, and the first argument is a role INDEX rather than the
-`none` we see for containment:
+## A1 — Associations and `relation` arcs *(was the blocker)*
 
-```prolog
-role=[use(0,in_base,state,1),use(1,in_base,state_0,1)]
-role=[use(2,in_assoc,{crop_neighbour},list(1)),use(3,in_assoc,{crop_neighbour_0},list(1))]
-role=[use(-2,in_8_nbrs,{from_8_nbrs_lit},list(boolean)),use(none,in_hierarchy,lit,boolean)]
-```
+`ranking1.pl` is a complete minimal example and appears to settle it. What we
+now believe:
 
-So we guess: `0`/`1` are the two ends of the base submodel, `2`/`3` the
-association's own two roles, the `_0` suffix distinguishes the second end, and
-negative indices are built-in spatial relations (`in_8_nbrs`). **Is any of that
-right?** In particular: what fixes the numbering, and is it stable, or an
-allocation order we must not depend on?
+- An association is an ordinary submodel that is the **target** of `relation`
+  arcs — `arc(Id, BaseSubmodel, AssocSubmodel, relation, [complete=true,
+  name=RoleName])`. In 49 of the corpus's 60 relation arcs the association end
+  is `count=[]`; its membership comes from the relation and its `condition`.
+- **`references(S, [local(arcId), …])` lists the relation arcs a submodel takes
+  part in**, and appears on both ends.
+- **The role index in `use(N, …)` is the position in that `references` list.**
+  `landuse1b` proves it: its list is `[obsolete,obsolete,local(arc00018),local(arc00019)]`
+  and the roles use indices **2 and 3**, not 0 and 1.
+- `in_base` is a reference crossing from the base **into** the association — one
+  `use(…)` per role, scalar per end:
+  `role=[use(0,in_base,attribute_role1,1),use(1,in_base,attribute_role2,1)]`
+  beside an equation `(attribute_role1>attribute_role2)`.
+- `in_assoc` is the reference coming back **out** to the base — one per role, and
+  a list, since many association instances meet one base instance:
+  `role=[use(0,in_assoc,{one_role1},list(int)),use(1,in_assoc,{one_role2},list(int))]`
+  beside `count({one_role2})+1`.
+- Alias naming differs between versions (`attribute_role1` in a 2008 file,
+  `crop_neighbour` / `crop_neighbour_0` in a 2003 one). We do not need to
+  reproduce it — the alias is whatever our equation says — but it suggests we
+  should not depend on any convention.
 
-**The models that would settle it.** (a) Two submodels A and B, an association
-between them, one variable in the association reading a value from each end. (b)
-A grid submodel with an 8-neighbour relation, one variable reading a neighbour's
-value — the `fire_rect` pattern, but minimal.
+**Questions that remain.** (a) Is "index = position in `references`" right, and
+is that position **stable**, or an allocation order we must not rely on? (b) What
+are the `obsolete` and `ancestor(0)` entries we see in some `references` lists —
+must we ever emit them? (c) Anything different about a self-association (both
+relation arcs from the same base, as in `ranking1`) that we would not see there?
+
+## A2 — The population symbols *(answered)*
+
+The corpus census settles the spellings. Ours → Simile's:
+
+| ours | Simile | seen as |
+|---|---|---|
+| initialiser | `creation` | "initial number", "initial pop size" |
+| exterminator | `loss` | "death", "tanks destroyed" |
+| migrator | `immigration` | "new tanks constructed" |
+| reproduction | `reproduction` | "birth" |
+
+**Confirm the middle two**, which are the ones we are inferring from names rather
+than from anything structural.
+
+**And one we do not have at all: `alarm`** (3 in the corpus — "done checks",
+"found prime"). What is it, and does the diagram editor need it?
+
+## A3 — `references(…)` *(answered — see A1)*
+
+It lists relation arcs. The remaining part is `obsolete` / `ancestor(0)`, asked
+in A1(b).
+
+## A4 — `border` *(answered)*
+
+448 in the corpus, so it is the current spelling for a boundary stub and our
+choice was right. Older files use a plain `variable` in the same position — we
+assume that is legacy and emit `border`. **Correct?**
 
 ---
 
-## 2 — `usr(…)` in a role term
+# Still open
 
-**What we need.** One sentence, or a model where the same alias appears both
-ways.
+## 1 — `usr(…)` in a role term
 
-**Why.** We emit bare aliases. If `usr(…)` is load-bearing we are producing
-subtly different models.
-
-**Evidence.** Both forms appear in *the same file* (`fire_rect.sml`):
+Both forms appear in **the same file** (`fire_rect.sml`):
 
 ```prolog
 role=[use(none,in_hierarchy,usr(nbr_lit),boolean)]
 role=[use(none,in_hierarchy,fuel,1)]
 ```
 
-**What we believe.** `usr(x)` marks an alias the modeller typed, against one
-Simile defaulted. **Is it decorative, or does the engine treat the two
-differently?**
+We guess `usr(x)` marks an alias the modeller typed against one Simile
+defaulted. We emit bare aliases throughout. **Decorative, or does the engine
+treat the two differently?**
 
----
-
-## 3 — `use_sofar` and `enabled_roles`
-
-**What we need.** What they mean and when they must be written.
-
-**Evidence.** `fire_rect.sml`:
+## 2 — `use_sofar` and `enabled_roles`
 
 ```prolog
-arc(arc00013,…,role=[use(none,in_hierarchy,usr(nbr_lit),boolean)],use_sofar=0],…)
-arc(arc00010,…,enabled_roles=[-2],name=i8,role=[use(-2,in_8_nbrs,…),use(none,in_hierarchy,…)],use_sofar=0],…)
+arc(arc00013,…,role=[…],use_sofar=0],…)
+arc(arc00010,…,enabled_roles=[-2],…,role=[use(-2,in_8_nbrs,{from_8_nbrs_lit},list(boolean)),…],use_sofar=0],…)
 ```
 
-We omit both and our models run. **Are they optional in general, or only for the
-cases we have happened to test?**
+We omit both and our models run. **Optional in general, or only for the cases we
+happen to have tested?** And is `in_8_nbrs` with its negative index one of a
+fixed set of built-in spatial relations — if so, what is the set?
 
----
+## 3 — Is our minimal `.sml` a supported input?
 
-## 4 — The four population symbols: what are they called in the file?
+We depend on this and found it by experiment, which is an uncomfortable place to
+be. Posting raw Prolog fails — the build dies in `file join $mimedir *.so`. A
+`.sml` whose only part is the model fails identically. Adding a second part, 27
+bytes of "Simile package description" (`modelRunning 1 running_c 1`), makes it
+build and run. Everything else a real `.sml` carries — Tcl canvas, helper and
+parameter XML, generated C++, a compiled ELF — appears optional.
 
-**What we need.** One model containing an initialiser, a migrator, an
-exterminator and a reproduction symbol.
+**Is a two-part file legitimate and stable, or are we exploiting something
+incidental?**
 
-**Why.** Our palette has all four; the file format we have seen has `loss` and
-`immigration`. Two of ours are probably those two, but guessing WHICH would
-produce a model that loads and quietly means something else — so we refuse all
-four by name.
+## 4 — The dimensional rule: confirm or break it
 
-**Evidence.** `forest.sml` has `node(node00009,loss,…)` named "Chance of Death"
-and `node(node00011,immigration,…)` named "Saplings".
-
----
-
-## 5 — Is our minimal `.sml` a supported input?
-
-**What we need.** Confirmation, or a correction.
-
-**Why.** We depend on this, and we found it by experiment rather than from
-documentation, which is an uncomfortable place to be.
-
-**What we found.** Posting raw Prolog fails — the build dies in
-`file join $mimedir *.so`. A `.sml` whose only part is the model fails
-identically. Adding a second part, 27 bytes of "Simile package description"
-(`modelRunning 1 running_c 1`), makes it build and run. Everything else a real
-`.sml` carries — Tcl canvas, helper and parameter XML, generated C++, a compiled
-ELF — appears to be optional.
-
-**Is a two-part file a legitimate input we can rely on, or are we exploiting
-something incidental that might change?** And is there a documented minimum?
-
----
-
-## 6 — The dimensional rule: confirm or break it
-
-**What we need.** Yes/no, plus any exception.
-
-**What we believe.** For a containment crossing:
-
-- **inward** references are scalars — `use(none,in_hierarchy,state,1)`;
-- **outward** references are lists, and the alias carries brackets that the
-  consumer's equation uses verbatim — `use(none,in_hierarchy,{volume},list(1))`
-  beside `sum({volume})`;
-- **curly** braces for variable membership, **square** for fixed, one bracket
-  level per dimension (`fire_rect` crosses a 200×300 grid and writes
-  `any(any([[lit]]))`);
-- a **conditional** submodel counts as multi-instance even at `count=[]` —
-  `landuse1b`'s `Forest` exports `{volume}` as `list(1)` and is the one submodel
-  there holding a condition.
+For a containment crossing we believe: **inward** references are scalars;
+**outward** are lists whose alias carries brackets the consumer's equation uses
+verbatim (`{volume}` beside `sum({volume})`); **curly** for variable membership,
+**square** for fixed, one bracket level per dimension (`fire_rect` crosses a
+200×300 grid and writes `any(any([[lit]]))`); and a **conditional** submodel
+counts as multi-instance even at `count=[]`.
 
 **Is "multi-instance or conditional ⇒ outward is a list" complete, or are there
 cases where an outward reference stays scalar?**
 
----
+## 5 — `multiplication_spec` kinds we do not have
 
-## 7 — `references(…)`, and `obsolete`
+The corpus shows `count=[N]`, `type=population`, and two we cannot make:
 
-**What we need.** Whether we must emit it.
+- **`type=records`** — data-specified membership.
+- **`count=[size(Patch)]`** — a count that is an expression over another
+  submodel.
 
-**Evidence.** `landuse1b.pl`:
+Our editor offers single / fixed-membership / population. **Is that the complete
+set of kinds, with records a variant of one of them, or a fourth thing?**
 
-```prolog
-references(node00002,[obsolete,obsolete,local(arc00018),local(arc00019)]).
-references(node00042,[local(arc00018),local(arc00019)]).
-```
+## 6 — `spec=`, and the values we do not hold
 
-We omit it and our models run. **What is it for, and is omitting it safe for
-models more complex than ours?** The literal `obsolete` entries suggest a list
-whose positions matter.
+Function nodes carry the user's typed text as character codes beside the parsed
+value (`spec=[114,97,…]` next to `value=rand_const(0,100)`). We emit `value` and
+omit `spec`, `min_val`, `max_val`, `fill_colour`; models run. **Is anything there
+load-bearing, or is it all round-tripping for the editor's benefit?**
 
----
+## 7 — `course=[…]`: arcs have waypoints?
 
-## 8 — `spec=`, and the values we do not hold
+Arcs carry `course=[[22,…],[…]]` — a list of points. We have curvature but no
+waypoints, and had them down as a possible future feature. **Are they purely
+visual?** If Simile has had them all along, that settles a design question for us
+rather than leaving it to taste (`DESIGN-diagram.md` §7.5).
 
-**What we need.** Confirmation that these are cosmetic.
+## 8 — Which Prolog, and how separable is the C++ back end?
 
-**Evidence.** Function nodes carry the user's typed text as character codes
-alongside the parsed value:
+Architecture rather than a model; set out at length in
+`NOTE-export-to-simile.md` §6. Since the generator is itself Prolog, a
+**JavaScript back end** would put the whole pipeline in the browser with no
+compiler and no server. Two things decide whether that is realistic: how
+separable the emitter is from an internal representation, and **how large the
+runtime library the generated code links against** is — we suspect the latter,
+not the code emission, is the real work.
 
-```prolog
-node(node00014,function,[],[…,spec=[114,97,110,100,95,99,111,110,115,116,40,48,44,49,48,48,41],units=1,value=rand_const(0,100)],[]).
-```
-
-We emit `value` and omit `spec`, `min_val`, `max_val` and `fill_colour`. Models
-run. **Is anything there load-bearing, or is it all round-tripping for the
-editor's benefit?**
-
----
-
-## 9 — `course=[…]`: arcs have waypoints?
-
-**What we need.** Confirmation, and whether they are purely visual.
-
-**Evidence.** `landuse1b.pl` arcs carry `course=[[22,…],[…]]` — a list of points.
-
-**Why it matters to us beyond drawing.** We currently have curvature but no
-waypoints, and had it down as a possible future feature. If Simile has had them
-all along, that settles a design question for us (`DESIGN-diagram.md` §7.5).
-
----
-
-## 10 — Which Prolog, and how separable is the C++ back end?
-
-**What we need.** A rough answer; this one is architecture, not a model.
-
-**Why.** Set out at length in `NOTE-export-to-simile.md` §6. Since the generator
-is itself Prolog, a **JavaScript back end** would make the whole pipeline run in
-the browser with no compiler and no server. Two things decide whether that is
-realistic: how separable the emitter is from an internal representation, and
-**how large the runtime library the generated code links against** is — we
-suspect the latter, not the code emission, is the real work.
-
-A cheap experiment settles the first half: try loading the generator into
-SWI-Prolog and see how far it gets. Dialect distance is usually obvious within
-an hour.
+A cheap experiment settles the first half: load the generator into SWI-Prolog and
+see how far it gets. Dialect distance is usually obvious within an hour.
 
 ---
 
