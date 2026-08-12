@@ -80,12 +80,21 @@ fixed one, or are there cases where that does not hold?
 2. **Is `.smx`, the add/remove edit log, a better export target than a `.pl` snapshot?** We produce
    exactly that shape natively. It may well be the wrong idea — a log presumably assumes a starting
    state and a schema version — but we would rather ask than guess.
-3. **Is there an HTTP interface to SimiLive?** The page mentions "hidden forms to create a direct
-   link to execute any model". If there is a documented endpoint that returns results data, we can
-   host our own plotter and table widgets. Without one, the realistic first step is handing the model
-   to SimiLive's own interface: that gets models *running*, but not results inside our application.
-4. **The 25-equation limit** for non-Enterprise use — our reference models are well past it. What
-   does testing at realistic size require?
+3. ~~**Is there an HTTP interface to SimiLive?**~~ **ANSWERED — and built against,
+   2026-08-12.** There is: `create_model.php` starts a session and returns its id, and
+   `model_action.php` takes every subsequent verb (`BuildShareLib`, `Describe`, `Reset`,
+   `ExecuteMulti`, `Query`, `Exit`). CORS is open and the requests are all form-encoded, so a static
+   page can drive it, `file://` included. We now have our own run control and spatial-grid widgets
+   running SimiLive's fire-spread demo end to end — results *inside* our application, not handed off
+   to SimiLive's interface. See STATUS.md item 27. This closes the gap this note was written to
+   describe: the only remaining hop is feeding it OUR model instead of a `.sml` already on the
+   server, and `create_model.php` already accepts `.pl`.
+4. **The 25-equation limit — real today, but legacy and going** *(2026-08-12)*. Simile is now free
+   and open source, and the free/teaching/commercial edition distinctions go with it. The developer
+   confirms the limit **is still in the code and still enforced**, but that it is legacy, easy to
+   remove, and will be. So: nothing to design around, and no workaround worth building — but it is a
+   live constraint on *testing* until it is lifted, and our reference models are all well past 25
+   equations. First real export to try against the server should therefore be a small one.
 5. **Which Prolog dialect is the generator written in, and how separable is its C++ back end?** See
    §6 — this now decides the whole deployment shape.
 

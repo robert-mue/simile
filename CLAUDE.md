@@ -10,8 +10,12 @@ user-data store, action log, undo/redo and session replay). The long-term goal i
 to replace the diagram editor of Simile (simulistics.com) with a notation-neutral,
 schema-driven editor. See **`DESIGN-diagram.md`** for the design record.
 
-Scope is the **diagram editor only** — not the simulation engine (exists already)
-nor results-display widgets.
+Scope is the **diagram editor**, plus a **client for the existing simulation
+engine** — not the engine itself, which exists already. The distinction is that
+we compute nothing: `src/simulation.js` drives a model running on a SimiLive
+server and the display widgets show what comes back, but no integrator, equation
+or numerical method lives here. Results-display widgets are in scope on that
+footing (`src/widgets/grid.js` is the first).
 
 ## Structure
 
