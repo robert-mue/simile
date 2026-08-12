@@ -22,4 +22,19 @@
     label: 'Diagram',
     title: 'Diagram',
   });
+
+  // Running a model. These two are views onto `Sienna.Simulation` (see
+  // src/simulation.js): the run control drives a session, display widgets
+  // receive from it. Several of either may be open at once.
+  reg.register('runControl', {
+    src: 'src/widgets/run-control.js',
+    label: 'Run control',
+    title: 'Run control',
+  });
+
+  reg.register('grid', {
+    src: 'src/widgets/grid.js',
+    label: 'Spatial grid',
+    title: 'Spatial grid',
+  });
 })(window.Sienna);
