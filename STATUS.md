@@ -1,7 +1,7 @@
 # simile — build status
 
 *A quick-reference companion to `DESIGN-diagram.md`, which remains the design record.
-Last updated 2026-08-08.*
+Last updated 2026-08-12.*
 
 Ordering follows the implementation plan agreed on 2026-08-01: schema → model layer →
 render → §13 ports/segments → creation → deletion → dragging → grammar engine.
@@ -10,6 +10,12 @@ render → §13 ports/segments → creation → deletion → dragging → gramma
 marker that followed it (item 20). What remains is the list of known gaps, and
 the questions in `DESIGN-diagram.md` §8 that only the Simile developer can
 answer.
+
+**A second strand opened on 2026-08-12: RUNNING a model** (item 27). It is
+outside the implementation plan above and outside the scope stated in
+`CLAUDE.md` — which is the diagram editor, not the simulation engine — because
+running is not engine work: the engine exists, and what was missing was a client
+for it. The editor half is untouched by it.
 
 ---
 
@@ -698,6 +704,70 @@ byte-identical.
 boundary rather than flush against it — invisible with a real mouse, an artefact
 of sampling. And re-parenting now has **no gesture at all**: see the gap below.
 
+**27. Running a model — session, run control, spatial grid** *(2026-08-12)*
+The first thing built outside the diagram editor. SimiLive
+(similive.simulistics.com) already carries a complete workflow — upload a model,
+run it on the server, display results — so rather than pursue client-side
+execution, its client was read and its protocol reimplemented here. Two of its
+parts are being replaced: the model it is fed, and the panels it shows results
+in.
+
+**`src/simulation.js` — `Sienna.Simulation`.** App-specific code belonging to
+neither the shell nor a widget, and the first of its kind here. The run control
+DRIVES a session and a display RECEIVES from it, so neither can own the protocol
+without breaking when its panel closes. Same split as `src/diagram.js` (model, no
+pixels) against `src/widgets/diagram.js` (view), applied to running.
+
+It deliberately does **not** live in `userData`, though that is the shell's
+pub/sub substrate and the obvious place. `userData` autosaves to `localStorage`
+and feeds undo; a session is neither saveable nor undoable, since half of it is a
+process on someone else's machine named by a temp directory. Restoring one would
+give the user a play button wired to a process that stopped existing. So it keeps
+its own listener list — same shape, lifetime of one page visit.
+
+**The protocol, verified end-to-end rather than inferred.** Two endpoints, no
+cookies. `create_model.php` returns an HTML page whose only load-bearing content
+is `var fileBase = '/tmp/xxxxx'` — that string IS the session; everything after is
+a form POST to `model_action.php`. Startup is fixed: `BuildShareLib` (compiles;
+its LAST line is the JSON of run defaults) → `CreateSocket` → `WaitSocket` →
+`Describe` → `LoadSPF`. Running is a poll loop **the client drives**:
+`ExecuteMulti` advances one chunk and returns every logged point in it; the server
+holds model state between calls but has no notion of a run. Every request carries
+a `note` saying what to send back, and replies are positional. CORS is open
+(`Access-Control-Allow-Origin: *`) and every request is CORS-simple, so this works
+from `file://` — confirmed, not assumed.
+
+**`sienna.runControl`** is a view onto the session's settings, holding no numbers
+of its own, so a second one shows the same run and neither drives the loop twice.
+Of its five fields only two are about the model: **Time step** is the integration
+step and **Log each** is how often the server records a point, while **Update
+each** is how much model time passes per request — a network setting that changes
+display smoothness and round-trip count and nothing about the results. Easily
+misread as physics; hence the tooltips.
+
+**`sienna.grid` never receives values.** A 200×300 grid is 60000 numbers a frame.
+The target is requested with `format:'binary'`, and the SERVER scales each value
+to a 0–255 colour index and LZW-encodes it — what arrives is the **body of a
+GIF**, a few hundred bytes. The widget supplies a cached header (dimensions plus a
+256-entry palette), so a frame costs one string concatenation and one `img.src`;
+the browser's own image decoder draws it. That is why 60000 cells stay smooth
+where per-cell DOM could not. Two consequences are visible in the UI: the min/max
+**range is part of the request**, not a display setting, so it cannot recolour a
+frame already received; and the palette's band count must match the `nswat` the
+server is told to quantise to, or the bands land between the palette's steps.
+
+Verified against the live server from both `file://` and `http://`: fire spread
+with **two grid panels on one session** showing the same fire front through
+different variables and palettes — the check that target routing is right — plus
+reset, pause taking effect after the chunk in flight, a closed display panel
+withdrawing its target from the next request, and `unload` ending the server
+session. Game of Life additionally exercises the `.spf` parameter path.
+
+**What this leaves for the export work.** The model still comes from the server as
+Simile `.sml`. `create_model.php` already accepts `.pl`, so exporting Simile
+Prolog from the diagram (`NOTE-export-to-simile.md`) plugs into `Simulation.load`
+with no other change here.
+
 ---
 
 ## Known gaps and loose ends
@@ -774,6 +844,34 @@ of sampling. And re-parenting now has **no gesture at all**: see the gap below.
 
   If it is ever wanted, the shapes worth considering are a byte cap with
   oldest-first eviction, or persisting only on unload.
+
+### On running a model (item 27)
+
+- **The model is still SimiLive's, not ours.** Everything runs from a `.sml`
+  already on the server; feeding it a model built here waits on the Prolog
+  export.
+- **The vertical flip is copied, not proven.** Grid rows arrive bottom-up and the
+  raster is flipped to match SimiLive, but no fixture yet is asymmetric enough to
+  demonstrate it independently. If a grid ever appears upside down, the one CSS
+  line on `.slx-grid-img` is the suspect.
+- **A grid whose column count Simile does not record prompts for it.** SimiLive
+  instead asks the server for the distinct value count
+  (`{node, format:'distinct'}`); that call was left unimplemented because its
+  reply format could not be verified, and a prompt beats a plausible-looking
+  wrong aspect ratio.
+- **Sessions are single.** One model at a time, app-wide: several panels view one
+  session, and loading a second model ends the first. Keying sessions by model is
+  the obvious extension, and pointless before the models are ours.
+- **No parameter editing, and no display but the grid.** SimiLive also has
+  plotters, tables, input sliders, a file-parameter dialogue, polygon maps and a
+  3-D viewer. The session layer's `note`/target mechanism was built to carry any
+  of them; only the grid consumes it so far.
+- **Nothing recovers a dropped session.** If the server times a session out or
+  the network drops, the next request fails and the status line says so — there
+  is no reconnect, and the run is lost.
+- **Three demo models in the Run control list have no display** (diffusion,
+  three-body, branching plant). They load and run correctly; nothing but the
+  clock will move.
 
 ---
 
