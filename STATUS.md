@@ -11,11 +11,15 @@ marker that followed it (item 20). What remains is the list of known gaps, and
 the questions in `DESIGN-diagram.md` §8 that only the Simile developer can
 answer.
 
-**A second strand opened on 2026-08-12: RUNNING a model** (item 27). It is
-outside the implementation plan above and outside the scope stated in
-`CLAUDE.md` — which is the diagram editor, not the simulation engine — because
-running is not engine work: the engine exists, and what was missing was a client
-for it. The editor half is untouched by it.
+**A second strand opened on 2026-08-12: RUNNING a model** (items 27–30). It sits
+outside the implementation plan above, and `CLAUDE.md`'s scope line was widened
+to say what was always meant: the diagram editor **plus a client for the
+existing engine**, the test being that we compute nothing — no integrator, no
+equation, no numerical method in this repo.
+
+As of 2026-08-12 the loop is closed: a model built in this editor is converted to
+Simile Prolog, uploaded, compiled and run on the Simile engine, and its results
+are drawn in this app's own panels.
 
 ---
 
@@ -768,6 +772,100 @@ Simile `.sml`. `create_model.php` already accepts `.pl`, so exporting Simile
 Prolog from the diagram (`NOTE-export-to-simile.md`) plugs into `Simulation.load`
 with no other change here.
 
+**28. Export to Simile, and run it — `src/export-simile.js`** *(2026-08-12)*
+A model built here now compiles and runs on the Simile engine. `growth` reaches
+731.6017851829938 at t = 20 against 731.6017851829954 for Euler at dt = 0.1 —
+thirteen figures, which is the check that the conversion MEANS what it says
+rather than merely loading.
+
+**The wrapper is not optional, and establishing that cost the most.** Posting raw
+Prolog fails: the build dies in `file join $mimedir *.so`, a Tcl variable never
+set for a bare file — and a `.sml` carrying the model as its ONLY part fails
+identically. What makes it build is a second part of 27 bytes, "Simile package
+description", `modelRunning 1 running_c 1`. Everything else a real `.sml` carries
+— Tcl canvas, helper and parameter XML, generated C++, a compiled ELF of the
+model — is ballast. Established by uploading `forest.sml` intact, then raw
+`forest.pl`, then a hand-built two-part file, then ours.
+
+*This also corrected the note: `.sml` is MIME/base64, not the hex it claimed —
+verified across files written in 2003, 2010 and 2024. A reader must find the
+model part BY CONTENT (`source(program=`), since the order varies and some parts
+carry no transfer-encoding header.*
+
+**The three representation gaps of `NOTE-export-to-simile.md` §3, closed.** A
+valued element becomes TWO nodes, a `variable` plus a `function` holding units
+and equation, joined by an influence. Influences terminate on the target's
+**function**, never on its visible node — it is the equation that uses the value.
+A flow has no valve: ours carries the name and the rate, Simile puts the name on
+the arc and the rate in a function listed in `attached=[…]`.
+
+Our per-influence **alias** maps exactly onto `role=[use(none,in_hierarchy,ALIAS,DIM)]`
+— both mean "the local name the consumer's equation uses", and in both systems
+the equation references the alias rather than the source's label. That
+correspondence is why the converter is short.
+
+**29. A plotter — `src/widgets/plotter.js`** *(2026-08-12)*
+Built rather than borrowed: a chart is what a modeller looks at longest, and what
+is wanted later (log scaling, exporting the numbers, marking events) is easier on
+foundations we own.
+
+Its visual decisions are checked rather than preferred, and should be changed
+knowingly. The eight series colours are a **validated ORDER**, run through a
+colour-vision simulator against the widget's own white surface: worst adjacent
+pair ΔE 9.1 under protanopia, 19.6 under normal vision — re-ordering breaks the
+guarantee, because the order IS the mechanism. **Colour follows the series, not
+its position**: dropping the middle of three leaves the others alone (verified),
+because a chart whose colours move under you cannot be read across a change.
+**Text never wears the series colour** — three of the eight hues are under 3:1 on
+white, fine for a 2px line and not for 11px text — which is also why every line is
+directly labelled at its end: identity never rests on colour alone. **One y-axis,
+ever**; two variables of different size want two panels, which this app makes
+cheap.
+
+Looking at the rendered result caught two things no validator can: at a small
+panel size converging end labels overlapped and the legend clipped. Colliding
+labels are now dropped rather than nudged (a label drifted off its line reads as
+noise), with the legend — which keeps its height and scrolls — carrying them.
+
+**30. Submodels export: one arc of ours becomes a chain of Simile's**
+*(2026-08-12)*
+We store a cross-boundary influence as ONE arc and derive the segments (§13);
+Simile stores the segments. Export walks the containment tree from the source's
+scope to the common ancestor and down to the target's, emitting one arc per
+level. Leaving a submodel, the segment ends at a `border` node inside it and the
+next starts at the submodel's own node; entering, the reverse. Consecutive
+segments pair in `links(S,[Upstream-Downstream])` under the boundary they cross,
+and only the last — the one landing on the consumer's function — carries the
+role.
+
+Read off `landuse1b.pl` and `forest.pl`, including the three-segment `Next to` →
+`Patch` case, which is what pins the pair ordering and shows pairs recorded under
+two different submodels.
+
+**Simile shares the inner segment of an outward crossing between consumers and
+gives each consumer its own on the way in — which is our ports rule exactly**
+(shared on the source side, per-arc on the target side). The two systems
+independently describe the same structure.
+
+**§4's blocker is answered, by measurement rather than by asking.** Inward
+references are scalars (`use(none,in_hierarchy,state,1)`). Outward references are
+lists whose alias carries brackets the consumer's equation uses VERBATIM —
+`{volume}` beside `sum({volume})` — curly for variable membership, square for
+fixed, one bracket level per dimension (`fire_rect` crosses a 200×300 grid and
+writes `any(any([[lit]]))`). A **conditional** submodel counts as multi-instance
+even at `count=[]`: landuse1b's `Forest` exports `{volume}` as `list(1)` and is
+the one submodel there holding a condition.
+
+So the alias is emitted exactly as the model holds it, and an outward crossing
+whose alias is bare is **refused**, naming the submodel and the bracket its kind
+requires — inventing the brackets would silently disagree with the equation the
+modeller wrote.
+
+Verified with `src/demo-stand.js`, the fixture this was built against: five
+plants, one influence crossing inward and one outward, reaching 36.761625539695
+at t = 40 against 5·1.005⁴⁰⁰ = 36.761625539694. A nested two-boundary version
+agrees to every digit it prints.
+
 ---
 
 ## Known gaps and loose ends
@@ -845,11 +943,28 @@ with no other change here.
   If it is ever wanted, the shapes worth considering are a byte cap with
   oldest-first eviction, or persisting only on unload.
 
-### On running a model (item 27)
+### On running a model (items 27–30)
 
-- **The model is still SimiLive's, not ours.** Everything runs from a `.sml`
-  already on the server; feeding it a model built here waits on the Prolog
-  export.
+- **Role arcs / association submodels do not export.** Their roles use a
+  different form — `use(0,in_base,…)`, `use(2,in_assoc,…)`, with per-end indices
+  and several `use(…)` terms in one role — and nothing in the editor produces
+  them yet. This is what stands between us and the reference models.
+- **Four node types have no confirmed Simile spelling**: initialiser, migrator,
+  exterminator, reproduction. `forest.sml` shows `loss` and `immigration`, which
+  are probably two of them, but guessing which would export a model that loads
+  and means something else. Refused by name until the developer confirms.
+- **Simile is a stricter checker than we are, and finding that out cost a round
+  trip.** The first `stand` fixture failed to compile because a flow's rate used
+  `biomass` with no influence drawn from it — a real modelling error, reported
+  precisely. Running our own `check model` (item 19) BEFORE exporting would catch
+  that class locally instead of after an upload. Cheap, and not done.
+- **`edition=enterprise` is written into every exported model**, because every
+  Simile file on hand says so, including the demos the SimiLive server serves. It
+  is what the format looks like rather than a claim about us — but it is the
+  field a licence check reads, and worth knowing is there.
+- **A submodel's `along` for border nodes is approximated.** Simile places a
+  boundary stub by distance along the perimeter; we hold ports as points. The
+  conversion is cosmetic and nothing depends on it.
 - **The vertical flip is copied, not proven.** Grid rows arrive bottom-up and the
   raster is flipped to match SimiLive, but no fixture yet is asymmetric enough to
   demonstrate it independently. If a grid ever appears upside down, the one CSS
@@ -862,16 +977,24 @@ with no other change here.
 - **Sessions are single.** One model at a time, app-wide: several panels view one
   session, and loading a second model ends the first. Keying sessions by model is
   the obvious extension, and pointless before the models are ours.
-- **No parameter editing, and no display but the grid.** SimiLive also has
-  plotters, tables, input sliders, a file-parameter dialogue, polygon maps and a
-  3-D viewer. The session layer's `note`/target mechanism was built to carry any
-  of them; only the grid consumes it so far.
+- **No parameter editing, and no table, sliders, polygon map or 3-D view.**
+  SimiLive has all of those. The session layer's `note`/target mechanism was
+  built to carry any of them; the grid and the plotter consume it so far.
+- **The plotter draws scalars only.** A value per submodel instance — the common
+  case in any interesting model — has no display: the grid takes a 2-D one, and
+  nothing takes a plain list. Plotting a trace per instance, or a mean with a
+  band, is the obvious next display.
 - **Nothing recovers a dropped session.** If the server times a session out or
   the network drops, the next request fails and the status line says so — there
   is no reconnect, and the run is lost.
 - **Three demo models in the Run control list have no display** (diffusion,
   three-body, branching plant). They load and run correctly; nothing but the
   clock will move.
+- **The dimensional rule is derived, not confirmed.** "Multi-instance or
+  conditional ⇒ outward references are lists" fits every crossing in the
+  reference models on hand, but it is our inference. Worth putting to the
+  developer as a statement to confirm rather than the open question §4 of the
+  note asked.
 
 ---
 
