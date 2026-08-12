@@ -98,6 +98,22 @@ assume that is legacy and emit `border`. **Correct?**
 
 # Still open
 
+## 0 — A robustness report, not a question
+
+`value=a>b` is not legal Prolog — `=` and `>` are both `xfx` priority 700, so the
+right argument of `=` may not itself be a 700 operator. It needs
+`value=(a>b)`, which is what Simile itself writes.
+
+**When we emitted the unparenthesised form, Simile did not complain.** It
+dropped the property, and the component disappeared from the model: a
+membership condition stopped filtering, an association returned every pair, and
+a ranking model answered 5,5,5,5 where it should have answered 4,3,2,1. It
+compiled, ran, and produced confident wrong numbers.
+
+Our bug, and fixed. But **a warning on a property that failed to parse would
+have saved an afternoon**, and would presumably help anyone else generating
+`.pl` files.
+
 ## 1 — `usr(…)` in a role term
 
 Both forms appear in **the same file** (`fire_rect.sml`):

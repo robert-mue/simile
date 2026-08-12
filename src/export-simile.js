@@ -157,6 +157,7 @@
     this.borderN = 0;
     this.vis = {};      // our id -> Simile id of the VISIBLE node
     this.fn = {};       // our id -> Simile id of the FUNCTION node
+    this.relArc = {};   // our role arc id -> Simile relation arc id
     this.borders = {};  // key -> {id, sub} for boundary stubs
     this.extra = {};    // our submodel id -> [Simile ids of borders inside it]
     this.links = {};    // our submodel id -> ['arcA-arcB', …]
@@ -197,16 +198,48 @@
       Object.keys(m.arcs).forEach(function (id) {
         var a = m.arcs[id];
         if (a.type === 'role') {
-          problems.push('it has a role arc — association submodels are not converted yet');
+          if (!(m.submodels || {})[a.from] || !(m.submodels || {})[a.to]) {
+            problems.push('a role arc joins something that is not a submodel');
+          }
           return;
         }
         if (a.type !== 'influence') return;
+
+        // An influence that both crosses an association AND climbs the
+        // containment tree carries a `use(…)` per route. We emit one route.
+        var cr = self.crossings(a.from, a.to);
+        if (self.assocPair(cr) && (cr.out.length > 1 || cr.into.length > 1)) {
+          problems.push('an influence crosses an association boundary AND a containment '
+            + 'boundary in one arc, which is not converted yet');
+          return;
+        }
 
         // An outward crossing of a multi-instance submodel produces a LIST, and
         // the alias has to say so, because the consumer's equation uses the
         // alias verbatim. Adding the brackets here would silently disagree with
         // the equation the modeller wrote.
         var alias = (a.alias || '').trim();
+
+        // An association crossing renames: our one alias becomes one name per
+        // role, `<alias>_<role>`, because Simile needs a name per end. So the
+        // consumer's equation cannot be using the bare alias — say what it
+        // should use rather than letting the model compile into nonsense.
+        var pr = self.assocPair(cr);
+        if (pr) {
+          var names = self.assocNames(a, pr);
+          var eq = String((m.nodes[a.to] || {}).props
+            ? (m.nodes[a.to].props[self.exprField(m.nodes[a.to].type)] || '') : '');
+          if (names.length && !names.some(function (n) { return eq.indexOf(n) >= 0; })) {
+            problems.push('across the association "'
+              + ((m.submodels || {})[pr.assoc] || {}).label + '", "' + alias
+              + '" arrives once per role, under ' + names.map(function (n) {
+                return pr.dir === 'in_assoc' ? '{' + n + '}' : n;
+              }).join(' and ') + ' — but the equation for "'
+              + ((m.nodes[a.to] || {}).label || a.to) + '" uses none of those');
+          }
+          return;
+        }
+
         var left = self.crossings(a.from, a.to).out.filter(function (s) { return self.isMulti(s); });
         if (left.length && !/^[{[]/.test(alias)) {
           // Square brackets for a fixed membership, curly for a variable one —
@@ -348,6 +381,91 @@
       (this.links[subId] = this.links[subId] || []).push(upstream + '-' + downstream);
     },
 
+    // ---- associations ----------------------------------------------------
+    //
+    // An association is not a stored kind — it is INFERRED from role arcs, in
+    // our model (§4) and in Simile's alike, where it is simply a submodel that
+    // `relation` arcs point at. Two systems, one inference.
+
+    /** The role arcs pointing at this submodel, in a stable order. */
+    rolesOf: function (subId) {
+      var m = this.m;
+      return Object.keys(m.arcs).filter(function (id) {
+        return m.arcs[id].type === 'role' && m.arcs[id].to === subId;
+      });
+    },
+
+    isAssoc: function (subId) {
+      return this.rolesOf(subId).length > 0;
+    },
+
+    /**
+     * If this crossing is between an association and one of its bases, say
+     * which way round. Returns null for an ordinary containment crossing.
+     */
+    assocPair: function (cross) {
+      if (cross.out.length < 1 || cross.into.length < 1) return null;
+      var left = cross.out[cross.out.length - 1];
+      var entered = cross.into[0];
+      var self = this;
+      var joins = function (assoc, base) {
+        return self.rolesOf(assoc).some(function (r) { return self.m.arcs[r].from === base; });
+      };
+      if (this.isAssoc(entered) && joins(entered, left)) {
+        return { dir: 'in_base', assoc: entered, base: left };
+      }
+      if (this.isAssoc(left) && joins(left, entered)) {
+        return { dir: 'in_assoc', assoc: left, base: entered };
+      }
+      return null;
+    },
+
+    /**
+     * The role term for an association crossing.
+     *
+     * One `use(…)` per relation arc joining this base to this association — so
+     * a self-association, where the base is related twice, contributes two, and
+     * the consumer's equation gets a name for each end. The INDEX is the
+     * position of that relation arc in the ASSOCIATION's `references` list;
+     * `landuse1b` shows it is not simply 0,1 (its list starts with two
+     * `obsolete` placeholders and its roles use 2 and 3), and `feeding1` shows
+     * each base lists only its own arcs while the association lists them all.
+     *
+     * The per-role ALIAS is derived — `<alias>_<role>` — because our model
+     * holds one alias per arc and Simile needs one per role. That is Simile's
+     * own convention (`attribute` + `role1` → `attribute_role1`), and the
+     * equation must use those names, which `check` verifies.
+     */
+    assocRole: function (a, pair) {
+      var self = this;
+      var refs = this.rolesOf(pair.assoc);
+      var mine = refs.filter(function (r) { return self.m.arcs[r].from === pair.base; });
+      var alias = (a.alias || '').trim();
+
+      return mine.map(function (r) {
+        var idx = refs.indexOf(r);
+        var name = self.roleAlias(alias, r);
+        return pair.dir === 'in_assoc'
+          ? 'use(' + idx + ',in_assoc,{' + name + '},list(1))'
+          : 'use(' + idx + ',in_base,' + name + ',1)';
+      }).join(',');
+    },
+
+    /** `<alias>_<role label>`, made safe to be a Prolog atom and an identifier. */
+    roleAlias: function (alias, roleArcId) {
+      var label = (this.m.arcs[roleArcId] || {}).label || 'role';
+      return alias + '_' + String(label).trim().replace(/\W+/g, '_');
+    },
+
+    /** Every name an association crossing gives the consumer's equation. */
+    assocNames: function (a, pair) {
+      var self = this;
+      var alias = (a.alias || '').trim();
+      return this.rolesOf(pair.assoc)
+        .filter(function (r) { return self.m.arcs[r].from === pair.base; })
+        .map(function (r) { return self.roleAlias(alias, r); });
+    },
+
     /** `centre=[x,y]` — our layout stores the centre already (`box()` reads x as cx). */
     centre: function (id) {
       var g = (this.m.layout || {})[id] || {};
@@ -378,12 +496,26 @@
       if (!fnId) return;
 
       var field = this.exprField(n.type);
-      var units = String((n.props || {}).units || '').trim() || '1';
+      // `units` is not decoration: it is how Simile knows what KIND of value the
+      // equation yields. A condition whose function says `units=1` compiles and
+      // then never filters — every association pair exists, and a ranking model
+      // returns 5,5,5,5 where it should return 4,3,2,1. Every condition in the
+      // 72-model corpus carries `boolean` (28) or `cond_spec` (9); none carries 1.
+      var units = String((n.props || {}).units || '').trim()
+        || (n.type === 'condition' ? 'boolean' : '1');
+      // The equation is ALWAYS parenthesised, and that is not cosmetic.
+      // `value=…` is a Prolog `=`, an xfx operator of priority 700, so neither
+      // argument may itself be a 700 operator — and every comparison is one.
+      // `value=a>b` therefore does not parse, and Simile drops the property
+      // rather than complaining: the component vanishes from the model, a
+      // membership condition silently stops filtering, and an association
+      // returns every pair. That cost an afternoon. Parentheses are harmless
+      // around anything, so they go on unconditionally.
       var props = [
         'complete=true',
         'name=' + atom('fn' + (++this.fnN)),
         'units=' + units,
-        'value=' + String((n.props || {})[field]).trim(),
+        'value=(' + String((n.props || {})[field]).trim() + ')',
       ];
 
       // A valve's function rides on its flow; `along` is where along the arc.
@@ -409,6 +541,17 @@
 
     emitArc: function (id) {
       var a = this.m.arcs[id];
+
+      // A role arc is Simile's `relation`, and its label is the role name — the
+      // name the consumer's equation will end up using as a suffix.
+      if (a.type === 'role') {
+        var rid = simId('arc', ++this.arcN);
+        this.relArc[id] = rid;
+        this.arcLines.push('arc(' + rid + ',' + this.vis[a.from] + ',' + this.vis[a.to]
+          + ',relation,' + list(['complete=true', 'name=' + atom(a.label || 'role')])
+          + ',' + list(['caption_offset=[0,0]']) + ').');
+        return;
+      }
 
       if (a.type === 'flow') {
         var valve = this.m.nodes[a.valve] || {};
@@ -443,15 +586,22 @@
       // The final segment lands on the consumer's equation and carries the
       // role: the alias exactly as the model holds it (the equation uses it
       // verbatim) and one `list(…)` wrapper per list-making boundary left.
-      var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
-      var dim = '1';
-      for (var i = 0; i < this.listCrossings(a.from, a.to); i++) dim = 'list(' + dim + ')';
+      var pair = this.assocPair(cross);
+      var role;
+      if (pair) {
+        role = this.assocRole(a, pair);
+      } else {
+        var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
+        var dim = '1';
+        for (var i = 0; i < this.listCrossings(a.from, a.to); i++) dim = 'list(' + dim + ')';
+        role = 'use(none,in_hierarchy,' + alias.trim() + ',' + dim + ')';
+      }
 
       var last = simId('arc', ++this.arcN);
       this.arcLines.push('arc(' + last + ',' + cursor + ',' + this.targetOf(a.to)
         + ',influence,' + list([
           'attached=[]', 'complete=true', 'name=' + atom('i' + (++this.infN)),
-          'role=[use(none,in_hierarchy,' + alias.trim() + ',' + dim + ')]',
+          'role=[' + role + ']',
         ]) + ',[]).');
       segs.push(last);
 
@@ -582,6 +732,21 @@
         self.emitSubmodel(id, out);
         // `links` sits with the submodel whose boundary the segments cross.
         if (self.links[id]) out.push('links(' + self.vis[id] + ',' + list(self.links[id]) + ').');
+
+        // `references` lists the relation arcs this submodel takes part in: all
+        // of them for an association, and its own for a base. The ORDER on the
+        // association is what the role indices point into, so it is written
+        // once, from `rolesOf`, and read back by `assocRole`.
+        var refs = self.isAssoc(id)
+          ? self.rolesOf(id)
+          : Object.keys(m.arcs).filter(function (r) {
+            return m.arcs[r].type === 'role' && m.arcs[r].from === id;
+          });
+        if (refs.length) {
+          out.push('references(' + self.vis[id] + ',' + list(refs.map(function (r) {
+            return 'local(' + self.relArc[r] + ')';
+          })) + ').');
+        }
       });
       Object.keys(m.nodes).forEach(function (id) {
         self.emitNode(id, out);
