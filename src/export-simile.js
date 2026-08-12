@@ -41,18 +41,54 @@
  * alias rather than the source's label. That correspondence is the reason this
  * conversion is as short as it is.
  *
- * ## What it will not do yet
+ * ## Submodels: one arc of ours becomes a chain of Simile's
  *
- * **Submodels.** Not because containment is hard, but because a *cross-boundary
- * influence* is: we store one arc end to end, Simile stores segments joined by
- * `border` nodes and paired in a `links(…)` fact (see `NOTE-export-to-simile.md`
- * §3, and DESIGN-diagram §13). Rather than emit a model that loads and is
- * quietly wrong, a model with submodels is refused by name.
+ * We store a cross-boundary influence as ONE arc end to end and derive the
+ * visual segments (DESIGN-diagram §13). Simile stores the segments. So export
+ * walks the containment tree from the source's scope up to the common ancestor
+ * and down to the target's, and emits one arc per level:
  *
- * That restriction also keeps us clear of the one question we cannot answer
- * ourselves — the dimensional term, `1` vs `list(1)` (§4 of the note). It only
- * arises when an influence crosses a boundary; within one level every reference
- * is a scalar, and `1` is right by construction.
+ *   - **Leaving** a submodel S: the current segment ends at a `border` node
+ *     INSIDE S, and the next starts at S's own node (which lives in S's parent).
+ *   - **Entering** a submodel S: the current segment ends at S's own node, and
+ *     the next starts at a `border` node inside S.
+ *   - Consecutive segments are paired in `links(S, [Upstream-Downstream, …])`,
+ *     recorded against the submodel whose boundary they cross. The pair is
+ *     ordered along the direction of influence.
+ *   - Only the LAST segment — the one landing on the consumer's function —
+ *     carries the `role`.
+ *
+ * Read off `landuse1b.pl` and `forest.pl` rather than guessed, including the
+ * three-segment case (`Next to` → `Patch`) which pins the ordering and shows
+ * the pairs recorded under two different submodels.
+ *
+ * A happy correspondence: Simile shares the inner segment of an outward
+ * crossing between several consumers (`arc00022` appears in two `links` pairs)
+ * and gives each consumer its own inner segment on the way in. That is exactly
+ * our ports rule — shared on the source side, per-arc on the target side — so
+ * our port map and Simile's segments describe the same thing.
+ *
+ * ## The dimensional term, measured rather than asked
+ *
+ * `NOTE-export-to-simile.md` §4 calls `1` vs `list(1)` the blocker. The
+ * reference models answer it for containment:
+ *
+ *   - **Inward** references are scalars: `use(none,in_hierarchy,state,1)`.
+ *   - **Outward** references are lists, and the alias carries brackets that the
+ *     consumer's equation uses VERBATIM: `use(none,in_hierarchy,{volume},list(1))`
+ *     beside an equation reading `sum({volume})`. Curly braces for variable
+ *     membership; square for fixed — `fire_rect` crosses a 200×300 grid and
+ *     writes `any(any([[lit]]))`, one bracket level per dimension.
+ *
+ * So the alias is emitted exactly as our model holds it, and an outward
+ * crossing of a multi-instance submodel whose alias is NOT bracketed is
+ * refused — that is a real modelling error (a list referenced as a scalar), and
+ * inventing the brackets here would edit the modeller's equations behind their
+ * back.
+ *
+ * What is still refused: **role arcs / association submodels**. Their roles use
+ * a different form (`use(0,in_base,…)`, `use(2,in_assoc,…)`) with per-end
+ * indices, and nothing in the editor produces them yet.
  *
  * Classic script; no imports/exports.
  */
@@ -118,9 +154,13 @@
     this.fnN = 0;
     this.infN = 0;
     this.cloudN = 0;
-    this.vis = {};   // our id -> Simile id of the VISIBLE node
-    this.fn = {};    // our id -> Simile id of the FUNCTION node (equation half)
-    this.attachedFn = {}; // Simile fn ids that hang off an arc, not the tree
+    this.borderN = 0;
+    this.vis = {};      // our id -> Simile id of the VISIBLE node
+    this.fn = {};       // our id -> Simile id of the FUNCTION node
+    this.borders = {};  // key -> {id, sub} for boundary stubs
+    this.extra = {};    // our submodel id -> [Simile ids of borders inside it]
+    this.links = {};    // our submodel id -> ['arcA-arcB', …]
+    this.arcLines = [];
   }
 
   Emitter.prototype = {
@@ -141,13 +181,6 @@
       var self = this;
       var problems = [];
 
-      var subs = Object.keys(m.submodels || {});
-      if (subs.length) {
-        problems.push('it has submodels (' + subs.map(function (s) {
-          return m.submodels[s].label || s;
-        }).join(', ') + '), and cross-boundary influences are not converted yet');
-      }
-
       Object.keys(m.nodes).forEach(function (id) {
         var n = m.nodes[id];
         var name = n.label || id;
@@ -163,7 +196,28 @@
 
       Object.keys(m.arcs).forEach(function (id) {
         var a = m.arcs[id];
-        if (a.type === 'role') problems.push('it has a role arc, which needs submodels');
+        if (a.type === 'role') {
+          problems.push('it has a role arc — association submodels are not converted yet');
+          return;
+        }
+        if (a.type !== 'influence') return;
+
+        // An outward crossing of a multi-instance submodel produces a LIST, and
+        // the alias has to say so, because the consumer's equation uses the
+        // alias verbatim. Adding the brackets here would silently disagree with
+        // the equation the modeller wrote.
+        var alias = (a.alias || '').trim();
+        var left = self.crossings(a.from, a.to).out.filter(function (s) { return self.isMulti(s); });
+        if (left.length && !/^[{[]/.test(alias)) {
+          // Square brackets for a fixed membership, curly for a variable one —
+          // the distinction the reference models draw, and the answer to the
+          // question §4 of the note could not resolve without them.
+          var sub = (self.m.submodels || {})[left[0]] || {};
+          var want = sub.kind === 'fixed-membership' ? '[' + alias + ']' : '{' + alias + '}';
+          problems.push('"' + alias + '" comes out of "' + (sub.label || left[0])
+            + '", which has more than one instance, so it arrives as a LIST. Reference it as '
+            + want + ' — in the alias, and in the equation that uses it');
+        }
       });
 
       if (problems.length) {
@@ -187,6 +241,9 @@
       var m = this.m;
       var self = this;
 
+      Object.keys(m.submodels || {}).forEach(function (id) {
+        self.vis[id] = simId('node', ++self.nodeN);
+      });
       Object.keys(m.nodes).forEach(function (id) {
         var n = m.nodes[id];
         // A valve has no visible node — it IS its equation, which the flow arc
@@ -194,6 +251,101 @@
         if (n.type !== 'valve') self.vis[id] = simId('node', ++self.nodeN);
         if (self.exprField(n.type)) self.fn[id] = simId('node', ++self.nodeN);
       });
+    },
+
+    // ---- containment ----------------------------------------------------
+
+    /** The submodel an element sits in, or null for the top level. */
+    parentOf: function (id) {
+      var el = this.m.nodes[id] || (this.m.submodels || {})[id];
+      return (el && el.parent) || null;
+    },
+
+    /**
+     * A valve lives wherever its flow does. It has no visible node, so its
+     * scope has to be read off the element itself.
+     */
+    scopeOf: function (id) {
+      return this.parentOf(id);
+    },
+
+    /** [innermost, …, outermost] — the submodels containing an element. */
+    chain: function (id) {
+      var out = [];
+      var p = this.scopeOf(id);
+      var guard = 0;
+      while (p && guard++ < 100) { out.push(p); p = this.parentOf(p); }
+      return out;
+    },
+
+    /**
+     * The boundaries an influence crosses: which submodels it leaves, then
+     * which it enters, in the order it does so.
+     */
+    crossings: function (from, to) {
+      var a = this.chain(from);
+      var b = this.chain(to);
+      var common = null;
+      for (var i = 0; i < a.length; i++) {
+        if (b.indexOf(a[i]) >= 0) { common = a[i]; break; }
+      }
+      var cutA = common ? a.indexOf(common) : a.length;
+      var cutB = common ? b.indexOf(common) : b.length;
+      return {
+        out: a.slice(0, cutA),                 // leaving, innermost first
+        into: b.slice(0, cutB).reverse(),      // entering, outermost first
+      };
+    },
+
+    /**
+     * Does a value coming OUT of this submodel arrive as a list?
+     *
+     * Yes when the submodel has more than one instance, and also when it has a
+     * `condition` — a conditional submodel may or may not exist for a given
+     * instance, so what leaves it is still a list. Read off `landuse1b.pl`,
+     * where `Forest` is `count=[]` yet exports `{volume}` as `list(1)`, and it
+     * is the one submodel there containing a condition.
+     */
+    isMulti: function (subId) {
+      var s = (this.m.submodels || {})[subId];
+      if (!s) return false;
+      if (s.kind && s.kind !== 'single') return true;
+      var m = this.m;
+      var self = this;
+      return Object.keys(m.nodes).some(function (id) {
+        return m.nodes[id].type === 'condition' && self.parentOf(id) === subId;
+      });
+    },
+
+    /** How many list-making boundaries an influence leaves — 0 for a scalar. */
+    listCrossings: function (from, to) {
+      var self = this;
+      return this.crossings(from, to).out.filter(function (s) {
+        return self.isMulti(s);
+      }).length;
+    },
+
+    /**
+     * The stub inside a submodel where a segment starts or ends. Shared per
+     * source on the way out, per arc on the way in — which is our own ports
+     * rule, and Simile's too (`arc00022` serves two consumers in `landuse1b`).
+     */
+    border: function (subId, key) {
+      var k = subId + '|' + key;
+      if (this.borders[k]) return this.borders[k];
+      var id = simId('node', ++this.nodeN);
+      this.borders[k] = id;
+      (this.extra[subId] = this.extra[subId] || []).push({
+        id: id,
+        name: 'brd' + (++this.borderN),
+        sub: subId,
+        owner: key,
+      });
+      return id;
+    },
+
+    link: function (subId, upstream, downstream) {
+      (this.links[subId] = this.links[subId] || []).push(upstream + '-' + downstream);
     },
 
     /** `centre=[x,y]` — our layout stores the centre already (`box()` reads x as cx). */
@@ -240,10 +392,10 @@
     },
 
     /** function → its own visible node: the pairing arc, which carries no role. */
-    emitPairing: function (id, out) {
+    emitPairing: function (id) {
       var n = this.m.nodes[id];
       if (n.type === 'valve' || !this.fn[id]) return;
-      out.push('arc(' + simId('arc', ++this.arcN) + ',' + this.fn[id] + ',' + this.vis[id]
+      this.arcLines.push('arc(' + simId('arc', ++this.arcN) + ',' + this.fn[id] + ',' + this.vis[id]
         + ',influence,' + list(['attached=[]', 'name=' + atom('i' + (++this.infN))]) + ',[]).');
     },
 
@@ -255,7 +407,7 @@
       return this.fn[ourId] || this.vis[ourId];
     },
 
-    emitArc: function (id, out) {
+    emitArc: function (id) {
       var a = this.m.arcs[id];
 
       if (a.type === 'flow') {
@@ -265,23 +417,125 @@
           'complete=true',
           'name=' + atom(valve.label || 'flow'),
         ];
-        out.push('arc(' + simId('arc', ++this.arcN) + ',' + this.vis[a.from] + ','
+        this.arcLines.push('arc(' + simId('arc', ++this.arcN) + ',' + this.vis[a.from] + ','
           + this.vis[a.to] + ',flow,' + list(props) + ',' + list(['caption_offset=[0,0]']) + ').');
         return;
       }
 
-      // An influence. The alias is what the consumer's equation says, and the
-      // trailing `1` is the dimensional term — correct by construction while
-      // every reference is a same-level scalar (see the header).
+      // An influence, possibly crossing boundaries — see the header. One arc of
+      // ours becomes one Simile arc per level, with the role on the last.
+      var cross = this.crossings(a.from, a.to);
+      var cursor = this.vis[a.from];
+      var segs = [];
+      var bounds = [];
+
+      cross.out.forEach((sub) => {
+        segs.push(this.plainSeg(cursor, this.border(sub, a.from)));
+        bounds.push(sub);
+        cursor = this.vis[sub];
+      });
+      cross.into.forEach((sub) => {
+        segs.push(this.plainSeg(cursor, this.vis[sub]));
+        bounds.push(sub);
+        cursor = this.border(sub, id);
+      });
+
+      // The final segment lands on the consumer's equation and carries the
+      // role: the alias exactly as the model holds it (the equation uses it
+      // verbatim) and one `list(…)` wrapper per list-making boundary left.
       var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
-      var iprops = [
-        'attached=[]',
-        'complete=true',
-        'name=' + atom('i' + (++this.infN)),
-        'role=[use(none,in_hierarchy,' + atom(alias) + ',1)]',
-      ];
-      out.push('arc(' + simId('arc', ++this.arcN) + ',' + this.vis[a.from] + ','
-        + this.targetOf(a.to) + ',influence,' + list(iprops) + ',[]).');
+      var dim = '1';
+      for (var i = 0; i < this.listCrossings(a.from, a.to); i++) dim = 'list(' + dim + ')';
+
+      var last = simId('arc', ++this.arcN);
+      this.arcLines.push('arc(' + last + ',' + cursor + ',' + this.targetOf(a.to)
+        + ',influence,' + list([
+          'attached=[]', 'complete=true', 'name=' + atom('i' + (++this.infN)),
+          'role=[use(none,in_hierarchy,' + alias.trim() + ',' + dim + ')]',
+        ]) + ',[]).');
+      segs.push(last);
+
+      // Pair each segment with the next, under the boundary between them.
+      for (var j = 0; j < bounds.length; j++) this.link(bounds[j], segs[j], segs[j + 1]);
+    },
+
+    /** A segment with no role — everything but the last one in a chain. */
+    plainSeg: function (from, to) {
+      var id = simId('arc', ++this.arcN);
+      this.arcLines.push('arc(' + id + ',' + from + ',' + to + ',influence,'
+        + list(['attached=[]', 'complete=true', 'name=' + atom('i' + (++this.infN))]) + ',[]).');
+      return id;
+    },
+
+    /** What a submodel's `multiplication_spec` says about its instances. */
+    spec: function (subId) {
+      var s = (this.m.submodels || {})[subId] || {};
+      if (s.kind === 'population') return '[type=population]';
+      if (s.kind === 'fixed-membership') {
+        var n = String((s.props || {}).dimensions || '').trim();
+        return '[count=[' + n + ']]';
+      }
+      return '[count=[]]';
+    },
+
+    /** Everything Simile should list as living inside this submodel. */
+    childrenOf: function (subId) {
+      var m = this.m;
+      var self = this;
+      var kids = [];
+
+      Object.keys(m.submodels || {}).forEach(function (id) {
+        if (m.submodels[id].parent === subId) kids.push(self.vis[id]);
+      });
+      Object.keys(m.nodes).forEach(function (id) {
+        if (self.parentOf(id) !== subId) return;
+        // A valve is not a node at all, and its function belongs to its arc.
+        if (m.nodes[id].type === 'valve') return;
+        if (self.vis[id]) kids.push(self.vis[id]);
+        if (self.fn[id]) kids.push(self.fn[id]);
+      });
+      (this.extra[subId] || []).forEach(function (b) { kids.push(b.id); });
+      return kids;
+    },
+
+    emitSubmodel: function (id, out) {
+      var s = this.m.submodels[id];
+      var g = (this.m.layout || {})[id] || {};
+      var w = g.w || 200;
+      var h = g.h || 130;
+      var x = (g.x || 0) - w / 2;
+      var y = (g.y || 0) - h / 2;
+
+      out.push('node(' + this.vis[id] + ',submodel,' + list(this.childrenOf(id)) + ','
+        + list([
+          'complete=true',
+          'multiplication_spec=' + this.spec(id),
+          'name=' + atom(s.label || id),
+          'separate=0',
+        ]) + ',' + list([
+          'bounding_box=[' + x + ',' + y + ',' + (x + w) + ',' + (y + h) + ']',
+          'caption_offset=[0,-8]',
+          'internal_extent=[0,0,' + w + ',' + h + ']',
+        ]) + ').');
+    },
+
+    /**
+     * A boundary stub. `along` is where it sits on the submodel's edge — purely
+     * cosmetic, and we hold the port as a point rather than a perimeter
+     * distance, so it is approximated from the port's position and nothing
+     * depends on it being right.
+     */
+    emitBorder: function (b, out) {
+      var ports = ((this.m.layout || {}).ports || {})[b.sub] || {};
+      var p = ports[b.owner];
+      var g = (this.m.layout || {})[b.sub] || {};
+      var along = 500;
+      if (p && g.w && g.h) {
+        var dx = (p.x - ((g.x || 0) - g.w / 2)) / g.w;
+        along = Math.max(0, Math.min(999, Math.round(dx * 1000)));
+      }
+      out.push('node(' + b.id + ',border,[],'
+        + list(['complete=true', 'name=' + atom(b.name)]) + ',[along=' + along + ']).');
     },
 
     run: function () {
@@ -290,6 +544,11 @@
       this.check();
       this.allocate();
 
+      // Arcs FIRST: walking them is what creates the boundary stubs, and a
+      // submodel cannot list its children until they all exist.
+      Object.keys(m.nodes).forEach(function (id) { self.emitPairing(id); });
+      Object.keys(m.arcs).forEach(function (id) { self.emitArc(id); });
+
       var out = [];
       out.push(SOURCE_LINE + atom(new Date().toString()) + ').');
       out.push('');
@@ -297,11 +556,16 @@
       // Everything at the top level, both halves of each pair. An attached
       // function is NOT a root — it belongs to its arc.
       var roots = [];
-      Object.keys(m.nodes).forEach(function (id) {
-        if (m.nodes[id].parent) return;
-        if (self.vis[id]) roots.push(self.vis[id]);
-        if (self.fn[id] && m.nodes[id].type !== 'valve') roots.push(self.fn[id]);
+      Object.keys(m.submodels || {}).forEach(function (id) {
+        if (!m.submodels[id].parent) roots.push(self.vis[id]);
       });
+      Object.keys(m.nodes).forEach(function (id) {
+        if (self.parentOf(id)) return;
+        if (m.nodes[id].type === 'valve') return;
+        if (self.vis[id]) roots.push(self.vis[id]);
+        if (self.fn[id]) roots.push(self.fn[id]);
+      });
+      (self.extra[null] || []).forEach(function (b) { roots.push(b.id); });
       out.push('roots(' + list(roots) + ').');
       out.push('');
 
@@ -314,16 +578,21 @@
       ]) + ').');
       out.push('');
 
+      Object.keys(m.submodels || {}).forEach(function (id) {
+        self.emitSubmodel(id, out);
+        // `links` sits with the submodel whose boundary the segments cross.
+        if (self.links[id]) out.push('links(' + self.vis[id] + ',' + list(self.links[id]) + ').');
+      });
       Object.keys(m.nodes).forEach(function (id) {
         self.emitNode(id, out);
         self.emitFunction(id, out);
       });
+      Object.keys(self.extra).forEach(function (sub) {
+        self.extra[sub].forEach(function (b) { self.emitBorder(b, out); });
+      });
+
       out.push('');
-
-      Object.keys(m.nodes).forEach(function (id) { self.emitPairing(id, out); });
-      Object.keys(m.arcs).forEach(function (id) { self.emitArc(id, out); });
-
-      return out.join('\n') + '\n';
+      return out.concat(this.arcLines).join('\n') + '\n';
     },
   };
 

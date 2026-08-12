@@ -281,6 +281,7 @@
   if (!Sienna.userData.get('models/landuse') && Sienna.demoLanduse) Sienna.demoLanduse();
   if (!Sienna.userData.get('models/farmers') && Sienna.demoFarmers) Sienna.demoFarmers();
   if (!Sienna.userData.get('models/lamos') && Sienna.demoLamos) Sienna.demoLamos();
+  if (!Sienna.userData.get('models/stand') && Sienna.demoStand) Sienna.demoStand();
 
   app.restore();
 
