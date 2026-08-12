@@ -181,13 +181,29 @@
     return splitTop(inner, ',').map(function (s) { return s.trim(); });
   }
 
-  /** Strip one layer of `'…'`, undoubling internal quotes. */
+  var ESCAPE = { n: '\n', t: '\t', r: '\r', a: '\x07', b: '\b', f: '\f', v: '\v' };
+
+  /**
+   * Strip one layer of `'…'`, undoubling internal quotes and decoding the
+   * backslash escapes.
+   *
+   * `\n` is not decoration. A third of `johadP`'s labels contain one —
+   * `name='water\ndepth'` is Simile wrapping a two-word label onto two lines —
+   * and leaving the escape undecoded turned every one of them into a name with
+   * a spurious letter in it (`water_ndepth`), which is a corrupted equation
+   * identifier, not a cosmetic blemish. Decoded, the newline becomes `_` by the
+   * ordinary naming rule and the label reads `water_depth`, which is what
+   * Simile's own equations already call it.
+   *
+   * Found by looking at an imported model on screen. No count of nodes and arcs
+   * would have shown it.
+   */
   function unquote(raw) {
     var t = String(raw == null ? '' : raw).trim();
-    if (t.charAt(0) === "'" && t.charAt(t.length - 1) === "'" && t.length > 1) {
-      return t.slice(1, -1).replace(/''/g, "'").replace(/\\\\/g, '\\');
-    }
-    return t;
+    if (t.charAt(0) !== "'" || t.charAt(t.length - 1) !== "'" || t.length < 2) return t;
+    return t.slice(1, -1).replace(/''/g, "'").replace(/\\(.)/g, function (m, c) {
+      return Object.prototype.hasOwnProperty.call(ESCAPE, c) ? ESCAPE[c] : c;
+    });
   }
 
   /**
