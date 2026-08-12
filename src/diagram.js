@@ -128,8 +128,146 @@
     return new Diagram(path);
   };
 
+  // =====================================================================
+  // WHAT NAMES AN INFLUENCE SUPPLIES (§14.1, §4)
+  // =====================================================================
+  //
+  // An influence carries a value into the target's equation under a NAME, and
+  // two different consumers need to know which name: the completeness check
+  // (`src/equation-check.js`, to colour an element red) and the Simile exporter
+  // (`src/export-simile.js`, to refuse a model whose equation names an end that
+  // will not exist). They must not answer it differently, so it is answered
+  // once, here.
+  //
+  // These are STATICS taking a plain model object rather than instance methods,
+  // because the exporter works on a detached model and has no Diagram to ask.
+  //
+  // Two things make it more than "read the alias":
+  //
+  //   1. **Brackets are not part of the name.** An outward crossing of a
+  //      multi-instance submodel stores its alias bracketed — `[biomass]`,
+  //      `{stored_water}` — because that is what the equation must WRITE. But
+  //      the equation parser reports the reference inside as `biomass`, so a
+  //      comparison against the stored alias fails in both directions at once:
+  //      the name looks unsupplied and the arrow looks unused. Our own `stand`
+  //      fixture — which runs correctly on the Simile engine — was reported red
+  //      on both counts.
+  //   2. **An association renames, once per role.** We hold one alias per arc;
+  //      a crossing into or out of an association supplies `<alias>_<role>` for
+  //      each role arc joining that base to that association (Simile's own
+  //      convention). `attribute` crossing into a self-association arrives as
+  //      `attribute_higher` AND `attribute_lower`, and an equation using
+  //      neither is a real error worth reporting.
+
+  function modelParent(model, id) {
+    var el = (model.nodes || {})[id] || (model.submodels || {})[id];
+    return el && el.parent != null ? el.parent : null;
+  }
+
+  /** [innermost, …, outermost] — the submodels containing an element. */
+  function modelChain(model, id) {
+    var out = [];
+    var p = modelParent(model, id);
+    while (p != null && out.indexOf(p) < 0) {
+      out.push(p);
+      p = modelParent(model, p);
+    }
+    return out;
+  }
+
+  /**
+   * The boundaries an arc crosses: which submodels it leaves, then which it
+   * enters, in the order it does so.
+   */
+  Diagram.crossings = function (model, from, to) {
+    var a = modelChain(model, from);
+    var b = modelChain(model, to);
+    var common = null;
+    for (var i = 0; i < a.length; i++) {
+      if (b.indexOf(a[i]) >= 0) { common = a[i]; break; }
+    }
+    var cutA = common ? a.indexOf(common) : a.length;
+    var cutB = common ? b.indexOf(common) : b.length;
+    return {
+      out: a.slice(0, cutA),                 // leaving, innermost first
+      into: b.slice(0, cutB).reverse(),      // entering, outermost first
+    };
+  };
+
+  /**
+   * The role arcs pointing AT this submodel, in a stable order — which is what
+   * makes it an association (§4: inferred from role arcs, never stored).
+   */
+  Diagram.rolesOf = function (model, subId) {
+    var arcs = model.arcs || {};
+    return Object.keys(arcs).filter(function (id) {
+      return arcs[id].type === 'role' && arcs[id].to === subId;
+    });
+  };
+
+  Diagram.isAssociation = function (model, subId) {
+    return Diagram.rolesOf(model, subId).length > 0;
+  };
+
+  /**
+   * If a crossing is between an association and one of its bases, say which way
+   * round. Null for an ordinary containment crossing.
+   */
+  Diagram.associationCrossing = function (model, cross) {
+    if (!cross.out.length || !cross.into.length) return null;
+    var left = cross.out[cross.out.length - 1];
+    var entered = cross.into[0];
+    function joins(assoc, base) {
+      return Diagram.rolesOf(model, assoc).some(function (r) {
+        return model.arcs[r].from === base;
+      });
+    }
+    if (Diagram.isAssociation(model, entered) && joins(entered, left)) {
+      return { dir: 'in_base', assoc: entered, base: left };
+    }
+    if (Diagram.isAssociation(model, left) && joins(left, entered)) {
+      return { dir: 'in_assoc', assoc: left, base: entered };
+    }
+    return null;
+  };
+
+  /** `<alias>_<role label>`, made safe to be an identifier. */
+  Diagram.roleAlias = function (alias, roleLabel) {
+    return alias + '_' + String(roleLabel == null ? 'role' : roleLabel)
+      .trim().replace(/\W+/g, '_');
+  };
+
+  /**
+   * Every name an influence supplies to its target's equation — bare, as the
+   * equation parser reports a reference. Usually one; one per role across an
+   * association.
+   */
+  Diagram.namesSuppliedBy = function (model, arcId) {
+    var arc = (model.arcs || {})[arcId];
+    if (!arc || arc.type !== 'influence') return [];
+
+    var source = (model.nodes || {})[arc.from] || (model.submodels || {})[arc.from] || {};
+    var alias = String(arc.alias != null ? arc.alias : (source.label || '')).trim();
+    // The brackets say the value arrives as a LIST; the name is what is inside.
+    var bare = alias.replace(/^[{[]+|[}\]]+$/g, '').trim();
+    if (!bare) return [];
+
+    var cross = Diagram.crossings(model, arc.from, arc.to);
+    var pair = Diagram.associationCrossing(model, cross);
+    if (!pair) return [bare];
+
+    return Diagram.rolesOf(model, pair.assoc)
+      .filter(function (r) { return model.arcs[r].from === pair.base; })
+      .map(function (r) { return Diagram.roleAlias(bare, (model.arcs[r] || {}).label); });
+  };
+
   Diagram.prototype = {
     constructor: Diagram,
+
+    /** Every name an influence supplies to its target's equation. */
+    namesSuppliedBy: function (arcId) {
+      return Diagram.namesSuppliedBy(this.model(), arcId);
+    },
 
     // ---- the schema (the notation; nothing about it is hard-wired here) ----
 

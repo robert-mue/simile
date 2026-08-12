@@ -253,7 +253,7 @@
         // should use rather than letting the model compile into nonsense.
         var pr = self.assocPair(cr);
         if (pr) {
-          var names = self.assocNames(a, pr);
+          var names = self.assocNames(a, pr, id);
           var eq = String((m.nodes[a.to] || {}).props
             ? (m.nodes[a.to].props[self.exprField(m.nodes[a.to].type)] || '') : '');
           if (names.length && !names.some(function (n) { return eq.indexOf(n) >= 0; })) {
@@ -430,37 +430,23 @@
     // our model (§4) and in Simile's alike, where it is simply a submodel that
     // `relation` arcs point at. Two systems, one inference.
 
-    /** The role arcs pointing at this submodel, in a stable order. */
+    // These four now DELEGATE to the model layer (`Sienna.Diagram`'s statics),
+    // because the completeness check needs the same answers — which names an
+    // influence supplies — to decide whether to colour an element red. Two
+    // copies of "an association renames once per role" would drift, and the
+    // first symptom would be a model that draws black and refuses to export.
+    // The statics take a plain model rather than a Diagram precisely so this
+    // file, which works on a detached one, can use them.
     rolesOf: function (subId) {
-      var m = this.m;
-      return Object.keys(m.arcs).filter(function (id) {
-        return m.arcs[id].type === 'role' && m.arcs[id].to === subId;
-      });
+      return Sienna.Diagram.rolesOf(this.m, subId);
     },
 
     isAssoc: function (subId) {
-      return this.rolesOf(subId).length > 0;
+      return Sienna.Diagram.isAssociation(this.m, subId);
     },
 
-    /**
-     * If this crossing is between an association and one of its bases, say
-     * which way round. Returns null for an ordinary containment crossing.
-     */
     assocPair: function (cross) {
-      if (cross.out.length < 1 || cross.into.length < 1) return null;
-      var left = cross.out[cross.out.length - 1];
-      var entered = cross.into[0];
-      var self = this;
-      var joins = function (assoc, base) {
-        return self.rolesOf(assoc).some(function (r) { return self.m.arcs[r].from === base; });
-      };
-      if (this.isAssoc(entered) && joins(entered, left)) {
-        return { dir: 'in_base', assoc: entered, base: left };
-      }
-      if (this.isAssoc(left) && joins(left, entered)) {
-        return { dir: 'in_assoc', assoc: left, base: entered };
-      }
-      return null;
+      return Sienna.Diagram.associationCrossing(this.m, cross);
     },
 
     /**
@@ -508,17 +494,12 @@
 
     /** `<alias>_<role label>`, made safe to be a Prolog atom and an identifier. */
     roleAlias: function (alias, roleArcId) {
-      var label = (this.m.arcs[roleArcId] || {}).label || 'role';
-      return alias + '_' + String(label).trim().replace(/\W+/g, '_');
+      return Sienna.Diagram.roleAlias(alias, (this.m.arcs[roleArcId] || {}).label);
     },
 
     /** Every name an association crossing gives the consumer's equation. */
-    assocNames: function (a, pair) {
-      var self = this;
-      var alias = (a.alias || '').trim();
-      return this.rolesOf(pair.assoc)
-        .filter(function (r) { return self.m.arcs[r].from === pair.base; })
-        .map(function (r) { return self.roleAlias(alias, r); });
+    assocNames: function (a, pair, arcId) {
+      return Sienna.Diagram.namesSuppliedBy(this.m, arcId);
     },
 
     /** `centre=[x,y]` — our layout stores the centre already (`box()` reads x as cx). */

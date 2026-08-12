@@ -92,13 +92,26 @@
    * The names available to this element's equations: one per influence arriving
    * at it, being that arc's alias (§14.1).
    */
+  /**
+   * The names the influences into `id` supply to its equation.
+   *
+   * Asked of the MODEL LAYER rather than read off `arc.alias` here, because the
+   * alias is not always the name: an outward crossing stores it bracketed
+   * (`[biomass]`, which the equation writes but the parser reports as
+   * `biomass`), and an association crossing supplies one name per role
+   * (`attribute_higher` and `attribute_lower` from one `attribute`). Reading
+   * the raw alias made `stand` and `mixed` — two fixtures that run correctly on
+   * the Simile engine — report both "undeclared" and "unused" for the same
+   * arrow, which is the signature of comparing two spellings of one thing.
+   */
   function suppliedNames(d, id) {
     var out = [];
     d.arcsAt(id).forEach(function (a) {
       var arc = d.get(a);
       if (!arc || arc.type !== 'influence' || arc.to !== id) return;
-      var name = arc.alias || d.label(arc.from);
-      if (name) out.push({ name: name, arc: a });
+      d.namesSuppliedBy(a).forEach(function (name) {
+        out.push({ name: name, arc: a });
+      });
     });
     return out;
   }
@@ -176,13 +189,25 @@
       }
     });
 
+    // `unused` is a question about the ARROW, not about each name — and across
+    // an association one arrow supplies several. `demo-mixed`'s ranking uses
+    // `count({one_lower})` and never mentions `one_higher`, which is correct
+    // and runs correctly; the arrow is doing its job. So an influence is unused
+    // only when the equation uses NONE of the names it brings.
+    var byArc = {};
     supplied.forEach(function (s) {
-      if (!usedNames[s.name]) {
-        out.push({
-          id: id, label: label, kind: 'unused', name: s.name, arc: s.arc,
-          message: 'an influence supplies "' + s.name + '", which the equation does not use',
-        });
-      }
+      var e = byArc[s.arc] = byArc[s.arc] || { names: [], used: false };
+      e.names.push(s.name);
+      if (usedNames[s.name]) e.used = true;
+    });
+    Object.keys(byArc).forEach(function (arc) {
+      if (byArc[arc].used) return;
+      var names = byArc[arc].names;
+      out.push({
+        id: id, label: label, kind: 'unused', name: names[0], arc: arc,
+        message: 'an influence supplies "' + names.join('" / "')
+                 + '", which the equation does not use',
+      });
     });
 
     return out;

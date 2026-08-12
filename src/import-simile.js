@@ -812,52 +812,62 @@
 
       // Brackets say "this is a list" and belong to the containment case; an
       // association role carries them on the `use` term, not in our alias.
-      var bare = u.alias.replace(/^[{[]+|[}\]]+$/g, '');
-      var role = this.roleNameFor(u, a);
+      var bare = u.name;
+      var role = this.roleNameFor(u);
       if (role) {
         var suffix = '_' + String(role).replace(/[^A-Za-z0-9_]/g, '_');
         if (bare.length > suffix.length && bare.slice(-suffix.length) === suffix) {
-          bare = bare.slice(0, -suffix.length);
+          return bare.slice(0, -suffix.length);
         }
       }
-      // The ordinal convention, and the `_0` Simile adds to break a collision
-      // between two derived names.
+      // The ORDINAL convention — `var12` / `var12_0` in `hexagon` (2003), where
+      // the first end is unadorned and later ones numbered. Only reached when no
+      // role name was stripped, and that guard matters: `Molusc`'s
+      // `remaining_surplus_4_link` is `remaining_surplus_4` under role `link`,
+      // and stripping the `_4` as well renamed a variable that exists.
       return bare.replace(/_\d+$/, '');
     },
 
     /**
-     * The role name a `use(…)` index points at: the position in the
-     * ASSOCIATION's `references` list, which `landuse1b` proves is not simply
-     * 0,1 — its list starts with two `obsolete` placeholders.
+     * The role name whose suffix this alias carries.
+     *
+     * The obvious route is the `use(…)` INDEX — a position in the association's
+     * `references` list, which `landuse1b` proves is not simply 0,1 (its list
+     * starts with two `obsolete` placeholders). But finding the association from
+     * the arc alone is guesswork when the crossing also climbs the containment
+     * tree, and `Molusc_june06` has five relations named `link`, `Link`,
+     * `link2`, `link 3`, `link 4` — pick the wrong list and `countryID_link`
+     * keeps its suffix and then gets another one appended.
+     *
+     * So the SUFFIX MATCH goes first, because it is self-validating: a name is
+     * only stripped when the alias actually ends with it. The index is the
+     * fallback, for the case where a modeller's alias happens not to follow the
+     * convention. Longest match wins, so `link2` beats nothing and `link` does
+     * not eat the tail of `link2`.
      */
-    roleNameFor: function (u, a) {
+    roleNameFor: function (u) {
       var self = this;
-      if (u.index == null) return null;
-      // The association is the submodel at whichever end of this crossing is
-      // the target of relation arcs.
-      var cands = [this.parent[a.to], this.parent[a.from]];
-      var found = null;
-      cands.forEach(function (sub) {
-        if (found || sub == null || !self.refs[sub]) return;
-        var arcId = self.refs[sub][u.index];
-        if (arcId && self.A[arcId] && self.A[arcId].type === 'relation') {
-          found = unquote(self.A[arcId].p.name || '');
-        }
-      });
-      if (found) return found;
-      // No usable `references`: fall back to the longest relation name the
-      // alias actually ends with.
       var best = null;
       this.arcIds.forEach(function (id) {
         if (self.A[id].type !== 'relation') return;
         var n = unquote(self.A[id].p.name || '').replace(/[^A-Za-z0-9_]/g, '_');
         if (!n) return;
-        var bare = u.alias.replace(/^[{[]+|[}\]]+$/g, '');
-        if (bare.length > n.length + 1 && bare.slice(-(n.length + 1)) === '_' + n) {
+        if (u.name.length > n.length + 1 && u.name.slice(-(n.length + 1)) === '_' + n) {
           if (!best || n.length > best.length) best = n;
         }
       });
-      return best;
+      if (best) return best;
+
+      if (u.index == null) return null;
+      var found = null;
+      Object.keys(this.refs).forEach(function (sub) {
+        if (found) return;
+        var arcId = self.refs[sub][u.index];
+        if (arcId && self.A[arcId] && self.A[arcId].type === 'relation') {
+          found = unquote(self.A[arcId].p.name || '');
+        }
+      });
+      return found;
     },
 
     /** Everything present in the file that we did not carry across. */
@@ -888,21 +898,46 @@
     if (!m) return null;
     var f = splitTop(m[1], ',').map(function (s) { return s.trim(); });
     if (f.length < 4) return null;
-    // `usr(x)` wraps an alias the modeller typed rather than one Simile
-    // defaulted (question 1). Both spellings appear in the SAME file, so it
-    // cannot be distinguishing anything the equation sees; we emit bare aliases
-    // and read it as decoration.
-    var alias = String(f[2]).trim();
-    var usr = /^usr\s*\((.*)\)$/.exec(alias);
-    if (usr) alias = usr[1].trim();
-    alias = unquote(alias);   // after the unwrap: `usr('Day_Hrs')` is both
-
+    var parts = aliasParts(f[2]);
     return {
       index: f[0] === 'none' ? null : parseInt(f[0], 10),
       dir: f[1],
-      alias: alias,
+      alias: parts.open + parts.name + parts.close,   // brackets kept: they mean "list"
+      name: parts.name,                               // the identifier alone
       dim: f[3],
     };
+  }
+
+  /**
+   * Pull a `use(…)` alias apart into its brackets and the identifier inside.
+   *
+   * Three wrappers, in this order, and the order is the point:
+   *
+   *   `usr(…)`  the modeller typed this name rather than Simile defaulting it
+   *             (question 1 of the questions note). Decoration; we emit bare
+   *             aliases in both directions.
+   *   `{…}` `[…]`  the value arrives as a LIST. Kept — our model stores them and
+   *             the equation writes them.
+   *   `'…'`    a quoted atom, because the name has a space or a capital in it.
+   *
+   * Unquoting BEFORE unbracketing is what a first version did, and it silently
+   * did nothing: `{'Pheromone_has'}` does not start with a quote, so the quotes
+   * survived into the stored alias and every comparison against the equation
+   * failed. Then the identifier is legalised the same way a label is — Simile's
+   * own equations already use the substituted form.
+   */
+  function aliasParts(raw) {
+    var t = String(raw == null ? '' : raw).trim();
+    var usr = /^usr\s*\((.*)\)$/.exec(t);
+    if (usr) t = usr[1].trim();
+
+    var open = (/^[{[]+/.exec(t) || [''])[0];
+    var close = (/[}\]]+$/.exec(t) || [''])[0];
+    var inner = unquote(t.slice(open.length, t.length - close.length).trim());
+
+    var name = inner.replace(/[^A-Za-z0-9_]/g, '_');
+    if (/^[0-9]/.test(name)) name = '_' + name;
+    return { open: open, close: close, name: name };
   }
 
   /** `'[203,54,455,260]'` → `[203,54,455,260]`. */

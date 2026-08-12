@@ -1052,10 +1052,75 @@ the default the exporter supplies — `1`, or `boolean` for a condition — so e
 fixture came back carrying a `units` field it never had. Dropped, and all six
 fixtures are now true fixed points, not merely equal in structure.
 
+**35. The red elements — a checker bug, not an import bug**
+*(2026-08-12)*
+An imported `johadP` drew ten elements red. None of them was wrong. Chasing
+them found **one bug in the completeness check with two faces**, and it was
+never about importing at all: our own `stand` and `mixed` fixtures — which run
+correctly on the Simile engine — were reported red the same way.
+
+The check compared the equation's references against `arc.alias` raw. But the
+alias is not always the name:
+
+- **Brackets are not part of the name.** An outward crossing stores `[biomass]`,
+  because that is what the equation must write; the parser reports the reference
+  inside as `biomass`. So the same arrow was reported BOTH "undeclared" and
+  "unused" — the signature of comparing two spellings of one thing.
+- **An association renames, once per role.** One `attribute` arrives as
+  `attribute_higher` and `attribute_lower`. The checker knew nothing about roles.
+
+Fixed by moving "which names does this influence supply" into the **model
+layer** — `Sienna.Diagram.namesSuppliedBy(model, arcId)`, with `crossings`,
+`rolesOf`, `isAssociation`, `associationCrossing` and `roleAlias` alongside it.
+They are statics taking a plain model, because the exporter works on a detached
+one and now calls them too. Two copies of "an association renames once per role"
+would drift, and the first symptom would be a model that draws black and refuses
+to export.
+
+One rule changed while doing it: **`unused` is a question about the ARROW, not
+about each name.** Across an association one arrow supplies several, and
+`demo-mixed` legitimately uses `count({one_lower})` and never mentions
+`one_higher`. An influence is unused only when the equation uses none of what it
+brings.
+
+*Three import bugs fell out of the same audit*, all found by running the checker
+over all 72 models rather than by reading code:
+
+- **A quoted atom inside brackets was never unquoted.** `{'Pheromone_has'}` does
+  not start with a quote, so the quotes survived into the alias and every
+  comparison failed. Unbracket first, then unquote, then legalise.
+- **The role-suffix strip trusted the `use(…)` index.** `Molusc_june06` has five
+  relations named `link`, `Link`, `link2`, `link 3`, `link 4`; picking the wrong
+  list left `countryID_link` intact and then appended `_link` again. The suffix
+  match now goes first because it is self-validating.
+- **The ordinal strip was too eager.** It exists for `hexagon`'s
+  `var12` / `var12_0`, but it was also eating the `_4` of
+  `remaining_surplus_4_link` — renaming a variable that exists. It now applies
+  only when no role name was stripped.
+
+*Where the corpus stands after all that*, audited element by element:
+
+| findings | what they are |
+|---|---|
+| 1204 `missing` | elements genuinely blank in the source. `Molusc_june06` alone has 932 of 1295 — it is a model driven from parameter files. Real. |
+| 135 `syntax` | **our equation grammar, not the models.** `century_gc` accounts for 40. Two constructs stand out: local bindings (`off=sqrt(3/4), x+…`) and quoted identifiers (`'Gs'-'Gs_0'`). `test/corpus.js` was harvested from three reference models and passes 1488/1500; the full catalogue says that corpus is **not representative**. |
+| 87 `undeclared` / 68 `unused` | down from 156/137. Not yet characterised one by one. |
+
+33 of 72 models now audit completely clean, up from 31 before the fixes and from
+a checker that could not be trusted at all on any model with a list crossing.
+
 ---
 
 ## Known gaps and loose ends
 
+- **The equation grammar's corpus is not representative.** 135 syntax findings
+  across the 72 catalogue models, against 12 known exclusions in
+  `test/corpus.js`. Local bindings and quoted identifiers are the two visible
+  classes. Item 35.
+- **87 `undeclared` and 68 `unused` findings across the corpus are
+  uncharacterised.** Some will be real (Simile models do carry idle arrows),
+  some will be further alias-spelling bugs of the kind item 35 found three of.
+  Worth a pass, not yet had one.
 - **One alias per influence, where an association needs one per role.** See item
   33: six catalogue models re-export with equations naming ends that no longer
   exist, and the exporter refuses rather than shipping them. The fix is a model
