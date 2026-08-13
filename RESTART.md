@@ -9,8 +9,8 @@ need to get moving again.*
 
 ## Where things stand
 
-**Everything is committed and pushed.** Working tree clean at `7d1e2d3` on
-`main`. Nothing is half-finished, and there is no branch to remember.
+**Everything is committed and pushed.** Working tree clean on `main`; run
+`git log --oneline -1` for where. Nothing is half-finished, and there is no branch to remember.
 
 The loop is closed in both directions: a model built in this editor converts to
 Simile Prolog, uploads, compiles and runs on the Simile engine with its results
@@ -34,8 +34,8 @@ No build, no npm, no server. Open each page and read the coloured bar.
    completeness check still agree with all six demo fixtures.
 2. **`test/index.html`** — needs nothing. The equation grammar over the corpus.
 3. **`test/roundtrip.html`** — press the button and select **all 72 `.pl` files**
-   in `~/Projects/Simile_model_catalogue`. This is the slow one and the one that
-   matters most.
+   in **`reference/catalogue/`** (they are in the repo now). This is the slow one
+   and the one that matters most.
 
 Then open `index.html` itself and check the devtools console is clean.
 
