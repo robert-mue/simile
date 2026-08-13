@@ -1284,6 +1284,54 @@ This is the same blind spot that hid the newline escape and the `unquote` bug on
 12 August — both directions consistently wrong, round trip green throughout. The
 audit page now says so, flags the two rows, and lists what each lost.
 
+**41. `prime` and `lamos1a` re-saved — §A4 answered, and 831 phantom elements**
+*(2026-08-13)*
+Two more re-saves, chosen for the constructs the first four did not reach.
+
+**`alarm` is current, and we now know what it is.** Simile 7.4 writes it
+unchanged. Both of `prime`'s alarms hold a **boolean** and are **referenced by
+name in sibling equations** — `done_checks` in `if done_checks then 0 else
+prev(0)+1`, `found_prime` in `if found_prime then start_prime else prev(0)+2`.
+So it is a value-bearing element with its own symbol, not a membership
+condition: `prime` contains no `condition` node at all. Its field model is
+`condition`'s — one boolean expression — which is what an implementation would
+need. Still refused on export, because adding a node type is a schema change.
+
+**§A4 answered: `border` is current, the plain `variable` is legacy.** The
+questions note guessed exactly this and asked for confirmation. `lamos1a` (2003,
+format 7.1) has **142 variables and no borders**; its 2026 re-save has **60
+variables and 82 borders**, the 82 being precisely the difference. Simile
+converts them on load.
+
+**And that was a bug of ours worth 831 phantom elements.** We read the legacy
+spelling as real variables with no equation: 82 in `lamos1a`, 82 in `lamos1b`,
+and **749 in `Molusc_june06`**. They are identifiable without trusting the type
+— a `links` pair names the segments either side of one boundary, and of the two
+inner ends one is the submodel's own node and the other is the stub — so
+`buildChains` now marks them, guarded on carrying no equation so a real element
+can never be mistaken for one.
+
+What it corrects:
+
+| | before | after |
+|---|---|---|
+| `lamos1a` elements | 176 | 94 |
+| `Molusc_june06` elements | 1295 | 546 |
+| corpus-wide `missing` findings | 1204 | 267 |
+| refused: "element left unfinished" | 14 | 10 |
+| refused: association alias | 6 | 10 |
+
+The four 2003 files were never unfinished — they were mis-read. Their real
+blocker was the association convention all along. Totals are unchanged at **45
+identical / 0 differ / 27 refused**, and `test/corpus.js` is byte-identical,
+since a stub carries no equation.
+
+**Both models now read the same across eras.** `prime` is structurally identical
+2008 vs 2026. `lamos1a` gains and loses **nothing** across twenty-three years and
+four format revisions: all 21 remaining differences are Simile's own
+pretty-printing (` 0.005` for `0.005`, a space before `else`) and the units it
+derives.
+
 ---
 
 ## Known gaps and loose ends

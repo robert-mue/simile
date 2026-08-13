@@ -521,10 +521,30 @@
       var self = this;
       this.prev = {};
       this.isUpstream = {};
+      this.stub = {};
       Object.keys(this.links).forEach(function (sub) {
         self.links[sub].forEach(function (pair) {
           self.prev[pair[1]] = pair[0];
           self.isUpstream[pair[0]] = true;
+
+          // A boundary stub, whatever the file calls it. 9.0 and later declare
+          // it `border`; PRE-9.0 FILES WRITE A PLAIN `variable` in the same
+          // position, which §A4 of the questions note guessed was legacy and
+          // Simile 7.4 confirms by converting them on load — `lamos1a` has 142
+          // variables and no borders in 2003, and 60 variables and 82 borders
+          // after a re-save, the 82 being exactly the difference.
+          //
+          // They are identifiable without trusting the type: a `links` pair
+          // names the segments either side of one boundary, and of the two
+          // inner ends one is the submodel's own node and the other is the
+          // stub. Reading them as real variables gave `lamos1a` 82 phantom
+          // elements with no equation — which is also why it was refused for
+          // "element left unfinished".
+          var up = self.A[pair[0]];
+          var down = self.A[pair[1]];
+          if (!up || !down) return;
+          if (down.from === sub) self.stub[up.to] = true;        // leaving
+          else if (up.to === sub) self.stub[down.from] = true;   // entering
         });
       });
     },
@@ -620,8 +640,12 @@
         var n = self.N[id];
         if (n.type === 'submodel' || n.type === 'function') return;
         // A border is a segment stub, not an element: we derive ports from
-        // containment instead (§13), so they are rebuilt on the way out.
+        // containment instead (§13), so they are rebuilt on the way out. The
+        // `stub` test catches the pre-9.0 spelling, where the same thing is
+        // written as a plain `variable` — guarded on carrying no equation, so
+        // a real element can never be mistaken for one.
         if (n.type === 'border') return;
+        if (self.stub[id] && !self.ownerOf2(id)) return;
 
         var type = NODE_TYPE[n.type] || INFERRED_TYPE[n.type];
         if (!type) {
