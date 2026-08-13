@@ -1212,6 +1212,56 @@ the property dialog reads "Number of instances / 9,9", and a deliberately broken
 `4, 9)` is still caught. Corpus-wide syntax findings 25 → 21, which is exactly
 the four bogus ones.
 
+**39. Four models re-saved by Simile 7.4 — what eighteen years changed**
+*(2026-08-13)*
+Robert opened `ranking1`, `hexagon`, `feeding1` and `johadP` in **current Simile,
+ran them, and exported model declarations** to
+`~/Projects/Simile_model_catalogue_2026/`. All four loaded and ran with no
+warnings. Diffing 2008 (format 9.0) against 2026 (format **11.4**) answers by
+observation what `NOTE-questions-for-developer.md` was asking by email.
+
+**Settled — the population symbols (§A2a).** `creation`, `loss`, `immigration`
+are written **unchanged** by 11.4. The three spellings we inferred are current,
+not legacy. What the re-save cannot settle is whether OUR palette names map onto
+them, or the `migrator` field-label question (§A2b) — those are about meaning,
+not spelling, and still want the developer.
+
+**Settled — association aliases, and it kills the hypothesis.** The `use(…)`
+terms are **byte-identical** across eighteen years. `hexagon` keeps its ordinal
+`a` / `a_0`, `feeding1` keeps two differently-named ends (`pop_size` and
+`biomass`), `ranking1` keeps `attribute_role1` / `attribute_role2`. Current
+Simile **preserves whatever the modeller typed and imposes no convention at
+all** — so re-casting these models would never have fixed them, and our
+exporter's derived `<alias>_<role>` is imposing a rule Simile does not have.
+That is ours to fix, in the model layer.
+
+**The re-save changes nothing for either blocker.** Running the round trip over
+the 2026 files gives the same four refusals for the same two causes.
+
+**What 11.4 adds.** Coordinates are floats (`centre=[ 148.0, 102.0]`);
+`attached=[…]` is written on **every** flow segment, not only the one with the
+rate; `along=` on every border; and — the one semantic addition — Simile now
+**derives units**, writing `units=1/day` on flow rates that carried `units=1` in
+2008. Eight in `johadP`, which is exactly its eight flow chains, and two in
+`hexagon`. Our exporter writes `1` and its models run, so this is informational,
+but Simile now has an opinion about rate units where it previously had none.
+
+**And it found a bug that only 11.4 could.** An influence *out of* a flow's rate
+is drawn from the flow ARC in 9.0 and from the rate FUNCTION in 11.4. Reading
+the newer spelling as a function-to-its-own-node pairing cost `johadP`
+**twelve arcs** — every influence into or out of a rate — and corrupted
+`ownerOf` besides. Fixed in `pairFunctions`, which now collects the rate
+functions first and exempts them.
+
+**After the fix, our importer reads 9.0 and 11.4 as the same model.**
+`ranking1` and `feeding1` are structurally identical across the two eras;
+`hexagon` and `johadP` differ only by the `units=1/day` Simile itself derived.
+
+*Also done:* the exporter's `source(…)` line now says
+`program='Simile v7.4',version=11.4,edition=free` — measured from a current
+file rather than copied from an old demo, and `free` rather than the inherited
+`enterprise`.
+
 ---
 
 ## Known gaps and loose ends

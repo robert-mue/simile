@@ -450,30 +450,60 @@
     },
 
     /**
-     * Which visible element each `function` node belongs to. Two spellings, both
-     * in the catalogue: an influence from the function to its owner, and (for a
-     * flow's rate) either `attached=[fn]` on the arc or an influence from the
-     * function to the ARC id.
+     * Which visible element each `function` node belongs to.
+     *
+     * An influence FROM a function is normally the pairing that joins an
+     * equation to the variable it belongs to — but not when that function is a
+     * flow's RATE. A rate can feed another equation, and where Simile draws
+     * that influence changed between file formats:
+     *
+     *   - **9.0** drew it from the flow ARC (`edinburgh1`'s
+     *     `arc(arc00047,arc00045,node00027,influence,…)`).
+     *   - **11.4** draws it from the rate FUNCTION.
+     *
+     * Reading the newer spelling as a pairing cost `johadP` twelve arcs — every
+     * influence into or out of a flow rate — and set `ownerOf` to nonsense
+     * besides. So the rate functions are collected FIRST, and pass three skips
+     * them. Found by diffing a 2008 model against its 2026 re-save, which is
+     * the one thing that could have found it.
      */
     pairFunctions: function () {
       var self = this;
       this.ownerOf = {};      // function node -> visible node id
       this.rateOf = {};       // flow arc id   -> function node
       this.pairing = {};      // arcs that are only a pairing, not an influence
+      this.isRate = {};       // function node -> true, if it is some flow's rate
 
+      // 1. `attached=[fn]` on the flow arc. 11.4 writes it on every segment.
       this.arcIds.forEach(function (id) {
         var a = self.A[id];
-        if (a.type === 'flow') {
-          var att = items(a.p.attached)[0];
-          if (att) self.rateOf[id] = att;
-          return;
-        }
+        if (a.type !== 'flow') return;
+        var att = items(a.p.attached)[0];
+        if (att) { self.rateOf[id] = att; self.isRate[att] = true; }
+      });
+
+      // 2. The older spelling: an influence from the function to the flow ARC.
+      this.arcIds.forEach(function (id) {
+        var a = self.A[id];
         if (a.type !== 'influence') return;
         var src = self.N[a.from];
         if (!src || src.type !== 'function') return;
+        if (!self.A[a.to] || self.A[a.to].type !== 'flow') return;
         self.pairing[id] = true;
-        if (self.A[a.to]) self.rateOf[a.to] = a.from;   // older files: fn → the arc
-        else self.ownerOf[a.from] = a.to;
+        self.rateOf[a.to] = a.from;
+        self.isRate[a.from] = true;
+      });
+
+      // 3. Everything else out of a function is the pairing to its own visible
+      //    node — unless the function is a rate, in which case it is a real
+      //    influence carrying that rate somewhere else.
+      this.arcIds.forEach(function (id) {
+        var a = self.A[id];
+        if (a.type !== 'influence' || self.pairing[id]) return;
+        var src = self.N[a.from];
+        if (!src || src.type !== 'function' || self.isRate[a.from]) return;
+        self.pairing[id] = true;
+        self.ownerOf[a.from] = a.to;
       });
     },
 
@@ -732,11 +762,13 @@
         var head = self.chain(id)[0];
         var srcSim = self.A[head].from;
         var from = self.ours[srcSim];
-        // A flow's own rate can be an input to something else. Simile draws
-        // that from the flow ARC; we draw it from the valve, which is where the
-        // rate lives.
+        // A flow's own rate can be an input to something else. We draw that
+        // from the valve, which is where the rate lives; Simile draws it from
+        // the flow ARC (9.0) or from the rate FUNCTION (11.4). Both arrive here.
         if (self.A[srcSim] && self.A[srcSim].type === 'flow') {
           from = (self.m.arcs[self.ours[srcSim]] || {}).valve;
+        } else if (self.isRate[srcSim]) {
+          from = self.valveOfFn(srcSim);
         }
 
         // The far end lands on a function (so: on that function's owner), on a

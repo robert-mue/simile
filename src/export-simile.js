@@ -128,11 +128,13 @@
 (function (Sienna) {
   'use strict';
 
-  // Simile writes `edition=enterprise` in every file on hand, including the
-  // demo models the SimiLive server itself serves. It is what the format looks
-  // like rather than a claim about us, but it IS the field a licence check
-  // would read — worth knowing it is here rather than finding it later.
-  var SOURCE_LINE = "source(program='Simile v7.1',version=11.1,edition=enterprise,date=";
+  // Measured, not copied. Simile 7.4 re-saving a 2008 model writes
+  // `program='Simile v7.4',version= 11.4,edition=free` — so this now matches
+  // what the current program emits, and `edition=free` is the honest value
+  // rather than the `enterprise` we had inherited from an old demo file. That
+  // field is the one a licence check would read, which is why it was worth
+  // getting right rather than leaving as whatever we found.
+  var SOURCE_LINE = "source(program='Simile v7.4',version=11.4,edition=free,date=";
 
   // The part that makes the build work. See the header.
   var PACKAGE_DESC = 'modelRunning 1 running_c 1\n';
