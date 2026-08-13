@@ -99,6 +99,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * notation gets a different palette with no code change (§3). Types marked
    * `autoCreated` (cloud, valve) are omitted: they arrive as a side effect of
    * drawing a flow and are never placed by hand.
+   *
+   * A type carrying `notImplemented` gets a button that is present, disabled
+   * and titled with the reason. That is deliberate: the vocabulary is the
+   * honest list of what the notation HAS, and a type we can read but not yet
+   * draw belongs on it, greyed, rather than being invisible. `alarm` is the
+   * first — event-based modelling was set aside early and this is the
+   * reminder.
    */
   _buildPalette() {
     const bar = this._palette = $('<div class="slx-palette">').appendTo(this.element);
@@ -115,7 +122,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     $('<span class="slx-palette-group">').text('add').appendTo(bar);
     Object.keys(schema.nodes).forEach((t) => {
-      if (!schema.nodes[t].autoCreated) add('node', t, t);
+      const spec = schema.nodes[t];
+      if (spec.autoCreated) return;
+      if (spec.notImplemented) {
+        $('<button type="button" disabled>')
+          .addClass('slx-not-implemented')
+          .attr({ title: t + ' — ' + spec.notImplemented })
+          .text(t)
+          .appendTo(bar);
+        return;
+      }
+      add('node', t, t);
     });
     add('submodel', 'submodel', 'submodel');
 
@@ -626,6 +643,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         solid(`M${b.cx - w * 0.05},${y1 + h * 0.45} L${b.cx + w * 0.15},${y1}`
             + ` L${x2},${y1 + h * 0.15} L${b.cx + w * 0.3},${y1 + h * 0.6} z`);
         return;
+
+      case 'bell':                       // alarm: an event signal
+        solid(`M${x1 + w * 0.08},${y1 + h * 0.72}`
+            + ` C${x1 + w * 0.2},${y1 + h * 0.6} ${x1 + w * 0.18},${y1 + h * 0.12} ${b.cx},${y1 + h * 0.12}`
+            + ` C${x2 - w * 0.18},${y1 + h * 0.12} ${x2 - w * 0.2},${y1 + h * 0.6} ${x2 - w * 0.08},${y1 + h * 0.72} z`);
+        line(`M${b.cx},${y1} L${b.cx},${y1 + h * 0.12}`);          // the crown
+        line(`M${b.cx - w * 0.16},${y2} L${b.cx + w * 0.16},${y2}`); // the clapper
+        return;
     }
   },
 
@@ -720,6 +745,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       case 'zigzag':
       case 'egg':
       case 'axe':
+      case 'bell':
         this._populationGlyph(g, b);
         break;
       default:

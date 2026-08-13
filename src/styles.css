@@ -218,6 +218,20 @@ text.slx-incomplete {
   cursor: pointer;
 }
 .slx-palette button:hover { border-color: #4a7fb5; }
+
+/* A type the notation HAS but the editor cannot yet draw (schema
+   `notImplemented`). Present and greyed rather than absent, so the palette
+   stays an honest list of the vocabulary and the gap is visible instead of
+   being a note in a file nobody opens. `alarm` is the first: event-based
+   modelling was set aside early on. The title says so on hover. */
+.slx-palette button.slx-not-implemented {
+  color: #a8adb5;
+  border-color: #e4e7ec;
+  border-style: dashed;
+  background: #fafbfc;
+  cursor: not-allowed;
+}
+.slx-palette button.slx-not-implemented:hover { border-color: #d0d4da; }
 .slx-palette button.slx-active {
   background: #4a7fb5;
   border-color: #4a7fb5;

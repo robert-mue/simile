@@ -93,6 +93,11 @@
     variable: 'variable',
     cloud: 'cloud',
     condition: 'condition',
+    // Read and drawn, though the editor cannot create one — see the schema.
+    // Until 2026-08-13 this was dropped as unsupported, which made
+    // `BallBerry4aP` round-trip "identical" having silently lost an alarm and
+    // its three influences.
+    alarm: 'alarm',
   };
   var INFERRED_TYPE = {
     creation: 'initialiser',
@@ -105,7 +110,11 @@
   var EXPR_FIELD = {
     compartment: 'initial', variable: 'value', condition: 'expr', valve: 'rate',
     initialiser: 'expr', exterminator: 'expr', migrator: 'expr', reproduction: 'expr',
+    alarm: 'expr',
   };
+
+  /** Types whose function carries `units=boolean` rather than `units=1`. */
+  var BOOLEAN_TYPE = { condition: true, alarm: true };
 
   var DROPPED = ['spec', 'min_val', 'max_val', 'fill_colour', 'comment', 'course',
     'curve', 'caption_offset', 'enum_types', 'use_sofar', 'enabled_roles',
@@ -586,7 +595,7 @@
       var units = src.units != null ? src.units : ((own && own.p.units) || null);
       if (units != null && units !== '') {
         var u = unquote(units);
-        if (u !== (type === 'condition' ? 'boolean' : '1')) out.units = u;
+        if (u !== (BOOLEAN_TYPE[type] ? 'boolean' : '1')) out.units = u;
       }
       return out;
     },

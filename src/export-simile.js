@@ -179,7 +179,24 @@
     variable: 'variable',
     cloud: 'cloud',
     condition: 'condition',
+    // `alarm` cannot be DRAWN — event-based modelling is not implemented and
+    // the palette entry is disabled — but it is read and written faithfully,
+    // because the only way one exists in our model is that it came out of a
+    // Simile file, and dropping it would make the round trip quietly lossy.
+    // The spelling is confirmed: Simile 7.4 re-saving `prime.pl` writes
+    // `alarm` unchanged (2026-08-13).
+    alarm: 'alarm',
   };
+
+  /**
+   * Types whose function carries `units=boolean` rather than `units=1`.
+   *
+   * Not decoration: a condition whose function says `units=1` compiles and then
+   * never filters, which is how a ranking model came back 5,5,5,5 (item 31).
+   * Every condition in the corpus carries `boolean` or `cond_spec`, and both of
+   * `prime`'s alarms carry `boolean` too.
+   */
+  var BOOLEAN_TYPE = { condition: true, alarm: true };
 
   function Emitter(model) {
     this.m = model;
@@ -540,7 +557,7 @@
       // returns 5,5,5,5 where it should return 4,3,2,1. Every condition in the
       // 72-model corpus carries `boolean` (28) or `cond_spec` (9); none carries 1.
       var units = String((n.props || {}).units || '').trim()
-        || (n.type === 'condition' ? 'boolean' : '1');
+        || (BOOLEAN_TYPE[n.type] ? 'boolean' : '1');
       // The equation is ALWAYS parenthesised, and that is not cosmetic.
       // `value=…` is a Prolog `=`, an xfx operator of priority 700, so neither
       // argument may itself be a 700 operator — and every comparison is one.

@@ -1,48 +1,37 @@
-# Email to the Simile developer — the population symbols
+# Email to the Simile developer — two questions about meaning
 
-*Drafted 2026-08-12. The covering letter for §A2 of `NOTE-questions-for-developer.md`.
-Self-contained: everything needed to answer is below, and the link at the end is
-only for the other, unrelated questions.*
+*Drafted 2026-08-12, **cut down 2026-08-13 and not yet sent.** The first draft
+had four questions. Re-saving six catalogue models in Simile 7.4 answered two of
+them by observation — the spellings, and what `alarm` is — so those are gone.
+What is left is the half a file cannot answer: what two of the symbols MEAN.*
+
+*The other, unrelated questions are in `NOTE-questions-for-developer.md`, and
+three of those (§A1 associations, §A2a spellings, §A4 `border`) are now answered
+too.*
 
 ---
 
-**Subject: Simile's population symbols — three spellings to confirm, and one we may have wrong**
+**Subject: Simile's population symbols — two questions about meaning, and one we think we have wrong**
 
 Hi [name],
 
 Robert here — this is from the notation-neutral diagram editor we've been
-building. It now converts its models to Simile Prolog, uploads them to SimiLive
-and runs them, so most of what we needed we've been able to work out from the
-model catalogue rather than by asking. Thank you for that: 72 `.pl` files
-answered more questions than a long conversation would have.
+building. It converts its models to Simile Prolog, uploads them to SimiLive and
+runs them, so most of what we needed we've worked out from the model catalogue
+rather than by asking. Thank you for that: 72 `.pl` files answered more questions
+than a long conversation would have, and opening a few of them in Simile 7.4 and
+re-saving answered several more.
 
-Four questions left, all on the population symbols. Each should be a one-line
-answer — and if it's easier to send a small model than to write prose, that is
-genuinely better for us. We can read the Prolog, and a model doubles as a test we
-keep.
+Two questions left, and both are about **meaning**, which is the part no file
+tells us. Each should be a one-line answer — and if it's easier to send a small
+model than to write prose, that is genuinely better for us. We can read the
+Prolog, and a model doubles as a test we keep.
 
-**1. Three spellings we've inferred, one we're sure of.**
-
-A census across all 72 catalogue models turns up five node types we don't
-currently emit. Our palette names are on the left, and the last column is what
-the *function* behind each node actually holds — which is what raises question 2:
-
-| ours | we think | seen in the corpus as | its function holds |
-|---|---|---|---|
-| initialiser | `creation` | "initial number", "initial pop size" | plain counts — `100`, `10`, `4` |
-| exterminator | `loss` | "death", "tanks destroyed" | `0.6` · `(x<0)` · `if rand_var(0,1)<opposition/25/360 then 1 else 0` |
-| migrator | `immigration` | "new tanks constructed" | `10` · `0.1` · `if effort<=0 then 0 else labour_input/effort` |
-| reproduction | `reproduction` | "birth" | `rand(0,2*0.7)` · `if rand_var(0,1)<r then 1 else 0` |
-
-Are the first three right? `reproduction` matches by name so we're confident of
-that one. We refuse to export any of them until we know, because a wrong guess
-gives a model that loads and quietly means something else.
-
-**2. We think our own `migrator` is mis-labelled — this is the one we'd most like
-your view on.**
+**1. We think our own `migrator` is mis-labelled — this is the one we'd most
+like your view on.**
 
 Our property dialog asks for a "migration condition", i.e. a boolean. But every
-`immigration` node in the corpus holds a **number** — `10`, `0.1`,
+`immigration` node in the catalogue holds a **number** — `10`, `0.1`,
 `if effort<=0 then 0 else labour_input/effort`. That reads as *how many new
 instances arrive per time unit*, not a condition.
 
@@ -51,36 +40,37 @@ has been in the editor since we wrote the schema, and would mislead anyone using
 it. We only noticed by looking at what the symbols hold rather than what they're
 called.
 
-**3. Is `loss` a probability or a condition?**
+**2. Is `loss` a probability or a condition?**
 
-The corpus shows both: a bare `0.6` in one model, `(x<0)` in another, and
+The catalogue shows both: a bare `0.6` in one model, `(x<0)` in another, and
 `if rand_var(0,1)<opposition/25/360 then 1 else 0` in a third. Is it a
 per-instance probability per time unit, with the boolean forms just people
-writing 1/0 explicitly?
+writing 1/0 explicitly? Or is it genuinely either, and Simile reads whichever it
+is given?
 
-**4. What is `alarm`?**
-
-We have no equivalent and hadn't known it existed. Three in the corpus, always
-`units=boolean`:
-
-- `not found_divisor` and `(found_divisor or quotient>check_limit)` — a
-  prime-number model
-- `(abs('Gs'-'Gs_0')<0.001)` — BallBerry
-
-It looks like "fire when this becomes true" — a convergence or termination
-signal. Is that right, and should a general-purpose Simile editor offer it?
+The same question probably applies to `creation` and `reproduction`, so if
+there's one rule covering all of them, that one sentence would do.
 
 ---
 
-**One thing that may be useful to you in return.** When we emitted `value=a>b`
+**Two things that may be useful to you in return.**
+
+**A bug of ours that your loader could have caught.** When we emitted `value=a>b`
 instead of `value=(a>b)` — not legal Prolog, since `=` and `>` are both priority
 700 — Simile silently dropped the property. The model compiled, ran, and gave
 confidently wrong answers; it took an afternoon to find. A warning when a
 property fails to parse would save that for anyone generating `.pl` files.
 
-There are eight further questions, none of them about population symbols, here if
-you have appetite for them:
-https://github.com/robert-mue/simile/blob/main/NOTE-questions-for-developer.md
+**What re-saving told us**, in case it's useful as a record of what 7.4 does to
+an old file. Opening six catalogue models (2003–2008, formats 7.1 and 9.0) in
+7.4, running them and exporting model declarations: all six loaded and ran with
+no warnings; the population symbols and `alarm` come back **unchanged**; legacy
+boundary stubs written as plain `variable` are converted to `border`; every
+coordinate becomes a float; `attached=[…]` appears on every flow segment; and
+7.4 **derives units it did not have before**, writing `units=1/day` on flow rates
+that carried `units=1` in 2008. Apart from those and some pretty-printing, the
+models are element-for-element identical across twenty-three years — which is a
+better compatibility record than most software can claim.
 
 Best,
 Robert

@@ -1332,6 +1332,35 @@ four format revisions: all 21 remaining differences are Simile's own
 pretty-printing (` 0.005` for `0.005`, a space before `else`) and the units it
 derives.
 
+**42. `alarm` — a node type that is declared, drawn, and disabled**
+*(2026-08-13)*
+Event-based modelling was set aside at the start of this exercise as an advanced
+feature. `alarm` is part of it, so the type is now **declared** without being
+implemented:
+
+- **Declared** in the schema, with `condition`'s field model — one boolean
+  expression — because that is what `prime` shows it to be.
+- **Drawn**, as a bell. The one shape here that has not been checked against
+  Simile's own toolbar; a guess about appearance, not about meaning.
+- **Read and written faithfully.** Until today it was dropped as unsupported,
+  which is why `BallBerry4aP` round-tripped "identical" having silently lost an
+  alarm and three influences. The spelling is confirmed (item 41), so a model
+  that arrives with one keeps it.
+- **Disabled in the palette** — present, greyed, dashed, titled "Not yet
+  implemented", reading a new `notImplemented` flag on the schema entry. One
+  symbol is almost certainly not enough to DO event modelling, and the point of
+  the button is to be a visible reminder rather than a working tool.
+
+The principle, worth stating because it will come up again: the palette is the
+honest list of what the notation HAS. A type we can read but not yet draw belongs
+on it greyed, not hidden.
+
+What it fixes: `prime` imports as 11 nodes / 16 arcs rather than 9 / 10; models
+where the import loses something drop from **2 to 1** (only `biomewater2`, whose
+two half-drawn influences are broken in the source file); corpus-wide
+`undeclared` findings 87 → 84, the alarms now being declared elements that
+sibling equations may reference.
+
 ---
 
 ## Known gaps and loose ends

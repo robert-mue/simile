@@ -71,7 +71,13 @@ are the `obsolete` and `ancestor(0)` entries we see in some `references` lists �
 must we ever emit them? (c) Anything different about a self-association (both
 relation arcs from the same base, as in `ranking1`) that we would not see there?
 
-## A2 — The population symbols *(spellings inferred; semantics need you)*
+## A2 — The population symbols *(spellings ANSWERED 2026-08-13; semantics still need you)*
+
+**Answered by observation.** Simile 7.4, re-saving `ranking1`, `johadP` and
+`prime`, writes `creation`, `loss`, `immigration` and `alarm` **unchanged**. The
+three inferred spellings are current, not legacy, and we now emit all of them.
+What remains is (b) and (c) below — what `migrator` and `loss` MEAN — which is
+the half no file can answer. Those two are the whole of the email now.
 
 **This is the one we would most like answered**, because looking at what the
 symbols HOLD rather than only what they are called turned up a probable error of
@@ -104,23 +110,39 @@ editor.
 probability per time unit, with the boolean forms just people writing 1/0 by
 hand?
 
-**(d) What is `alarm`?** We have no equivalent and had not known it existed.
-Three in the corpus, always `units=boolean`: `not found_divisor` and
-`(found_divisor or quotient>check_limit)` in a prime-number model,
-`(abs('Gs'-'Gs_0')<0.001)` in BallBerry. It looks like "fire when this becomes
-true" — a convergence or termination signal. Right? And should a general-purpose
-Simile editor offer it?
+**(d) What is `alarm`?** *(ANSWERED 2026-08-13, by reading `prime` rather than
+asking.)* It is a **boolean-valued element whose name other equations reference**
+— `done_checks` in `if done_checks then 0 else prev(0)+1`, `found_prime` in
+`if found_prime then start_prime else prev(0)+2`. Not a membership condition:
+`prime` contains no `condition` node at all. Its field model is `condition`'s.
+
+It is part of **event-based modelling**, which was set aside at the start of this
+exercise as an advanced feature. `alarm` is now declared in our schema and both
+read and written faithfully, but its palette entry is **disabled and greyed**
+with the title "Not yet implemented" — one symbol is not enough to do event
+modelling, and a visible gap beats an invisible one. The question that remains is
+what ELSE event modelling needs, and that is not urgent.
 
 ## A3 — `references(…)` *(answered — see A1)*
 
 It lists relation arcs. The remaining part is `obsolete` / `ancestor(0)`, asked
 in A1(b).
 
-## A4 — `border` *(answered)*
+## A4 — `border` *(ANSWERED 2026-08-13 — confirmed, and it was costing us)*
 
-448 in the corpus, so it is the current spelling for a boundary stub and our
-choice was right. Older files use a plain `variable` in the same position — we
-assume that is legacy and emit `border`. **Correct?**
+448 in the corpus, so it is the current spelling for a boundary stub. Older files
+use a plain `variable` in the same position, which we assumed was legacy.
+
+**Confirmed by observation.** `lamos1a` (2003, format 7.1) has 142 variables and
+no borders; re-saved by Simile 7.4 it has 60 variables and 82 borders — the 82
+being exactly the difference. Simile converts them on load.
+
+We had been reading the legacy spelling as real elements: 82 phantom variables in
+`lamos1a`, 82 in `lamos1b`, **749 in `Molusc_june06`**, all with no equation, and
+four models were being refused for "unfinished elements" that were never
+elements. Fixed by identifying stubs from `links` rather than from the type.
+Nothing needed from you — recorded because the guess was right and the cost of
+not checking it was high.
 
 ---
 

@@ -108,6 +108,37 @@
       migrator:     { has_label: true,  fields: [{ name: 'expr', label: 'Migration condition', type: 'expression', required: true }] },
       exterminator: { has_label: true,  fields: [{ name: 'expr', label: 'Removal condition', type: 'expression', required: true }] },
       reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Number of offspring', type: 'expression', required: true }] },
+
+      // ---- event-based modelling: DECLARED, NOT IMPLEMENTED ----
+      //
+      // `alarm` is Simile's event signal, and event-based modelling was set
+      // aside at the start of this exercise as an advanced feature to come back
+      // to. It is here because a model that contains one must be readable
+      // rather than silently stripped, and because a greyed-out palette entry
+      // is a better reminder than a note in a file nobody opens.
+      //
+      // What it is, measured from `prime.pl` (2026-08-13, confirmed unchanged
+      // by Simile 7.4): a **boolean-valued element whose name other equations
+      // reference** — `done_checks` in `if done_checks then 0 else prev(0)+1`,
+      // `found_prime` in `if found_prime then start_prime else prev(0)+2`. It
+      // is NOT a membership condition: `prime` contains no `condition` node at
+      // all. So its field model is `condition`'s, and its `units` are
+      // `boolean`.
+      //
+      // `notImplemented` is what the palette reads to grey the button out and
+      // title it. One alarm is almost certainly not enough to DO event-based
+      // modelling — there will be machinery around it we have not looked at —
+      // which is exactly why the button is disabled rather than merely ugly.
+      alarm: {
+        has_label: true,
+        notImplemented: 'Not yet implemented',
+        fields: [
+          { name: 'expr', label: 'Fires when', type: 'expression', required: true,
+            help: 'A condition. Event-based modelling is not implemented yet: '
+                + 'an alarm read from a Simile model is kept and drawn, but a '
+                + 'new one cannot be drawn and its behaviour is not simulated.' },
+        ],
+      },
     },
 
     // A submodel is one object whose KIND is a property (§2), so its dialog is
@@ -448,6 +479,13 @@
       migrator:     { shape: 'zigzag',  resizable: false, w: 20, h: 12 },
       reproduction: { shape: 'egg',     resizable: false, w: 15, h: 19 },
       exterminator: { shape: 'axe',     resizable: false, w: 18, h: 18 },
+      // `alarm` is not implemented (see the vocabulary above) but it IS drawn,
+      // because a model imported from Simile may contain one and losing it
+      // silently is worse than showing something we cannot yet edit. A bell,
+      // for want of Simile's own icon — a guess about appearance only, not
+      // about meaning, and the one shape here that has not been checked
+      // against the real toolbar.
+      alarm:        { shape: 'bell',    resizable: false, w: 17, h: 18 },
       // A submodel's MEMBERSHIP KIND is drawn, not just stored (ruled
       // 2026-08-06, on building the reference models: the three kinds were
       // indistinguishable, though how many instances a submodel has is
