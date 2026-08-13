@@ -100,19 +100,16 @@ now marked answered.
   something, the export never sees it and the comparison comes back clean. The
   round-trip page reports losses separately for exactly this reason.
 
-## Files outside the repo that are NOT backed up
+## The catalogues are now in the repo
 
-Both of these live in `~/Projects/` and are in no git repository. If the machine
-dies they are gone.
+Both live in `reference/` as of 2026-08-13 — `catalogue/` (the 72 `.pl` files)
+and `catalogue-2026/` (the six Simile 7.4 re-saves). They were in no git
+repository before that, and the re-saves could only have been replaced by
+redoing the work in Simile.
 
-| path | what | replaceable? |
-|---|---|---|
-| `Simile_model_catalogue/` | the 72 `.pl` files, 1.6 MB | probably — it came from a Simile distribution |
-| `Simile_model_catalogue_2026/` | six models re-saved by Simile 7.4, 164 KB | **only by redoing the work in Simile** |
-
-The second one is the evidence behind STATUS items 39–42 and cost real effort at
-the keyboard. **Worth copying somewhere safe, or committing.** Not done, because
-putting someone's model files into this repository is a call for Robert to make.
+`~/Projects/Simile_model_catalogue*` still exist on Robert's machine and are
+what the harnesses point at by default; `reference/` is the copy that survives
+the machine. If the two ever disagree, `reference/` is the one to trust.
 
 ## Environment
 

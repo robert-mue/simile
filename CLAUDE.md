@@ -55,6 +55,11 @@ footing (`src/widgets/grid.js` is the first).
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
   statement of the Simile expression language; there is no generated parser.
+- `reference/` — **data, not code.** `catalogue/` is the 72-model Simile
+  catalogue (all format 9.0 or older) that `test/roundtrip.html` and
+  `test/corpus.js` are built from; `catalogue-2026/` is six of them re-saved by
+  Simile 7.4. Committed because the repository is the durable copy. Do not edit
+  either — their value is that they do not change. See `reference/README.md`.
 - `test/` — pages, not a test framework. Open one and read the bar.
   - `index.html` — the grammar over `corpus.js`, 1409 equations harvested from
     the catalogue **through the importer**, so it tests the pipeline too.
