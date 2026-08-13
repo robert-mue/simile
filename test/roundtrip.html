@@ -49,9 +49,40 @@
 
     <!-- No shell: the two converters and the schema hang off window.Sienna,
          and nothing here needs userData, actions or a DOM widget. -->
-    <script>window.Sienna = window.Sienna || {};</script>
+    <script>
+      window.Sienna = window.Sienna || {};
+      // The completeness check reads a model through `Sienna.Diagram`, which
+      // reads `Sienna.userData`. Stubbed, never the real one: the real store
+      // autosaves to localStorage and a test page must not be able to touch the
+      // models a user has saved.
+      (function (S) {
+        var store = {};
+        function at(ref, make) {
+          var k = String(ref).split('/'), o = store;
+          for (var i = 0; i < k.length - 1; i++) {
+            if (o[k[i]] == null) { if (!make) return null; o[k[i]] = {}; }
+            o = o[k[i]];
+          }
+          return { p: o, k: k[k.length - 1] };
+        }
+        S.userData = {
+          set: function (r, v) { var n = at(r, true); n.p[n.k] = v; },
+          get: function (r) { var n = at(r); return n ? n.p[n.k] : undefined; },
+          remove: function (r) { var n = at(r); if (n) delete n.p[n.k]; },
+          keys: function (r) {
+            var v = S.userData.get(r);
+            return v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v) : [];
+          },
+        };
+        S.actions = { dispatch: function (a, run) { if (run) run(); } };
+      })(window.Sienna);
+    </script>
+    <script src="../vendor/peggy.min.js"></script>
     <script src="../src/schema/simile-v1.js"></script>
     <script src="../src/diagram.js"></script>
+    <script src="../src/equation-grammar.js"></script>
+    <script src="../src/equation.js"></script>
+    <script src="../src/equation-check.js"></script>
     <script src="../src/export-simile.js"></script>
     <script src="../src/import-simile.js"></script>
     <script>
@@ -112,9 +143,21 @@
 
           files.forEach(function (f) {
             var row = { name: f.name };
-            var m1, pl, m2;
+            var m1, pl, m2, imported;
             try {
-              m1 = Sienna.importSimile.read(f.text).model;
+              imported = Sienna.importSimile.read(f.text);
+              m1 = imported.model;
+              // A fixed point proves the two directions AGREE. It does not
+              // prove nothing was lost: where the import drops something, the
+              // export never sees it and the comparison comes back clean. So
+              // record it separately.
+              row.lost = imported.notes.filter(function (n) {
+                return n.kind === 'unsupported' || n.kind === 'dropped';
+              }).map(function (n) { return n.text; });
+              try {
+                Sienna.userData.set('models/audit', m1);
+                row.audit = Sienna.equationCheck.audit(new Sienna.Diagram('models/audit'));
+              } catch (e2) { row.audit = []; row.auditError = e2.message; }
             } catch (e) {
               row.state = 'broke'; row.why = 'import failed: ' + e.message;
               counts.broke++; rows.push(row); return;
@@ -157,11 +200,13 @@
           // a bug. So the bar is green when nothing differs, whatever the
           // refusal count, and the refusals are itemised below.
           var bad = counts.differs + counts.broke;
+          var lossy = rows.filter(function (r) { return r.lost && r.lost.length; }).length;
           el.className = bad ? 'fail' : 'pass';
           el.textContent = (bad ? '✗ ' + bad + ' failed — ' : '✓ no differences — ')
             + counts.ok + ' of ' + total + ' round-tripped identically, '
             + counts.refused + ' refused by the exporter'
-            + (counts.broke ? ', ' + counts.broke + ' could not be read' : '');
+            + (counts.broke ? ', ' + counts.broke + ' could not be read' : '')
+            + (lossy ? ' · ' + lossy + ' lost something at import' : '');
 
           var order = { broke: 0, differs: 1, refused: 2, ok: 3 };
           rows.sort(function (a, b) {
@@ -169,11 +214,30 @@
           });
 
           var html = ['<table><tr><th>model</th><th>result</th><th>detail</th></tr>'];
+          function extra(r) {
+            var out = '';
+            if (r.lost && r.lost.length) {
+              out += '<details><summary style="color:#b71c1c">lost at import ('
+                + r.lost.length + ') — invisible to the round trip</summary><pre>'
+                + esc(r.lost.join('\n')) + '</pre></details>';
+            }
+            if (r.audit && r.audit.length) {
+              var by = {};
+              r.audit.forEach(function (a) { by[a.kind] = (by[a.kind] || 0) + 1; });
+              out += '<details><summary>completeness: '
+                + Object.keys(by).map(function (k) { return k + ' \u00d7 ' + by[k]; }).join(', ')
+                + '</summary><pre>' + esc(r.audit.map(function (a) {
+                  return a.kind + ': ' + (a.label || a.id) + ' — ' + a.message;
+                }).join('\n')) + '</pre></details>';
+            }
+            return out;
+          }
           var label = { ok: 'identical', differs: 'DIFFERS', refused: 'refused', broke: 'FAILED' };
           rows.forEach(function (r) {
             html.push('<tr class="' + r.state + '"><td class="model">' + esc(r.name)
               + '</td><td>' + label[r.state] + '</td><td class="why">' + esc(r.why)
               + (r.full ? '<details><summary>detail</summary><pre>' + esc(r.full) + '</pre></details>' : '')
+              + extra(r)
               + '</td></tr>');
           });
           html.push('</table>');

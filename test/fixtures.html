@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>simile — fixture regression</title>
+    <style>
+      body { font: 13px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 64rem; }
+      h1 { font-size: 1.2rem; }
+      #summary { font-size: 1.1rem; padding: 0.6rem 0.9rem; border-radius: 4px; margin: 1rem 0; }
+      .pass { background: #e8f5e9; border: 1px solid #a5d6a7; }
+      .fail { background: #ffebee; border: 1px solid #ef9a9a; }
+      table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+      th, td { border-top: 1px solid #eee; padding: 5px 9px; text-align: left; vertical-align: top; }
+      th { color: #666; font-weight: 600; border-top: none; }
+      td.name { font-family: ui-monospace, monospace; white-space: nowrap; }
+      td.ok { color: #1b5e20; }
+      td.bad { color: #b71c1c; font-family: ui-monospace, monospace; font-size: 12px; }
+      p.note { color: #666; }
+      ul.why { margin: 0.3rem 0 0; padding-left: 1.1rem; color: #b71c1c; font-family: ui-monospace, monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Fixture regression — round trip and completeness</h1>
+    <p class="note">
+      Every demo fixture is built, converted to Simile Prolog, read back, and the
+      two models compared element by element; then the completeness check is run
+      over it. A fixture must reach a <strong>fixed point</strong> and audit
+      <strong>clean</strong>. Unlike <a href="roundtrip.html">roundtrip.html</a>
+      this needs no files: the fixtures are in the repository, so this page is
+      the regression test that survives a wiped scratch directory.
+    </p>
+    <p class="note">
+      What it is guarding, all of it found the hard way: an exporter that wrote
+      <code>arc(…,undefined,…)</code> for an influence out of a flow; an
+      <code>unquote</code> that stripped the quotes off <code>'A_Q'*'Gs'</code>;
+      a completeness check that reported the same arrow both undeclared and
+      unused; and a valve whose rate landed on the wrong segment of a
+      cross-boundary flow.
+    </p>
+
+    <div id="summary">running…</div>
+    <div id="detail"></div>
+
+    <!-- The model layer writes through `Sienna.userData` and wraps every change
+         in `Sienna.actions.dispatch`, so the fixtures need both. They are
+         STUBBED here rather than loading the shell: the real `userData`
+         autosaves to localStorage, and a test page must not be able to touch
+         the models a user has stored (that is not hypothetical — it happened,
+         twice, on 2026-08-12). Nothing else of the shell is needed. -->
+    <script>
+      window.Sienna = window.Sienna || {};
+      (function (S) {
+        var store = {};
+        function nodeAt(ref, make) {
+          var k = String(ref).split('/');
+          var o = store;
+          for (var i = 0; i < k.length - 1; i++) {
+            if (o[k[i]] == null) { if (!make) return null; o[k[i]] = {}; }
+            o = o[k[i]];
+          }
+          return { parent: o, key: k[k.length - 1] };
+        }
+        S.userData = {
+          set: function (ref, v) { var n = nodeAt(ref, true); n.parent[n.key] = v; },
+          get: function (ref) { var n = nodeAt(ref); return n ? n.parent[n.key] : undefined; },
+          remove: function (ref) { var n = nodeAt(ref); if (n) delete n.parent[n.key]; },
+          keys: function (ref) {
+            var v = S.userData.get(ref);
+            return v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v) : [];
+          },
+        };
+        S.actions = { dispatch: function (a, run) { if (run) run(); } };
+      })(window.Sienna);
+    </script>
+    <script src="../vendor/peggy.min.js"></script>
+    <script src="../src/schema/simile-v1.js"></script>
+    <script src="../src/diagram.js"></script>
+    <script src="../src/equation-grammar.js"></script>
+    <script src="../src/equation.js"></script>
+    <script src="../src/equation-check.js"></script>
+    <script src="../src/export-simile.js"></script>
+    <script src="../src/import-simile.js"></script>
+    <script src="../src/demo-growth.js"></script>
+    <script src="../src/demo-submodel.js"></script>
+    <script src="../src/demo-stand.js"></script>
+    <script src="../src/demo-rank.js"></script>
+    <script src="../src/demo-mixed.js"></script>
+    <script src="../src/demo-drain.js"></script>
+    <script>
+      (function (Sienna) {
+        'use strict';
+
+        // Each fixture, and the one sentence saying what it is for. Kept here
+        // rather than in the fixtures themselves so this page reads as a list
+        // of what is covered.
+        var FIXTURES = [
+          ['growth',   Sienna.demoGrowth,   'a flat model'],
+          ['submodel', Sienna.demoSubmodel, 'one submodel, influences crossing it'],
+          ['stand',    Sienna.demoStand,    'a fixed-membership submodel, both crossing directions'],
+          ['drain',    Sienna.demoDrain,    'FLOWS crossing a boundary, rate on a middle segment'],
+          ['rank',     Sienna.demoRank,     'an association with two roles'],
+          ['mixed',    Sienna.demoMixed,    'containment and association in one arc, carrying a list'],
+        ];
+
+        /**
+         * A model reduced to what a run depends on. Ids are minted in file
+         * order and differ between the two passes, so every element is keyed by
+         * its PATH from the root instead.
+         */
+        function shape(m) {
+          function pathOf(id) {
+            var e = m.nodes[id] || m.submodels[id];
+            if (!e) return '?' + id;
+            return (e.parent ? pathOf(e.parent) + '/' : '') + (e.label || '.' + (e.type || 'sub'));
+          }
+          return {
+            subs: Object.keys(m.submodels).map(function (id) {
+              var s = m.submodels[id];
+              return ['sub', pathOf(id), s.kind, JSON.stringify(s.props)].join('|');
+            }).sort(),
+            nodes: Object.keys(m.nodes).map(function (id) {
+              var n = m.nodes[id];
+              return [n.type, pathOf(id), JSON.stringify(n.props)].join('|');
+            }).sort(),
+            arcs: Object.keys(m.arcs).map(function (id) {
+              var a = m.arcs[id];
+              return [a.type, pathOf(a.from), pathOf(a.to), a.alias || '', a.label || '',
+                a.valve ? pathOf(a.valve) : ''].join('|');
+            }).sort(),
+          };
+        }
+
+        function diff(A, B) {
+          var out = [];
+          ['subs', 'nodes', 'arcs'].forEach(function (k) {
+            var x = {}, y = {};
+            A[k].forEach(function (v) { x[v] = 1; });
+            B[k].forEach(function (v) { y[v] = 1; });
+            A[k].forEach(function (v) { if (!y[v]) out.push('lost   ' + v); });
+            B[k].forEach(function (v) { if (!x[v]) out.push('gained ' + v); });
+          });
+          return out;
+        }
+
+        function esc(s) {
+          return String(s).replace(/[&<>]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+          });
+        }
+
+        var rows = [];
+        var failures = 0;
+
+        FIXTURES.forEach(function (f) {
+          var name = f[0], build = f[1], covers = f[2];
+          var row = { name: name, covers: covers, why: [] };
+
+          if (!build) {
+            row.why.push('the fixture did not load — is it listed in this page?');
+            rows.push(row); failures++; return;
+          }
+
+          var path = 'models/' + name;
+          var m1, pl, m2;
+          try {
+            build(path);
+            m1 = Sienna.userData.get(path);
+          } catch (e) {
+            row.why.push('building it threw: ' + e.message);
+            rows.push(row); failures++; return;
+          }
+
+          row.size = Object.keys(m1.nodes).length + ' nodes, '
+            + Object.keys(m1.arcs).length + ' arcs, '
+            + Object.keys(m1.submodels).length + ' submodels';
+
+          try {
+            pl = Sienna.exportSimile.prolog(m1);
+          } catch (e) {
+            row.why.push('the exporter refused: ' + e.message.split('\n').slice(1).join(' '));
+            rows.push(row); failures++; return;
+          }
+          // The bug that started all of this: an undefined id is valid-looking
+          // Prolog and Simile loads it.
+          if (/\bundefined\b/.test(pl)) row.why.push('the exported Prolog contains "undefined"');
+
+          try {
+            m2 = Sienna.importSimile.read(pl).model;
+          } catch (e) {
+            row.why.push('reading it back threw: ' + e.message);
+            rows.push(row); failures++; return;
+          }
+
+          diff(shape(m1), shape(m2)).forEach(function (d) { row.why.push(d); });
+
+          try {
+            Sienna.equationCheck.audit(new Sienna.Diagram(path)).forEach(function (a) {
+              row.why.push('audit ' + a.kind + ': ' + a.message);
+            });
+          } catch (e) {
+            row.why.push('the audit threw: ' + e.message);
+          }
+
+          if (row.why.length) failures++;
+          rows.push(row);
+        });
+
+        var el = document.getElementById('summary');
+        el.className = failures ? 'fail' : 'pass';
+        el.textContent = failures
+          ? '✗ ' + failures + ' of ' + rows.length + ' fixtures failed'
+          : '✓ all ' + rows.length + ' fixtures reach a fixed point and audit clean';
+
+        var html = ['<table><tr><th>fixture</th><th>covers</th><th>size</th><th>result</th></tr>'];
+        rows.forEach(function (r) {
+          html.push('<tr><td class="name">' + esc(r.name) + '</td><td>' + esc(r.covers)
+            + '</td><td>' + esc(r.size || '—') + '</td>'
+            + (r.why.length
+              ? '<td class="bad">FAILED<ul class="why">'
+                + r.why.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('')
+                + '</ul></td>'
+              : '<td class="ok">fixed point, audit clean</td>')
+            + '</tr>');
+        });
+        document.getElementById('detail').innerHTML = html.join('') + '</table>';
+      })(window.Sienna);
+    </script>
+  </body>
+</html>

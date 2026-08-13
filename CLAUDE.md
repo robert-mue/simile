@@ -55,10 +55,18 @@ footing (`src/widgets/grid.js` is the first).
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
   statement of the Simile expression language; there is no generated parser.
-- `test/` — pages, not a test framework. `index.html` runs the grammar over
-  `corpus.js`, 1500 equations harvested from the reference models.
-  `roundtrip.html` takes `.pl` files (select the whole model catalogue) and
-  checks that `.pl` → our model → `.pl` reaches a fixed point.
+- `test/` — pages, not a test framework. Open one and read the bar.
+  - `index.html` — the grammar over `corpus.js`, 1409 equations harvested from
+    the catalogue **through the importer**, so it tests the pipeline too.
+  - `fixtures.html` — every demo fixture built, round-tripped and audited.
+    Needs no files, so this is the one that survives a wiped scratch directory.
+  - `roundtrip.html` — takes `.pl` files (select the whole model catalogue) and
+    checks that `.pl` → our model → `.pl` reaches a fixed point, reporting what
+    each import LOST as well, since a fixed point cannot show that.
+
+  The last two stub `userData`/`actions` rather than loading the shell: the real
+  store autosaves to localStorage, and a test page must not be able to touch
+  saved models.
 
 ## Running
 
