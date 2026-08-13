@@ -1262,6 +1262,28 @@ functions first and exempts them.
 file rather than copied from an old demo, and `free` rather than the inherited
 `enterprise`.
 
+**40. Two census errors, and what "identical" does not mean**
+*(2026-08-13)*
+Correcting item 33 and the audit page, both of which overstated things.
+
+**No catalogue model uses `type=records` or a `count` expression.** The census
+regex searched whole files, and the only occurrences are in the three synthetic
+`test02_1submodel_*` probes, where `type=records` sits on a **cloud** and
+`count=[size(Patch)]` on a **function**. A `multiplication_spec` means nothing
+on either. Those files are a parser probe, not models. The census now reads the
+spec off submodel clauses through the actual parser, and both counts are zero.
+
+**"Identical" means the two directions agree, not that nothing was lost.** Where
+the IMPORTER drops something, the export never sees it, the re-import agrees,
+and the comparison comes back clean. Two of the 45 are like this:
+`BallBerry4aP` loses an `alarm` node and its three influences; `biomewater2`
+loses two half-drawn influences that run into a border and stop. So the honest
+headline is **43 of 72 identical with nothing lost**, plus two identical-but-lossy.
+
+This is the same blind spot that hid the newline escape and the `unquote` bug on
+12 August — both directions consistently wrong, round trip green throughout. The
+audit page now says so, flags the two rows, and lists what each lost.
+
 ---
 
 ## Known gaps and loose ends
