@@ -164,6 +164,35 @@ Our bug, and fixed. But **a warning on a property that failed to parse would
 have saved an afternoon**, and would presumably help anyone else generating
 `.pl` files.
 
+## 0b — What does the index in `use(N,in_assoc,…)` mean? *(new, 2026-08-13)*
+
+We had this down as "the position in the association's `references` list", and
+that reads every model whose association has both roles from ONE base. It does
+not read `feeding1`, whose association `eats` joins two DIFFERENT bases:
+
+```prolog
+arc(arc00001,node00002,node00003,relation,[complete=true,name=eater]).
+arc(arc00002,node00004,node00003,relation,[complete=true,name=food]).
+references(node00003,[local(arc00001),local(arc00002)]).
+```
+
+Both consumers — one in each base — are given **index 0**:
+
+```prolog
+role=[use(0,in_assoc,{eaten},list(1)),use(none,in_hierarchy,{eaten_0},list(1))]
+role=[use(0,in_assoc,{pop_size},list(1)),use(none,in_hierarchy,{pop_size_0},list(1))]
+```
+
+By our reading the `food` consumer should say index 1. **We tried it**: Simile
+refuses the model outright —
+
+> The equation for component `eaten` refers to an input parameter called
+> `{eaten}`. This is not a valid parameter in the context of that component.
+
+So the index means something we have not understood, and it is load-bearing.
+**What does N select for `in_assoc`?** We now refuse to export `feeding1` rather
+than guess, which costs us one model and no wrong answers.
+
 ## 1 — `usr(…)` in a role term
 
 Both forms appear in **the same file** (`fire_rect.sml`):

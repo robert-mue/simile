@@ -1361,9 +1361,91 @@ two half-drawn influences are broken in the source file); corpus-wide
 `undeclared` findings 87 → 84, the alarms now being declared elements that
 sibling equations may reference.
 
+**43. Per-role aliases — the last association blocker, mostly closed**
+*(2026-08-13)*
+An influence crossing an association supplies **one name per role**. We held one
+alias per arc and derived `<alias>_<role>`, which refused ten catalogue models.
+The re-saves proved that derivation is not a rule — Simile returns whatever the
+modeller typed, byte-identical after eighteen years, and the catalogue holds at
+least three spellings.
+
+**Now stored, not derived.** `arc.roleAliases` maps role arc id → name, and
+`Diagram.roleAliasFor` is the one place that decides: stored where we have it,
+`<alias>_<role>` where we do not. The derivation survives as the DEFAULT for
+arcs drawn in this editor, which is all it ever should have been. A name equal
+to the default is not stored, so a model gains no clutter and the round trip
+keeps its fixed point — the same rule as `units=1`.
+
+`Diagram.setRoleAlias(arc, role, name)` is the model-layer setter, and setting
+it empty REMOVES it, meaning "no opinion, use the default". Nothing calls it
+yet: **the editor has no arc dialog at all**, so an alias has never been
+editable. That is the natural first job of the dialog work, not of this one.
+
+**Verified end to end, not just structurally.** The `rank` fixture with both
+roles renamed to `topdog` and `underdog` — names no derivation could produce —
+compiles and returns [4,3,2,1] from the live engine. `hexagon` (the ordinal
+convention) and `ageclass6` both build and run too.
+
+| | before | after |
+|---|---|---|
+| round-trip identical | 45 | **54** |
+| refused: association alias | 10 | **1** |
+| corpus `undeclared` findings | 84 | 14 |
+| corpus `unused` findings | 68 | 10 |
+
+Two things came out of it that are worth more than the numbers.
+
+*`lamos1a` needed a rule we did not have.* Simile SHARES a final segment between
+several consumers, so one arc's role term accumulates every consumer's names —
+four uses across two roles. We split that per consumer, so each of our arcs must
+take its own pair. **The consumer's own equation is the ground truth**: the name
+it is given is the one it writes. Item 32 identified the sharing; it did not
+matter until names stopped being derivable.
+
+*`feeding1` is refused, and deliberately.* Its association joins two DIFFERENT
+bases, and it writes `use(0,…)` for both consumers — where our rule says the
+second should be index 1. Guessing a placement was measured: Simile rejects the
+result outright ("the equation for eaten refers to an input parameter called
+{eaten}. This is not a valid parameter in the context of that component"). So we
+refuse instead, and the `in_assoc` index question goes to the developer with a
+reproducible case. One model, and an honest refusal beats a file that will not
+build.
+
+**44. Round-tripping is not running — measured, at last**
+*(2026-08-13)*
+Chasing item 43 through the live engine turned up something the round trip is
+constitutionally unable to see: **a model can round-trip to a perfect fixed
+point and still produce Prolog that Simile refuses to build.** The comparison is
+our model against itself; it never asks Simile anything.
+
+Sampled 14 of the 54, by uploading our export and building it:
+
+- **12 build**, including `hexagon` and `ageclass6` (associations this item
+  fixed), `diffusion`, `oom2`, `life_input`, `drainage1`, `daisyworld1`,
+  `budworm1`, `competition1`, `besn1`, `ageclass4`, `chao`.
+- **`lamos1a` fails** on `bad_index_number(2,dt,1)` — a `dt(2)` reaching two
+  submodels up — plus its own `check_spark` inconsistency. **The original file
+  builds**, so this is ours.
+- **`embryo1` fails** with `invalid command name "destroy"`, a Tcl error inside
+  Simile's build script rather than a modelling complaint. **The original file
+  builds**, so this is ours too.
+
+So "54 of 72 round-trip identically" remains true and remains worth having, but
+it is not "54 models we can run". The honest figure is 54 round-trip, of which a
+14-model sample says roughly 6 in 7 also build. Closing that gap means uploading
+every exportable model and building it — a slow check against a live server, but
+the only one that answers the question, and now cheap to write.
+
 ---
 
 ## Known gaps and loose ends
+
+- **Two models export but will not build**, though the originals do: `lamos1a`
+  (`bad_index_number(2,dt,1)`, so our nesting or `dt` depth differs) and
+  `embryo1` (`invalid command name "destroy"`). Item 44; both reproducible.
+- **`feeding1`'s `in_assoc` index is unexplained.** Its association joins two
+  bases and writes index 0 for both consumers. Item 43; question added for the
+  developer.
 
 - **20 equations in the catalogue do not parse, by a decision worth revisiting.**
   Comma-as-`and` / semicolon-as-`or` (12) and local bindings (8), the two

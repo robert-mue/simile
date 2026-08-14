@@ -109,12 +109,18 @@
  * chain — even when the influence ALSO climbs the containment tree first. Only
  * the role on the last segment differs.
  *
- * An association RENAMES. We hold one alias per influence; Simile needs one per
- * role, so `attribute` crossing in arrives as `attribute_higher` AND
- * `attribute_lower`. Those are derived here as `<alias>_<role>` (Simile's own
- * convention) and the consumer's equation must use them, which `check`
- * verifies — the alternative being a model that compiles and means something
- * else.
+ * An association RENAMES: one name per role, so `attribute` crossing in arrives
+ * under two. Those names come from the arc's `roleAliases` where the model has
+ * them, and are derived as `<alias>_<role>` where it does not — see
+ * `Diagram.roleAliasFor`. The derivation is a DEFAULT, not a rule: Simile
+ * imposes no convention, and treating it as one refused ten catalogue models
+ * whose modellers had typed something else. Either way the consumer's equation
+ * must use the names, which `check` verifies — the alternative being a model
+ * that compiles and means something else.
+ *
+ * Verified end to end: the `rank` fixture with both roles renamed to `topdog`
+ * and `underdog`, which no derivation would produce, compiles and returns
+ * [4,3,2,1] from the live engine.
  *
  * One asymmetry, established by running it rather than by reading: when a value
  * reaches an association already a list (because it left a multi-instance
@@ -484,11 +490,10 @@
      * own convention (`attribute` + `role1` → `attribute_role1`), and the
      * equation must use those names, which `check` verifies.
      */
-    assocRole: function (a, pair, cross) {
+    assocRole: function (a, pair, cross, arcId) {
       var self = this;
       var refs = this.rolesOf(pair.assoc);
       var mine = refs.filter(function (r) { return self.m.arcs[r].from === pair.base; });
-      var alias = (a.alias || '').trim();
 
       // The association hop is the LAST boundary left; anything left before it
       // is ordinary containment, and each multi-instance one makes the value a
@@ -499,7 +504,10 @@
 
       return mine.map(function (r) {
         var idx = refs.indexOf(r);
-        var name = self.roleAlias(alias, r);
+        // The stored name where the model has one, the derived `<alias>_<role>`
+        // where it does not. Simile imposes no convention, so a name read from
+        // a file must be written back unchanged — see `Diagram.roleAliasFor`.
+        var name = Sienna.Diagram.roleAliasFor(self.m, arcId, r);
         var dim = '1';
         var i;
         if (pair.dir === 'in_assoc') {
@@ -710,7 +718,7 @@
       var pair = this.assocPair(cross);
       var role;
       if (pair) {
-        role = this.assocRole(a, pair, cross);
+        role = this.assocRole(a, pair, cross, id);
       } else {
         var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
         var dim = '1';

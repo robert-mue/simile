@@ -152,12 +152,23 @@
   //      the name looks unsupplied and the arrow looks unused. Our own `stand`
   //      fixture — which runs correctly on the Simile engine — was reported red
   //      on both counts.
-  //   2. **An association renames, once per role.** We hold one alias per arc;
-  //      a crossing into or out of an association supplies `<alias>_<role>` for
-  //      each role arc joining that base to that association (Simile's own
-  //      convention). `attribute` crossing into a self-association arrives as
-  //      `attribute_higher` AND `attribute_lower`, and an equation using
-  //      neither is a real error worth reporting.
+  //   2. **An association renames, once per role.** A crossing into or out of
+  //      an association supplies ONE NAME PER ROLE ARC joining that base to
+  //      that association. `attribute` crossing into a self-association arrives
+  //      as two names, and an equation using neither is a real error.
+  //
+  //      Those names are stored per role in `arc.roleAliases`, keyed by role
+  //      arc id, because **Simile imposes no convention on them**. That was
+  //      measured, not assumed: re-saving three catalogue models in Simile 7.4
+  //      returned their `use(…)` terms byte-identical after eighteen years, and
+  //      the catalogue uses at least three spellings — the role name
+  //      (`class_this`), an ordinal (`var12_0`), and plain unrelated names
+  //      (`pop_size` / `biomass`) — all three inside 2008 v9.0 files.
+  //
+  //      `Diagram.roleAlias` derives `<alias>_<role>` and remains the DEFAULT
+  //      for a role we have no stored name for, which is every arc drawn in
+  //      this editor. It is a reasonable default; it was never a rule, and
+  //      treating it as one is what refused ten catalogue models.
 
   function modelParent(model, id) {
     var el = (model.nodes || {})[id] || (model.submodels || {})[id];
@@ -238,6 +249,48 @@
   };
 
   /**
+   * The arc's own alias, without the brackets that mark it as a list — which is
+   * the form the equation parser reports a reference in, and so the form
+   * everything here compares against.
+   */
+  Diagram.bareAlias = function (model, arc) {
+    var source = (model.nodes || {})[arc.from] || (model.submodels || {})[arc.from] || {};
+    var alias = String(arc.alias != null ? arc.alias : (source.label || '')).trim();
+    return alias.replace(/^[{[]+|[}\]]+$/g, '').trim();
+  };
+
+  /**
+   * The role arcs an influence supplies a name for — empty unless it crosses an
+   * association boundary. Exposed because the property dialog needs to ask
+   * "how many names does this arc carry, and for which roles?" and must not
+   * answer it with its own copy of the rule.
+   */
+  Diagram.rolesCrossedBy = function (model, arcId) {
+    var arc = (model.arcs || {})[arcId];
+    if (!arc || arc.type !== 'influence') return [];
+    var pair = Diagram.associationCrossing(
+      model, Diagram.crossings(model, arc.from, arc.to)
+    );
+    if (!pair) return [];
+    return Diagram.rolesOf(model, pair.assoc).filter(function (r) {
+      return model.arcs[r].from === pair.base;
+    });
+  };
+
+  /**
+   * The name this influence supplies for one role: the stored one, or the
+   * derived default where there is none. See the note above on why stored wins.
+   */
+  Diagram.roleAliasFor = function (model, arcId, roleArcId) {
+    var arc = (model.arcs || {})[arcId] || {};
+    var stored = (arc.roleAliases || {})[roleArcId];
+    if (stored != null && String(stored).trim() !== '') return String(stored).trim();
+    return Diagram.roleAlias(
+      Diagram.bareAlias(model, arc), ((model.arcs || {})[roleArcId] || {}).label
+    );
+  };
+
+  /**
    * Every name an influence supplies to its target's equation — bare, as the
    * equation parser reports a reference. Usually one; one per role across an
    * association.
@@ -246,19 +299,13 @@
     var arc = (model.arcs || {})[arcId];
     if (!arc || arc.type !== 'influence') return [];
 
-    var source = (model.nodes || {})[arc.from] || (model.submodels || {})[arc.from] || {};
-    var alias = String(arc.alias != null ? arc.alias : (source.label || '')).trim();
-    // The brackets say the value arrives as a LIST; the name is what is inside.
-    var bare = alias.replace(/^[{[]+|[}\]]+$/g, '').trim();
-    if (!bare) return [];
-
-    var cross = Diagram.crossings(model, arc.from, arc.to);
-    var pair = Diagram.associationCrossing(model, cross);
-    if (!pair) return [bare];
-
-    return Diagram.rolesOf(model, pair.assoc)
-      .filter(function (r) { return model.arcs[r].from === pair.base; })
-      .map(function (r) { return Diagram.roleAlias(bare, (model.arcs[r] || {}).label); });
+    var roles = Diagram.rolesCrossedBy(model, arcId);
+    if (roles.length) {
+      return roles.map(function (r) { return Diagram.roleAliasFor(model, arcId, r); })
+        .filter(function (n) { return n !== ''; });
+    }
+    var bare = Diagram.bareAlias(model, arc);
+    return bare ? [bare] : [];
   };
 
   Diagram.prototype = {
@@ -463,6 +510,39 @@
       return Sienna.userData.keys(base).map(function (owner) {
         return 'ports/' + boundary + '/' + owner;
       });
+    },
+
+    /**
+     * Set the name an influence supplies for ONE role of the association it
+     * crosses (§14.1, and the note by `Diagram.roleAliasFor`).
+     *
+     * Setting it to the empty string REMOVES it, falling back to the derived
+     * `<alias>_<role>`. That is deliberate: an editor should be able to say "I
+     * have no opinion, use the default" without storing a name that merely
+     * happens to equal the default and then silently diverging from it if the
+     * role is renamed.
+     */
+    setRoleAlias: function (arcId, roleArcId, name) {
+      var arc = this.get(arcId);
+      if (!arc || arc.type !== 'influence') throw new Error('not an influence');
+      var clean = name == null ? '' : String(name).trim();
+      if (clean) this.checkLabel(clean);       // it is an equation name, like any other
+
+      var self = this;
+      var base = this.path + '/arcs/' + arcId + '/roleAliases';
+      Sienna.actions.dispatch(
+        {
+          type: 'diagram.setRoleAlias',
+          target: this.path,
+          payload: { id: arcId, role: roleArcId, alias: clean },
+        },
+        function () {
+          var map = Object.assign({}, self.get(arcId).roleAliases || {});
+          if (clean) map[roleArcId] = clean; else delete map[roleArcId];
+          if (Object.keys(map).length) Sienna.userData.set(base, map);
+          else Sienna.userData.remove(base);
+        }
+      );
     },
 
     /**

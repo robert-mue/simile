@@ -829,10 +829,34 @@
           return;
         }
 
-        self.ours[id] = self.put('arc', {
+        var el = {
           type: 'influence', from: from, to: to,
           alias: self.aliasOf(a, from), props: {},
-        }, null);
+        };
+        // Per-role names where this crosses an association. The single `alias`
+        // above is still stored — it is the common stem, and what the editor
+        // shows and derives a default from — but these are what gets written
+        // back, so a name we did not invent survives the round trip.
+        var roleAliases = self.roleAliasesFor(
+          items(a.p.role).map(parseUse).filter(Boolean), from, to
+        );
+        if (roleAliases) {
+          // Store only what DIFFERS from the derived default. A name equal to
+          // `<alias>_<role>` is what an arc drawn in this editor would produce
+          // anyway, so storing it adds nothing and costs the round trip its
+          // fixed point — our own `rank` and `mixed` fixtures came back
+          // carrying names they had never had. Same rule as `units=1`.
+          var bare = String(el.alias || '').replace(/^[{[]+|[}\]]+$/g, '').trim();
+          var kept = {};
+          Object.keys(roleAliases).forEach(function (r) {
+            var label = (self.m.arcs[r] || {}).label;
+            if (roleAliases[r] !== Sienna.Diagram.roleAlias(bare, label)) {
+              kept[r] = roleAliases[r];
+            }
+          });
+          if (Object.keys(kept).length) el.roleAliases = kept;
+        }
+        self.ours[id] = self.put('arc', el, null);
       });
     },
 
@@ -872,6 +896,113 @@
      * not of this file, and it is the first thing the round trip found that the
      * fixtures could not.
      */
+    /**
+     * The names an association crossing supplies, one per role, exactly as the
+     * file spells them — keyed by OUR role arc id.
+     *
+     * This is what makes the ten association models round-trip. Simile imposes
+     * no convention on these names (proved by re-saving: 7.4 returns them
+     * byte-identical, and the catalogue holds at least three spellings), so
+     * reconstructing them from a single stem was always going to lose. Now the
+     * file's own names are stored and written back untouched.
+     *
+     * Each `use(N,…)`'s N is a position in the ASSOCIATION's `references` list,
+     * so the walk is index → that list → a Simile relation arc → our role arc.
+     * The association is found through the shared model-layer rule rather than
+     * by guessing, which is possible here only because `makeRelations` has
+     * already run: the role arcs are in the model before any influence is.
+     *
+     * Falls back to pairing by ORDER when `references` cannot be followed —
+     * the `use` terms and the roles are both in the association's order — and
+     * returns null if even that is unavailable, leaving the derived default.
+     */
+    roleAliasesFor: function (allUses, ourFrom, ourTo) {
+      var self = this;
+      // ONLY the association uses. A role term may carry an `in_hierarchy` use
+      // alongside them — `feeding1` writes
+      // `[use(0,in_assoc,{eaten},…),use(none,in_hierarchy,{eaten_0},…)]` — and
+      // mapping that one positionally assigns a containment name to a role.
+      var uses = allUses.filter(function (u) {
+        return u.dir === 'in_base' || u.dir === 'in_assoc';
+      });
+      if (!uses.length) return null;
+
+      var pair = Sienna.Diagram.associationCrossing(
+        this.m, Sienna.Diagram.crossings(this.m, ourFrom, ourTo)
+      );
+      if (!pair) return null;
+
+      var mine = Sienna.Diagram.rolesOf(this.m, pair.assoc).filter(function (r) {
+        return self.m.arcs[r].from === pair.base;
+      });
+      if (!mine.length) return null;
+
+      // Our submodel id back to Simile's, so the file's `references` list can
+      // be indexed. Built once; `ours` is Simile -> ours.
+      if (!this._sim) {
+        this._sim = {};
+        Object.keys(this.ours).forEach(function (k) { self._sim[self.ours[k]] = k; });
+      }
+      var refs = this.refs[this._sim[pair.assoc]] || null;
+
+      // Candidate names per role. Usually one each — but Simile SHARES a final
+      // segment between several consumers, and the role term then accumulates
+      // every consumer's names on the one arc. `lamos1a` writes four uses
+      // across two roles:
+      //     use(0,…,{interflow}), use(0,…,{interflow_0}),
+      //     use(1,…,{interflow_1}), use(1,…,{interflow_2})
+      // We split that segment per consumer, so this arc must take the PAIR
+      // belonging to its own consumer and leave the other pair to the sibling
+      // arc. Item 32 identified this sharing; it did not matter until names
+      // stopped being derivable.
+      var byRole = {};
+      uses.forEach(function (u, i) {
+        var ourRole = null;
+        if (refs && u.index != null) {
+          var simRole = refs[u.index];
+          if (simRole && self.A[simRole] && self.A[simRole].type === 'relation') {
+            ourRole = self.ours[simRole];
+          }
+        }
+        // The index must land on a role THIS crossing supplies. Where there is
+        // no `references` list to follow, pair by order — the uses and the
+        // roles are both in the association's order, and that is sound.
+        //
+        // But where the index WAS followed and landed outside `mine`, do not
+        // invent a placement: that is the file telling us our role model
+        // disagrees with it, and guessing was measured to produce a model
+        // Simile rejects outright ("the equation for eaten refers to an input
+        // parameter called {eaten}. This is not a valid parameter in the
+        // context of that component"). `feeding1`'s association joins two
+        // different bases and writes index 0 for BOTH consumers, which we have
+        // no account of. Leaving the name unplaced makes the exporter refuse,
+        // which is the honest outcome — see the questions note.
+        if (ourRole && mine.indexOf(ourRole) < 0) return;
+        if (!ourRole) ourRole = mine[i];
+        if (!ourRole || !u.name) return;
+        (byRole[ourRole] = byRole[ourRole] || []).push(u.name);
+      });
+
+      // Where a role offers several names, the consumer's own EQUATION says
+      // which is his: it is the one he writes. That is the only ground truth
+      // available, and it is a good one — a name no equation mentions is a name
+      // for somebody else.
+      var target = this.m.nodes[ourTo] || {};
+      var field = EXPR_FIELD[target.type];
+      var equation = String((target.props || {})[field] || '');
+      var out = {};
+      var used = false;
+      Object.keys(byRole).forEach(function (r) {
+        var names = byRole[r];
+        var pick = names.filter(function (n) {
+          return new RegExp('\\b' + n.replace(/[^A-Za-z0-9_]/g, '.') + '\\b').test(equation);
+        })[0];
+        out[r] = pick || names[0];
+        used = true;
+      });
+      return used ? out : null;
+    },
+
     aliasOf: function (a, ourFrom) {
       var uses = items(a.p.role).map(parseUse).filter(Boolean);
       if (!uses.length) {

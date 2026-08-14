@@ -187,7 +187,11 @@
       },
       // An influence carries information rather than stuff, so it may branch
       // freely. It has no label, but it does carry the local name (alias) the
-      // target's equation uses for the imported value (§14.1).
+      // target's equation uses for the imported value (§14.1) — and, where it
+      // crosses an association, one name PER ROLE in `roleAliases`, since the
+      // value arrives once for each. Simile imposes no convention on those
+      // names, so they are stored rather than derived; `Diagram.roleAliasFor`
+      // is the one place that decides.
       influence: {
         has_label: false,
         branches: true,
