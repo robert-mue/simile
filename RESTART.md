@@ -62,9 +62,9 @@ calling it. Adding one finishes per-role aliases properly *and* fills a real gap
 — `specFor` in `src/dialog.js` only looks at `schema.nodes` and the submodel, so
 an arc currently falls through to an empty field list.
 
-**One thing owed:** the dialog registry change has NOT been seen on screen.
-Chrome's extension was disconnected when it was written. The generated-form path
-is byte-for-byte the same expression as before, but open a dialog and confirm.
+**Confirmed on screen 2026-08-14.** The debt this note used to record is paid:
+double-clicking a variable opens the generated form through the registry, with
+Name / Value or expression / Units and the expression intact. Nothing to redo.
 
 ### 2. Event-based modelling
 
@@ -116,6 +116,11 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   `for (const u of ['src/schema/simile-v1.js','src/dialog.js']) await fetch(u,{cache:'reload'}); location.reload();`
 - **`file://` and `http://localhost` are different origins**, so they have
   separate stored models. A test on one cannot see the other's.
+- **Chrome's automation extension refuses `file://` URLs outright**, so an agent
+  driving the browser cannot open `index.html` the way you do. Serve the
+  directory instead — `python3 -m http.server 8731` from the repo root, then
+  `http://localhost:8731/index.html` — and remember the origin trap above: that
+  tab has its own stored models and cannot see the `file://` ones.
 - **Never delete stored models** from `Sienna.userData` without asking — not on
   localhost, not "test clutter". `models/johad-test`, `models/prime-test` and
   `models/hexagon-test` are mine, on the localhost profile, and can go whenever.
