@@ -1436,9 +1436,60 @@ it is not "54 models we can run". The honest figure is 54 round-trip, of which a
 every exportable model and building it — a slow check against a live server, but
 the only one that answers the question, and now cheap to write.
 
+**45. Dialogs: the seam strengthened, and the widget question settled**
+*(2026-08-13)*
+Robert asked whether dialogs should be **widgets**, so a custom one could be
+swapped in. Explored and declined, but the goal was taken seriously and the
+existing seam strengthened to meet it.
+
+*Why not widgets.* Four costs, none obvious from outside: panels are
+**persisted**, so a dialog would be restored on reload pointing at a possibly
+deleted element; a panel `ref` of `models/x/nodes/node3` **resolves**, so
+`documents.currentPath` could pick a dialog as "the current model" and export
+it; opening one emits `panel.add`, so **session replay would pop dialogs open**;
+and a live-bound widget writes per field, losing **one visit = one undo step**,
+which the dialog holds today.
+
+*Robert's correction, accepted.* The line between "dialog" and "inspector" is
+not inspect-versus-edit — an editable side panel does a dialog's job, and
+diagramming tools ship exactly that. The real line is **lifetime and modality**:
+transient and focused, versus persistent and ambient. Every cost above is about
+lifetime, which is why it argues against a widget *dialog* and not against a
+widget *inspector*.
+
+*What changed.* The presentation was `spec.dialog`, a FUNCTION on the schema's
+type entry — which contradicted the schema's own first claim, "everything below
+is plain data… so it stays exportable to other tools". It is now
+`Sienna.dialogs.register(key, renderer)`:
+
+- the schema is data again, and a custom dialog is a script that registers
+  itself, in the manner of a widget but without a panel;
+- keys may be bare (`variable`) or notation-qualified (`simile-v1:variable`),
+  qualified winning, so two notations can share a type name;
+- a renderer is handed the element, field model, **the whole schema**, the
+  `Diagram`, and `ctx.field(name)` / `ctx.fields()` — the STANDARD rows. That
+  last part is the actual strengthening: before, a custom dialog had to
+  hand-write every control, so changing one field's presentation cost the whole
+  form.
+
+Nothing used the old hook, so nothing broke. Registry precedence is smoke-tested;
+**the on-screen check is still owed** — Chrome's extension is disconnected.
+
 ---
 
 ## Known gaps and loose ends
+
+- **An inspector widget, for later.** A persistent, editable panel following the
+  selection. Genuinely wants to be a widget, unlike a dialog. Item 45 lists what
+  it would have to answer first — mainly replay and restore.
+- **No function list or keypad in the equation dialog.** Simile's generates a
+  function list dynamically from its built-ins (and possibly user-supplied
+  ones); we have the same data in `schema.functions` as `{name: arity}`, and a
+  renderer is now handed the schema, so the seam is ready. Deliberately not
+  built: Robert prefers a simpler dialog for now, keypad included. A marker,
+  not a gap.
+- **There is still no arc dialog at all.** An influence's alias has never been
+  editable, and `Diagram.setRoleAlias` (item 43) has nothing calling it.
 
 - **Two models export but will not build**, though the originals do: `lamos1a`
   (`bad_index_number(2,dt,1)`, so our nesting or `dt` depth differs) and

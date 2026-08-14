@@ -29,7 +29,7 @@ A submodel is **not** a kind of node (some libraries model containers that way; 
 
 1. **Vocabulary** — the node/arc types this notation has (and the submodel's allowed kinds).
 2. **Grammar** — a graph grammar: which types may connect to which, and what may be contained where (e.g. a flow's ends must be compartment or cloud; population symbols only inside a population submodel). *Open: rule language + preventive-vs-validation enforcement.*
-3. **Property / dialog spec** — the fields each type exposes in its settings dialog (equations/values/units/props). A mandatory **field model** (the data — source of truth) separated from an optional **presentation** (per-type HTML template; auto-generated form as fallback).
+3. **Property / dialog spec** — the fields each type exposes in its settings dialog (equations/values/units/props). A mandatory **field model** (the data — source of truth) separated from an optional **presentation** (auto-generated form as fallback). *Revised 2026-08-13:* the presentation is registered through `Sienna.dialogs.register(type, renderer)` and no longer hung on the schema as a function — a function is precisely what a schema claiming to be plain exportable data cannot hold. A renderer is handed the field model, the whole schema, and the standard row-builders, so it can reuse the ordinary control for the fields it does not want to reinvent.
 4. **Styling** — glyphs, colours, line/fill/font (see §6).
 
 Delivered as a **`.js` file registering on `window.Sienna`**, not fetched JSON — because `file://` blocks `fetch` (same reason widgets load by `<script>` injection). Bonus: dialog HTML templates can be JS template strings.

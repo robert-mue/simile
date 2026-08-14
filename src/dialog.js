@@ -1,18 +1,54 @@
 /**
- * `Sienna.propertyDialog` — the settings dialog for one diagram element.
+ * `Sienna.propertyDialog` — the settings dialog for one diagram element —
+ * and `Sienna.dialogs`, the registry that makes its BODY replaceable.
  *
  * DESIGN-diagram.md §3 splits this face of the schema in two:
  *
  *   - a **field model**, which is mandatory and is the source of truth: what
  *     properties this type has, what each is called, and what kind of value it
  *     holds (expression / text / number / boolean / choice);
- *   - a **presentation**, which is optional: a per-type HTML template. Without
- *     one, a form is generated from the field model.
+ *   - a **presentation**, which is optional: a per-type renderer. Without one,
+ *     a form is generated from the field model.
  *
  * The binding between the two is one rule: **any control carrying
- * `data-field="<name>"` is bound to that field**. A template therefore needs no
- * code of its own — it is layout and wording only — and the generated form uses
- * exactly the same mechanism, so there is one code path rather than two.
+ * `data-field="<name>"` is bound to that field**. A renderer therefore needs no
+ * code of its own to save anything — it is layout and wording — and the
+ * generated form uses exactly the same mechanism, so there is one code path.
+ *
+ * ## Why a registry rather than a field on the schema
+ *
+ * The presentation used to be `spec.dialog`, a FUNCTION hung on the schema's
+ * type entry. That contradicted the schema's own first claim — "everything
+ * below is plain data… so it stays exportable to other tools" — because a
+ * function is exactly what cannot be exported. `Sienna.dialogs.register()`
+ * moves the code out, leaving the schema data again, and gives a custom dialog
+ * somewhere to live that is neither the schema nor this file: a script that
+ * registers itself, in the manner of a widget.
+ *
+ * That was the whole benefit of "dialogs as widgets" (2026-08-13) without the
+ * costs — panel persistence, `ref` colliding with `documents.currentPath`,
+ * replay recreating dialogs, and the loss of one-visit-one-undo-step. An
+ * INSPECTOR — a persistent, editable side panel following the selection — is a
+ * different thing and genuinely does want to be a widget; the line between it
+ * and a dialog is lifetime and modality, not inspect-versus-edit.
+ *
+ * ## What a renderer gets
+ *
+ * `renderer(ctx)` returns an HTML string, or an element. `ctx` carries the
+ * element, its id and type, the field model, **the whole schema** (so a
+ * renderer can build something from `schema.functions`, which is what Simile's
+ * own equation dialog does with its function list), the `Diagram`, and:
+ *
+ *   - `ctx.value(name)`  — the current value of one field;
+ *   - `ctx.field(name)`  — the STANDARD row for one field, so a custom layout
+ *     can reuse the ordinary control for the parts it does not want to
+ *     reinvent and hand-write only the part it does;
+ *   - `ctx.fields()`     — every standard row, the generated form entire.
+ *
+ * Those last two are the point: before, a custom dialog had to hand-write every
+ * control, which made "change one field's presentation" cost the whole form.
+ *
+ * ## Everything else
  *
  * Values live where the model already keeps them: `props[name]`, except for
  * fields marked `target`, which address the element itself (a submodel's
@@ -29,6 +65,32 @@
  */
 (function (Sienna, $) {
   'use strict';
+
+  // ---- the presentation registry ---------------------------------------
+
+  var renderers = {};
+
+  Sienna.dialogs = {
+    /**
+     * Claim the dialog body for a type.
+     * @param {string} key  `'variable'`, or `'simile-v1:variable'` to bind it
+     *   to one notation — a qualified entry wins over a bare one, so a schema
+     *   can specialise a type another schema also has.
+     * @param {function} renderer  `ctx => html | element`
+     */
+    register: function (key, renderer) {
+      if (typeof renderer !== 'function') throw new Error('a dialog renderer must be a function');
+      renderers[key] = renderer;
+      return renderer;
+    },
+
+    /** The renderer for a type in a notation, or null for the generated form. */
+    rendererFor: function (schemaName, type) {
+      return renderers[schemaName + ':' + type] || renderers[type] || null;
+    },
+
+    list: function () { return Object.keys(renderers); },
+  };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -53,7 +115,7 @@
     return v == null ? '' : v;
   }
 
-  /** One row of the generated form. Templates may replace this wholesale. */
+  /** One row of the generated form. A renderer can reuse these via `ctx.field`. */
   function fieldHtml(f, value) {
     var id = 'fld-' + f.name;
     var control;
@@ -98,14 +160,31 @@
     var fields = spec.fields || [];
     var typeName = String(id).indexOf('submodel') === 0 ? 'submodel' : el.type;
 
-    var body;
-    if (typeof spec.dialog === 'function') {
-      // A per-type template: layout and wording only. It is bound by the same
-      // data-field rule as the generated form.
-      body = spec.dialog({ element: el, id: id, value: function (n) { return readValue(el, { name: n }); } });
-    } else {
-      body = fields.map(function (f) { return fieldHtml(f, readValue(el, f)); }).join('');
+    // The standard row for one field, by name — what a custom renderer reuses
+    // for the parts it does not want to reinvent.
+    function rowFor(name) {
+      var f = fields.filter(function (x) { return x.name === name; })[0];
+      return f ? fieldHtml(f, readValue(el, f)) : '';
     }
+    function allRows() {
+      return fields.map(function (f) { return fieldHtml(f, readValue(el, f)); }).join('');
+    }
+
+    var schema = d.schema();
+    var renderer = Sienna.dialogs.rendererFor(schema.name, typeName);
+    var body = renderer
+      ? renderer({
+        element: el,
+        id: id,
+        type: typeName,
+        spec: spec,
+        schema: schema,          // e.g. `schema.functions` for a function list
+        diagram: d,
+        value: function (n) { return readValue(el, { name: n }); },
+        field: rowFor,
+        fields: allRows,
+      })
+      : allRows();
 
     var $host = host && host.length ? host : $('body');
     $host.find('.slx-dlg-backdrop').remove();
@@ -122,7 +201,7 @@
       + '<button type="button" data-act="ok">OK</button>'
       + '</div></div>'
     ).appendTo($back);
-    $dlg.find('.slx-dlg-fields').html(body);
+    $dlg.find('.slx-dlg-fields').html(body);   // a string or an element; jQuery takes either
 
     function close() {
       $(document).off('keydown.slxdlg');
