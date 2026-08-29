@@ -61,7 +61,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _create() {
     this.element.addClass('slx-diagram');
 
-    this._view = { x: 0, y: 0, k: 1 }; // pan/zoom: the one root transform
+    // Pan/zoom: the one root transform. It starts at `defaultScale` and not at
+    // 1, because 1 is not what this app calls 100% — the view bar's "100%"
+    // restores `defaultScale` for the reason given there, that the notation's
+    // world units are unreadably small at a true 1:1. An empty model opened at
+    // k=1 was the one view in the app that no button would have produced, and
+    // its nodes drew at barely half the size they take everywhere else.
+    this._view = { x: 0, y: 0, k: this.options.defaultScale };
     this._tool = null;                 // null = select/drag; else a palette tool
     this._sel = [];                    // selected element ids
 
@@ -73,6 +79,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._buildViewBar();
     this._buildCanvas();
     this._bindView();
+    // The view is only real once it is on the root transform. Nothing else
+    // applies it at startup — zoom, pan and fit each apply their own — so a
+    // starting scale other than 1 would otherwise be believed by `_toWorld` and
+    // not by the picture, and every placement would land at the click point
+    // divided by it.
+    this._applyView();
 
     if (window.ResizeObserver) {
       this._ro = new ResizeObserver(() => this._fit());

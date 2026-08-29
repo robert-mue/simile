@@ -747,6 +747,13 @@
       var self = this;
       var map = mapOf(id);
       if (!map) return;
+      // A rename to the name it already has is not an edit, and must not become
+      // an undo step. Placing a node opens its rename box on a default name, so
+      // every element placed and left alone recorded one — and undo then spent
+      // a press restoring "node2" over "node2", visibly doing nothing. Every
+      // other press appeared dead.
+      var cur = Sienna.userData.get(this.path + '/' + map + '/' + id + '/label');
+      if ((cur || '') === (label || '')) return;
       Sienna.actions.dispatch(
         { type: 'diagram.setLabel', target: this.path, payload: { id: id, label: label } },
         function () {
