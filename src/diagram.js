@@ -1098,10 +1098,24 @@
 
     // ---- writes (each is one dispatched action = one undo step) ----
 
-    /** Write one element + optional layout. Caller supplies the action wrapper. */
+    /**
+     * Write one element + optional layout. Caller supplies the action wrapper.
+     *
+     * **Layout first, then the element.** `userData.set` notifies subscribers
+     * synchronously, so these two writes are two renders, and a watcher sees
+     * the store between them. Writing the element first makes that intermediate
+     * state "exists, but has no position" — and an element with no layout draws
+     * at the origin, which is a lie the renderer then has to act on. It cost a
+     * real bug: the first node placed in an empty model was framed by `_fit` on
+     * that phantom origin position and left off-screen, looking as though the
+     * click had done nothing. Layout first makes the intermediate state
+     * "position for an element that does not exist yet", which renders as
+     * nothing at all, because every renderer walks the families and not the
+     * layout.
+     */
     _put: function (family, id, el, geom) {
-      Sienna.userData.set(this.path + '/' + family + '/' + id, el);
       if (geom) Sienna.userData.set(this.path + '/layout/' + id, geom);
+      Sienna.userData.set(this.path + '/' + family + '/' + id, el);
     },
 
     _geom: function (o) {

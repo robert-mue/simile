@@ -435,6 +435,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (!verdict.ok) { this._flash(verdict.message); return; }
     }
 
+    this._placedByHand();
     let id;
     if (kind === 'submodel') {
       id = d.addSubmodel({ parent, x: p.x, y: p.y, label: '' });
@@ -478,6 +479,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const box = { x: (origin.x + cur.x) / 2, y: (origin.y + cur.y) / 2, w: w, h: h };
       this._tool = null;
       this._syncPalette();
+      this._placedByHand();
       const id = d.addSubmodel(Object.assign({ parent: this._dropTargetAt(d, origin, null), label: '' }, box));
       this._render();
       // Capture is NOT refused when it creates an illegal containment: boxing a
@@ -489,6 +491,25 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._editLabel(d, id);
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  /**
+   * The user is about to place something with their own hand, so the panel has
+   * nothing left to frame.
+   *
+   * The initial fit exists for content that ARRIVES — a model opened, imported
+   * or restored, which the user has not seen and could be anywhere. Content the
+   * user places is the opposite case: they chose the spot, they are looking at
+   * it, and re-framing moves it out from under the cursor. Worse, `maxFitScale`
+   * lets fit zoom IN, so the first node in an empty model was flung to the
+   * centre at 200% — the sole element of an empty model being, technically, a
+   * model that fits the panel very well indeed.
+   *
+   * Called BEFORE the write, because `userData.set` notifies synchronously and
+   * the render that frames the model happens inside the add, not after it.
+   */
+  _placedByHand() {
+    this._fittedOnce = true;
   },
 
   _applyView() {
@@ -561,11 +582,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       }));
     });
 
-    // Frame the model ONCE, when it first has content. Never re-frame after an
-    // edit: adding or moving an element changes the bounding box, and a view
-    // that re-scales every time you place something is unusable. Resizing the
-    // panel still re-fits (via the ResizeObserver), until the user takes the
-    // view over by panning or zooming.
+    // Frame the model ONCE, when content it did not draw itself first arrives —
+    // a model opened, imported or restored. Never re-frame after an edit:
+    // adding or moving an element changes the bounding box, and a view that
+    // re-scales every time you place something is unusable. Nor on the first
+    // element the user places by hand, which `_placedByHand` rules out ahead of
+    // the write: they chose that spot and are looking at it. Resizing the panel
+    // still re-fits (via the ResizeObserver), until the user takes the view
+    // over by panning or zooming.
     if (!this._drag && !this._portDrag && !this._fittedOnce) {
       this._fit();
       if (this._root.getBBox && this._root.getBBox().width) this._fittedOnce = true;

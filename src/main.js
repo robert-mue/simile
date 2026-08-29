@@ -67,6 +67,11 @@
     root: 'models',
     label: 'model',
     widget: 'diagram',
+    // Four times the panel default's width and roughly twice its height. The
+    // default is sized for a tool panel: at 260px the diagram's own palette
+    // wraps into six rows, so the toolbars are taller than the canvas and a new
+    // model opens with nowhere to draw. No position, so panels still cascade.
+    geometry: { width: 1040, height: 680 },
     // The empty-model shape lives in the model layer, not here, so that a
     // model made from the File menu and one made from code cannot differ.
     create: function (id) { return Sienna.Diagram.emptyModel(id); },
