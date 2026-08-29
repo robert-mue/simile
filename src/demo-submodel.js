@@ -39,7 +39,7 @@
     var plant = d.addSubmodel({ label: 'PLANT', kind: 'single', x: 250, y: 220, w: 200, h: 130 });
 
     // --- inside PLANT ---
-    var biomass = d.addNode('compartment', {
+    var biomass = d.addNode('stock', {
       label: 'biomass', parent: plant, x: 330, y: 220, w: 36, h: 24,
       props: { initial: '10' },
     });

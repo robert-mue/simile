@@ -40,6 +40,14 @@
     if (!obj || typeof obj !== 'object') throw new Error('that is not a model file');
     if (!obj.nodes || !obj.arcs) throw new Error('expected a model with nodes and arcs');
 
+    // Migrate BEFORE the checks below, in place. The shell hands `validate` the
+    // very object it is about to store, and a file written before `compartment`
+    // became `stock` is not a bad file — it is an old one, and the difference
+    // matters to whoever saved it. Bringing it forward here means the app has
+    // exactly one place that knows how to read an older model, shared by the
+    // File menu's Open and by the startup pass over the store.
+    Sienna.Diagram.migrate(obj);
+
     var format = obj.format == null ? 1 : obj.format;
     if (!(format <= Sienna.Diagram.FORMAT)) {
       throw new Error('it was saved by a newer version of simile (format ' + format
@@ -390,6 +398,18 @@
       e.preventDefault();
       Sienna.history.redo();
     }
+  });
+
+  // Bring every stored model up to the current format before anything opens
+  // one. Models in localStorage were written by whichever build made them, and
+  // the store is the one copy — there is no file to re-import and no undo that
+  // reaches back past this session. Written straight to `userData` rather than
+  // through `actions.dispatch`, because this is not something the user did: it
+  // must not appear in the action log, and undoing it would put a model back
+  // into a spelling the schema no longer has.
+  Sienna.userData.keys('models').forEach(function (id) {
+    var model = Sienna.userData.get('models/' + id);
+    if (Sienna.Diagram.migrate(model)) Sienna.userData.set('models/' + id, model);
   });
 
   // TEMPORARY dev convenience: seed the demo model so Widgets ▸ Diagram has

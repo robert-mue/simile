@@ -4,7 +4,7 @@
  *
  *     cloud ──growth──▶ [biomass]        k ──▶ growth ◀── biomass
  *
- * i.e. a growth flow from a cloud into a biomass compartment, with the flow
+ * i.e. a growth flow from a cloud into a biomass stock, with the flow
  * rate influenced by a parameter `k` and by `biomass` itself. No submodels.
  *
  * Run it from the browser console:  demoGrowth()
@@ -23,9 +23,9 @@
     var p = path || 'models/growth';
     var d = Sienna.Diagram.create(p, { name: 'Growth' });
 
-    // 1. The compartment the flow runs into. (x/y are layout only — the model
+    // 1. The stock the flow runs into. (x/y are layout only — the model
     //    itself is position-free; see DESIGN-diagram.md §6.)
-    var biomass = d.addNode('compartment', { label: 'biomass', x: 340, y: 220, w: 36, h: 24,
+    var biomass = d.addNode('stock', { label: 'biomass', x: 340, y: 220, w: 36, h: 24,
       props: { initial: '10' } });
 
     // 2. The flow. Drawn from blank space, so its source cloud is auto-created,

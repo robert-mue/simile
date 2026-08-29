@@ -82,7 +82,7 @@
     // a submodel's `dimensions` needs: demanding it of every submodel would
     // leave every single-instance one permanently red.
     nodes: {
-      compartment:  { has_label: true,  fields: [
+      stock:        { has_label: true,  fields: [
         { name: 'initial', label: 'Initial value', type: 'expression', required: true,
           help: 'Value at the start of the run.' },
         { name: 'units',   label: 'Units', type: 'text' },
@@ -95,7 +95,16 @@
       // A valve has no position of its own: it rides at the midpoint of its
       // flow, so dragging either end carries it along. Derived geometry is
       // never stored (§10.2).
-      valve:        { has_label: true,  autoCreated: true, positionedBy: 'arc', fields: [
+      //
+      // `labelStem` is what a new one is CALLED, where that differs from what
+      // its type is: a valve's default name is `flow1`, not `valve1`. The node
+      // is a valve — that is the symbol on the diagram and the thing that holds
+      // the rate — but what the modeller names is the process the flow carries,
+      // `growth` or `harvest`. System Dynamics has always named it that way,
+      // and a convention borrowed whole is a smaller hurdle than a better one
+      // invented here. Every other type takes its own name as the stem.
+      valve:        { has_label: true,  labelStem: 'flow', autoCreated: true,
+                      positionedBy: 'arc', fields: [
         { name: 'rate',  label: 'Rate', type: 'expression', required: true,
           help: 'Amount flowing per unit time.' },
         { name: 'units', label: 'Units', type: 'text' },
@@ -222,14 +231,14 @@
     //   'deferred'    — content; report via completeness colouring, never block
     // `confidence` is 'known' or 'guess' (§12.7): a wrong guess is one line.
     rules: [
-      { id: 'flow-ends', subject: 'arc:flow', ends: ['compartment', 'cloud'],
+      { id: 'flow-ends', subject: 'arc:flow', ends: ['stock', 'cloud'],
         enforcement: 'preventive', confidence: 'known',
-        message: 'A flow must run between compartments or clouds.' },
+        message: 'A flow must run between stocks or clouds.' },
 
       { id: 'flow-not-cloud-to-cloud', subject: 'arc:flow',
         not: { ends: ['cloud', 'cloud'] },
         enforcement: 'preventive', confidence: 'guess',
-        message: 'A flow must have a compartment at at least one end.' },
+        message: 'A flow must have a stock at at least one end.' },
 
       { id: 'role-ends', subject: 'arc:role', ends: ['submodel', 'submodel'],
         enforcement: 'preventive', confidence: 'known',
@@ -247,7 +256,7 @@
       // we know needs it, but whether a submodel may be influenced (to drive
       // its `dimensions`) is unasked — see §8.
       { id: 'influence-target', subject: 'arc:influence',
-        toTypes: ['variable', 'valve', 'condition', 'compartment',
+        toTypes: ['variable', 'valve', 'condition', 'stock',
                   'initialiser', 'migrator', 'exterminator', 'reproduction'],
         enforcement: 'preventive', confidence: 'guess',
         message: 'An influence must end at something that carries an equation.' },
@@ -469,7 +478,7 @@
     // Sizes are 60% of the first draft: the glyphs were chunky relative to the
     // spacing between them, which is what a diagram's scale really means here.
     style: {
-      compartment:  { shape: 'rect',    resizable: true,  w: 36, h: 24 },
+      stock:        { shape: 'rect',    resizable: true,  w: 36, h: 24 },
       variable:     { shape: 'circle',  resizable: false, w: 18, h: 18 },
       cloud:        { shape: 'cloud',   resizable: false, w: 24, h: 16 },
       valve:        { shape: 'valve',   resizable: false, w: 12, h: 12 },

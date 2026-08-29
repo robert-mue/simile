@@ -26,7 +26,7 @@
  *   1. **A valued element is TWO nodes in Simile.** A `variable` holds the name
  *      and the graphics; a second `function` node holds the units and the
  *      equation, and an influence arc runs function → variable. So each of our
- *      compartments and variables emits a pair.
+ *      stocks and variables emits a pair.
  *   2. **Influences terminate on the function, not on the visible node.** An
  *      influence into `biomass` actually arrives at `biomass`'s function node —
  *      which makes sense, since it is the equation that uses the value.
@@ -181,7 +181,10 @@
    * something else. Refusing says so; guessing would not.
    */
   var NODE_TYPE = {
-    compartment: 'compartment',
+    // OUR type on the left, SIMILE's on the right, and they differ for the one
+    // we renamed: `stock` is what a modeller is shown, `compartment` is what
+    // the file format has said for thirty years and is not ours to change.
+    stock: 'compartment',
     variable: 'variable',
     cloud: 'cloud',
     condition: 'condition',

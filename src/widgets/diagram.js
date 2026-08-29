@@ -792,7 +792,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._layer.nodes.appendChild(g);
 
     if (node.label) {
-      // The notation's default anchor: a compartment holds its label; a valve's
+      // The notation's default anchor: a stock holds its label; a valve's
       // goes BELOW its glyph, since influences into it bow overhead; everything
       // else sits above. The user's own offset is added on top.
       let ly;

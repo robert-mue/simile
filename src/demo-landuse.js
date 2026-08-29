@@ -41,7 +41,7 @@
     });
 
     // The land-use state of this patch: 1 = forest, 2 = crop.
-    var state = d.addNode('compartment', {
+    var state = d.addNode('stock', {
       label: 'state', parent: patch, x: 200, y: 200, w: 40, h: 26,
       props: { initial: '1' },
     });
@@ -89,11 +89,11 @@
     d.addInfluence(state, d.childrenOf(crop)[0]);
 
     // What each land use accumulates, so the conditionals are not empty shells.
-    d.addNode('compartment', {
+    d.addNode('stock', {
       label: 'volume', parent: forest, x: 400, y: 180, w: 40, h: 26,
       props: { initial: '0' },
     });
-    d.addNode('compartment', {
+    d.addNode('stock', {
       label: 'biomass', parent: crop, x: 400, y: 320, w: 40, h: 26,
       props: { initial: '0' },
     });

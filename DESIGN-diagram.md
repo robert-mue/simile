@@ -957,3 +957,46 @@ wants it**, and recorded here so it is a decision rather than a drift.
 published surface. If a second notation or a second app ever arrives, that is the
 moment to extract it — and §21.1's work is what makes the extraction plausible,
 since the notation-specific vocabulary is now data rather than method names.
+
+## 22. Naming — what a new element is called, and what a stock is called *(2026-08-29)*
+
+Three decisions taken together, on the first day the editor was used to build a
+model by hand rather than by a test. Everything above this section predates
+them and says `compartment` throughout; that prose is left as written, because a
+design record that quietly renames its own history stops being evidence of how
+the design got here.
+
+**A `compartment` is now a `stock`.** The word `compartment` is Simile's, and
+System Dynamics has said `stock` for as long as Simile has existed. Keeping the
+rarer word costs every new user a translation before they can read anything else
+written about the field, and buys nothing. Renamed everywhere in the code: the
+schema's vocabulary, its rules and their messages, the style table, the CSS
+class, the demo fixtures.
+
+**Simile's file format is untouched.** `.pl` and `.sml` still say
+`compartment`, because that word belongs to the format and not to us. Both
+converters already mapped types through an explicit table, so the rename is one
+entry on one side of each: `stock → 'compartment'` going out, `compartment →
+'stock'` coming in. The fixture round trip is what proves the wire format did
+not move.
+
+**The rename moved data, so the data is migrated.** A type is a value written
+down — in every model in localStorage and every `.simile` file already saved.
+The alternative was an alias, leaving the notation permanently holding two words
+for one thing, which is the exact hurdle the rename removes. So `Diagram.migrate`
+rewrites the old spelling, `FORMAT` goes to 2, and it runs both over the store
+at startup and over anything the File menu opens. The store is the only copy of
+a model a user built here; there is no file to re-import.
+
+**A new element is named after its type, not its id.** `stock1`, `variable2` —
+not `node5`. Naming it after the id told the modeller what the editor calls the
+thing internally, the one fact about it they have no use for. Numbering restarts
+inside each parent, because uniqueness is a sibling rule (§14.2).
+
+**A valve is called `flow1`.** The node is a valve — that is the symbol, and it
+is where the rate equation lives — but what a modeller names is the process the
+flow carries: `growth`, `harvest`. So the schema carries a `labelStem` for the
+one type whose name and default label differ. This is genuinely confusing, and
+was adopted with that understood: every available convention here confuses
+someone, and the System Dynamics one at least confuses them in a way the rest of
+the literature will resolve.

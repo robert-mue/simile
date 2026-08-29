@@ -38,8 +38,8 @@
   stroke-width: 0.9;
 }
 
-/* A compartment is a stock: solid box. */
-.slx-node-compartment rect {
+/* A stock: solid box. */
+.slx-node-stock rect {
   fill: #f3f6fa;
 }
 

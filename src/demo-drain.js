@@ -6,7 +6,7 @@
  *     cd1 ─inflow─▶ [store] ─outflow─▶ cd2
  *              └──────────────────────┘
  *
- * Both clouds sit OUTSIDE the submodel and the compartment sits inside, so one
+ * Both clouds sit OUTSIDE the submodel and the stock sits inside, so one
  * flow crosses inward and one crosses outward, and each becomes two Simile flow
  * arcs paired by `links` — the same segmentation an influence gets, which is
  * what `johadP.pl` showed and what nothing in this repo previously exercised.
@@ -46,7 +46,7 @@
       label: 'TANK', x: 400, y: 240, w: 240, h: 160, kind: 'single',
     });
 
-    var store = d.addNode('compartment', {
+    var store = d.addNode('stock', {
       label: 'store', parent: tank, x: 400, y: 240, w: 40, h: 26,
       props: { initial: '0' },
     });
@@ -66,7 +66,7 @@
       x: 520, y: 240, props: { rate: 'store * 0.1' },
     });
 
-    // The outflow's rate uses the compartment it empties — same scope, so this
+    // The outflow's rate uses the stock it empties — same scope, so this
     // one does not cross anything.
     d.addInfluence(store, outflow.valve);
 

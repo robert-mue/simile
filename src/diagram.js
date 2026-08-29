@@ -61,15 +61,31 @@
   }
 
   /**
-   * A new element is born named after its own id ('node5'), not nameless.
-   * A nameless element is invisible in equations and awkward to point at, and
-   * an id is at least a legal, unique name the user can then improve on.
+   * A new element is born named after its TYPE and a number — `stock1`,
+   * `variable2`, `flow1` — not nameless, and no longer after its own id.
+   *
+   * A nameless element is invisible in equations and awkward to point at, so a
+   * default is worth having; the question is only what it should say. Naming it
+   * after its id ('node5') was the first answer and the wrong one: it tells the
+   * modeller what the editor calls the thing internally, which is the one fact
+   * about it they have no use for. The type is what they can see on the diagram
+   * anyway, so the name at least agrees with the picture.
+   *
+   * The stem is `labelStem` where the schema gives one, else the type — see the
+   * valve, whose default name is `flow1`. Numbering restarts inside each parent
+   * because uniqueness is a SIBLING rule (`checkSiblingName`): two submodels may
+   * each hold a `stock1`, exactly as they may each hold a `growth`.
+   *
    * Types the notation marks as optionally-labelled (has_label:'optional', the
    * clouds) are left blank.
    */
-  function defaultLabel(spec, id, given) {
+  function defaultLabel(diagram, spec, type, parent, given) {
     if (given) return given;
-    return spec && spec.has_label === true ? id : '';
+    if (!spec || spec.has_label !== true) return '';
+    var stem = spec.labelStem || type;
+    for (var n = 1; ; n++) {
+      if (!diagram.siblingNamed(parent, stem + n, null)) return stem + n;
+    }
   }
 
   function Diagram(path) {
@@ -87,7 +103,43 @@
    * It exists from the start because it cannot be added retrospectively: a file
    * already saved without a version can never be told apart from a future one.
    */
-  Diagram.FORMAT = 1;
+  Diagram.FORMAT = 2;
+
+  /**
+   * Node types this app has RENAMED, old spelling to new. Nothing to do with
+   * Simile's file format, which is untouched — the converters map to and from
+   * `compartment` exactly as before, because that word belongs to Simile.
+   */
+  var LEGACY_NODE_TYPE = { compartment: 'stock' };
+
+  /**
+   * Bring a stored or imported model up to the current format, in place.
+   *
+   * Renaming `compartment` to `stock` renamed a value that is WRITTEN DOWN — in
+   * every model in localStorage and every `.simile` file already saved. Leaving
+   * both spellings alive in the schema would have avoided this, at the price of
+   * the notation permanently having two words for one thing, which is the exact
+   * hurdle the rename was meant to remove. So the data moves instead.
+   *
+   * Idempotent, and safe on a model that needs nothing: it reports whether it
+   * changed anything so a caller can avoid a pointless write.
+   *
+   * @returns {boolean} whether anything was rewritten
+   */
+  Diagram.migrate = function (model) {
+    if (!model || typeof model !== 'object') return false;
+    var changed = false;
+    Object.keys(model.nodes || {}).forEach(function (id) {
+      var node = model.nodes[id];
+      var to = node && LEGACY_NODE_TYPE[node.type];
+      if (to) { node.type = to; changed = true; }
+    });
+    if (changed || (model.format == null ? 1 : model.format) < Diagram.FORMAT) {
+      model.format = Diagram.FORMAT;
+      changed = true;
+    }
+    return changed;
+  };
 
   /**
    * What an empty model looks like — the one statement of it. Both `create`
@@ -1135,7 +1187,7 @@
 
     /**
      * Add a node.
-     * @param {string} type 'compartment' | 'variable' | 'cloud' | 'valve' | …
+     * @param {string} type 'stock' | 'variable' | 'cloud' | 'valve' | …
      * @param {{label?:string, parent?:string, props?:object, x?:number, y?:number}} [o]
      * @returns {string} the new node id
      */
@@ -1145,7 +1197,7 @@
       this.checkLabel(opt.label);
       var self = this;
       var id = this._mintId('node');
-      var label = defaultLabel(spec, id, opt.label);
+      var label = defaultLabel(this, spec, type, opt.parent != null ? opt.parent : null, opt.label);
       Sienna.actions.dispatch(
         { type: 'diagram.addNode', target: this.path, payload: { id: id, nodeType: type, label: label } },
         function () {
@@ -1348,7 +1400,8 @@
             self._put('nodes', attachId, {
               type: spec.attachmentNode,
               parent: parent,
-              label: defaultLabel(self.nodeType(spec.attachmentNode), attachId, opt.label),
+              label: defaultLabel(self, self.nodeType(spec.attachmentNode),
+                                  spec.attachmentNode, parent, opt.label),
               props: opt.props || {},
             }, null);
           }

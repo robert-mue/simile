@@ -37,7 +37,7 @@
       kind: 'fixed-membership', props: { dimensions: '5' },
     });
 
-    var biomass = d.addNode('compartment', {
+    var biomass = d.addNode('stock', {
       label: 'biomass', parent: plant, x: 360, y: 240, w: 36, h: 24,
       props: { initial: '1' },
     });
@@ -53,7 +53,7 @@
       label: 'total', x: 640, y: 240, props: { value: 'sum([biomass])' },
     });
 
-    // Same level: the flow's rate uses the compartment it fills.
+    // Same level: the flow's rate uses the stock it fills.
     d.addInfluence(biomass, flow.valve);
     // Inward across the boundary: one scalar, seen by every instance.
     d.addInfluence(r, flow.valve);

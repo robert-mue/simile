@@ -39,7 +39,7 @@
       x: 200, y: 180, w: 250, h: 170,
     });
 
-    var wealth = d.addNode('compartment', {
+    var wealth = d.addNode('stock', {
       label: 'wealth', parent: farmer, x: 150, y: 160, w: 40, h: 26,
       props: { initial: '100' },
     });
@@ -72,7 +72,7 @@
       props: { dimensions: '60' },
     });
 
-    d.addNode('compartment', {
+    d.addNode('stock', {
       label: 'area', parent: field, x: 560, y: 160, w: 40, h: 26,
       props: { initial: '2.5' },
     });

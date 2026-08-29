@@ -89,7 +89,9 @@
   // refusal) and every one of them is reported, so a round trip fails loudly at
   // the export end rather than quietly here.
   var NODE_TYPE = {
-    compartment: 'compartment',
+    // SIMILE's spelling on the left, ours on the right. `compartment` is the
+    // format's word and stays; `stock` is ours (see the exporter's table).
+    compartment: 'stock',
     variable: 'variable',
     cloud: 'cloud',
     condition: 'condition',
@@ -108,7 +110,7 @@
 
   // Where each type keeps the equation its function node holds.
   var EXPR_FIELD = {
-    compartment: 'initial', variable: 'value', condition: 'expr', valve: 'rate',
+    stock: 'initial', variable: 'value', condition: 'expr', valve: 'rate',
     initialiser: 'expr', exterminator: 'expr', migrator: 'expr', reproduction: 'expr',
     alarm: 'expr',
   };

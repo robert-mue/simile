@@ -17,7 +17,7 @@
  *   - **Repeated names in different scopes**, which §14.2 says is normal and
  *     which no fixture had actually exercised: `neighbours` appears in
  *     `fire_patch` and again in `patch_results`; `row` and `col` in
- *     `patch_results` and again in `patch`; `water` is a compartment in
+ *     `patch_results` and again in `patch`; `water` is a stock in
  *     `soil_water` and a variable in `neighbour`; `rain` is a root variable and
  *     a flow inside `soil_water`; `fire` is both a submodel and a variable
  *     inside it.
@@ -117,8 +117,8 @@
     node('other_fires', 'variable', 'conditional_fire', 646, 762);
 
     // fire_patch
-    node('fuel_load', 'compartment', 'fire_patch', 288, 375, { w: 36, h: 24 });
-    node('fuel_load_lost', 'compartment', 'fire_patch', 672, 400, { w: 36, h: 24 });
+    node('fuel_load', 'stock', 'fire_patch', 288, 375, { w: 36, h: 24 });
+    node('fuel_load_lost', 'stock', 'fire_patch', 672, 400, { w: 36, h: 24 });
     var burningLosses = d.addFlow({
       from: N.fuel_load, to: N.fuel_load_lost, parent: S.fire_patch,
       label: 'burning_losses', x: 438, y: 205,
@@ -170,7 +170,7 @@
     node('n5', 'variable', 'plants', 1409, 662);
 
     // plant_species
-    node('number', 'compartment', 'plant_species', 1237, 455, { w: 40, h: 30 });
+    node('number', 'stock', 'plant_species', 1237, 455, { w: 40, h: 30 });
     var repro = d.addFlow({ to: N.number, parent: S.plant_species,
       label: 'reproduction', x: 1130, y: 285, fromXY: { x: 1023, y: 288 } });
     N.reproduction = repro.valve;
@@ -190,7 +190,7 @@
     node('seeds_in', 'variable', 'plant_species', 1350, 576);
 
     // soil_water
-    node('water', 'compartment', 'soil_water', 1180, 843, { w: 40, h: 32 });
+    node('water', 'stock', 'soil_water', 1180, 843, { w: 40, h: 32 });
     var rainFlow = d.addFlow({ to: N.water, parent: S.soil_water,
       label: 'rain', x: 1083, y: 636, fromXY: { x: 1035, y: 600 } });
     N.rain = rainFlow.valve;
@@ -344,7 +344,7 @@
         return el.label === wantLabel && par === wantParent;
       })[0];
       if (!id) return;
-      var field = { compartment: 'initial', variable: 'value',
+      var field = { stock: 'initial', variable: 'value',
                     condition: 'expr', valve: 'rate' }[d.get(id).type];
       if (field) {
         var props = {};
