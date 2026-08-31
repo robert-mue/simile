@@ -79,6 +79,13 @@ No build/server/npm. Open `index.html` in a browser. First checkout needs the
 submodule: `git clone --recurse-submodules …` (or `git submodule update --init`).
 Verify by opening the page and checking the devtools console.
 
+Over http instead — needed when driving the app from Chrome's automation
+extension, which refuses `file://` — use **`python3 tools/serve.py`** (port 8731)
+and NOT `python3 -m http.server`. The plain server lets Chrome cache the app's
+scripts, which has twice produced convincing false results: green code reported
+as broken, and new code reported as doing nothing. Note that `file://` and
+`http://localhost` are separate origins with separate stored models.
+
 Touching the equation grammar? Open `test/index.html` and read the bar — green
 means every equation in the corpus still parses.
 

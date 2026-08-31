@@ -174,14 +174,25 @@ association-alias convention (there isn't one), `border` vs the legacy plain
 - **The scratch directory is `/tmp` and does not survive a reboot.** It has been
   wiped twice, taking every analysis harness with it. That is why the regression
   net lives in `test/` as pages. Put anything you want to keep in the repo.
-- **Chrome caches the app's scripts hard.** A change can appear not to work. In
-  the devtools console:
-  `for (const u of ['src/schema/simile-v1.js','src/dialog.js']) await fetch(u,{cache:'reload'}); location.reload();`
+- **Chrome caches the app's scripts hard, and it lies convincingly.** Serve with
+  **`python3 tools/serve.py`** rather than `python3 -m http.server`: the plain
+  server sends only `Last-Modified`, so Chrome caches heuristically and can run
+  a file that changed on disk minutes ago. On 2026-08-31 that produced
+  `test/fixtures.html` reporting "4 of 6 failed — Unknown node type
+  compartment" two days after that rename was committed, and a new dialog
+  reported as doing nothing when the browser simply had the version from before
+  it was written. Both looked exactly like real faults.
+  **Ctrl+Shift+R is not enough**, because widgets and dialogs are injected at run
+  time rather than listed in `index.html`. The escape hatch, if you are stuck on
+  a plain server, is every script the page actually loaded:
+  `for (const s of document.querySelectorAll('script[src]')) await fetch(s.getAttribute('src'),{cache:'reload'}); location.reload();`
+  and the quickest test of whether you have the current code is to ask for
+  something only it has, e.g. `typeof Sienna.dialogs.problems`.
 - **`file://` and `http://localhost` are different origins**, so they have
   separate stored models. A test on one cannot see the other's.
 - **Chrome's automation extension refuses `file://` URLs outright**, so an agent
   driving the browser cannot open `index.html` the way you do. Serve the
-  directory instead — `python3 -m http.server 8731` from the repo root, then
+  directory instead — `python3 tools/serve.py` from the repo root, then
   `http://localhost:8731/index.html` — and remember the origin trap above: that
   tab has its own stored models and cannot see the `file://` ones. Note also
   that a synthetic drag through the extension does NOT reliably draw an arc,
