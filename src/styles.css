@@ -841,3 +841,105 @@ text.slx-incomplete {
   font-size: 11px;
   color: #8b929c;
 }
+
+/* ---- the node properties dialog: tabs and the aside column ------------ *
+ * It opens on the equation but is not an equation dialog — styling and
+ * whatever else belongs to a node rather than to its equation goes beside
+ * Equation, which is why the strip is here before the second tab is. */
+
+.slx-dlg-tabbed { min-width: 420px; max-width: 560px; }
+
+.slx-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 4px 0 0;
+  border-bottom: 1px solid #dfe3e9;
+}
+
+.slx-tab {
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  background: none;
+  font: inherit;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.slx-tab:hover { color: #2f3540; }
+
+.slx-tab-on {
+  border-color: #dfe3e9;
+  background: #fff;
+  color: #2f3540;
+  font-weight: 600;
+  /* Sit on the strip's own border, so the open tab reads as continuous with
+     the panel below it rather than as a button above a line. */
+  margin-bottom: -1px;
+  padding-bottom: 6px;
+}
+
+.slx-tab-panel { padding-top: 12px; }
+
+.slx-hidden { display: none; }
+
+/* The aside is a column of things that WRITE INTO the equation. Influences are
+   the first; Simile's numeric keypad and function tree are the next two, and
+   belong here rather than anywhere else. */
+.slx-dlg-aside {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #eceff3;
+}
+
+.slx-dlg-aside > label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b929c;
+}
+
+.slx-influence-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Scrollable: a variable in a busy model can have a dozen influences, and the
+     dialog must not grow to whatever the diagram happens to contain. */
+  max-height: 132px;
+  overflow-y: auto;
+  border: 1px solid #e3e7ec;
+  border-radius: 3px;
+}
+
+.slx-influence-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 1px 4px;
+}
+
+.slx-influence-list li + li { border-top: 1px solid #f1f3f6; }
+
+button.slx-influence {
+  flex: 1 1 auto;
+  padding: 3px 5px;
+  border: none;
+  border-radius: 2px;
+  background: none;
+  font: 12px/1.4 ui-monospace, monospace;
+  color: #245a8d;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.slx-influence:hover { background: #eaf2fa; }
+
+.slx-influence-from {
+  flex: 0 0 auto;
+  padding-right: 4px;
+  font-size: 11px;
+  color: #9aa1ab;
+}

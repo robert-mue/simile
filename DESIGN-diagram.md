@@ -1049,3 +1049,52 @@ one type whose name and default label differ. This is genuinely confusing, and
 was adopted with that understood: every available convention here confuses
 someone, and the System Dynamics one at least confuses them in a way the rest of
 the literature will resolve.
+
+## 23. The node properties dialog *(2026-08-31)*
+
+**It is not an equation dialog.** Ruled the moment the equation work was
+finished, and the reasoning is worth keeping because it is about a name rather
+than a feature: a node has properties with nothing to do with its equation —
+styling first among them — and a dialog named after its first tab has to be
+renamed the moment the second arrives, or else keeps a name that has stopped
+being true. So it is the node properties dialog, and it opens on **Equation**.
+
+**The tab strip exists before the second tab does.** Only tabs with content are
+built, so today there is exactly one; what it buys is that adding Styling later
+is an entry in a list rather than a rearrangement of everything. The first tab
+is named for what it holds — an element with an expression field opens on
+`Equation`, one without (a cloud, a plain submodel) says `Properties`, since
+calling a units-and-dimensions form "Equation" would be a lie in service of a
+layout.
+
+**Name sits above the tabs**, not inside the first one. It is the element's
+identity and its equation name (§14), not a property of one tab among several.
+
+### 23.1 Writing into the equation
+
+Simile puts three aids beside an equation — a numeric keypad, a hierarchical
+list of the built-in functions, and the influencing variables — and all three
+insert **at the caret**. That last part is the whole requirement: an aid that
+appends to the end of the text is worse than useless to someone editing the
+middle of an expression.
+
+The **influences list** is built first, and is the only one of the three that
+could not be a static table: it depends on the arrows drawn into this element,
+so it is the one the editor knows something about that a reference card does
+not. Names come from `Diagram.namesSuppliedBy` — the same source the
+completeness check compares against (§14.1, §19.9) — so the list offered and the
+"no influence supplies it" finding cannot disagree, and a name pasted from here
+can never be reported as undeclared. That includes the brackets on an outward
+crossing of a multi-instance submodel (`[biomass]`), which are part of what must
+be typed, and one entry per ROLE where an association renames.
+
+Each name is shown with the element it comes FROM, because an alias need not
+resemble its source and "where is this from?" would otherwise mean closing the
+dialog to look.
+
+**The caret mechanism is shared, and lives in the dialog rather than in each
+aid**, which is what makes the keypad and the function tree cheap to add: the
+caret is remembered from whichever expression field was last touched, and
+`mousedown` is prevented on anything that inserts, so the click never moves
+focus. Without that second half every insertion lands at the end of the text —
+the button takes focus, and the textarea's selection collapses on the way out.

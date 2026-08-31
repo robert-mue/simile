@@ -1,6 +1,15 @@
 /**
- * `Sienna.propertyDialog` — the settings dialog for one diagram element —
- * and `Sienna.dialogs`, the registry that makes its BODY replaceable.
+ * `Sienna.propertyDialog` — the **node properties dialog**, which opens on the
+ * element's equation — and `Sienna.dialogs`, the registry that makes its BODY
+ * replaceable.
+ *
+ * It is deliberately not "the equation dialog", though that is all it holds
+ * today (ruled 2026-08-31). A node has properties that have nothing to do with
+ * its equation — styling first among them — and naming the dialog after its
+ * first tab would have meant renaming it, or worse keeping the name, the moment
+ * the second arrived. So the tab strip exists before there is a second tab to
+ * put in it: `Equation` is the first and the default, and what comes next goes
+ * beside it without rearranging anything.
  *
  * DESIGN-diagram.md §3 splits this face of the schema in two:
  *
@@ -43,10 +52,26 @@
  *   - `ctx.field(name)`  — the STANDARD row for one field, so a custom layout
  *     can reuse the ordinary control for the parts it does not want to
  *     reinvent and hand-write only the part it does;
- *   - `ctx.fields()`     — every standard row, the generated form entire.
+ *   - `ctx.fields()`     — every standard row, the generated form entire;
+ *   - `ctx.influences()` — the panel of names this element's equation may use,
+ *     each inserting itself at the caret. Offered, not imposed: a renderer owns
+ *     the body, so it places this where it wants it or leaves it out.
  *
- * Those last two are the point: before, a custom dialog had to hand-write every
- * control, which made "change one field's presentation" cost the whole form.
+ * `field` and `fields` are the point of the registry: before them, a custom
+ * dialog had to hand-write every control, which made "change one field's
+ * presentation" cost the whole form.
+ *
+ * ## Writing into the equation
+ *
+ * Simile puts three aids beside an equation — a numeric keypad, a hierarchical
+ * list of the built-in functions, and the influencing variables — and all three
+ * insert AT THE CARET. The influences are built (they are the ones that cannot
+ * be got from a static table, since they depend on the arrows drawn); the other
+ * two are the next things to go in the same column. What that costs is one
+ * mechanism, kept here rather than in each aid: the caret is remembered from
+ * whichever expression field was last touched, and `mousedown` on anything that
+ * inserts is prevented, so the click never moves focus and the caret is still
+ * where the modeller left it.
  *
  * ## Everything else
  *
@@ -224,6 +249,68 @@
     return v == null ? '' : v;
   }
 
+  function isExpression(f) {
+    return f.type === 'expression' || f.type === 'expression-list';
+  }
+
+  /**
+   * The names this element's equation is entitled to use, as the equation must
+   * WRITE them.
+   *
+   * Straight from `Diagram.namesSuppliedBy`, which is the same source the
+   * completeness check compares against (§14.1) — so the list offered and the
+   * "no influence supplies it" finding cannot disagree, and a name pasted from
+   * here can never be reported as undeclared. That includes the brackets on an
+   * outward crossing of a multi-instance submodel (`[biomass]`), which are part
+   * of what must be typed and not decoration, and one entry per ROLE where an
+   * association renames.
+   */
+  function influenceNames(d, id) {
+    var out = [];
+    var seen = {};
+    d.arcsAt(id).forEach(function (a) {
+      var arc = d.get(a);
+      if (!arc || arc.type !== 'influence' || arc.to !== id) return;
+      var from = d.get(arc.from) || {};
+      d.namesSuppliedBy(a).forEach(function (name) {
+        if (!name || seen[name]) return;
+        seen[name] = true;
+        out.push({ name: name, from: from.label || arc.from });
+      });
+    });
+    return out;
+  }
+
+  /**
+   * The influences panel: what may be referenced, one click to insert it.
+   *
+   * Simile puts three of these beside an equation — a numeric keypad, a
+   * hierarchical list of the built-in functions, and the influencing variables —
+   * and all three insert at the caret. This is the third; the other two are the
+   * next things to go in this same column, which is why the markup is a list in
+   * a labelled block rather than something shaped only for names.
+   *
+   * A name is offered with the element it comes FROM, because an alias need not
+   * resemble its source and "where is this from?" is otherwise unanswerable
+   * without closing the dialog.
+   */
+  function influencesHtml(d, id) {
+    var names = influenceNames(d, id);
+    var body;
+    if (!names.length) {
+      body = '<p class="slx-dlg-help">Nothing influences this yet. '
+        + 'Draw an influence arrow into it and its name will appear here.</p>';
+    } else {
+      body = '<ul class="slx-influence-list">' + names.map(function (n) {
+        var also = n.from && n.from !== n.name
+          ? '<span class="slx-influence-from">' + esc(n.from) + '</span>' : '';
+        return '<li><button type="button" class="slx-influence" data-insert="'
+          + esc(n.name) + '">' + esc(n.name) + '</button>' + also + '</li>';
+      }).join('') + '</ul>';
+    }
+    return '<div class="slx-dlg-aside"><label>Influences</label>' + body + '</div>';
+  }
+
   /** One row of the generated form. A renderer can reuse these via `ctx.field`. */
   function fieldHtml(f, value) {
     var id = 'fld-' + f.name;
@@ -279,6 +366,8 @@
       return fields.map(function (f) { return fieldHtml(f, readValue(el, f)); }).join('');
     }
 
+    var hasEquation = fields.some(isExpression);
+
     var schema = d.schema();
     var renderer = Sienna.dialogs.rendererFor(schema.name, typeName);
     var body = renderer
@@ -292,25 +381,103 @@
         value: function (n) { return readValue(el, { name: n }); },
         field: rowFor,
         fields: allRows,
+        // A custom renderer OWNS the body, so the influences panel is offered
+        // rather than imposed: ask for it and place it, or leave it out.
+        influences: function () { return influencesHtml(d, id); },
       })
-      : allRows();
+      : allRows() + (hasEquation ? influencesHtml(d, id) : '');
+
+    // ---- tabs -----------------------------------------------------------
+    //
+    // This is a NODE PROPERTIES dialog that opens on its equation, not an
+    // equation dialog — the distinction Robert drew on 2026-08-31, and the
+    // reason the tab strip exists before there is a second tab to put in it.
+    // Styling, and whatever else turns out to belong to a node rather than to
+    // its equation, goes beside Equation without rearranging what is here.
+    //
+    // Only tabs with content are built, so nothing shows an empty panel. The
+    // first is named for what it holds: an element with an expression field
+    // opens on `Equation`, one without (a cloud, a plain submodel) says
+    // `Properties`, because calling a units-and-dimensions form "Equation"
+    // would be a lie in service of a layout.
+    var tabs = [{
+      key: 'equation',
+      label: hasEquation ? 'Equation' : 'Properties',
+      body: body,
+    }];
+
+    var strip = tabs.map(function (t, i) {
+      return '<button type="button" class="slx-tab' + (i === 0 ? ' slx-tab-on' : '')
+        + '" data-tab="' + esc(t.key) + '">' + esc(t.label) + '</button>';
+    }).join('');
+    var panels = tabs.map(function (t, i) {
+      return '<div class="slx-tab-panel' + (i === 0 ? '' : ' slx-hidden')
+        + '" data-panel="' + esc(t.key) + '"></div>';
+    }).join('');
 
     var $host = host && host.length ? host : $('body');
     $host.find('.slx-dlg-backdrop').remove();
 
     var $back = $('<div class="slx-dlg-backdrop">').appendTo($host);
     var $dlg = $(
-      '<div class="slx-dlg" role="dialog" aria-modal="true">'
+      '<div class="slx-dlg slx-dlg-tabbed" role="dialog" aria-modal="true">'
       + '<h2>' + esc(typeName) + '</h2>'
+      // Name sits ABOVE the tabs: it is the element's identity, and its own
+      // equation name (§14), not a property of one tab among several.
       + '<div class="slx-dlg-row"><label for="fld-label">Name</label>'
       + '<input type="text" id="fld-label" data-field=":label" value="' + esc(el.label || '') + '"></div>'
-      + '<div class="slx-dlg-fields"></div>'
+      + '<div class="slx-tabs" role="tablist">' + strip + '</div>'
+      + '<div class="slx-dlg-fields">' + panels + '</div>'
       + '<div class="slx-dlg-buttons">'
       + '<button type="button" data-act="cancel">Cancel</button>'
       + '<button type="button" data-act="ok">OK</button>'
       + '</div></div>'
     ).appendTo($back);
-    $dlg.find('.slx-dlg-fields').html(body);   // a string or an element; jQuery takes either
+
+    tabs.forEach(function (t) {
+      // A string or an element; jQuery takes either.
+      $dlg.find('[data-panel="' + t.key + '"]').html(t.body);
+    });
+
+    $dlg.on('click', '.slx-tab', function () {
+      var key = $(this).attr('data-tab');
+      $dlg.find('.slx-tab').removeClass('slx-tab-on');
+      $(this).addClass('slx-tab-on');
+      $dlg.find('.slx-tab-panel').addClass('slx-hidden')
+        .filter('[data-panel="' + key + '"]').removeClass('slx-hidden');
+    });
+
+    // ---- inserting at the caret -----------------------------------------
+    //
+    // Everything in the aside column inserts into the equation AT THE CARET,
+    // which means the caret has to survive the click that asks for it. Two
+    // halves: remember where it was in whichever expression field was last
+    // touched, and stop the mousedown on a name from moving focus at all.
+    var caret = null;                         // { el, start, end }
+    function remember(node) {
+      caret = { el: node, start: node.selectionStart, end: node.selectionEnd };
+    }
+    $dlg.on('focus keyup click', 'textarea[data-field], input[data-field]', function () {
+      if (this.selectionStart == null) return;         // checkbox, select
+      remember(this);
+    });
+    // preventDefault on mousedown is what keeps the caret: without it the button
+    // takes focus, the textarea's selection collapses, and every insertion lands
+    // at the end of the text instead of where the modeller was working.
+    $dlg.on('mousedown', '[data-insert]', function (e) { e.preventDefault(); });
+    $dlg.on('click', '[data-insert]', function () {
+      var text = $(this).attr('data-insert');
+      var target = (caret && caret.el && $.contains($dlg[0], caret.el)) ? caret.el
+        : $dlg.find('textarea[data-field]')[0];
+      if (!target) return;
+      var start = caret && caret.el === target ? caret.start : target.value.length;
+      var end = caret && caret.el === target ? caret.end : target.value.length;
+      target.value = target.value.slice(0, start) + text + target.value.slice(end);
+      var to = start + text.length;
+      target.focus();
+      target.setSelectionRange(to, to);
+      remember(target);
+    });
 
     function close() {
       $(document).off('keydown.slxdlg');
