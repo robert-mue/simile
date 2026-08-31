@@ -847,7 +847,14 @@ text.slx-incomplete {
  * whatever else belongs to a node rather than to its equation goes beside
  * Equation, which is why the strip is here before the second tab is. */
 
-.slx-dlg-tabbed { min-width: 420px; max-width: 560px; }
+.slx-dlg-tabbed {
+  /* Wide enough for fields and aids side by side, but never wider than the
+     panel hosting it — a dialog that overflows its own panel is worse than a
+     narrow one, and `max-width` wins over `width` when the two disagree. */
+  min-width: 420px;
+  width: 620px;
+  max-width: 92%;
+}
 
 .slx-tabs {
   display: flex;
@@ -943,3 +950,73 @@ button.slx-influence:hover { background: #eaf2fa; }
   font-size: 11px;
   color: #9aa1ab;
 }
+
+/* ---- the function chooser --------------------------------------------- *
+ * Simile's five groups, collapsed. `<details>` does the work, so there is no
+ * state to keep and the keyboard comes free. */
+
+.slx-fn-tree {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid #e3e7ec;
+  border-radius: 3px;
+}
+
+.slx-fn-group + .slx-fn-group { border-top: 1px solid #f1f3f6; }
+
+.slx-fn-group > summary {
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #3a3f47;
+  list-style-position: inside;
+}
+
+.slx-fn-group > summary:hover { background: #f5f7fa; }
+
+.slx-fn-group[open] > summary { font-weight: 600; }
+
+.slx-fn-count {
+  float: right;
+  color: #a7adb6;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.slx-fn-list {
+  margin: 0;
+  padding: 2px 0 6px 18px;
+  /* Names are short and there are a lot of them, so they wrap into columns
+     rather than making the reader scroll a single file of them. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px 2px;
+  list-style: none;
+}
+
+button.slx-fn {
+  padding: 2px 6px;
+  border: none;
+  border-radius: 2px;
+  background: none;
+  font: 12px/1.4 ui-monospace, monospace;
+  color: #245a8d;
+  cursor: pointer;
+}
+
+button.slx-fn:hover { background: #eaf2fa; }
+
+/* Equation tab: fields on the left, the aids that write into them on the
+   right. Stacked, the function tree pushes the equation out of view, and an
+   aid that inserts at the caret is worthless when the caret cannot be seen. */
+.slx-eq-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.slx-eq-main { flex: 1 1 240px; min-width: 0; }
+.slx-eq-aside { flex: 0 1 230px; min-width: 0; }
+
+/* Inside the column the asides stack, and the first needs no rule above it. */
+.slx-eq-aside .slx-dlg-aside:first-child { margin-top: 0; padding-top: 0; border-top: none; }

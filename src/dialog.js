@@ -311,6 +311,56 @@
     return '<div class="slx-dlg-aside"><label>Influences</label>' + body + '</div>';
   }
 
+  /**
+   * What to write when a function is chosen: its name and a bracketed
+   * placeholder per argument, `pow(arg1, arg2)`.
+   *
+   * The count comes from the schema's own arity table — the one the checker
+   * uses — so a call inserted here is arity-correct by construction and cannot
+   * come straight back as a `function` finding. Where a function accepts a
+   * RANGE (`dt` takes 0 or 1, `trend` 2 or 3), the fewest is written: it is the
+   * form that is always legal, and adding an optional argument is easier than
+   * noticing an unwanted one and deleting it.
+   */
+  function callTemplate(name, arity) {
+    var n = Array.isArray(arity) ? Math.min.apply(null, arity) : (arity || 0);
+    var args = [];
+    for (var i = 1; i <= n; i++) args.push('arg' + i);
+    return name + '(' + args.join(', ') + ')';
+  }
+
+  /**
+   * The function chooser: Simile's five groups, collapsed, each holding its
+   * functions.
+   *
+   * A TREE rather than the flat list Simile shows, because eighty-seven names
+   * in one column is a scroll rather than a menu, and the grouping already
+   * exists — it is how the help documents them, so it is what a modeller coming
+   * from Simile will already have in their head. The grouping is the schema's
+   * (`functionGroups`), not this file's: a different notation groups its own
+   * functions its own way, and one that says nothing gets no tree at all.
+   *
+   * `<details>`/`<summary>` does the collapsing, so there is no state to keep,
+   * nothing to persist, and it works with the keyboard for free. All groups
+   * start closed: the point of the tree is that it is small until asked.
+   */
+  function functionsHtml(schema) {
+    var groups = schema.functionGroups || [];
+    if (!groups.length) return '';
+    var table = schema.functions || {};
+    var body = groups.map(function (g) {
+      var items = (g.functions || []).map(function (name) {
+        return '<li><button type="button" class="slx-fn" data-insert="'
+          + esc(callTemplate(name, table[name])) + '">' + esc(name) + '</button></li>';
+      }).join('');
+      return '<details class="slx-fn-group"><summary>' + esc(g.label)
+        + '<span class="slx-fn-count">' + (g.functions || []).length + '</span></summary>'
+        + '<ul class="slx-fn-list">' + items + '</ul></details>';
+    }).join('');
+    return '<div class="slx-dlg-aside"><label>Functions</label>'
+      + '<div class="slx-fn-tree">' + body + '</div></div>';
+  }
+
   /** One row of the generated form. A renderer can reuse these via `ctx.field`. */
   function fieldHtml(f, value) {
     var id = 'fld-' + f.name;
@@ -385,8 +435,18 @@
         // A custom renderer OWNS the body, so the influences panel is offered
         // rather than imposed: ask for it and place it, or leave it out.
         influences: function () { return influencesHtml(d, id); },
+        functions: function () { return functionsHtml(schema); },
       })
-      : allRows() + (hasEquation ? influencesHtml(d, id) : '');
+      : (hasEquation
+        // TWO COLUMNS when there are aids to show. Stacked, the tree pushes the
+        // equation off the top of a panel-sized dialog, and an aid that inserts
+        // AT THE CARET is worthless when the caret is scrolled out of sight —
+        // the whole point is watching the expression take shape as you click.
+        ? '<div class="slx-eq-cols">'
+          + '<div class="slx-eq-main">' + allRows() + '</div>'
+          + '<div class="slx-eq-aside">' + influencesHtml(d, id) + functionsHtml(schema) + '</div>'
+          + '</div>'
+        : allRows());
 
     // ---- tabs -----------------------------------------------------------
     //
@@ -484,9 +544,20 @@
       var start = caret && caret.el === target ? caret.start : target.value.length;
       var end = caret && caret.el === target ? caret.end : target.value.length;
       target.value = target.value.slice(0, start) + text + target.value.slice(end);
-      var to = start + text.length;
       target.focus();
-      target.setSelectionRange(to, to);
+
+      // Land on the first placeholder if the insertion brought any, so the next
+      // keystroke replaces `arg1` instead of appending to it. A function call is
+      // the one insertion that is never finished on arrival — `pow(arg1, arg2)`
+      // is a shape to fill in, not an answer — and without this the modeller has
+      // to go back and select the placeholder by hand every time.
+      var hole = /\barg\d+\b/.exec(text);
+      if (hole) {
+        target.setSelectionRange(start + hole.index, start + hole.index + hole[0].length);
+      } else {
+        var to = start + text.length;
+        target.setSelectionRange(to, to);
+      }
       remember(target);
     });
 

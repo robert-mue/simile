@@ -1098,3 +1098,50 @@ caret is remembered from whichever expression field was last touched, and
 `mousedown` is prevented on anything that inserts, so the click never moves
 focus. Without that second half every insertion lands at the end of the text —
 the button takes focus, and the textarea's selection collapses on the way out.
+
+**Only expression fields may receive an insertion.** Tracking every field was
+the first attempt and it renamed the element: the dialog opens with the caret in
+Name, so Name was the default target rather than an edge case.
+
+### 23.2 The function chooser — a tree, not a flat list *(2026-08-31)*
+
+Simile shows its built-ins as one flat list. We show the **five groups its own
+help divides them into** — Arithmetic, Trigonometric, List handling, Model
+properties, Statistics — collapsed, because eighty-seven names in one column is
+a scroll rather than a menu, and because the grouping is already in the head of
+anyone arriving from Simile. `<details>`/`<summary>` does the collapsing, so
+there is no state to keep, nothing to persist, and the keyboard works for free.
+
+**The grouping is schema data** (`functionGroups`), not a list in the dialog: a
+different notation groups its own functions its own way, and one that says
+nothing gets no tree. It is kept separate from the flat `functions` table, which
+exists for the arity check — membership of a menu is no business of the checker.
+
+**A chosen function is written with a placeholder per argument** — `pow(arg1,
+arg2)` — and the count comes from that same arity table, so an inserted call is
+arity-correct by construction and cannot come straight back as a `function`
+finding. Where a function takes a range (`dt` 0 or 1, `trend` 2 or 3) the fewest
+is written: always legal, and adding an argument beats noticing an unwanted one.
+The **first placeholder is selected** on insertion, because a call is the one
+insertion that is never finished on arrival — it is a shape to fill in.
+
+**What the help costs us to follow, recorded rather than tidied away:**
+
+- Four functions the help documents were missing from our table (`atan2`,
+  `cosh`, `sinh`, `tanh`) and four more (`after`, `as_number`, `trend`,
+  `sofar`); their arities were read off the individual function pages. Without
+  this the tree would have offered names our own checker calls "no such
+  function".
+- `hypot` is in TWO groups, arithmetic and trigonometric, because that is how
+  the help lists it. Repeated rather than assigned: choosing for Simile would be
+  inventing.
+- Eight functions we know are in NO group — `firsttrue`, `graph`, `howmanytrue`,
+  `pi`, `posgreatest`, `posleast`, `rand`, `table` — because the help's five
+  pages do not list them; most came from the corpus, which outranks the
+  documentation (§19.2). They stay legal to type and absent from the tree.
+  Whether they deserve a sixth group is open.
+
+**The Equation tab is two columns** — fields left, the aids that write into them
+right. Stacked, the tree pushed the equation off the top of a panel-sized
+dialog, and an aid that inserts at the caret is worthless when the caret cannot
+be seen: watching the expression take shape is the point.

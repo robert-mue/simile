@@ -390,9 +390,13 @@
       acos: 1,
       asin: 1,
       atan: 1,          // ✓
+      atan2: 2,
       cos: 1,           // ✓
+      cosh: 1,
       sin: 1,           // ✓
+      sinh: 1,
       tan: 1,           // ✓
+      tanh: 1,
 
       // statistics and random
       binome: 2,
@@ -427,6 +431,7 @@
       with_least: 2,
 
       // time and dynamics
+      after: 2,
       at_init: 1,
       const_delay: 2,
       delay1: 2,
@@ -444,9 +449,11 @@
       smthn: 3,
       step: 2,
       time: [0, 1],     // ✓
+      trend: [2, 3],
       var_delay: 2,
 
       // model properties
+      as_number: 1,
       at_posn: [1, 3],
       channel_is: 1,
       dies_of: 1,
@@ -460,6 +467,7 @@
       place_in: 1,      // ✓
       preceding: 1,
       size: [1, 2],     // ✓
+      sofar: 1,
       trigger_magnitude: [0, 1],
 
       // graph, table and other lookups
@@ -468,6 +476,57 @@
       stop: 1,
       table: 1,         // ✓
     },
+
+    // =====================================================================
+    // 4b. HOW THE FUNCTIONS ARE GROUPED, for a chooser (§23.1)
+    // =====================================================================
+    // The five groups Simile's own help divides its built-ins into, in the
+    // order that page lists them, and with each group's membership taken from
+    // that group's page:
+    //
+    //   simulistics.com/help/equations/builtin.htm — and the five
+    //   "Built-in functions : …" links at the foot of it.
+    //
+    // Grouping is presentation, but it is the NOTATION's presentation and not
+    // this editor's, so it is data here rather than a list in the dialog: a
+    // different schema groups its own functions its own way, or omits this and
+    // gets no tree. It is deliberately separate from `functions` above, which
+    // stays a flat name→arity table because that is what the checker wants and
+    // membership of a menu is no business of the arity check.
+    //
+    // TWO HONEST GAPS, both left visible rather than papered over:
+    //
+    //   1. `hypot` appears in TWO groups (arithmetic and trigonometric), which
+    //      is how the help lists it. Repeated here rather than assigned, since
+    //      choosing for Simile would be inventing.
+    //   2. Eight functions we know — `firsttrue`, `graph`, `howmanytrue`, `pi`,
+    //      `posgreatest`, `posleast`, `rand`, `table` — are in NO group, because
+    //      the help's five pages do not list them; most came from the corpus,
+    //      which outranks the documentation (§19.2). They are therefore absent
+    //      from the tree while remaining perfectly legal to type. Whether they
+    //      deserve a sixth group is Robert's call, not a thing to invent here.
+    functionGroups: [
+      { label: 'Arithmetic', functions: [
+        'abs', 'ceil', 'exp', 'floor', 'fmod', 'hypot', 'inf', 'int', 'log',
+        'log10', 'max', 'min', 'pow', 'round', 'sgn', 'sqrt'] },
+      { label: 'Trigonometric', functions: [
+        'acos', 'asin', 'atan', 'atan2', 'cos', 'cosh', 'hypot', 'sin', 'sinh',
+        'tan', 'tanh'] },
+      { label: 'List handling', functions: [
+        'all', 'any', 'element', 'greatest', 'interpolate', 'least', 'makearray',
+        'order', 'place_in', 'product', 'rankings', 'subtotals', 'sum',
+        'with_greatest', 'with_least'] },
+      { label: 'Model properties', functions: [
+        'after', 'as_number', 'at_init', 'at_posn', 'channel_is', 'const_delay',
+        'count', 'delay1', 'delay3', 'delayn', 'dies_of', 'dt', 'first',
+        'following', 'forcst', 'in_preceding', 'in_progenitor', 'index',
+        'init_time', 'iterations', 'last', 'parent', 'preceding', 'prev',
+        'pulse', 'ramp', 'size', 'smth1', 'smth3', 'smthn', 'sofar', 'step',
+        'stop', 'time', 'trend', 'trigger_magnitude', 'var_delay'] },
+      { label: 'Statistics', functions: [
+        'binome', 'colin', 'exprnd', 'gaussian_var', 'hypergeom', 'poidev',
+        'rand_const', 'rand_var', 'with_colin'] },
+    ],
 
     // =====================================================================
     // 5. STYLING (§6) — the cascade's base layer
