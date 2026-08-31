@@ -332,7 +332,8 @@
       // LIST of them is edited the same way — it is one piece of text with
       // commas in it, which is also how Simile stores a multi-dimensional
       // membership; the field's `help` says so.
-      control = '<textarea id="' + id + '" rows="2" data-field="' + esc(f.name) + '">' + esc(value) + '</textarea>';
+      control = '<textarea id="' + id + '" rows="2" class="slx-expression" data-field="'
+        + esc(f.name) + '">' + esc(value) + '</textarea>';
     } else {
       control = '<input type="text" id="' + id + '" data-field="' + esc(f.name) + '" value="' + esc(value) + '">';
     }
@@ -453,11 +454,18 @@
     // which means the caret has to survive the click that asks for it. Two
     // halves: remember where it was in whichever expression field was last
     // touched, and stop the mousedown on a name from moving focus at all.
+    // WHICH fields can receive one. Expression fields and nothing else: a name
+    // pasted into Name would rename the element, and into Units would be
+    // nonsense. Tracking every `[data-field]` was the first attempt and did
+    // exactly that — leave the caret in Name, click an influence, and the
+    // element got renamed to whatever was clicked.
+    var INSERTABLE = 'textarea.slx-expression, textarea[data-field]:not([data-field=":label"])';
+
     var caret = null;                         // { el, start, end }
     function remember(node) {
       caret = { el: node, start: node.selectionStart, end: node.selectionEnd };
     }
-    $dlg.on('focus keyup click', 'textarea[data-field], input[data-field]', function () {
+    $dlg.on('focus keyup click', INSERTABLE, function () {
       if (this.selectionStart == null) return;         // checkbox, select
       remember(this);
     });
@@ -467,8 +475,11 @@
     $dlg.on('mousedown', '[data-insert]', function (e) { e.preventDefault(); });
     $dlg.on('click', '[data-insert]', function () {
       var text = $(this).attr('data-insert');
-      var target = (caret && caret.el && $.contains($dlg[0], caret.el)) ? caret.el
-        : $dlg.find('textarea[data-field]')[0];
+      // The remembered caret, but only if it is still in a field that may
+      // receive text; otherwise the first expression field, at its end.
+      var target = (caret && caret.el && $.contains($dlg[0], caret.el)
+                    && $(caret.el).is(INSERTABLE)) ? caret.el
+        : $dlg.find(INSERTABLE)[0];
       if (!target) return;
       var start = caret && caret.el === target ? caret.start : target.value.length;
       var end = caret && caret.el === target ? caret.end : target.value.length;
