@@ -534,6 +534,117 @@
     ],
 
     // =====================================================================
+    // 4c. WHAT EACH FUNCTION IS, for a tooltip (§23.2)
+    // =====================================================================
+    // `name: [signature, description]`, both taken from Simile's own help —
+    // one page per function under simulistics.com/help/equations/functions/,
+    // plus help/equations/trig.htm, which documents its eleven inline.
+    //
+    // Quoted rather than paraphrased, because a description of `smth3` or
+    // `in_progenitor` invented here would be a guess wearing the authority of
+    // the tooltip. Sixteen were edited by hand where the page's own layout
+    // defeated extraction — a signature given as an example, a description that
+    // was really the first bullet of an argument list — and those are the only
+    // ones whose wording is ours rather than theirs.
+    //
+    // `sofar` is honest about a gap at the source: its help page gives the
+    // syntax and then says "Result is…" and stops.
+    //
+    // The signature is Simile's, so its argument names are the ones the help
+    // uses; the placeholders actually INSERTED come from the arity table above,
+    // which is a different thing and deliberately so — one is documentation,
+    // the other is what the checker will judge.
+    functionHelp: {
+      abs: ['abs(X)', 'Returns the absolute value of X - i.e. ignores its sign.'],
+      acos: ['acos(X)', 'Returns the arccos (inverse cosine) of X. Result is in radians.'],
+      after: ['after(T, M)', 'Use only as whole equation of derived event. Instead of firing immediately when triggered, event is delayed by value of 1st argument, then fires with…'],
+      all: ['all([X])', 'Result is true if all the elements of the array [X] or the list {X} are true.'],
+      any: ['any([X])', 'Result is true if any of the elements of the array [X] or the list {X} are true.'],
+      as_number: ['as_number(N)', 'Converts integral types to integer.'],
+      asin: ['asin(X)', 'Returns the arcsine of X. Result is in radians.'],
+      at_init: ['at_init(X)', 'Returns the value the argument had when first used, i.e., on model reset or when the submodel instance containing this equation was created.'],
+      at_posn: ['at_posn(C)', 'Must form the whole equation of a component. Sets the component\'s value to the value of a component in an instance of a 2-D submodel representing a gr…'],
+      atan: ['atan(X)', 'Returns a value in radians (range -pi/2 to pi/2), being the arctangent of X (the ratio of two sides of a right triangle). Same as arctan(X).'],
+      atan2: ['atan2(X,Y)', 'Returns the arctangent of X. Result is in radians.'],
+      binome: ['binome(prob, n)', 'The binomial distribution describes the probability of a given number of positive outcomes occurring when a number n of trials are carried out, each w…'],
+      ceil: ['ceil(X)', 'Rounds up X to the next whole number (stands for \'ceiling\').'],
+      channel_is: ['channel_is(X)', 'X is an immigration, reproduction or creation channel. Returns true if this individual appeared through that channel.'],
+      colin: ['colin([Array])', 'Returns a deviate from a distribution whose relative probabilities are given by the values in the argument array.'],
+      const_delay: ['const_delay(var,n)', 'This function returns some previous value of another variable, a arbitrary period of time before.'],
+      cos: ['cos(X)', 'Returns the cosine of X (an angle in radians).'],
+      cosh: ['cosh(X)', 'Hyperbolic cosine of X.'],
+      count: ['count([X]) count({X})', 'Number of values in the array [X] or the list {X}.'],
+      delay1: ['delay1(input, duration [, initial])', 'Returns input delayed by duration — a first-order material delay.'],
+      delay3: ['delay3(input, duration [, initial])', 'Returns input delayed by duration — a third-order material delay.'],
+      delayn: ['delayn(input, duration, n [, initial])', 'Returns input delayed by duration — a material delay of order n.'],
+      dies_of: ['dies_of(X)', 'Returns true if argument is the loss channel that will cause the individual to disappear at the end of the current time step.'],
+      dt: ['dt(I)', 'Returns the duration of the level I time step.'],
+      element: ['element([X],I)', 'Picks the I th value from the array [X].'],
+      exp: ['exp(X)', 'Returns e (the base of natural logarithms) to the power X.'],
+      exprnd: ['exprnd(mean [, seed])', 'value sampled from an exponential distribution (numerical).'],
+      first: ['first(T)', 'Takes an argument T that is a member of an enumerated type, and returns "true" if it is the first member of its type, and "false" otherwise.'],
+      floor: ['floor(X)', 'Rounds X down to a whole number.'],
+      fmod: ['fmod(X,Y)', 'Returns remainder after dividing X by Y.'],
+      following: ['following(T)', 'Takes an argument T that is a member of an enumerated type, and returns the next member of the enumerated type.'],
+      forcst: ['forcst(input, time, horizon [, initial])', 'Simple trend extrapolation: calculates the trend in input over the averaging time, then extrapolates it horizon into the future.'],
+      gaussian_var: ['gaussian_var(mean, sd)', 'A random sample from a Gaussian (normal) distribution with the given mean and standard deviation, redrawn each time step.'],
+      greatest: ['greatest([X]) greatest({X})', 'Returns the largest value from an array [X] or the list {X}.'],
+      hypergeom: ['hypergeom(Pop, Mark, Sample)', 'Returns a deviate from a hypergeometric distribution for a given population, number of marks, and size of sample.'],
+      hypot: ['hypot(X,Y)', 'Returns length of hypotenuse of right-angle triangle with base X and height Y.'],
+      in_preceding: ['in_preceding(X)', 'Used in a multi-instance submodel, returns the value of X as it would be in the preceding instance, or 0/false in the first instance.'],
+      in_progenitor: ['in_progenitor(X)', 'Used in a population submodel, returns the value of X as it would be in the instance holding the reproduction channel responsible for this one.'],
+      index: ['index(I)', 'Returns the index (instance number) of a member of a fixed-membership or population submodel, for the nesting level I.'],
+      inf: ['inf()', 'Returns the value of positive infinity.'],
+      init_time: ['init_time(1)', 'Returns the time at which this model component first came into existence. This really only has any use for:.'],
+      int: ['int(X)', 'Returns integer part of X.'],
+      interpolate: ['interpolate(X, [Xarray], [Yarray])', 'X is an input value. The arrays Xarray and Yarray define a series of coordinates.'],
+      iterations: ['iterations(X)', 'Returns number of iterations that have been done up to this point in an alarm submodel. Argument is the boolean balue from the alarm symbol.'],
+      last: ['last(X)', 'Recalls value of X, another element, from previous time step. X must influence this element in order to be used in the equation.'],
+      least: ['least([X]) least({X})', 'Returns the smallest value from an array [X] or the list {X}.'],
+      log: ['log(X)', 'Returns natural logarithm of X.'],
+      log10: ['log10(X)', 'Returns base-10 logarithm of X.'],
+      makearray: ['makearray(X,N)', 'Makes an array consisting of N lots of X.'],
+      max: ['max(X,Y)', 'Returns greater of X and Y; i.e. it returns X if X>=Y, otherwise it returns Y.'],
+      min: ['min(X,Y)', 'Returns lesser of X and Y; i.e. it returns X if X<=Y, otherwise it returns Y.'],
+      order: ['order([X])', 'Takes an array of numeric values and returns an array containing the indices of those values in ascending order.'],
+      parent: ['parent(1)', 'Returns the id (instance number) of the individual whose reproduction gave rise to this one, or 0 if the individual being considered was created at th…'],
+      place_in: ['place_in(I)', 'When making an array with the makearray function , place_in() returns the current position in the array.'],
+      poidev: ['poidev(mean)', 'The poisson distribution describes the probability of a given number of positive outcomes occurring in the limiting case of the binomial distribution,…'],
+      pow: ['pow(X,Y)', 'Returns X raised to the power Y.'],
+      preceding: ['preceding(T)', 'Takes an argument T that is a member of an enumerated type, and returns the previous member of the enumerated type.'],
+      prev: ['prev(N)', 'Returns the value of this element itself, N time steps ago. See last , for a function that returns a previous value of any element other than this one…'],
+      product: ['product([X])', 'Result is the product of all elements of the array [X] or the list {X}.'],
+      pulse: ['pulse(magnitude, first_time [, interval])', 'Generate a pulse with a duration of a single time step and a given cumulative value.'],
+      ramp: ['ramp(time,slope)', 'Generates a ramp of slope slope, starting at time time and zero before that time.'],
+      rand_const: ['rand_const(X,Y)', 'Returns a random number between X and Y at the start of the simulation or when the submodel instance is created.'],
+      rand_var: ['rand_var(X,Y)', 'Returns a random number between X and Y, with a new value every time step.'],
+      rankings: ['rankings([X])', 'Returns an array with the ranks of the corresponding elements: 1 for the largest, the array size for the smallest.'],
+      round: ['round(X)', 'Rounds X up or down to the nearest whole number.'],
+      sgn: ['sgn(X)', 'Returns -1 if X is negative, or 1 if X is zero or positive.'],
+      sin: ['sin(X)', 'Returns the sine of the argument (an angle in radians).'],
+      sinh: ['sinh(X)', 'Hyperbolic sine of X.'],
+      size: ['size(S)', 'The size() function is used to get a component\'s dimensions. It is used when two components should have the same dimensions without being connected by…'],
+      smth1: ['smth1(input, averaging [, initial])', 'Returns input smoothed over the averaging time — first-order smoothing.'],
+      smth3: ['smth3(input, averaging [, initial])', 'Returns input smoothed over the averaging time — third-order smoothing.'],
+      smthn: ['smthn(input, averaging, n [, initial])', 'Returns input smoothed over the averaging time — smoothing of order n.'],
+      sofar: ['sofar([X])', 'Simile’s help page for this function is incomplete: it gives the syntax but no description.'],
+      sqrt: ['sqrt(X)', 'Returns the square root of X.'],
+      step: ['step(height, time)', 'Creates a step function: output is 0 up until time, and equal to height thereafter.'],
+      stop: ['stop(n)', 'When executed, this function halts execution of the model, and produces the following error message:.'],
+      subtotals: ['subtotals([X])', 'Returns an array containing the running totals from summing the elements of the original array.'],
+      sum: ['sum([X])', 'Result is the sum of all elements of the array [X] or the list {X}.'],
+      tan: ['tan(X)', 'Returns the tan of the argument (an angle in radians).'],
+      tanh: ['tanh(X)', 'Hyperbolic tangent of X.'],
+      time: ['time()', 'Returns the current simulation time.'],
+      trend: ['trend(input, time [, initial])', 'Calculates the trend in input over the exponential averaging time, expressed as fractional change in input per unit time.'],
+      trigger_magnitude: ['trigger_magnitude()', 'Returns a value representing the magnitude of the triggering event.'],
+      var_delay: ['var_delay(var,n)', 'This function returns some previous value of another variable, an arbitrary period of time before.'],
+      with_colin: ['with_colin({ProbList},{ValList})', 'Takes two lists with equal size, and returns an element from the second argument, picked at random with the probability of each element proportional t…'],
+      with_greatest: ['with_greatest([N], [X]) with_greatest({N}, {X})', 'Returns the value from an array [X] or the list {X} whose position in the array or list corresponds to the largest value in the array [N] or list {N}.'],
+      with_least: ['with_least([N], [X]) with_least({N}, {X})', 'Returns the value from an array [X] or the list {X} whose position in the array or list corresponds to the smallest value in the array [N] or list {N}…'],
+    },
+
+    // =====================================================================
     // 5. STYLING (§6) — the cascade's base layer
     // =====================================================================
     // Only the part that has a structural consequence is filled in: `resizable`

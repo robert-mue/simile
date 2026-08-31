@@ -308,11 +308,16 @@
           + esc(n.name) + '">' + esc(n.name) + '</button>' + also + '</li>';
       }).join('') + '</ul>';
     }
-    // "Parameters" is SIMILE's word for this panel, kept deliberately: the
-    // point of matching its layout is recognition, and a transitioning user
-    // looks for the box called Parameters. Our own checker still says
-    // "influence", which is the arrow rather than the panel.
-    return '<div class="slx-dlg-aside"><label>Parameters</label>' + body + '</div>';
+    // **Variables**, not Simile's "Parameters". Matching Simile's layout is
+    // worth a lot and matching its vocabulary is not worth being wrong: in
+    // modelling a parameter is a variable whose value is a NUMBER, so the word
+    // claims something about these that is not true of them — any of these may
+    // be a computed variable, a stock, or a flow rate.
+    //
+    // Whether `variable` is itself the right word, given that the thing drawn
+    // is an INFLUENCE and one of our node types is already called `variable`,
+    // is left open on purpose (2026-09-01). The checker still says "influence".
+    return '<div class="slx-dlg-aside"><label>Variables</label>' + body + '</div>';
   }
 
   /**
@@ -352,10 +357,19 @@
     var groups = schema.functionGroups || [];
     if (!groups.length) return '';
     var table = schema.functions || {};
+    var help = schema.functionHelp || {};
     var body = groups.map(function (g) {
       var items = (g.functions || []).map(function (name) {
-        return '<li><button type="button" class="slx-fn" data-insert="'
-          + esc(callTemplate(name, table[name])) + '">' + esc(name) + '</button></li>';
+        // The tooltip is Simile's own signature and sentence (see the schema's
+        // `functionHelp`), NOT the placeholder call being inserted: the
+        // signature names its arguments — `pow(X,Y)`, `delay1(input, duration
+        // [, initial])` — which is the thing worth reading on the way past, and
+        // it shows the optional arguments that the inserted call leaves out.
+        var h = help[name];
+        var title = h ? h[0] + '\n' + h[1] : callTemplate(name, table[name]);
+        return '<li><button type="button" class="slx-fn" title="' + esc(title)
+          + '" data-insert="' + esc(callTemplate(name, table[name])) + '">'
+          + esc(name) + '</button></li>';
       }).join('');
       return '<details class="slx-fn-group"><summary>' + esc(g.label)
         + '<span class="slx-fn-count">' + (g.functions || []).length + '</span></summary>'

@@ -1163,9 +1163,32 @@ other way:
 - the trigonometry group is **`Trigonometry`**, the dialogue's word, not the
   index page's "Trigonometric functions". Where two sources of Simile's own
   disagree about presentation, the screen wins.
-- the parameters panel is called **`Parameters`**, which is Simile's name for
-  it. Our checker still says "influence", because that is the arrow rather than
-  the panel — a divergence worth watching, and easily changed if it grates.
+- the variables panel was called `Parameters`, Simile's name for it, and was
+  **renamed to `Variables` on 2026-09-01**. Matching Simile's layout is worth a
+  lot; matching its vocabulary is not worth being wrong. In modelling a
+  *parameter* is a variable whose value is a number, and the panel lists nothing
+  of the sort — a name in it may be a computed variable, a stock, or a flow
+  rate. Whether `Variables` is itself right, given that the thing drawn is an
+  **influence** and one of our node types is already called `variable`, is
+  **left open deliberately**: the checker still says "influence", and the two
+  will have to be reconciled, but not by picking a second wrong word in a
+  hurry.
+
+**Every function carries a tooltip** — its signature and a one-sentence
+description, both quoted from Simile's own help, one page per function under
+`help/equations/functions/` plus `help/equations/trig.htm`. Quoted rather than
+paraphrased: a description of `smth3` or `in_progenitor` invented here would be
+a guess wearing the authority of the tooltip. Sixteen were edited by hand where
+the page's own layout defeated extraction — a signature given as an example, a
+description that was really the first bullet of an argument list — and those are
+the only ones whose wording is ours. `sofar` is honest about a gap at the
+source: its page gives the syntax, says "Result is…", and stops.
+
+The tooltip shows the **documented signature**, not the placeholder call being
+inserted, because the signature names its arguments (`delay1(input, duration [,
+initial])`) and shows the optional ones the inserted call leaves out. The two
+are deliberately different things: one is documentation, the other is what the
+checker will judge.
 
 **Nothing in the aids may take the keyboard.** Insert buttons already suppressed
 `mousedown` to protect the caret; the disclosure triangles had to as well, since
