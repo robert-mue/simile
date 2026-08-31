@@ -914,8 +914,9 @@ text.slx-incomplete {
   padding: 0;
   list-style: none;
   /* Scrollable: a variable in a busy model can have a dozen influences, and the
-     dialog must not grow to whatever the diagram happens to contain. */
-  max-height: 132px;
+     dialog must not grow to whatever the diagram happens to contain. Matched to
+     the function tree beside it, so the two panels line up. */
+  max-height: 172px;
   overflow-y: auto;
   border: 1px solid #e3e7ec;
   border-radius: 3px;
@@ -956,13 +957,29 @@ button.slx-influence:hover { background: #eaf2fa; }
  * state to keep and the keyboard comes free. */
 
 .slx-fn-tree {
-  max-height: 190px;
+  /* Tall enough that the CLOSED tree — the root and its five groups — is whole.
+     A chooser whose resting state is cut off mid-row looks broken, and the
+     scrollbar should appear because you opened something, not on arrival. */
+  max-height: 172px;
   overflow-y: auto;
   border: 1px solid #e3e7ec;
   border-radius: 3px;
 }
 
 .slx-fn-group + .slx-fn-group { border-top: 1px solid #f1f3f6; }
+
+.slx-fn-root > summary {
+  padding: 4px 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #3a3f47;
+  background: #f5f7fa;
+  list-style-position: inside;
+}
+
+/* The groups are one level in from their root, as a tree should read. */
+.slx-fn-root > .slx-fn-group > summary { padding-left: 20px; }
+.slx-fn-root > .slx-fn-group > .slx-fn-list { padding-left: 30px; }
 
 .slx-fn-group > summary {
   padding: 4px 8px;
@@ -1005,18 +1022,28 @@ button.slx-fn {
 
 button.slx-fn:hover { background: #eaf2fa; }
 
-/* Equation tab: fields on the left, the aids that write into them on the
-   right. Stacked, the function tree pushes the equation out of view, and an
-   aid that inserts at the caret is worthless when the caret cannot be seen. */
-.slx-eq-cols {
+/* Equation tab: the aids in a row ACROSS THE TOP, the equation below — the
+   arrangement of Simile's own equation dialogue. What you pick flows downward
+   into what you are writing, and the panels are where a Simile user looks for
+   them. The keypad becomes the third panel in this row. */
+.slx-eq-aids {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eceff3;
 }
 
-.slx-eq-main { flex: 1 1 240px; min-width: 0; }
-.slx-eq-aside { flex: 0 1 230px; min-width: 0; }
+.slx-eq-aids > .slx-dlg-aside {
+  /* Functions is the wider of the two, as in Simile, because a tree of eighty
+     names needs it more than a list of three parameters. */
+  flex: 1 1 200px;
+  min-width: 0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
 
-/* Inside the column the asides stack, and the first needs no rule above it. */
-.slx-eq-aside .slx-dlg-aside:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.slx-eq-aids > .slx-dlg-aside:first-child { flex: 1.4 1 240px; }

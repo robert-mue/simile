@@ -1141,7 +1141,35 @@ insertion that is never finished on arrival — it is a shape to fill in.
   documentation (§19.2). They stay legal to type and absent from the tree.
   Whether they deserve a sixth group is open.
 
-**The Equation tab is two columns** — fields left, the aids that write into them
-right. Stacked, the tree pushed the equation off the top of a panel-sized
-dialog, and an aid that inserts at the caret is worthless when the caret cannot
-be seen: watching the expression take shape is the point.
+### 23.3 Following Simile's own arrangement *(2026-08-31)*
+
+Having built the tree, the layout was settled by looking at the thing itself —
+`help/equations/dialogue.htm` — rather than by reasoning about it. Simile puts
+**Functions, Parameters and Keypad in a row across the top, and the equation
+field full-width underneath**. We now do the same, minus the keypad, which is
+the third panel in that row when it is built.
+
+It is the better arrangement on its own merits — what you pick flows downward
+into what you are writing — but that is not why it was chosen. **It is what a
+Simile user already knows**, and a transition is made of small recognitions.
+The same reasoning settles three details that would otherwise have gone the
+other way:
+
+- the tree hangs under a **`Built-in`** root, whose sibling in Simile is
+  `Macros`, the user-defined functions. We have none; the shape is kept because
+  it is the shape they know, and it is where macros would go.
+- the groups are in Simile's dialogue order (**alphabetical**), not the order of
+  the index page that supplied their membership.
+- the trigonometry group is **`Trigonometry`**, the dialogue's word, not the
+  index page's "Trigonometric functions". Where two sources of Simile's own
+  disagree about presentation, the screen wins.
+- the parameters panel is called **`Parameters`**, which is Simile's name for
+  it. Our checker still says "influence", because that is the arrow rather than
+  the panel — a divergence worth watching, and easily changed if it grates.
+
+**Nothing in the aids may take the keyboard.** Insert buttons already suppressed
+`mousedown` to protect the caret; the disclosure triangles had to as well, since
+`<summary>` is focusable and expanding a group silently moved the caret out of
+the equation — characters typed next went nowhere at all. `<details>` toggles on
+click, so suppressing focus costs the tree nothing. The rule is now general: the
+aids column serves the equation field and never competes with it.

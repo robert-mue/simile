@@ -480,12 +480,17 @@
     // =====================================================================
     // 4b. HOW THE FUNCTIONS ARE GROUPED, for a chooser (§23.1)
     // =====================================================================
-    // The five groups Simile's own help divides its built-ins into, in the
-    // order that page lists them, and with each group's membership taken from
-    // that group's page:
+    // The five groups Simile's own help divides its built-ins into. Membership
+    // comes from each group's page under
     //
-    //   simulistics.com/help/equations/builtin.htm — and the five
-    //   "Built-in functions : …" links at the foot of it.
+    //   simulistics.com/help/equations/builtin.htm — the five
+    //   "Built-in functions : …" links at the foot of it
+    //
+    // but the ORDER and the SPELLING come from the equation dialogue itself
+    // (help/equations/dialogue.htm), which is what a Simile user has actually
+    // looked at: alphabetical, and `Trigonometry` rather than the index page's
+    // "Trigonometric functions". Where the two sources differ about
+    // presentation, the screen wins — the point of matching is recognition.
     //
     // Grouping is presentation, but it is the NOTATION's presentation and not
     // this editor's, so it is data here rather than a list in the dialog: a
@@ -509,9 +514,6 @@
       { label: 'Arithmetic', functions: [
         'abs', 'ceil', 'exp', 'floor', 'fmod', 'hypot', 'inf', 'int', 'log',
         'log10', 'max', 'min', 'pow', 'round', 'sgn', 'sqrt'] },
-      { label: 'Trigonometric', functions: [
-        'acos', 'asin', 'atan', 'atan2', 'cos', 'cosh', 'hypot', 'sin', 'sinh',
-        'tan', 'tanh'] },
       { label: 'List handling', functions: [
         'all', 'any', 'element', 'greatest', 'interpolate', 'least', 'makearray',
         'order', 'place_in', 'product', 'rankings', 'subtotals', 'sum',
@@ -526,6 +528,9 @@
       { label: 'Statistics', functions: [
         'binome', 'colin', 'exprnd', 'gaussian_var', 'hypergeom', 'poidev',
         'rand_const', 'rand_var', 'with_colin'] },
+      { label: 'Trigonometry', functions: [
+        'acos', 'asin', 'atan', 'atan2', 'cos', 'cosh', 'hypot', 'sin', 'sinh',
+        'tan', 'tanh'] },
     ],
 
     // =====================================================================

@@ -308,7 +308,11 @@
           + esc(n.name) + '">' + esc(n.name) + '</button>' + also + '</li>';
       }).join('') + '</ul>';
     }
-    return '<div class="slx-dlg-aside"><label>Influences</label>' + body + '</div>';
+    // "Parameters" is SIMILE's word for this panel, kept deliberately: the
+    // point of matching its layout is recognition, and a transitioning user
+    // looks for the box called Parameters. Our own checker still says
+    // "influence", which is the arrow rather than the panel.
+    return '<div class="slx-dlg-aside"><label>Parameters</label>' + body + '</div>';
   }
 
   /**
@@ -357,8 +361,14 @@
         + '<span class="slx-fn-count">' + (g.functions || []).length + '</span></summary>'
         + '<ul class="slx-fn-list">' + items + '</ul></details>';
     }).join('');
+    // The `Built-in` root is Simile's, and it is not decoration: its sibling
+    // there is `Macros`, the user-defined functions. We have none, so there is
+    // one root — but the shape is the one a transitioning user knows, and it is
+    // where macros would go.
     return '<div class="slx-dlg-aside"><label>Functions</label>'
-      + '<div class="slx-fn-tree">' + body + '</div></div>';
+      + '<div class="slx-fn-tree">'
+      + '<details class="slx-fn-root" open><summary>Built-in</summary>'
+      + body + '</details></div></div>';
   }
 
   /** One row of the generated form. A renderer can reuse these via `ctx.field`. */
@@ -438,14 +448,15 @@
         functions: function () { return functionsHtml(schema); },
       })
       : (hasEquation
-        // TWO COLUMNS when there are aids to show. Stacked, the tree pushes the
-        // equation off the top of a panel-sized dialog, and an aid that inserts
-        // AT THE CARET is worthless when the caret is scrolled out of sight —
-        // the whole point is watching the expression take shape as you click.
-        ? '<div class="slx-eq-cols">'
-          + '<div class="slx-eq-main">' + allRows() + '</div>'
-          + '<div class="slx-eq-aside">' + influencesHtml(d, id) + functionsHtml(schema) + '</div>'
-          + '</div>'
+        // AIDS ABOVE, EQUATION BELOW — the arrangement of Simile's own equation
+        // dialogue (help/equations/dialogue.htm), which puts Functions,
+        // Parameters and Keypad in a row across the top and the equation field
+        // full-width underneath. Adopted deliberately: it reads better, because
+        // what you pick flows downward into what you are writing, and it is one
+        // less thing to relearn for someone arriving from Simile. The keypad is
+        // the third panel in that row when it is built.
+        ? '<div class="slx-eq-aids">' + functionsHtml(schema) + influencesHtml(d, id) + '</div>'
+          + allRows()
         : allRows());
 
     // ---- tabs -----------------------------------------------------------
@@ -532,7 +543,13 @@
     // preventDefault on mousedown is what keeps the caret: without it the button
     // takes focus, the textarea's selection collapses, and every insertion lands
     // at the end of the text instead of where the modeller was working.
-    $dlg.on('mousedown', '[data-insert]', function (e) { e.preventDefault(); });
+    //
+    // The same goes for OPENING a group. A `<summary>` is focusable, so
+    // expanding Arithmetic quietly moved the caret out of the equation and the
+    // next few characters typed went nowhere — the disclosure triangle stealing
+    // the keyboard from the field it exists to serve. `<details>` toggles on
+    // click, not on mousedown, so suppressing focus costs the tree nothing.
+    $dlg.on('mousedown', '[data-insert], .slx-fn-tree summary', function (e) { e.preventDefault(); });
     $dlg.on('click', '[data-insert]', function () {
       var text = $(this).attr('data-insert');
       // The remembered caret, but only if it is still in a field that may
