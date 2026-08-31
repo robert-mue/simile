@@ -432,7 +432,8 @@ text.slx-incomplete {
   cursor: pointer;
 }
 
-.slx-dlg-buttons button[data-act='ok'] {
+.slx-dlg-buttons button[data-act='ok'],
+.slx-dlg-buttons button[data-act='edit'] {
   background: #2f7fd0;
   border-color: #2f7fd0;
   color: #fff;
@@ -771,3 +772,72 @@ text.slx-incomplete {
   padding: 0 2px;
 }
 .slx-plot-drop:hover { color: #a32b2b; }
+
+/* ---- the problem report (Sienna.dialogs.problems) --------------------- *
+ * Shown AFTER an edit is committed, never in front of one. It is a report,
+ * so it is styled as one: the same shell as the property dialog, wider,
+ * because an equation with its fault marked needs the room. */
+
+.slx-dlg-problems { max-width: 520px; }
+
+/* Stacked over the property dialog, which stays open behind it: the modeller
+   may be sent back to the equation, and their text has to still be there. */
+.slx-dlg-over { z-index: 21; background: rgba(20, 24, 30, 0.2); }
+
+.slx-problem-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.slx-problem {
+  padding: 8px 10px;
+  border-left: 3px solid #d98b8b;
+  border-radius: 0 3px 3px 0;
+  background: #fdf4f4;
+}
+
+.slx-problem + .slx-problem { margin-top: 6px; }
+
+/* An influence the equation never mentions is a disagreement between the
+   diagram and the text, not an error in the text — so it reads differently. */
+.slx-problem-unused {
+  border-left-color: #d9b06b;
+  background: #fdf9f0;
+}
+
+.slx-problem-field {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b929c;
+}
+
+.slx-problem-message { color: #3a3f47; }
+
+.slx-problem-code {
+  margin: 6px 0 0;
+  padding: 5px 7px;
+  border-radius: 3px;
+  background: #fff;
+  border: 1px solid #ecdcdc;
+  font: 12px/1.4 ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.slx-problem-code mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: #ffd9d9;
+  color: #a32b2b;
+  font-weight: 600;
+}
+
+.slx-dlg-note {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: #8b929c;
+}

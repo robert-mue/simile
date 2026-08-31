@@ -854,6 +854,55 @@ That has a cost worth recording, since it is the kind of thing that is discovere
 
 One asymmetry, kept on purpose: **a bad label is still refused**, and the dialogue stays open. A label is not merely this element's business — it is the name *other* elements' equations use, so a label with a space in it breaks things elsewhere and can never be referenced at all. That is §12.3's split doing its job: naming is structural and preventive, equations are content and deferred.
 
+### 19.10 Telling the modeller — a report with two doors *(2026-08-31)*
+
+§19.9 settled that OK always commits and that a wrong equation is kept verbatim
+and flagged. What it did not settle is how the modeller finds out, and the answer
+in practice was: they do not. The only output was the element turning red, which
+says neither which of the five counts applies nor which name is at fault — and on
+a half-built model everything is red, so red says nothing at all. The bug report
+was "the check doesn't happen"; the checks had been running on every render since
+they were written. An invisible check is indistinguishable from an absent one.
+
+So OK now **checks before writing** and, if anything is wrong, raises a modal
+listing every finding, each with the offending stretch of the equation marked in
+place. Two buttons, and the pair is the whole design:
+
+- **Return to the equation** — nothing is written, the property dialog is still
+  open behind the report with the modeller's text in it, and they carry on
+  typing. Cancel from there still reverts to the pre-dialog state, because
+  nothing was ever committed.
+- **Close anyway** — commits verbatim and closes, exactly as §19.9 rules.
+
+**This is why the check runs on a draft** rather than on the stored element
+(`equationCheck.completeness(d, id, draft)`). The first attempt committed first
+and reported afterwards, which was faithful to §19.9 and useless: the only route
+back to the mistake was to reopen the dialog and find it again. Reporting on
+something not yet saved is what makes "fix it now" an option, and it costs one
+parameter.
+
+**§19.9 is unchanged, not weakened.** A wrong equation is still never refused —
+every door out of the report leads somewhere and no work is lost through any of
+them. The arrows usually arrive after the equation, so "I will finish this in a
+minute" has to remain possible. Simile blocks on OK here; we still decline to,
+while adopting its presentation, because a popup earns attention and a caption
+beside a field does not.
+
+**A visit is still one undo step**, including a visit that went round by way of
+the report: nothing is written until the modeller answers, so a round trip
+through "return to the equation" writes nothing at all.
+
+**`unused` gets no marker.** Every other finding points at something written
+down; an influence the equation never mentions is a name that is *absent*, and
+there is no position for something absent. It is styled apart for the same
+reason — it reports a disagreement between the diagram and the text, resolvable
+from either end, rather than an error in the text.
+
+**The label is checked first and separately.** It is structural (§12.3): a bad
+name breaks other elements' equations, so it is refused outright and the dialog
+stays open. Checking it before the equation report also stops the report offering
+"close anyway" on a change that could not be saved in any case.
+
 ## 20. Replay — a session as an artefact
 
 *Built 2026-08-07, from the marker put down the day before. The mechanism is the shell's (`Sienna.actions.replay`); what is recorded here is the part simile had to decide.*

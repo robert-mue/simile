@@ -80,8 +80,8 @@
    * model — so a notation with different fields is checked without a change
    * here, and a type with two equations has both checked.
    */
-  function expressionFields(d, id) {
-    var el = d.get(id);
+  function expressionFields(d, id, el) {
+    el = el || d.get(id);
     if (!el) return [];
     var schema = d.schema();
     var spec = String(id).indexOf('submodel') === 0 ? schema.submodel : (schema.nodes[el.type] || schema.arcs[el.type]);
@@ -153,10 +153,10 @@
    * Check one element's equations.
    * @returns {Array<{id, label, kind, field, message, at?}>}
    */
-  function element(d, id) {
-    var el = d.get(id);
+  function element(d, id, draft) {
+    var el = draft || d.get(id);
     if (!el) return [];
-    var fields = expressionFields(d, id);
+    var fields = expressionFields(d, id, el);
     if (!fields.length) return [];
 
     var schema = d.schema();
@@ -188,20 +188,28 @@
         calls(parsed.ast).forEach(function (c) {
           if (!Object.prototype.hasOwnProperty.call(table, c.name)) {
             out.push({
-              id: id, label: label, kind: 'function', field: f.name, at: part.at + c.at,
+              id: id, label: label, kind: 'function', field: f.name,
+              at: part.at + c.at, len: c.name.length,
               message: f.label + ': no such function "' + c.name + '"',
             });
           } else if (!arityOk(table[c.name], c.count)) {
             out.push({
-              id: id, label: label, kind: 'function', field: f.name, at: part.at + c.at,
+              id: id, label: label, kind: 'function', field: f.name,
+              at: part.at + c.at, len: c.name.length,
               message: f.label + ': ' + c.name + '() takes ' + arityText(table[c.name]) +
                        ', not ' + c.count,
             });
           }
         });
 
+        // Keep WHERE each name was written, not just that it was. An
+        // `undeclared` finding is about a name the modeller can see in front of
+        // them, so it can be pointed at — and the offsets are already in the
+        // AST, which is the only place they can come from.
         Sienna.equation.references(parsed.ast).forEach(function (ref) {
-          usedNames[ref.name] = true;
+          if (!usedNames[ref.name]) {
+            usedNames[ref.name] = { field: f.name, at: part.at + ref.at, len: ref.name.length };
+          }
         });
       });
     });
@@ -218,8 +226,10 @@
 
     Object.keys(usedNames).forEach(function (name) {
       if (!suppliedSet[name]) {
+        var where = usedNames[name];
         out.push({
           id: id, label: label, kind: 'undeclared', name: name,
+          field: where.field, at: where.at, len: where.len,
           message: '"' + name + '" is used but no influence supplies it',
         });
       }
@@ -234,7 +244,7 @@
     supplied.forEach(function (s) {
       var e = byArc[s.arc] = byArc[s.arc] || { names: [], used: false };
       e.names.push(s.name);
-      if (usedNames[s.name]) e.used = true;
+      if (usedNames[s.name]) e.used = true;   // an entry means the name was written
     });
     Object.keys(byArc).forEach(function (arc) {
       if (byArc[arc].used) return;
@@ -268,15 +278,25 @@
    * that happened. The cost of deriving it is a parse per equation per render,
    * which is what the cache in `src/equation.js` is for.
    *
+   * **`draft`** is an element-shaped object to test INSTEAD of the stored one:
+   * what the dialog is holding but has not written. It exists so a dialog can
+   * ask "is what I have in my hands correct?" before committing anything, which
+   * is what lets OK offer to go back to the equation rather than reporting on a
+   * model the modeller has already been given. The arrows are still read from
+   * the model, because a dialog does not edit those.
+   *
+   * @param {Sienna.Diagram} d
+   * @param {string} id
+   * @param {object} [draft]  an element to test in place of the stored one
    * @returns {{complete: boolean, reasons: Array}}
    */
-  function completeness(d, id) {
-    var el = d.get(id);
+  function completeness(d, id, draft) {
+    var el = draft || d.get(id);
     if (!el) return { complete: true, reasons: [] };
 
     var reasons = [];
     var props = el.props || {};
-    expressionFields(d, id).forEach(function (f) {
+    expressionFields(d, id, el).forEach(function (f) {
       if (!isRequired(el, f)) return;
       var text = props[f.name];
       if (text == null || String(text).trim() === '') {
@@ -287,7 +307,7 @@
       }
     });
 
-    var all = reasons.concat(element(d, id));
+    var all = reasons.concat(element(d, id, draft));
     return { complete: !all.length, reasons: all };
   }
 

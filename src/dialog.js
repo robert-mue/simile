@@ -90,6 +90,115 @@
     },
 
     list: function () { return Object.keys(renderers); },
+
+    /**
+     * Report what is wrong with the element being edited, and offer a way out
+     * in each direction.
+     *
+     * Raised by OK **before anything is written**, so the modeller has a real
+     * choice: go back and fix it, or keep it as it stands. Two buttons, and the
+     * distinction between them is the whole point —
+     *
+     *   - *Return to the equation* — nothing is saved, the property dialog is
+     *     still open behind this with their text in it, and they carry on. This
+     *     is the reason the check runs on a DRAFT rather than on the stored
+     *     element (see `equationCheck.completeness`): reporting after the commit
+     *     would mean the only route back was to re-open the dialog and find the
+     *     mistake again.
+     *   - *Close anyway* — commits verbatim and closes, exactly as §19.9 rules.
+     *     A wrong equation is never refused; the arrows usually arrive after the
+     *     equation, so "I will finish this in a minute" has to stay possible.
+     *
+     * So this is not a gate: every door leads somewhere, and no work is ever
+     * lost through it. Modal, at Robert's call and matching what Simile does
+     * here — Simile blocks on OK, which we still decline to. A popup earns
+     * attention; a caption next to a field does not, and the whole problem being
+     * fixed is that a signal existed and nobody saw it.
+     *
+     * Each finding shows its message and, where it has a position, the offending
+     * stretch of the equation marked in place. `unused` never has one: it is a
+     * name the equation does NOT contain, and there is no position for something
+     * absent.
+     *
+     * @param {object} o
+     * @param {Sienna.Diagram} o.diagram
+     * @param {string} o.id
+     * @param {object} o.draft     the element as edited (source of the excerpts)
+     * @param {Array} o.findings   as `equationCheck.completeness().reasons`
+     * @param {function} o.onEdit  chose to go back; nothing has been written
+     * @param {function} o.onClose chose to keep it; the caller commits
+     * @param {JQuery} [o.host]
+     */
+    problems: function (o) {
+      var d = o.diagram;
+      var id = o.id;
+      var findings = o.findings;
+      if (!findings || !findings.length) return null;
+      var el = o.draft || d.get(id) || {};
+      var props = el.props || {};
+      var spec = specFor(d, id) || { fields: [] };
+
+      function labelOf(name) {
+        var f = (spec.fields || []).filter(function (x) { return x.name === name; })[0];
+        return f ? f.label : name;
+      }
+
+      // The equation, with `len` characters from `at` marked. Clamped, because a
+      // stale offset must not be able to garble the text it is explaining.
+      function excerpt(f) {
+        var text = String(props[f.field] == null ? '' : props[f.field]);
+        if (!text || f.at == null) return '';
+        var at = Math.max(0, Math.min(f.at, text.length));
+        var end = Math.max(at + 1, Math.min(at + (f.len || 1), text.length));
+        return '<pre class="slx-problem-code">' + esc(text.slice(0, at))
+          + '<mark>' + esc(text.slice(at, end)) + '</mark>'
+          + esc(text.slice(end)) + '</pre>';
+      }
+
+      var rows = findings.map(function (f) {
+        var where = f.field ? '<span class="slx-problem-field">' + esc(labelOf(f.field)) + '</span>' : '';
+        return '<li class="slx-problem slx-problem-' + esc(f.kind || 'other') + '">'
+          + where + '<span class="slx-problem-message">' + esc(f.message) + '</span>'
+          + excerpt(f) + '</li>';
+      }).join('');
+
+      var $host = o.host && o.host.length ? o.host : $('body');
+      var $back = $('<div class="slx-dlg-backdrop slx-dlg-over">').appendTo($host);
+      var $dlg = $(
+        '<div class="slx-dlg slx-dlg-problems" role="dialog" aria-modal="true">'
+        + '<h2>' + esc(el.label || id) + ' — '
+        + findings.length + ' problem' + (findings.length > 1 ? 's' : '') + '</h2>'
+        + '<ul class="slx-problem-list">' + rows + '</ul>'
+        + '<p class="slx-dlg-note">Nothing has been saved yet. '
+        + 'You can go back and fix these, or keep the element as it is — '
+        + 'it will stay marked until they are resolved.</p>'
+        + '<div class="slx-dlg-buttons">'
+        + '<button type="button" data-act="close">Close anyway</button>'
+        + '<button type="button" data-act="edit">Return to the equation</button>'
+        + '</div></div>'
+      ).appendTo($back);
+
+      var done = false;
+      function finish(fn) {
+        if (done) return;                  // one answer only, whatever the route
+        done = true;
+        $(document).off('keydown.slxproblems');
+        $back.remove();
+        if (typeof fn === 'function') fn();
+      }
+      $dlg.on('click', '[data-act=edit]', function () { finish(o.onEdit); });
+      $dlg.on('click', '[data-act=close]', function () { finish(o.onClose); });
+      // Dismissing without choosing means going back to the equation: it is the
+      // option that discards nothing, so it is the safe reading of a stray click
+      // or an Escape.
+      $back.on('mousedown', function (e) { if (e.target === $back[0]) finish(o.onEdit); });
+      $(document).on('keydown.slxproblems', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); finish(o.onEdit); }
+        else if (e.key === 'Enter') { e.preventDefault(); finish(o.onEdit); }
+      });
+      $dlg.find('[data-act=edit]').focus();
+      return { close: function () { finish(null); }, element: $dlg };
+    },
   };
 
   function esc(s) {
@@ -221,22 +330,65 @@
         else props[name] = v;
       });
 
-      try {
-        // ONE action: label, direct fields and props together, so a visit to
-        // the dialog is a single undo step.
-        d.setProperties(id, { label: label, props: props, direct: direct });
-      } catch (err) {
+      function reject(message) {
         $dlg.find('.slx-dlg-error').remove();
-        $('<p class="slx-dlg-error">').text(err.message).insertBefore($dlg.find('.slx-dlg-buttons'));
-        return;                                  // the label was rejected; stay open
+        $('<p class="slx-dlg-error">').text(message).insertBefore($dlg.find('.slx-dlg-buttons'));
       }
-      close();
+
+      // ONE action: label, direct fields and props together, so a visit to the
+      // dialog is a single undo step — including a visit that went round by way
+      // of the problem report, since nothing is written until the end.
+      function write() {
+        try {
+          d.setProperties(id, { label: label, props: props, direct: direct });
+        } catch (err) {
+          reject(err.message);
+          return false;                            // the label was rejected; stay open
+        }
+        close();
+        return true;
+      }
+
+      // The LABEL is checked first and on its own, because it is structural: a
+      // bad name breaks other elements' equations and is refused outright
+      // (§12.3, §19.9). Doing it before the equation report also stops the
+      // report offering "close anyway" on a change that cannot be saved at all.
+      try {
+        d.checkLabel(label);
+        d.checkSiblingName(id, label);
+      } catch (err) {
+        reject(err.message);
+        return;
+      }
+
+      // Then the equations — on a DRAFT, before writing, so "return to the
+      // equation" is a real option and not a re-opening. §19.9 stands: the
+      // report cannot refuse the edit, only ask.
+      if (Sienna.equationCheck) {
+        var draft = $.extend({}, el, direct, { label: label, props: $.extend({}, el.props, props) });
+        var verdict = Sienna.equationCheck.completeness(d, id, draft);
+        if (!verdict.complete) {
+          Sienna.dialogs.problems({
+            diagram: d, id: id, draft: draft, findings: verdict.reasons, host: host,
+            onEdit: function () { $dlg.find('[data-field]').first().focus(); },
+            onClose: write,
+          });
+          return;
+        }
+      }
+
+      write();
     }
 
     $dlg.on('click', '[data-act=ok]', commit);
     $dlg.on('click', '[data-act=cancel]', close);
     $back.on('mousedown', function (e) { if (e.target === $back[0]) close(); });
     $(document).on('keydown.slxdlg', function (e) {
+      // The problem report is modal OVER this dialog and owns the keyboard while
+      // it is up. Without this, Escape would close the dialog underneath it and
+      // lose the very text the report is asking about, and Enter would commit
+      // the edit the modeller is still being asked about.
+      if ($host.find('.slx-dlg-problems').length) return;
       if (e.key === 'Escape') close();
       else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') commit();
     });
