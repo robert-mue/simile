@@ -6,6 +6,20 @@ properties dialog. If you are picking this up cold — a new session, a new
 machine, or a week later — read this first. `STATUS.md` is the full record;
 this is the part you need to get moving again.*
 
+**When to rewrite this note.** By event, not by the calendar — a note that
+restates the diff goes stale faster and gets trusted less. Rewrite it when:
+
+1. **the queue changes** — a job finishes, a new one appears, or a decision is
+   deliberately left open;
+2. **before any deliberate stop** — end of session, end of day, before travel;
+3. **when a trap is found**, while it is fresh and while the wrong version of it
+   is still doing damage.
+
+Not for code that merely accumulates: the commit messages here are long on
+purpose and `git log` reconstructs the rest. This note carries only what the log
+cannot — what is next, what is undecided, and what will bite you. Whoever is
+working the keyboard should do this unprompted; it should not need asking for.
+
 ---
 
 ## Where things stand
@@ -242,6 +256,13 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   that a synthetic drag through the extension does NOT reliably draw an arc,
   though clicks and typing work; arc gestures have to be checked by hand, or
   driven through `Diagram.addArc` from the console.
+- **The models are in NO repository.** They live in localStorage, on one
+  machine, in one browser profile, on one origin — a dead disk takes them, and
+  git will not help. `File ▸ Export all models…` writes every one of them to a
+  single JSON bundle; it is the only backup there is, and it takes a few
+  seconds. (There is deliberately no import for that bundle yet: reading one
+  back has to answer what happens to an id that already exists, and the wrong
+  answer destroys work silently.)
 - **Never delete stored models** from `Sienna.userData` without asking — not on
   localhost, not "test clutter". `models/johad-test`, `models/prime-test` and
   `models/hexagon-test` are mine, on the localhost profile, and can go whenever.

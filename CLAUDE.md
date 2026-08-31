@@ -26,7 +26,8 @@ footing (`src/widgets/grid.js` is the first).
 - `index.html` — loads the shell from `sienna/vendor` + `sienna/src/core` (in
   dependency order), then this app's `src/widgets/index.js` and `src/main.js`.
 - `src/main.js` — the app bootstrap: constructs `Sienna.App`, tells the shell
-  what a simile document IS (`Sienna.documents.configure`), builds the Edit /
+  what a simile document IS (`Sienna.documents.configure`, including the panel
+  geometry a model opens at), builds the Edit /
   Widgets / View / Session menus, registers the replay handlers for this app's
   layout actions, and seeds the demo models.
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
