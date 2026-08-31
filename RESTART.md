@@ -1,9 +1,10 @@
 # Restart note
 
-*Rewritten 2026-08-29, at the end of the first day the editor was used to BUILD
-a model by hand rather than by a test. If you are picking this up cold — a new
-session, a new machine, or a week later — read this first. `STATUS.md` is the
-full record; this is the part you need to get moving again.*
+*Rewritten 2026-08-29, when the editor was first used to BUILD a model by hand
+rather than by a test; brought forward 2026-09-01 after two days on the node
+properties dialog. If you are picking this up cold — a new session, a new
+machine, or a week later — read this first. `STATUS.md` is the full record;
+this is the part you need to get moving again.*
 
 ---
 
@@ -26,8 +27,9 @@ view, or the undo stack the way a hand does. See "What hand-use found" below —
 the lesson is worth more than the individual fixes.
 
 **Standing numbers.** Quote these only after re-running the checks below, since
-they are exactly what a regression would change. All three re-measured
-2026-08-29, after the naming change:
+they are exactly what a regression would change. The two no-file pages were
+re-run repeatedly through 2026-09-01 and have not moved; the catalogue round
+trip was last measured 2026-08-29, after the naming change:
 
 | | |
 |---|---|
@@ -99,6 +101,43 @@ most valuable thing this note can tell you.
   a modeller names is the process. One `labelStem` in the schema. Confusing, and
   adopted knowing it — see DESIGN-diagram.md §22.
 
+## The node properties dialog (2026-08-31 / 09-01)
+
+Two days' work, all of it in `src/dialog.js`, the schema, and `src/styles.css`.
+DESIGN-diagram.md §23 is the record; the short version:
+
+- **It is a NODE PROPERTIES dialog that opens on its equation**, not an equation
+  dialog. Tabbed, with `Equation` first; only tabs with content are built, so
+  there is one today and Styling goes beside it later without rearranging.
+- **OK checks before writing.** If anything is wrong it raises a modal listing
+  every finding, each with the offending stretch of the equation marked, and two
+  buttons: return to the equation (nothing written, dialog still open) or close
+  anyway (commits verbatim, as §19.9 rules). Checking a DRAFT rather than the
+  stored element is what makes "fix it now" possible and keeps Cancel honest.
+- **Aids above, equation below** — Simile's own arrangement
+  (`help/equations/dialogue.htm`), which was settled by looking at the
+  screenshot rather than reasoning about it. Functions and Variables are in that
+  row; the KEYPAD is the third panel and is not built (parked deliberately).
+- **Functions** is a collapsible tree of Simile's five groups under a `Built-in`
+  root, 87 entries, each inserting `name(arg1, arg2)` at the caret with the
+  first placeholder selected, and each carrying a tooltip quoted from Simile's
+  help.
+- **Nothing in the aids may take the keyboard**: insert buttons and disclosure
+  triangles both suppress `mousedown`, or the caret leaves the equation and
+  typed characters vanish.
+
+**Open, and recorded as open:**
+
+- `Variables` vs `influence`. The panel says Variables (a "parameter" is a
+  variable whose value is a number, so Simile's word was wrong); the checker
+  says "influence"; one of our node types is already called `variable`. To be
+  reconciled deliberately, not with a third hasty word.
+- Eight functions we know — `firsttrue`, `graph`, `howmanytrue`, `pi`,
+  `posgreatest`, `posleast`, `rand`, `table` — are in no group, because Simile's
+  help does not group them. Legal to type, absent from the tree. A sixth group
+  is Robert's call.
+- `hypot` appears in two groups, as it does in the help.
+
 ## Jobs queued
 
 ### 1. A regression net for the EDITOR — new, and now the first job
@@ -109,19 +148,24 @@ view did. Hard, because it needs a DOM and a real panel; worth it, because five
 bugs in one afternoon all lived exactly there and the three existing pages
 cannot see any of them.
 
-### 2. Dialogs — where the work was heading before
+### 2. Dialogs — well under way, see the section above
 
-**The dialog boxes for nodes and submodels**, plus cosmetic adjustments towards
-Simile's look and feel (without being bound by it).
+The node dialog is built and in use. What is left of it:
 
-Groundwork is done and CONFIRMED on screen. `Sienna.dialogs.register(key,
-renderer)` owns the presentation, so a custom dialog is a script that registers
-itself; a renderer is handed the element, the field model, the whole schema, the
-`Diagram`, and `ctx.field(name)` / `ctx.fields()` — the standard rows — so it
-can replace one field's presentation without hand-writing the whole form.
-Item 45.
+- **the numeric keypad**, the third panel in the aids row. Parked by Robert, and
+  cheap when wanted: buttons carrying `data-insert`, since the caret machinery
+  is already shared.
+- **a second tab** — styling was the motivating example for making it tabbed.
+- **the submodel dialog**, which shares the generated form but has had no
+  attention of its own.
 
-**The obvious first job: there is no arc dialog at all.** An influence's alias
+`Sienna.dialogs.register(key, renderer)` owns the presentation, so a custom
+dialog is a script that registers itself; a renderer is handed the element, the
+field model, the whole schema, the `Diagram`, and `ctx.field(name)` /
+`ctx.fields()` / `ctx.influences()` / `ctx.functions()` — the standard blocks —
+so it can replace one part without hand-writing the whole form. Item 45.
+
+**Still untouched: there is no arc dialog at all.** An influence's alias
 has never been editable, and `Diagram.setRoleAlias` (item 43) has nothing
 calling it. Adding one finishes per-role aliases properly *and* fills a real gap
 — `specFor` in `src/dialog.js` only looks at `schema.nodes` and the submodel, so
