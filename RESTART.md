@@ -246,6 +246,15 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   `for (const s of document.querySelectorAll('script[src]')) await fetch(s.getAttribute('src'),{cache:'reload'}); location.reload();`
   and the quickest test of whether you have the current code is to ask for
   something only it has, e.g. `typeof Sienna.dialogs.problems`.
+- **`tools/serve.py` holds the terminal it is started in.** It runs in the
+  foreground until Ctrl-C, so the shell that is serving cannot also run Claude,
+  and Ctrl-C to get the prompt back takes the server with it — the browser tab
+  stays open with nothing left to load from, which reads like the app broke.
+  Give it a terminal of its own, or detach it before starting Claude:
+  `nohup python3 tools/serve.py > /tmp/serve.log 2>&1 &` (stop it later with
+  `pkill -f tools/serve.py`). An agent can start it detached too, but a server
+  belonging to this session's process tree may not outlive a reboot or a hard
+  kill, so after a power cut start it yourself first.
 - **`file://` and `http://localhost` are different origins**, so they have
   separate stored models. A test on one cannot see the other's.
 - **Chrome's automation extension refuses `file://` URLs outright**, so an agent
