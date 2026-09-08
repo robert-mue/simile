@@ -84,6 +84,16 @@
     // model made from the File menu and one made from code cannot differ.
     create: function (id) { return Sienna.Diagram.emptyModel(id); },
     validate: validateModel,
+    // Simile's own formats, in and out. These used to be a top-level `Simile`
+    // menu of their own, which put two file commands somewhere no one looks
+    // for file commands. They are about a different program, but they are
+    // still Open and Save, so File is where they belong.
+    extraItems: function () {
+      return [
+        { label: 'Import Simile model (.pl / .sml)…', onSelect: importSimileFile },
+        { label: 'Export current model as .pl…', onSelect: exportSimileFile },
+      ];
+    },
   });
 
   // =======================================================================
@@ -328,16 +338,6 @@
       items: [
         { label: 'Undo', onSelect: function () { Sienna.history.undo(); } },
         { label: 'Redo', onSelect: function () { Sienna.history.redo(); } },
-      ],
-    },
-    {
-      // Simile's own formats, in and out. The shell's File menu handles OUR
-      // format; these two are about the other program, so they are the app's.
-      label: 'Simile',
-      items: [
-        { label: 'Import model (.pl / .sml)…', onSelect: importSimileFile },
-        { label: '—' },
-        { label: 'Export current model as .pl…', onSelect: exportSimileFile },
       ],
     },
     {

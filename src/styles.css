@@ -116,7 +116,7 @@ text.slx-incomplete {
   font: 7.5px/1.2 system-ui, sans-serif;   /* 60% of the first draft, with the glyphs */
   fill: #111;
   text-anchor: middle;
-  cursor: grab;            /* labels are draggable (offset stored in layout) */
+  cursor: default;         /* draggable, but see the cursor note by .slx-node */
 }
 
 .slx-empty {
@@ -167,7 +167,7 @@ text.slx-incomplete {
   fill: #fff;
   stroke: #4a7fb5;
   stroke-width: 0.9;
-  cursor: grab;
+  cursor: default;
 }
 .slx-port-shared {
   fill: #4a7fb5;
@@ -177,12 +177,16 @@ text.slx-incomplete {
   stroke-width: 2.5;
 }
 .slx-port:active {
-  cursor: grabbing;
+  cursor: default;
 }
 
+/* The pointer stays the arrow over every element (item 11): an open-hand
+   `grab` has a fat, ambiguous hotspot, and these are small targets — a stock
+   is 12px across at 100%. The hand survives only on the canvas itself below,
+   where panning is what it means and precision does not matter. */
 .slx-node,
 .slx-submodel {
-  cursor: grab;
+  cursor: default;
 }
 
 /* --- palette -------------------------------------------------------- */
@@ -334,7 +338,26 @@ text.slx-incomplete {
   stroke: transparent;
   stroke-width: 10;
   pointer-events: stroke;
+  cursor: default;         /* not the canvas's grab: this strip IS an element */
+}
+
+/* Only an arc that CAN be bent says so. A flow is routed by the model, not by
+   the pointer, so it gets no adjust cursor — the widget adds this class exactly
+   where it attaches the bow drag, so the two cannot drift apart. */
+.slx-arc-hit-bow {
   cursor: ns-resize;
+}
+
+/* An invisible rectangle inside a node's group, standing in for a glyph whose
+   ink is too thin to aim at (the valve's bow-tie). It must not take the node's
+   paint — hence the class selector alongside `.slx-node`, which has to outrank
+   the `.slx-node rect` fill and stroke above — and it must still take the
+   pointer.  */
+.slx-node .slx-hit-box,
+.slx-submodel .slx-hit-box {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
 }
 
 /* Selection: a ring around the element, in the overlay so nothing paints over it. */

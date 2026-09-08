@@ -767,6 +767,15 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         break;
       case 'valve':
         // The System Dynamics valve: a bow-tie sitting on its flow.
+        // An invisible rectangle over the whole box goes in FIRST, because the
+        // bow-tie is two thin triangles meeting at a point and pressing it
+        // means hitting ink — the notch either side of the waist is empty, and
+        // at 12px there is not much of it that isn't. What the user aims at is
+        // the symbol's extent, so that is what answers (item 13).
+        g.appendChild(this._el('rect', {
+          class: 'slx-hit-box',
+          x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h,
+        }));
         g.appendChild(this._el('path', {
           d: `M${b.cx - b.w / 2},${b.cy - b.h / 2} L${b.cx + b.w / 2},${b.cy + b.h / 2}`
            + ` L${b.cx + b.w / 2},${b.cy - b.h / 2} L${b.cx - b.w / 2},${b.cy + b.h / 2} z`,
@@ -792,12 +801,19 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._layer.nodes.appendChild(g);
 
     if (node.label) {
-      // The notation's default anchor: a stock holds its label; a valve's
-      // goes BELOW its glyph, since influences into it bow overhead; everything
-      // else sits above. The user's own offset is added on top.
+      // The notation's default anchor. A valve's label goes BELOW its glyph,
+      // since influences into it bow overhead; everything else sits above.
+      // The user's own offset is added on top.
+      //
+      // A stock used to hold its label inside the box, the way Simile draws it,
+      // and that cost more than it was worth: the text lies across the middle
+      // of the rectangle, which is exactly where you press to drag the stock,
+      // so the gesture started a label drag instead (item 7). Below the box,
+      // the whole of the symbol is the symbol again. The valve's clearance is
+      // larger than the stock's because it has a flow line running through it.
       let ly;
-      if (b.shape === 'rect') ly = b.cy + 4;
-      else if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13;
+      if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13;
+      else if (b.shape === 'rect') ly = b.cy + b.h / 2 + 8;
       else ly = b.cy - b.h / 2 - 6;
       this._placeLabel(d, id, node.label, b.cx, ly);
     }
@@ -911,6 +927,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         class: 'slx-arc-hit', 'data-id': id, 'data-segment': i, d: dAttr,
       });
       if (curved) {
+        hit.setAttribute('class', 'slx-arc-hit slx-arc-hit-bow');
         hit.addEventListener('pointerdown', (e) => this._beginBowDrag(e, d, id, pts[i], pts[i + 1]));
       }
       this._layer.arcs.appendChild(hit);

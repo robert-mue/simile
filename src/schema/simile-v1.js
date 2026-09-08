@@ -106,7 +106,7 @@
       valve:        { has_label: true,  labelStem: 'flow', autoCreated: true,
                       positionedBy: 'arc', fields: [
         { name: 'rate',  label: 'Rate', type: 'expression', required: true,
-          help: 'Amount flowing per unit time.' },
+          help: 'Rate of flow.' },
         { name: 'units', label: 'Units', type: 'text' },
       ] },
       condition:    { has_label: true,  fields: [
