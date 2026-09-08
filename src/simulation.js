@@ -82,6 +82,22 @@
     return typeof spec === 'string' ? spec : JSON.stringify(spec);
   }
 
+  /**
+   * How much model time to ask for in one request, given the run and the log
+   * interval. Aims for `UPDATES_PER_RUN` refreshes across the run — enough for
+   * a plot to look live — and never asks for less than one logged point, since
+   * a chunk shorter than the log interval buys nothing but another round trip.
+   * A whole multiple of `logEach` keeps chunk boundaries on logged points.
+   */
+  var UPDATES_PER_RUN = 20;
+
+  function chunkFor(runLength, logEach) {
+    var log = logEach > 0 ? logEach : 1;
+    var run = runLength > 0 ? runLength : log;
+    var steps = Math.max(1, Math.round(run / UPDATES_PER_RUN / log));
+    return Math.min(run, steps * log);
+  }
+
   var Simulation = {
     SERVER: SERVER,
     keyOf: keyOf,
@@ -289,11 +305,23 @@
 
         self.unitName = self.params.timeUnit || 'unit';
         self.timeUnit = TIME_LIB[self.unitName] || 1;
+        var runLength = parseFloat(self.params.execTime);
+        var logEach = parseFloat(self.params.displayInt);
         self.settings = {
-          runLength: parseFloat(self.params.execTime),
+          runLength: runLength,
           current: parseFloat(self.params.resetTo),
-          updateEach: parseFloat(self.params.displayInt),
-          logEach: parseFloat(self.params.displayInt),
+          // NOT displayInt, which is what these two used to share. `logEach` is
+          // how often the model records a point and belongs to the model;
+          // `updateEach` is how much of the run is asked for in one request and
+          // belongs to the display. Conflating them made the chunk as small as
+          // the log interval, so a run of 100 logging every 1 was a hundred
+          // round trips to a server on the other end of the internet. Measured
+          // 2026-09-08 against SimiLive, growth, 100 logged points either way:
+          // updateEach 1 → 4068ms, 10 → 402ms, 100 → 46ms. The results are
+          // identical; a small chunk buys nothing but how often the plot
+          // advances while the run is going.
+          updateEach: chunkFor(runLength, logEach),
+          logEach: logEach,
           timeStep: String(self.params.phaseList),
         };
         if (self.params.errLimit == null) self.params.errLimit = 0;
