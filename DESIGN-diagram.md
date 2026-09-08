@@ -1196,3 +1196,57 @@ checker will judge.
 the equation — characters typed next went nowhere at all. `<details>` toggles on
 click, so suppressing focus costs the tree nothing. The rule is now general: the
 aids column serves the equation field and never competes with it.
+
+## 24. The current model *(2026-09-09)*
+
+Until now "the current model" was implicit: whichever panel bound to a model sat
+frontmost in the workspace (`documents.currentPath`). That reads the user's mind
+correctly most of the time, costs nothing to maintain, and has two failures that
+hand-testing found within minutes.
+
+The first is that **it cannot answer for a widget with no model panel of its
+own.** The run control is a transport, not a view: it has no `ref`, so there is
+no frontmost anything for it to consult. It therefore listed every stored model
+and opened on whichever came first, which meant that making a new model and
+running it required going and finding the new model in a menu — the thing you
+had just made and were plainly working on. The second is that a model with all
+its panels closed **stops existing** as far as the question goes, so a File
+command that acts on "the current one" has nothing to act on even though the
+user would answer the question instantly.
+
+So the current model is now **stored**, at `current/<root>` in `userData`, and
+`documents.current(app)` reads it. Three consequences follow from that choice:
+
+- **It is written straight to `userData`, never dispatched.** Navigation is not
+  an edit. An undo that silently retargeted the run controls — with no visible
+  change on screen to explain what had just been undone — would be a worse
+  interaction than not offering undo at all.
+- **It moves by itself,** on every gesture that plainly means *I am working on
+  this now*: creating a model, opening one, and bringing a bound panel to the
+  front. This is the part that matters, because a concept the user has to
+  maintain by hand is one they will forget to maintain and then be misled by.
+  Frontmost survives as the fallback for a store that has never recorded a
+  choice, so nothing regresses on a fresh browser.
+- **The explicit command is for saying so when none of that has happened** —
+  `File ▸ Current model ▸`, every model listed, the current one bulleted.
+  Selecting one retargets without opening a panel, which is what distinguishes
+  it from `File ▸ All models ▸` directly below.
+
+Raising a panel reaches `documents` through a new `onRaise(ref, $panel)`
+callback on the workspace, wired up in `App`. The workspace holds panels and has
+no business knowing that any of them views a document; `App` is already the
+place where the shell's halves are joined, so the knowledge lives there.
+
+### 24.1 A loaded session is not retargeted
+
+The run control follows the current model **only while the server is idle.**
+Once a model is loaded, the menu describes what is actually up there, and
+raising some other diagram to glance at it must not quietly change what `run`
+would run. When the session ends the menu is released and re-points at whatever
+is current by then.
+
+This is the general shape of the rule, worth stating because it will come up
+again for every widget that ends up following the current model: *follow while
+you are idle, hold while you are committed.* A display widget that has drawn a
+run's results is committed to that run in the same way, and should not silently
+redraw itself against a different model because a panel was clicked.

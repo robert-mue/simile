@@ -305,13 +305,13 @@
   }
 
   /**
-   * The frontmost model, as Prolog, into a file the user picks. The exporter
+   * The current model, as Prolog, into a file the user picks. The exporter
    * refuses a model it cannot faithfully convert, and that message is worth
    * showing whole — it names the elements to fix.
    */
   function exportSimileFile() {
-    var path = Sienna.documents.currentPath(app);
-    if (!path) { window.alert('Open a model first — this exports the frontmost one.'); return; }
+    var path = Sienna.documents.current(app);
+    if (!path) { window.alert('There is no current model — open one first.'); return; }
     var model = Sienna.userData.get(path);
     var text;
     try {

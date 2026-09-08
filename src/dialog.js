@@ -35,7 +35,7 @@
  * registers itself, in the manner of a widget.
  *
  * That was the whole benefit of "dialogs as widgets" (2026-08-13) without the
- * costs — panel persistence, `ref` colliding with `documents.currentPath`,
+ * costs — panel persistence, `ref` colliding with `documents.current`,
  * replay recreating dialogs, and the loss of one-visit-one-undo-step. An
  * INSPECTOR — a persistent, editable side panel following the selection — is a
  * different thing and genuinely does want to be a widget; the line between it

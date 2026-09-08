@@ -63,6 +63,23 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     this._buildFields();
 
     this._unsub = this._sim.subscribe((e) => this._onEvent(e));
+
+    // The set of models, and which one is current, both live in `userData` and
+    // both change from outside this widget — a model created from the File
+    // menu, a diagram panel raised. Refill and re-point when they do.
+    // Guarded by a signature: every edit inside a diagram writes to `userData`
+    // too, and rebuilding a <select> under the user's hand on every keystroke
+    // would be its own bug.
+    let sig = this._sourceSig();
+    this._unsubData = Sienna.userData.subscribe('', () => {
+      const now = this._sourceSig();
+      if (now === sig) return;
+      sig = now;
+      this._fillSources();
+      this._followCurrent();
+    });
+
+    this._followCurrent();
     this._syncAll();
   },
 
@@ -155,6 +172,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
    */
   _fillSources() {
     const ours = (Sienna.userData.keys('models') || []);
+    const keep = this._demo.val();
     this._demo.empty();
 
     if (ours.length) {
@@ -170,6 +188,41 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
       $('<option>').val('demo:' + i).text(d.label).appendTo(demos);
     });
     $('<option>').val('custom').text('other server path…').appendTo(this._demo);
+
+    // Rebuilding the list must not silently move the target: put the previous
+    // choice back if it is still there.
+    if (keep != null && this._demo.find('option[value="' + keep + '"]').length) {
+      this._demo.val(keep);
+    }
+  },
+
+  /** Which models there are, what they are called, and which one is current. */
+  _sourceSig() {
+    const ids = Sienna.userData.keys('models') || [];
+    return ids.map((id) => id + ':' + ((Sienna.userData.get('models/' + id) || {}).name || ''))
+      .join('|') + '@' + (Sienna.userData.get('current/models') || '');
+  },
+
+  /**
+   * Point the menu at the current model (item 10). A run control has no panel
+   * of its own bound to a model, so before this it opened on whatever happened
+   * to be first in the list — you made a model and then had to go and find it
+   * in a menu to run it.
+   *
+   * Only while the server is idle. Once a model is loaded the menu says what is
+   * actually up there, and changing a diagram's frontmost panel must not
+   * quietly retarget a session that is loaded or running.
+   */
+  _followCurrent() {
+    if (this._sim.status !== 'idle' && this._sim.status !== 'error') return;
+    const path = Sienna.documents && Sienna.documents.current
+      ? Sienna.documents.current(window.app) : null;
+    if (!path) return;
+    const want = 'own:' + path;
+    if (this._demo.val() === want) return;
+    if (!this._demo.find('option[value="' + want + '"]').length) return;
+    this._demo.val(want);
+    this._sourceChanged();
   },
 
   /** Keep the path box showing what will actually be sent. */
@@ -236,7 +289,12 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
 
   _onEvent(e) {
     switch (e.type) {
-      case 'status': this._syncStatus(); break;
+      case 'status':
+        this._syncStatus();
+        // A session that has just ended releases the menu: it can point at the
+        // current model again, which may have moved while a model was loaded.
+        this._followCurrent();
+        break;
       case 'settings': this._syncFields(); break;
       case 'progress': this._progress.children().css('width', (e.fraction * 100) + '%'); break;
       default: break;
@@ -301,6 +359,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
 
   _destroy() {
     if (this._unsub) this._unsub();
+    if (this._unsubData) this._unsubData();
     this.element.removeClass('slx-run').empty();
   },
 });
