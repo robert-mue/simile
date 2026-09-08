@@ -1250,3 +1250,72 @@ again for every widget that ends up following the current model: *follow while
 you are idle, hold while you are committed.* A display widget that has drawn a
 run's results is committed to that run in the same way, and should not silently
 redraw itself against a different model because a panel was clicked.
+
+## 25. Which panel is this? — naming and colouring by subject *(2026-09-09)*
+
+A workspace with three models open, each with a diagram and a plot or two, is
+seven panels whose titlebars all say roughly the same thing. Two changes, one
+question: **which model does this panel belong to?**
+
+### 25.1 A panel's subject is its `ref`
+
+`ref` was already the shell's word for *the path this panel is a view of*, and
+already documented as groundwork for scoping updates to panels that share a
+subject. So a plotter opened while `growth` is current gets `ref =
+models/growth`, exactly as its diagram does.
+
+A plot is not a view of the model's structure the way the diagram is — it draws
+results, which come from a simulation session and not from `userData` at all.
+It is nonetheless *about* that model and nothing else, and giving it a `ref`
+makes four things agree at once with no second concept invented: the titlebar
+colour, the numbering below, `File ▸ Save` acting on the model whose plot is in
+front, and raising a plot making its model current (§24). None of the results
+widgets read `_model()`, so the binding costs them nothing.
+
+### 25.2 The name says model, kind, and which one
+
+`<model id>: <widget>/<n>` — `growth: plotter/2`. All three parts earn their
+place: the model repeats across its own diagram and plots, the widget repeats
+across models, and `n` separates two plots of the same model.
+
+**`n` counts per (model, widget)**, so the second plot of `growth` is
+`plotter/2` however many plots other models have. It is the lowest number not in
+use among the panels open *now*, so closing `plotter/1` frees the name rather
+than counting upward for ever. Assigned once, at creation, and then carried in
+the title the workspace already persists: a number that renumbered itself as
+neighbours came and went would not be an identifier at all.
+
+This uses the model's **id**, not its name — `farmers`, not `Farmers and
+fields`. It is shorter, it is unique by construction, and a titlebar is an
+identifier rather than a caption.
+
+The scheme is the app's, supplied to the shell through a `panelTitle` hook,
+because only the app knows what its panels are called. The numbering needs to
+see the workspace, which is why `App` grew `panels()` and `widgetOf($panel)`.
+
+### 25.3 Colour is a palette, not a hue
+
+The titlebar is tinted from a hash of the `ref`, so panels of one model match
+and nothing has to be stored — the colour is a pure function of the model's
+path, and survives export, reload and restore.
+
+The first attempt took the hash modulo 360 and used it as a hue directly. That
+is the obvious implementation and it does not work: over the seventeen stored
+models it gave `landuse`, `lamos` and `rank` **the same hue**, and put `model2`
+through `model5` within three degrees of each other. A hash spreads values
+evenly over a range; it does not spread them over the much smaller set of
+*colours a person can tell apart*.
+
+So the palette is explicit — twelve hues thirty degrees apart, at two
+lightnesses, giving 24 combinations that are all visibly different. Saturation
+started at 22% and had to go to 38%: at low saturation two hues thirty degrees
+apart are both just "brown", which is no use to someone scanning for a model.
+Both lightnesses stay dark enough to keep white titlebar text above 4.5:1.
+
+24 slots and 17 models means collisions — three pairs or triples currently share
+a colour. That is accepted rather than solved. The alternative is allocating
+colours as models are first opened, which guarantees separation among the models
+actually in use but makes a model's colour depend on the order it was met, and
+therefore something to store, migrate and keep consistent. Colour here is a hint
+that saves you reading titles, not a key; when two do collide, the title is still
+there and still unique.

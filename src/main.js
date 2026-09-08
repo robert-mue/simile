@@ -14,12 +14,55 @@
 
   var app = new Sienna.App('#app');
 
-  // One Widgets entry per registered widget, in registration order (none yet).
+  /**
+   * What a panel is called (§25): `<model id>: <widget>/<n>`, e.g.
+   * `growth: plotter/2`. Three parts because all three are needed to tell one
+   * panel from another once a session has a few models open at once — the name
+   * of the model alone repeats across its diagram and its plots, and the name
+   * of the widget alone repeats across models.
+   *
+   * `n` counts per (model, widget), not across the workspace, so the second
+   * plotter for `growth` is `plotter/2` however many plots other models have.
+   * It is the lowest free number among the panels open NOW, so closing
+   * `plotter/1` frees the name for the next one rather than counting for ever.
+   * Assigned once, at creation, and then carried in the title the workspace
+   * persists — a title that renumbered itself as neighbours came and went would
+   * not be an identifier at all.
+   */
+  function panelTitle(subjectPath, widget) {
+    var id = subjectPath ? String(subjectPath).split('/').pop() : '';
+    var taken = {};
+    app.panels().forEach(function ($p) {
+      if ($p.panel('ref') !== subjectPath) return;
+      if (app.widgetOf($p) !== widget) return;
+      var m = /\/(\d+)$/.exec($p.panel('title') || '');
+      if (m) taken[Number(m[1])] = true;
+    });
+    var n = 1;
+    while (taken[n]) n++;
+    return (id ? id + ': ' : '') + widget + '/' + n;
+  }
+
+  /**
+   * One Widgets entry per registered widget, in registration order (none yet).
+   *
+   * A widget panel is bound to the CURRENT model by its `ref` (§25). A plot or
+   * a grid is not a view of the model's structure the way the diagram is, but
+   * it is about that model and nothing else, and `ref` is the shell's word for
+   * what a panel is about — it is what makes the titlebar colour, the numbering
+   * and File's idea of the current model all agree without a second concept.
+   */
   var widgetItems = Sienna.widgetRegistry.list().map(function (w) {
     return {
       label: w.label,
       onSelect: function () {
-        app.addPanel({ title: w.title, widget: w.name, options: w.options });
+        var subject = Sienna.documents.current(app) || '';
+        app.addPanel({
+          title: panelTitle(subject, w.name),
+          widget: w.name,
+          ref: subject,
+          options: w.options,
+        });
       },
     };
   });
@@ -84,6 +127,7 @@
     // model made from the File menu and one made from code cannot differ.
     create: function (id) { return Sienna.Diagram.emptyModel(id); },
     validate: validateModel,
+    panelTitle: function (doc) { return panelTitle(doc.path, 'diagram'); },
     // Simile's own formats, in and out. These used to be a top-level `Simile`
     // menu of their own, which put two file commands somewhere no one looks
     // for file commands. They are about a different program, but they are
