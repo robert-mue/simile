@@ -44,6 +44,33 @@
   }
 
   /**
+   * Re-derive every open panel's title, in workspace order (§25.2).
+   *
+   * Needed because a restored workspace brings its titles back verbatim, so a
+   * panel saved before this scheme existed — or saved by a build with different
+   * rules — comes back named the old way and stays that way for ever. The title
+   * is DERIVED data (model, widget, ordinal); the stored copy is a cache, and
+   * this is what makes the cache honest.
+   *
+   * Numbering here runs 1, 2, 3… through the panels as they come, rather than
+   * filling the lowest free slot the way creation does: after a restore every
+   * panel is being named at once, so there are no gaps to fill.
+   */
+  function renamePanels() {
+    var n = {};
+    app.panels().forEach(function ($p) {
+      var widget = app.widgetOf($p);
+      if (!widget) return;                    // a bare panel names itself
+      var ref = $p.panel('ref') || '';
+      var key = ref + '|' + widget;
+      n[key] = (n[key] || 0) + 1;
+      var id = ref ? ref.split('/').pop() : '';
+      $p.panel('title', (id ? id + ': ' : '') + widget + '/' + n[key]);
+    });
+    app.persist();
+  }
+
+  /**
    * One Widgets entry per registered widget, in registration order (none yet).
    *
    * A widget panel is bound to the CURRENT model by its `ref` (§25). A plot or
@@ -469,7 +496,7 @@
   if (!Sienna.userData.get('models/rank') && Sienna.demoRank) Sienna.demoRank();
   if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
 
-  app.restore();
+  app.restore().then(renamePanels);
 
   // Handy for tinkering from the browser console.
   window.app = app;

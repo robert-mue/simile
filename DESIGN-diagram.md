@@ -1281,9 +1281,22 @@ across models, and `n` separates two plots of the same model.
 **`n` counts per (model, widget)**, so the second plot of `growth` is
 `plotter/2` however many plots other models have. It is the lowest number not in
 use among the panels open *now*, so closing `plotter/1` frees the name rather
-than counting upward for ever. Assigned once, at creation, and then carried in
-the title the workspace already persists: a number that renumbered itself as
-neighbours came and went would not be an identifier at all.
+than counting upward for ever, and it does not change again while the session
+lasts: a number that renumbered itself as neighbours came and went would not be
+an identifier at all.
+
+**The title is derived data, and the stored copy is a cache.** The first version
+of this treated the persisted title as the record, which meant a workspace saved
+before the scheme existed came back named the old way and stayed that way for
+ever — the first thing hand-testing found. Every title is now re-derived after a
+restore, walking the panels in order and numbering 1, 2, 3… (at restore every
+panel is being named at once, so unlike creation there are no gaps to fill).
+
+Fixing that turned up a second fault beneath it: `workspace.serialize` was
+reading the title the panel was *created with* rather than the one it has, so
+any later rename was silently dropped on the next reload. Two bugs pointing the
+same way — the live panel is the truth, and anything stored about it is a copy
+that has to be kept honest.
 
 This uses the model's **id**, not its name — `farmers`, not `Farmers and
 fields`. It is shorter, it is unique by construction, and a titlebar is an
