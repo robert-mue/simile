@@ -2,9 +2,10 @@
 
 *Rewritten 2026-08-29, when the editor was first used to BUILD a model by hand
 rather than by a test; brought forward 2026-09-01 after two days on the node
-properties dialog. If you are picking this up cold — a new session, a new
-machine, or a week later — read this first. `STATUS.md` is the full record;
-this is the part you need to get moving again.*
+properties dialog, and again 2026-09-09 at the end of a session that cleared
+Robert's whole list of UI refinements. If you are picking this up cold — a new
+session, a new machine, or a week later — read this first. `STATUS.md` is the
+full record; this is the part you need to get moving again.*
 
 **When to rewrite this note.** By event, not by the calendar — a note that
 restates the diff goes stale faster and gets trusted less. Rewrite it when:
@@ -33,6 +34,31 @@ Simile Prolog, uploads, compiles and runs on the Simile engine with its results
 drawn in our own panels; and a Simile `.pl` or `.sml` reads back into one of our
 models. `STATUS.md` items 27–45 are that work.
 
+**What changed on 2026-09-09.** Robert worked through a numbered list of UI
+refinements from hand-testing and every item is done, verified in a running
+browser and pushed. They are small individually and the design record is where
+the reasoning lives (§24 the current model, §25 naming and colouring panels by
+subject, §26 thumbnails and the size ladder). In one line each:
+
+| | |
+|---|---|
+| 7 | a stock's label moved below the box — inside, it sat where you press to drag |
+| 10 | **the current model is now an explicit, stored thing** (§24), not "whichever panel is in front"; the Run control follows it |
+| 11 | the arrow cursor over elements; the hand survives only on the canvas |
+| 12 | only a bendable arc shows the adjust cursor |
+| 13 | a valve answers over its whole box, not just the bow-tie's ink |
+| 14 | a valve's rate reads "Rate of flow." |
+| 16 | **runs were 5× slower than they needed to be** — one HTTP round trip per logged point, because `updateEach` was taken from `displayInt` |
+| 18–19 | the Simile menu folded into File; `Recent` and `All models` submenus |
+| 20–21 | panels are titled `growth: plotter/2` and tinted per model |
+| — | **thumbnails** (§26): a panel too small to work in hides its chrome and shows a miniature, with a third titlebar button between minimise and maximise |
+
+Four of those were reported a second time after the first fix, and every one of
+the second reports was the same class of fault: **a decision made from state the
+user cannot see** — a title cached from creation, a toggle keyed on invisible
+history, a widget waiting on an observer that never fires. Read §26.4 before
+writing anything that reacts to a resize.
+
 **What changed on 2026-08-29**, and it is a different KIND of change from
 everything before it: Robert opened the app and built a model, and four bugs
 fell out within minutes that no test on this repo could have caught, because
@@ -48,8 +74,12 @@ trip was last measured 2026-08-29, after the naming change:
 | | |
 |---|---|
 | catalogue round trip | **54 of 72 identical, 0 differ, 18 refused, 1 lossy import** |
-| fixtures | 6 of 6 reach a fixed point and audit clean |
+| fixtures | 6 of 6 reach a fixed point and audit clean *(re-run 2026-09-09, green)* |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
+
+The 2026-09-09 work was all above the model layer, so only `fixtures.html` was
+re-run. The other two are unchanged since 2026-09-01 and 2026-08-29 respectively
+— re-run them before quoting them.
 
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
@@ -154,13 +184,26 @@ DESIGN-diagram.md §23 is the record; the short version:
 
 ## Jobs queued
 
-### 1. A regression net for the EDITOR — new, and now the first job
+### 1. A regression net for the EDITOR — still the first job, and now overdue
 
 Everything above argues for it. What is missing is a page that drives the
 *widget*: arm a tool, click, and assert where the element landed and what the
 view did. Hard, because it needs a DOM and a real panel; worth it, because five
 bugs in one afternoon all lived exactly there and the three existing pages
 cannot see any of them.
+
+**2026-09-09 made the case worse.** Eleven UI changes went in, and every one was
+verified by probing the live DOM from the console — cursors, hit areas, menu
+structure, panel titles, titlebar colours, the thumbnail threshold. All of it
+correct, none of it repeatable: those probes exist nowhere but in a transcript.
+Four items had to be reported twice. A page that opened a panel and asserted on
+it would have caught at least the panel-title and thumbnail-toggle faults.
+
+Note that a harness of this kind now has a hazard of its own, learned the hard
+way — see the ResizeObserver trap below. Anything driven from an automated
+browser may be running in a hidden tab, where `ResizeObserver` never fires and
+`requestAnimationFrame` never resolves. A test that resizes a panel and waits
+for a repaint will hang or silently assert on stale geometry.
 
 ### 2. Dialogs — well under way, see the section above
 
@@ -200,8 +243,25 @@ a widget, unlike a dialog. Robert is right that the dialog/inspector line is
 blurred — an editable side panel does a dialog's job. The real difference is
 **lifetime and modality**, and that is what an inspector has to answer for:
 panels are persisted and restored, their `ref` is seen by
-`documents.currentPath`, and `panel.add` goes into the replay log. Item 45 has
+`documents.current` (and now decides a panel's title and titlebar colour, §25),
+and `panel.add` goes into the replay log. Item 45 has
 the detail.
+
+### 5. Two things Robert has parked, and one he owes us
+
+- **The numeric keypad** in the equation dialog (see job 2) — parked, cheap.
+- **`Variables` vs `influence`** in the dialog's wording — deliberately left
+  open, to be settled when the arc dialog exists.
+- **Touchscreen (his item 24).** "Some UI operations do not work on a small
+  touchscreen (my phone)." He is to send specifics; nothing has been done. The
+  diagram is `pointerdown`/`pointermove` throughout, which should be
+  touch-clean, but there is a double-click rule and a press-versus-drag
+  distinction on labels that will not survive a finger, and the palette buttons
+  are small. **Do not guess at this — wait for the details.**
+
+His written list of UI refinements is otherwise **finished**; he ticked the last
+of it off on 2026-09-09. There is no backlog of his sitting unaddressed, which
+means the next session starts from the queue above rather than from his notes.
 
 ## Waiting on the developer
 
@@ -265,6 +325,17 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   that a synthetic drag through the extension does NOT reliably draw an arc,
   though clicks and typing work; arc gestures have to be checked by hand, or
   driven through `Diagram.addArc` from the console.
+- **A ResizeObserver does not fire in a tab that is not being painted**, and
+  `requestAnimationFrame` never resolves there either. This cost time twice on
+  2026-09-09: once as a real bug (opening a thumbnail left the diagram at
+  thumbnail scale until a reload, because the widget was waiting on its own
+  observer), and once as a phantom, when a rAF probe from the automation
+  extension hung the renderer outright and made a working feature look broken.
+  **When a browser-driven test behaves impossibly, check
+  `document.visibilityState` first.** The rule the code now follows: whoever
+  causes a change announces it (the panel triggers `slxpanelresize`, taken with
+  `widgetBase._watchPanelResize`), and an observer is only for changes nobody
+  announced, such as the window resizing.
 - **The models are in NO repository.** They live in localStorage, on one
   machine, in one browser profile, on one origin — a dead disk takes them, and
   git will not help. `File ▸ Export all models…` writes every one of them to a
