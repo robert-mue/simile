@@ -1363,11 +1363,33 @@ only            no chrome       + chrome       workspace
 
 Minimise and maximise already existed. The thumbnail rung is new, and so is the
 button that climbs off it: a third control between minimise and maximise, since
-that is where it sits on the ladder. It grows the panel to the widget's declared
-working size, keeps the top-left corner where it is (a panel that jumped across
-the workspace as it grew would lose the user's place), clamps to the workspace,
-and **toggles** — the geometry it grew from is remembered, so one button goes
-both ways, exactly as maximise does.
+that is where it sits on the ladder. It keeps the top-left corner where it is (a
+panel that jumped across the workspace as it grew would lose the user's place),
+clamps to the workspace, and **toggles**, exactly as maximise does.
+
+### 26.1.1 What the toggle asks
+
+Two versions of that toggle were wrong before it was right, both by asking the
+wrong question about which way to go.
+
+The first asked *"did I grow this panel earlier?"*, remembering the geometry it
+grew from. That is invisible history, and it is lost on a reload — so a restored
+full-size panel grew again instead of shrinking, which is exactly how it was
+reported.
+
+The second asked *"is it smaller than working size?"* and shrank back to
+whatever size the panel had been before. Better, but it meant a panel at some
+middling size toggled between that size and working size and **never reached a
+thumbnail at all**: the control had quietly stopped being a thumbnail button.
+
+The question that works is the simplest one, and the one the ladder implies: *is
+this a thumbnail?* If it is, grow to working size; if it is not, shrink to a
+thumbnail. The remembered geometry survives only as a refinement — it is used
+when it was itself a thumbnail, so a hand-sized thumbnail comes back at the size
+the user made it rather than the default.
+
+The general lesson is the one worth keeping: **a control's direction should be a
+function of what the user can see, not of what the program remembers.**
 
 ### 26.2 The one thing the shell cannot work out
 
