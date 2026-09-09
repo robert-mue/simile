@@ -86,6 +86,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // divided by it.
     this._applyView();
 
+    // Two sources, deliberately. The panel tells us the moment IT resizes —
+    // synchronously, and whether or not the tab is being painted — which is
+    // what makes opening a thumbnail back up re-scale the diagram there and
+    // then rather than at the next reload. The observer stays for the size
+    // changes the panel never hears about, chiefly the window resizing.
+    this._watchPanelResize(() => this._onResize());
     if (window.ResizeObserver) {
       this._ro = new ResizeObserver(() => this._onResize());
       this._ro.observe(this.element[0]);
@@ -1712,23 +1718,35 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    */
   _onResize() {
     const thumb = this._panel().hasClass('slx-panel--thumb');
-    if (thumb !== !!this._thumb) {
-      this._thumb = thumb;
-      if (thumb) {
-        this._preThumb = { view: Object.assign({}, this._view), userView: this._userView };
-        this._userView = false;
-        this._fit();
-        return;
+    const crossed = thumb !== !!this._thumb;
+    this._thumb = thumb;
+
+    if (thumb) {
+      // A thumbnail always shows the whole model: it is a picture of what this
+      // panel holds, and a picture of the corner someone was zoomed into is a
+      // picture of nothing. The view they had is put aside on the way in.
+      if (crossed) {
+        this._preThumb = { view: Object.assign({}, this._view), userView: !!this._userView };
       }
-      if (this._preThumb) {
-        this._view = this._preThumb.view;
-        this._userView = this._preThumb.userView;
-        this._preThumb = null;
-        this._applyView();
-        return;
-      }
+      this._userView = false;
+      this._fit();
+      return;
     }
-    if (thumb) this._userView = false;   // a thumbnail always shows everything
+
+    // On the way out, hand back a view the user CHOSE — panned or zoomed to
+    // deliberately. A view they never chose is not worth restoring and is
+    // actively wrong here, because it was framed for a panel of a different
+    // size; the right answer at any size is to fit. Restoring it regardless is
+    // what left an opened-up thumbnail still drawn at thumbnail scale.
+    const kept = this._preThumb;
+    this._preThumb = null;
+    if (crossed && kept && kept.userView) {
+      this._view = kept.view;
+      this._userView = true;
+      this._applyView();
+      return;
+    }
+    if (crossed) this._userView = false;
     this._fit();
   },
 

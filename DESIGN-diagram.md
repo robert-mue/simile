@@ -1415,6 +1415,15 @@ thumbnail size puts the user's view aside and forces a fit; leaving hands the
 view back exactly as it was. The panel's own class is what the widget consults,
 so the two cannot disagree about where the threshold is.
 
+### 26.3.1 Restore a view the user chose, and only that
+
+Putting the view aside on the way into a thumbnail raised the question of what
+to hand back on the way out, and the first answer — hand back whatever was
+there — was wrong. A view the user never chose was framed for a panel of a
+different size, so restoring it puts an opened-up panel at the wrong scale; the
+right answer at any size is to fit. Only a view the user *chose*, by panning or
+zooming deliberately, is worth preserving across the round trip.
+
 ### 26.4 An observer is not a guarantee
 
 The first implementation drove the thumbnail state from a `ResizeObserver`
@@ -1433,3 +1442,18 @@ changes nobody here initiated: the window resizing, a neighbour maximising.
 browser session had the tab hidden: a `requestAnimationFrame` probe hung the
 renderer outright. Worth remembering when a browser-driven test behaves
 impossibly — `document.visibilityState` is the first thing to check.)
+
+The lesson was then only half learned, and the other half was reported the next
+minute: opening a thumbnail back up left the **diagram** still drawn at
+thumbnail scale until the page was reloaded. The panel had been fixed to measure
+itself directly; the widget inside it was still waiting on a `ResizeObserver` of
+its own to notice. The panel knows the moment it resizes and can simply say so,
+so it now does — a `slxpanelresize` event, taken by the widget through
+`_watchPanelResize` — and each widget keeps an observer as well for the changes
+the panel never hears about, chiefly the window resizing.
+
+Both halves are the same rule, and it is worth stating once for anything built
+on this shell: **the component that caused a change should announce it; an
+observer is for changes nobody announced.** An observer is late by a frame at
+best and silent in a tab that is not being painted, which makes it fine for
+keeping a picture fresh and unfit for anything another piece of code will read.

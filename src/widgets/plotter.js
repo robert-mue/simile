@@ -80,6 +80,9 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._buildLegend();
 
     this._unsub = this._sim.subscribe((e) => this._onEvent(e));
+    // Same pairing as the diagram: the panel says so directly when it resizes
+    // itself, the observer catches everything else.
+    this._watchPanelResize(() => this._draw());
     if (window.ResizeObserver) {
       this._ro = new ResizeObserver(() => this._draw());
       this._ro.observe(this.element[0]);
