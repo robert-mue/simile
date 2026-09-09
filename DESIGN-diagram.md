@@ -1384,12 +1384,33 @@ thumbnail at all**: the control had quietly stopped being a thumbnail button.
 
 The question that works is the simplest one, and the one the ladder implies: *is
 this a thumbnail?* If it is, grow to working size; if it is not, shrink to a
-thumbnail. The remembered geometry survives only as a refinement — it is used
-when it was itself a thumbnail, so a hand-sized thumbnail comes back at the size
-the user made it rather than the default.
+thumbnail.
 
 The general lesson is the one worth keeping: **a control's direction should be a
 function of what the user can see, not of what the program remembers.**
+
+### 26.1.2 The two ends are not symmetrical
+
+The obvious next move is to make both ends remember: shrink back to the
+thumbnail you last had, grow back to the working size you last had. That is
+wrong at one end, and the reason says what a thumbnail is *for*.
+
+**Shrinking always goes to the same small size.** Thumbnails earn their keep by
+making a crowded workspace manageable, which means small and — since you will
+have several — tileable. A thumbnail that came back at whatever size it was last
+dragged to drifts out of both. And the user's intent is being misread: someone
+who drags a thumbnail bigger is trying to *see it better right now*, not
+declaring a new default. Nobody resizing a small panel thinks they are editing a
+preference.
+
+**Growing goes to the size this panel was last worked at.** Here the same
+gesture means the opposite thing, because at working size dragging a panel
+bigger is exactly how a user says how big they want it. So any size above the
+thumbnail threshold is recorded, and the widget's registered `workingSize` is
+only the answer until there is a better one.
+
+The asymmetry is the point: the same drag means "let me see this" on one rung
+and "this is my size" on the other, and the control should read it that way.
 
 ### 26.2 The one thing the shell cannot work out
 
