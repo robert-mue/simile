@@ -87,7 +87,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._applyView();
 
     if (window.ResizeObserver) {
-      this._ro = new ResizeObserver(() => this._fit());
+      this._ro = new ResizeObserver(() => this._onResize());
       this._ro.observe(this.element[0]);
     }
 
@@ -120,7 +120,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * reminder.
    */
   _buildPalette() {
-    const bar = this._palette = $('<div class="slx-palette">').appendTo(this.element);
+    const bar = this._palette = $('<div class="slx-palette slx-chrome">').appendTo(this.element);
     const d = this._diagram();
     const schema = d ? d.schema() : null;
     if (!schema) return;
@@ -210,7 +210,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * Escape cancels like any other.
    */
   _buildViewBar() {
-    const bar = this._viewBar = $('<div class="slx-palette slx-viewbar">').appendTo(this.element);
+    const bar = this._viewBar = $('<div class="slx-palette slx-chrome slx-viewbar">').appendTo(this.element);
 
     $('<span class="slx-palette-group">').text('view').appendTo(bar);
     const cmd = (act, label, title) =>
@@ -1699,6 +1699,39 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * "fit" command: asking for it explicitly overrides that, and leaves the view
    * flagged as the user's, so the next resize does not silently re-fit.
    */
+  /**
+   * The panel changed size. Normally that just re-frames a view the user has
+   * not touched (`_fit`), but a panel small enough to be a THUMBNAIL is a
+   * different job: whatever the user was zoomed into, what a miniature has to
+   * show is the whole model, or it is not a picture of anything.
+   *
+   * So entering thumbnail size forces a fit and puts the user's view aside;
+   * leaving it hands the view back exactly as it was. The panel's own rule
+   * decides when that is (`slx-panel--thumb`), so the two cannot disagree about
+   * where the threshold is.
+   */
+  _onResize() {
+    const thumb = this._panel().hasClass('slx-panel--thumb');
+    if (thumb !== !!this._thumb) {
+      this._thumb = thumb;
+      if (thumb) {
+        this._preThumb = { view: Object.assign({}, this._view), userView: this._userView };
+        this._userView = false;
+        this._fit();
+        return;
+      }
+      if (this._preThumb) {
+        this._view = this._preThumb.view;
+        this._userView = this._preThumb.userView;
+        this._preThumb = null;
+        this._applyView();
+        return;
+      }
+    }
+    if (thumb) this._userView = false;   // a thumbnail always shows everything
+    this._fit();
+  },
+
   _fit(force) {
     if (this._userView && !force) return;
     const box = this._root.getBBox ? this._root.getBBox() : null;

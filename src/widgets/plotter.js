@@ -91,7 +91,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
   // ---- construction ---------------------------------------------------
 
   _buildBar() {
-    const bar = $('<div class="slx-palette slx-plot-bar">').appendTo(this.element);
+    const bar = $('<div class="slx-palette slx-chrome slx-plot-bar">').appendTo(this.element);
 
     $('<span class="slx-palette-group">').text('plot').appendTo(bar);
     this._pick = $('<select class="slx-plot-pick">').appendTo(bar);

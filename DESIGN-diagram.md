@@ -1332,3 +1332,82 @@ actually in use but makes a model's colour depend on the order it was met, and
 therefore something to store, migrate and keep consistent. Colour here is a hint
 that saves you reading titles, not a key; when two do collide, the title is still
 there and still unique.
+
+## 26. Thumbnails, and the size ladder *(2026-09-09)*
+
+Managing several open widgets is the perennial problem with a panel workspace,
+and a small panel was making it worse rather than better. A diagram panel at
+700×100 showed **two rows of toolbar and no canvas at all**: everything except
+the thing you wanted to see. A panel too small to work in should stop pretending
+it can be worked in, and show you what it is instead.
+
+### 26.1 A size rule, not a state
+
+Below 380px wide or 230px tall a panel takes the class `slx-panel--thumb`, which
+hides the widget's chrome and gives the content the whole box, padding included.
+
+This is deliberately **not** a fourth state alongside minimised and maximised.
+Nothing is stored, nothing has to be migrated, it follows a drag of the resize
+handle continuously, and the rule explains itself as it happens: too small for
+the tools, so here is the picture. The cost is that a small panel cannot be made
+to keep its toolbar — accepted, because the case for wanting that is thin and an
+explicit state can be layered on later without undoing any of this.
+
+The ladder is then:
+
+```
+minimised   →   thumbnail   →   working   →   maximised
+titlebar        content,        content        fills the
+only            no chrome       + chrome       workspace
+```
+
+Minimise and maximise already existed. The thumbnail rung is new, and so is the
+button that climbs off it: a third control between minimise and maximise, since
+that is where it sits on the ladder. It grows the panel to the widget's declared
+working size, keeps the top-left corner where it is (a panel that jumped across
+the workspace as it grew would lose the user's place), clamps to the workspace,
+and **toggles** — the geometry it grew from is remembered, so one button goes
+both ways, exactly as maximise does.
+
+### 26.2 The one thing the shell cannot work out
+
+The shell owns panels and knows nothing about what a widget draws, so it cannot
+tell a toolbar from a canvas. That is the single piece of cooperation this
+needs: a widget marks its toolbars `slx-chrome`, and the shell hides what is
+marked. One class, no new mechanism, and a widget that marks nothing simply
+keeps all of itself at every size.
+
+Not every widget has a meaningful miniature. A **run control is its controls** —
+hide them and what is left is an empty box with a status line — so it declares
+`thumbnail: false` and stays out of the scheme. The diagram, plotter and grid
+all have something to show.
+
+### 26.3 What a miniature of a diagram is
+
+For the diagram the answer is its own fit-to-view: the whole model, scaled to
+the panel, still drawn as vectors rather than scaled as an image, so it stays
+crisp. That needed one adjustment, because `_fit` deliberately stops re-framing
+once the user has panned or zoomed — and a thumbnail of the corner of a model
+someone happened to be zoomed into is a picture of nothing. So entering
+thumbnail size puts the user's view aside and forces a fit; leaving hands the
+view back exactly as it was. The panel's own class is what the widget consults,
+so the two cannot disagree about where the threshold is.
+
+### 26.4 An observer is not a guarantee
+
+The first implementation drove the thumbnail state from a `ResizeObserver`
+alone, which is the obvious way to watch a panel's size and was wrong in a way
+worth recording: **a hidden tab runs no rendering lifecycle**, so its
+`ResizeObserver` callbacks never arrive and `requestAnimationFrame` never fires.
+The state was then correct only after a paint, which is not a state the rest of
+the code can read — a `panel('thumbnailed')` call could return the wrong answer
+indefinitely.
+
+Every deliberate size change — `setGeometry`, `minimize`, `maximize`, the end of
+a resize drag — now calls `_measure()` directly. The observer stays, for the
+changes nobody here initiated: the window resizing, a neighbour maximising.
+
+(It also cost half an hour of confusion during testing, because the automated
+browser session had the tab hidden: a `requestAnimationFrame` probe hung the
+renderer outright. Worth remembering when a browser-driven test behaves
+impossibly — `document.visibilityState` is the first thing to check.)

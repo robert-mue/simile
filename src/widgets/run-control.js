@@ -86,7 +86,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
   // ---- construction ---------------------------------------------------
 
   _buildSource() {
-    const bar = $('<div class="slx-palette slx-run-source">').appendTo(this.element);
+    const bar = $('<div class="slx-palette slx-chrome slx-run-source">').appendTo(this.element);
 
     $('<span class="slx-palette-group">').text('model').appendTo(bar);
 

@@ -82,7 +82,7 @@ $.widget('sienna.grid', $.sienna.widgetBase, {
   // ---- construction ---------------------------------------------------
 
   _buildBar() {
-    const bar = $('<div class="slx-palette slx-grid-bar">').appendTo(this.element);
+    const bar = $('<div class="slx-palette slx-chrome slx-grid-bar">').appendTo(this.element);
 
     $('<span class="slx-palette-group">').text('show').appendTo(bar);
     this._pick = $('<select class="slx-grid-pick">').appendTo(bar);
