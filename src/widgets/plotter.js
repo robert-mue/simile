@@ -70,7 +70,9 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
 
   _create() {
     this.element.addClass('slx-plot');
-    this._sim = Sienna.Simulation;
+    // The session as this panel's model sees it: blank while another model is
+    // the one loaded (Simulation.viewFor).
+    this._sim = Sienna.Simulation.viewFor(this._ref());
     this._owner = this._panelId() || ('plot' + Math.random().toString(36).slice(2));
     this._series = [];      // {id, label, slot, pts: [[t,v],…]}
     this._used = {};        // slot index -> taken

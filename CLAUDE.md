@@ -31,7 +31,13 @@ footing (`src/widgets/grid.js` is the first).
   Widgets / View / Session menus, registers the replay handlers for this app's
   layout actions, and seeds the demo models.
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
-  relative to `index.html`, so use `src/widgets/<name>.js`.
+  relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
+  `role` (`diagram`, `run-control`, `display`) decides which collection it
+  opens in.
+- `src/layouts.js` — simile's layouts (sienna `DESIGN.md` Part III): the
+  default **Model and simulation** gives each model a Model collection and a
+  Simulation collection (run control + tabbed Displays), made on demand from
+  templates; **Free** is the old floating workspace. View ▸ Layout switches.
 - `src/widgets/diagram.js` — the diagram widget: renders the model as SVG and
   handles every editing gesture. The one place that knows about pixels.
 - `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,
@@ -49,7 +55,10 @@ footing (`src/widgets/grid.js` is the first).
   the specification of the mapping; the importer reads it backwards. Menu:
   `Simile ▸ Import model… / Export current model…`.
 - `src/simulation.js` — the SimiLive session layer (no DOM): upload, compile,
-  step, query. Its results feed the `plotter` and `grid` widgets.
+  step, query. Its results feed the `plotter` and `grid` widgets. ONE session:
+  panels bound to a model (`ref`) see it through `Simulation.viewFor(ref)`,
+  which shows it only while it is that model's (`loadedFor` / `modelPath`), so
+  another model's run control and displays read "no model loaded".
 - `src/demo-*.js` — fixtures seeded on first run: `growth`, `submodel`, and the
   three reference models `landuse`, `farmers` and `lamos` (§9).
 - `src/styles.css` — app-specific styles, loaded after the shell's.

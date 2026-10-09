@@ -61,6 +61,9 @@
     app.panels().forEach(function ($p) {
       var widget = app.widgetOf($p);
       if (!widget) return;                    // a bare panel names itself
+      // A collection is named after its model and its template ("growth:
+      // Simulation") when it is made; it is not one of a numbered series.
+      if (widget === 'container') return;
       var ref = $p.panel('ref') || '';
       var key = ref + '|' + widget;
       n[key] = (n[key] || 0) + 1;
@@ -181,12 +184,31 @@
   }
 
   Sienna.actions.onReplay('panel.add', function (e) {
-    // `ref` is what makes a replayed diagram panel view the right model.
+    // `ref` is what makes a replayed diagram panel view the right model. The
+    // recorded id says where the panel goes — inside a collection it is a path
+    // ('p1/p0/p1') — and the options carry what a collection was made with.
     return app.addPanel({
+      id: e.target,
       title: e.payload.title,
       widget: e.payload.widget || undefined,
       ref: e.payload.ref || '',
+      options: e.payload.options || undefined,
     });
+  });
+  Sienna.actions.onReplay('layout.apply', function (e) {
+    // The panels re-opened into the layout were logged after this, each in its
+    // own right, so replay must not open them a second time.
+    return app.applyLayout(e.payload.name, { keepPanels: false });
+  });
+  // A tiled panel's share and a tab being chosen belong to the workspace the
+  // panel sits in, which is its parent element.
+  Sienna.actions.onReplay('panel.share', function (e) {
+    var $p = panelById(e.target);
+    if ($p) $p.parent().workspace('share', e.target, e.payload.share);
+  });
+  Sienna.actions.onReplay('panel.activate', function (e) {
+    var $p = panelById(e.target);
+    if ($p) $p.parent().workspace('activate', e.target);
   });
   Sienna.actions.onReplay('panel.close', function (e) {
     var $p = panelById(e.target);
@@ -418,6 +440,9 @@
     {
       label: 'View',
       items: [
+        // How the workspace is arranged (src/layouts.js). Switching re-opens
+        // every panel into the new arrangement, so nothing is lost.
+        { label: 'Layout', items: Sienna.layouts.menuItems(app) },
         { label: 'Clear workspace', onSelect: function () { app.clearWorkspace(); } },
       ],
     },

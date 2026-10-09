@@ -110,6 +110,8 @@
     params: null,      // run defaults from BuildShareLib
     components: null,  // the Describe dictionary: id -> {text, captpath, dims, …}
     modelLink: '',     // what was loaded, for display
+    modelPath: null,   // which of OUR models is loaded (its userData path), if any
+    loadedFor: null,   // the model whose run control loaded it (see viewFor)
     timeUnit: 1,       // days per model time unit
     unitName: 'unit',
 
@@ -254,6 +256,7 @@
 
       return this.unload().then(function () {
         self.modelLink = link;
+        self.modelPath = null;   // a server demo, not one of ours
         self._setStatus('loading', 'Uploading model…');
 
         return Promise.resolve($.ajax({
@@ -373,6 +376,7 @@
 
       return this.unload().then(function () {
         self.modelLink = model.name || model.id || path;
+        self.modelPath = path;
         self._setStatus('loading', 'Uploading model…');
 
         var fd = new FormData();
@@ -400,6 +404,10 @@
      */
     unload: function () {
       this.stop();
+      // Whose session it was goes even when there is no session: a load that
+      // failed leaves a claim behind and no base, and the next load is not it.
+      this.modelPath = null;
+      this.loadedFor = null;
       if (!this.base) return Promise.resolve();
       var dead = this.base;
       this.base = null;
@@ -615,6 +623,69 @@
       });
       return out;
     },
+  };
+
+  /**
+   * The session as seen by a panel that belongs to ONE model (its `ref`) — a
+   * run control or display in that model's Simulation collection. There is one
+   * session, so one model loaded at a time, and another model's panels must
+   * not show this one's run or drive it. Through this view a panel sees the
+   * session only while it is ITS model's: loaded by its model's run control
+   * (whatever that loaded, a server demo included), or, when an unbound run
+   * control did the loading, while its model is the one up there. Otherwise no
+   * model is loaded as far as it can tell, which is exactly what it then says —
+   * and loading from its run control replaces whatever was loaded.
+   *
+   * Status events always pass, so a panel clears when its model is replaced.
+   * A panel with no model (`ref` empty) gets the session itself, as before.
+   *
+   * Several sessions at once — two runs side by side — would replace this with
+   * a session per model; deliberately not yet.
+   */
+  Simulation.viewFor = function (ref) {
+    var sim = Simulation;
+    if (!ref) return sim;
+    var mine = function () {
+      return sim.loadedFor ? sim.loadedFor === ref : sim.modelPath === ref;
+    };
+    var claim = function (call) {
+      if (sim.status === 'loading') return call();   // refused: already loading
+      var p = call();
+      // After the call, because a load begins by unloading, which clears the
+      // claim. If nothing is loaded now, this load is ours — including one
+      // that failed at once, whose error is then ours to show. If something
+      // still is, the load was refused before it touched the session.
+      if (!sim.base) sim.loadedFor = ref;
+      return p;
+    };
+    return {
+      get base() { return mine() ? sim.base : null; },
+      get components() { return mine() ? sim.components : null; },
+      get status() { return mine() ? sim.status : 'idle'; },
+      get message() { return mine() ? sim.message : ''; },
+      get modelLink() { return mine() ? sim.modelLink : ''; },
+      get params() { return mine() ? sim.params : null; },
+      get settings() { return sim.settings; },
+      get unitName() { return sim.unitName; },
+      scalarComponents: function () { return mine() ? sim.scalarComponents() : []; },
+      gridCandidates: function () { return mine() ? sim.gridCandidates() : []; },
+      addTarget: function (owner, spec) { return sim.addTarget(owner, spec); },
+      removeTarget: function (owner) { return sim.removeTarget(owner); },
+      query: function (specs) {
+        return mine() ? sim.query(specs) : Promise.reject(new Error(ref + ' is not loaded'));
+      },
+      load: function (link, params) { return claim(function () { return sim.load(link, params); }); },
+      loadOwn: function (path) { return claim(function () { return sim.loadOwn(path); }); },
+      unload: function () { return mine() ? sim.unload() : Promise.resolve(); },
+      reset: function () { return mine() ? sim.reset() : Promise.resolve(); },
+      start: function () { if (mine()) sim.start(); },
+      stop: function () { if (mine()) sim.stop(); },
+      subscribe: function (fn) {
+        return sim.subscribe(function (e) {
+          if (e.type === 'status' || mine()) fn(e);
+        });
+      },
+    };
   };
 
   Sienna.Simulation = Simulation;

@@ -19,12 +19,16 @@
 
   // `workingSize` is what the panel's "open to a working size" button opens a
   // shrunken panel to; `thumbnail: false` says a widget has nothing to show
-  // once its controls are hidden, so it should never become one.
+  // once its controls are hidden, so it should never become one. `role` says
+  // which collection a new panel opens in (src/layouts.js; sienna DESIGN.md
+  // §19): the diagram in its model's Model collection, the run control and the
+  // displays in its Simulation collection.
   reg.register('diagram', {
     src: 'src/widgets/diagram.js', // resolved relative to index.html
     label: 'Diagram',
     title: 'Diagram',
     workingSize: { width: 1040, height: 680 },   // as Sienna.documents.configure
+    role: 'diagram',
   });
 
   // Running a model. These two are views onto `Sienna.Simulation` (see
@@ -37,6 +41,7 @@
     label: 'Run control',
     title: 'Run control',
     thumbnail: false,
+    role: 'run-control',
   });
 
   reg.register('plotter', {
@@ -44,6 +49,7 @@
     label: 'Plotter',
     title: 'Plotter',
     workingSize: { width: 620, height: 420 },
+    role: 'display',
   });
 
   reg.register('grid', {
@@ -51,5 +57,6 @@
     label: 'Spatial grid',
     title: 'Spatial grid',
     workingSize: { width: 560, height: 520 },
+    role: 'display',
   });
 })(window.Sienna);

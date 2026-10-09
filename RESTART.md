@@ -85,6 +85,33 @@ re-run. The other two are unchanged since 2026-09-01 and 2026-08-29 respectively
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive, which `growth` and `drain` both did on 2026-08-29.
 
+### Layouts (2026-10-09, branch `layout`)
+
+The workspace is no longer one floating pile. sienna gained containers,
+tiled/tabbed modes, placement by role, per-document collections and layouts
+(sienna `DESIGN.md` Part III), and simile now uses them — `src/layouts.js`:
+
+- **Model and simulation** (the default): Models | Simulations side by side,
+  each tabbed by model. A model's first diagram makes its **Model collection**;
+  its first run control or display makes its **Simulation collection** — a run
+  control above a tabbed **Displays**. Each collection carries the model's
+  `ref`, so its colour, and closes when its last panel does.
+- **Free (floating)**: what simile had before. View ▸ Layout switches, and
+  re-opens every panel into the new arrangement.
+- Roles in `src/widgets/index.js`: `diagram`, `run-control`, `display`.
+
+**One session at a time still.** `Sienna.Simulation` is a single SimiLive
+session. A run control or display in a model's Simulation collection sees it
+through `Simulation.viewFor(ref)`: only while its own model's run control
+loaded it (or its model is what an unbound one loaded). Loading from another
+model's run control replaces it, and the first model's displays go blank. A
+session per model — two runs side by side — is the obvious next step and was
+deliberately deferred.
+
+Not yet: a way for the user to switch a collection's mode in simile (the sienna
+demo has a stopgap menu), and a run control supplied by the Simulation template
+is titled "Run control" until the next reload renames it `growth: runControl/1`.
+
 ## Check nothing has rotted, in three minutes
 
 No build, no npm, no server. Open each page and read the coloured bar.

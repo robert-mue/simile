@@ -56,7 +56,10 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
 
   _create() {
     this.element.addClass('slx-run');
-    this._sim = Sienna.Simulation;
+    // The session as this panel's model sees it (Simulation.viewFor): a run
+    // control in a model's Simulation collection shows and drives only that
+    // model's run; an unbound one, the session itself.
+    this._sim = Sienna.Simulation.viewFor(this._ref());
 
     this._buildSource();
     this._buildTransport();
@@ -215,8 +218,10 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
    */
   _followCurrent() {
     if (this._sim.status !== 'idle' && this._sim.status !== 'error') return;
-    const path = Sienna.documents && Sienna.documents.current
-      ? Sienna.documents.current(window.app) : null;
+    // A run control in a model's Simulation collection belongs to that model
+    // (its panel's `ref`), whatever is current; only an unbound one follows.
+    const path = this._ref() || (Sienna.documents && Sienna.documents.current
+      ? Sienna.documents.current(window.app) : null);
     if (!path) return;
     const want = 'own:' + path;
     if (this._demo.val() === want) return;

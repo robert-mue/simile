@@ -66,7 +66,9 @@ $.widget('sienna.grid', $.sienna.widgetBase, {
 
   _create() {
     this.element.addClass('slx-grid');
-    this._sim = Sienna.Simulation;
+    // The session as this panel's model sees it: blank while another model is
+    // the one loaded (Simulation.viewFor).
+    this._sim = Sienna.Simulation.viewFor(this._ref());
     this._owner = this._panelId() || ('grid' + Math.random().toString(36).slice(2));
     this._spec = null;
     this._geom = null;   // {rows, cols, hex} of the chosen component
