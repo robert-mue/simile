@@ -347,9 +347,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       band.setAttribute('width', Math.abs(cur.x - origin.x));
       band.setAttribute('height', Math.abs(cur.y - origin.y));
     };
-    const end = () => {
+    const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       band.remove();
+      if (ev && ev.type === 'pointercancel') return;                        // the browser took the gesture
       const w = Math.abs(cur.x - origin.x);
       const h = Math.abs(cur.y - origin.y);
       if (w < 4 || h < 4) return;              // not a drag: tool stays armed
@@ -427,9 +428,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
           this._applyView();
         };
         const up = () => {
-          $(document).off('pointermove', move).off('pointerup', up);
+          $(document).off('pointermove', move).off('pointerup pointercancel', up);
         };
-        $(document).on('pointermove', move).on('pointerup', up);
+        $(document).on('pointermove', move).on('pointerup pointercancel', up);
       },
     });
   },
@@ -488,9 +489,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       ghost.setAttribute('width', Math.abs(cur.x - origin.x));
       ghost.setAttribute('height', Math.abs(cur.y - origin.y));
     };
-    const end = () => {
+    const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       ghost.remove();
+      if (ev && ev.type === 'pointercancel') return;                        // the browser took the gesture
       const w = Math.abs(cur.x - origin.x);
       const h = Math.abs(cur.y - origin.y);
       if (w < 20 || h < 20) return;              // not a drag: nothing made, tool stays armed
@@ -882,10 +884,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       };
       this._render();
     };
-    const end = () => {
+    const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       const final = this._labelDrag && this._labelDrag.off;
       this._labelDrag = null;
+      if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
       const moved = final && (final.dx !== start.dx || final.dy !== start.dy);
       if (moved) {
         d.moveLabel(id, final.dx, final.dy);      // one action per drag
@@ -1036,10 +1039,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._bowDrag = { id, bow: Math.max(-this._MAX_BOW, Math.min(this._MAX_BOW, -side / c)) };
       this._render();
     };
-    const end = () => {
+    const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       const final = this._bowDrag && this._bowDrag.bow;
       this._bowDrag = null;
+      if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
       if (final != null && final !== start) d.setArcBow(id, final);
       this._render();
     };
@@ -1129,10 +1133,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._portDrag = { [port.key]: this._ontoRect(w, rect) };
       this._render();
     };
-    const end = () => {
+    const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       const final = this._portDrag && this._portDrag[port.key];
       this._portDrag = null;
+      if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
       // A click that never moved is not an edit: no action, so no undo entry.
       if (final && (final.x !== start.x || final.y !== start.y)) {
         d.movePort(port.key, final.x, final.y);          // ONE action per drag
@@ -1193,6 +1198,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       rubber.remove();
       this.element[0].querySelectorAll('.slx-arc-target').forEach((n) => n.classList.remove('slx-arc-target'));
+      // Cancelled — the browser took the gesture — is not a drop: a cancel
+      // event's position is not where the finger was, and an arc made there
+      // lands somewhere nobody pointed. The tool stays armed.
+      if (ev.type === 'pointercancel') { this._render(); return; }
       const toId = this._elementAt(ev);
       const w = this._toWorld(ev.clientX, ev.clientY);
       this._tool = null;
@@ -1306,10 +1315,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._drag = { id, moves };
       this._render();
     };
-    const end = () => {
+    const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
       const drag = this._drag;
       this._drag = null;
+      // Cancelled is not dropped: nothing is written until the drop, so putting
+      // it back is just drawing what the model still says.
+      if (ev && ev.type === 'pointercancel') { this._render(); return; }
       const moved = drag && drag.moves[id]
         && (drag.moves[id].x !== start[id].x || drag.moves[id].y !== start[id].y);
       // (a) A press that never moved is a SELECTION, not a drag.

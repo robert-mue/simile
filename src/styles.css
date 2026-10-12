@@ -17,6 +17,14 @@
   background: #fff;
   cursor: grab;
 }
+
+/* Every gesture on the canvas is the diagram's. Without this a touchscreen
+   claims a drag as a pan a few pixels in and cancels it, so a node stopped
+   after 40px — and the browser's own pinch and scroll would fight the
+   diagram's. Zoom by touch is the view bar's +/− for now. */
+.slx-diagram-svg {
+  touch-action: none;
+}
 .slx-diagram:active {
   cursor: grabbing;
 }
