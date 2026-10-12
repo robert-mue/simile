@@ -206,6 +206,11 @@
     var $p = panelById(e.target);
     if ($p) $p.parent().workspace('share', e.target, e.payload.share);
   });
+  // A collection re-arranged from its Arrange contents button.
+  Sienna.actions.onReplay('panel.arrange', function (e) {
+    var $p = panelById(e.target);
+    if ($p) $p.panel('content').container('mode', e.payload.mode, e.payload.direction || undefined);
+  });
   Sienna.actions.onReplay('panel.activate', function (e) {
     var $p = panelById(e.target);
     if ($p) $p.parent().workspace('activate', e.target);

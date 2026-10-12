@@ -108,9 +108,10 @@ model's run control replaces it, and the first model's displays go blank. A
 session per model — two runs side by side — is the obvious next step and was
 deliberately deferred.
 
-Not yet: a way for the user to switch a collection's mode in simile (the sienna
-demo has a stopgap menu), and a run control supplied by the Simulation template
-is titled "Run control" until the next reload renames it `growth: runControl/1`.
+Every collection has an **Arrange contents** button (its titlebar, or its tab
+in a tabbed area) to switch it between floating, tiled and tabbed. Not yet: a
+run control supplied by the Simulation template is titled "Run control" until
+the next reload renames it `growth: runControl/1`.
 
 ## Check nothing has rotted, in three minutes
 
