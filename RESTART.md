@@ -95,6 +95,11 @@ tiled/tabbed modes, placement by role, per-document collections and layouts
   choice for the novice): Simile's own arrangement — a model window and a
   simulation window, floating, each 56% of the workspace wide, both opened
   when a model is. A second model's pair arrives offset from the first.
+  Closing the model window (or its diagram) closes its simulation window too.
+  View ▸ **Windows** lists every window to bring one forward; View ▸ **Arrange
+  windows** puts this model beside its simulation, two models side by side,
+  or two simulations side by side. "Window" means a top-level collection,
+  "panel" what holds one widget (sienna DESIGN.md §19.2).
 - **Model and simulation areas**: Models | Simulations side by side,
   each tabbed by model. A model's first diagram makes its **Model collection**;
   its first run control or display makes its **Simulation collection** — a run

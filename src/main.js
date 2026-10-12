@@ -429,6 +429,53 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
+  // ---- windows --------------------------------------------------------
+  // A WINDOW is a collection at the top level — a model window, a simulation
+  // window; what is inside one is a panel. These find a model's windows by the
+  // template they were made from (src/layouts.js).
+
+  /** The open windows made from one template, frontmost first. */
+  function windowsOf(template) {
+    return app.windows().filter(function ($p) {
+      var $c = $p.panel('content');
+      return $c.hasClass('slx-container') && $c.container('option', 'fromTemplate') === template;
+    }).sort(function (a, b) {
+      return (parseInt(b.css('z-index'), 10) || 0) - (parseInt(a.css('z-index'), 10) || 0);
+    });
+  }
+
+  /** Side by side, or say why not. */
+  function arrange(list, need) {
+    if (list.length < 2) { window.alert(need); return; }
+    app.sideBySide(list.slice(0, 2));
+  }
+
+  var arrangeItems = [
+    {
+      label: 'This model beside its simulation',
+      onSelect: function () {
+        var ref = Sienna.documents.current(app);
+        var pick = function (t) {
+          return windowsOf(t).filter(function ($p) { return $p.panel('ref') === ref; });
+        };
+        arrange(pick('Model').concat(pick('Simulation')),
+          'This needs the current model\'s model and simulation windows open.');
+      },
+    },
+    {
+      label: 'Two models side by side',
+      onSelect: function () {
+        arrange(windowsOf('Model'), 'This needs two model windows open — the two frontmost are used.');
+      },
+    },
+    {
+      label: 'Two simulations side by side',
+      onSelect: function () {
+        arrange(windowsOf('Simulation'), 'This needs two simulation windows open — the two frontmost are used.');
+      },
+    },
+  ];
+
   function buildMenu() {
     return [
     {
@@ -447,6 +494,10 @@
       items: [
         // How the workspace is arranged (src/layouts.js). Switching re-opens
         // every panel into the new arrangement, so nothing is lost.
+        // Every open window, to bring one to the front; re-drawn as windows
+        // come and go.
+        { label: 'Windows', items: function () { return app.windowItems(); } },
+        { label: 'Arrange windows', items: arrangeItems },
         { label: 'Layout', items: Sienna.layouts.menuItems(app) },
         { label: 'Clear workspace', onSelect: function () { app.clearWorkspace(); } },
       ],

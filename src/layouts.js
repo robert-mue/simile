@@ -62,6 +62,8 @@
         widget: 'container',
         title: 'Model',
         openWithDocument: true,
+        // Closing the model window closes the model, simulation window too.
+        primary: true,
         geometry: { left: 0.01, top: 0.02, width: 0.56, height: 0.92 },
         // Tiled, so a lone diagram fills the window.
         options: { mode: 'tiled', accepts: ['diagram'] },
