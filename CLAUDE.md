@@ -34,10 +34,12 @@ footing (`src/widgets/grid.js` is the first).
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it
   opens in.
-- `src/layouts.js` — simile's layouts (sienna `DESIGN.md` Part III): the
-  default **Model and simulation** gives each model a Model collection and a
-  Simulation collection (run control + tabbed Displays), made on demand from
-  templates; **Free** is the old floating workspace. View ▸ Layout switches.
+- `src/layouts.js` — simile's layouts (sienna `DESIGN.md` Part III). Each
+  model gets a Model collection and a Simulation collection (run control +
+  tabbed Displays), made from templates. The default, **Model and simulation
+  windows**, makes them floating windows opened together with the model;
+  **Model and simulation areas** gathers them into two tabbed areas; **Free**
+  is the old floating workspace. View ▸ Layout switches.
 - `src/widgets/diagram.js` — the diagram widget: renders the model as SVG and
   handles every editing gesture. The one place that knows about pixels.
 - `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,

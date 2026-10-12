@@ -224,7 +224,9 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
       ? Sienna.documents.current(window.app) : null);
     if (!path) return;
     const want = 'own:' + path;
-    if (this._demo.val() === want) return;
+    // Already pointing there — as a run control made for its model starts —
+    // but the path box beside it may still say what it was built with.
+    if (this._demo.val() === want) { this._sourceChanged(); return; }
     if (!this._demo.find('option[value="' + want + '"]').length) return;
     this._demo.val(want);
     this._sourceChanged();
