@@ -456,6 +456,10 @@
       // the only way a session outlives the tab it was made in.
       label: 'Session',
       items: [
+        // What someone opening simile for the first time sees: a new tab with a
+        // store of its own, emptied each time. Nothing here is touched.
+        { label: 'Open as a new user (new tab)', onSelect: function () { Sienna.openAsNewUser(); } },
+        { label: '—' },
         { label: 'Watch replay', onSelect: function () { replaySession(true); } },
         { label: 'Replay at once', onSelect: function () { replaySession(false); } },
         { label: '—' },
