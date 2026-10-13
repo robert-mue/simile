@@ -45,3 +45,36 @@ Windows and files
 
 Touch screens
 - Windows and diagrams can be dragged with a finger.
+
+
+------------------------------------------------------------------------
+Release 2026-10-13b
+------------------------------------------------------------------------
+
+Tutorials
+- Help > Tutorials has the first two of the old Simile tutorials,
+  rewritten for the web version: Bank account and Predator-prey.
+
+Building models
+- Sketched graphs: a variable or flow has a Graph tab on its properties
+  dialog, where a relationship can be drawn by hand and used in the
+  equation as graph(x). Graphs in imported Simile models are kept.
+- Influence arrows can be selected (they turn blue) and deleted.
+- Names must be written with underscores, not spaces; the name box
+  says so and suggests one.
+- An influence from another submodel is shown with its path, such as
+  /S1/a; one from the same submodel by its name alone.
+- File > Rename model renames a model, and its windows follow.
+- Renaming an element updates the equations that use it.
+- The properties dialog's tabs and buttons stay in view while its
+  contents scroll.
+
+Running models
+- A new time step is used from the next start of a run.
+- Run after editing the model loads the edited model first.
+- Run settings are remembered for each model.
+- Models with capitalised names, or using time(), now run.
+
+Windows and menus
+- Choosing a window from View > Windows makes its model current.
+- Menu separators are drawn as lines.
