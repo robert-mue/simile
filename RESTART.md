@@ -1,11 +1,10 @@
 # Restart note
 
-*Rewritten 2026-08-29, when the editor was first used to BUILD a model by hand
-rather than by a test; brought forward 2026-09-01 after two days on the node
-properties dialog, and again 2026-09-09 at the end of a session that cleared
-Robert's whole list of UI refinements. If you are picking this up cold — a new
-session, a new machine, or a week later — read this first. `STATUS.md` is the
-full record; this is the part you need to get moving again.*
+*Rewritten 2026-10-13, at the end of two days that took the app public, wrote
+all three of the old Simile tutorials, and turned up the next big idea —
+embedded pages. If you are picking this up cold — a new session, a new
+machine, or a week later — read this first. `STATUS.md` is the full record
+(items 46–47 are the last two days); this is the part you need to get moving.*
 
 **When to rewrite this note.** By event, not by the calendar — a note that
 restates the diff goes stale faster and gets trusted less. Rewrite it when:
@@ -25,67 +24,124 @@ working the keyboard should do this unprompted; it should not need asking for.
 
 ## Where things stand
 
-**Everything is committed and pushed**, in both repositories. Working tree clean
-on `main` here and in `sienna/`; run `git log --oneline -1` in each for where.
-Nothing is half-finished and there is no branch to remember.
+**Everything is committed and pushed**, in both repositories, on `main`. Run
+`git log --oneline -1` in each for where. Nothing is half-finished.
 
-The loop is closed in both directions: a model built in this editor converts to
-Simile Prolog, uploads, compiles and runs on the Simile engine with its results
-drawn in our own panels; and a Simile `.pl` or `.sml` reads back into one of our
-models. `STATUS.md` items 27–45 are that work.
+**The app is public, and released by date.** https://robert-mue.github.io/simile/
+is GitHub Pages built from the **`release` branch**, not `main`: pushing to
+`main` publishes nothing. A release (only when Robert says "release"):
 
-**What changed on 2026-09-09.** Robert worked through a numbered list of UI
-refinements from hand-testing and every item is done, verified in a running
-browser and pushed. They are small individually and the design record is where
-the reasoning lives (§24 the current model, §25 naming and colouring panels by
-subject, §26 thumbnails and the size ladder). In one line each:
+1. append an entry at the END of `RELEASES.txt` (oldest first, **ASCII only** —
+   a `.txt` opened over `file://` may mis-decode UTF-8);
+2. set `window.SIMILE_RELEASE` in `src/release.js` to the same name — it is
+   shown at the right of the menu bar, and Help ▸ Release notes opens the file;
+3. commit and push `main`, then `git push origin main:release`;
+4. an annotated tag of that name, pushed; `gh release create <name> --notes-file …`;
+5. wait for `gh api repos/robert-mue/simile/pages/builds/latest` to say `built`,
+   then check `…/src/release.js` on the live site.
 
-| | |
-|---|---|
-| 7 | a stock's label moved below the box — inside, it sat where you press to drag |
-| 10 | **the current model is now an explicit, stored thing** (§24), not "whichever panel is in front"; the Run control follows it |
-| 11 | the arrow cursor over elements; the hand survives only on the canvas |
-| 12 | only a bendable arc shows the adjust cursor |
-| 13 | a valve answers over its whole box, not just the bow-tie's ink |
-| 14 | a valve's rate reads "Rate of flow." |
-| 16 | **runs were 5× slower than they needed to be** — one HTTP round trip per logged point, because `updateEach` was taken from `displayInt` |
-| 18–19 | the Simile menu folded into File; `Recent` and `All models` submenus |
-| 20–21 | panels are titled `growth: plotter/2` and tinted per model |
-| — | **thumbnails** (§26): a panel too small to work in hides its chrome and shows a miniature, with a third titlebar button between minimise and maximise |
+Names are the date; a second release the same day takes a letter
+(`2026-10-13`, `2026-10-13b`, `2026-10-13c` — the latest). No licence yet, the
+catalogue stays public, and sienna is not to be made public yet (Robert).
 
-Four of those were reported a second time after the first fix, and every one of
-the second reports was the same class of fault: **a decision made from state the
-user cannot see** — a title cached from creation, a toggle keyed on invisible
-history, a widget waiting on an observer that never fires. Read §26.4 before
-writing anything that reacts to a resize.
+**The tutorials are done.** Help ▸ Tutorials: Bank account, Predator-prey,
+Trees (`help/tutorials/`, screenshots under `img/<name>/`). Written as the old
+tutorials are; where the app differs, a "Not yet in the web version" note.
+Each one was built step by step in the real app, headless, and its numbers
+checked — the harness is now in `tools/headless/` (read its README), so
+screenshots can be retaken after a UI change.
 
-**What changed on 2026-08-29**, and it is a different KIND of change from
-everything before it: Robert opened the app and built a model, and four bugs
-fell out within minutes that no test on this repo could have caught, because
-every test drives the model layer directly and never touches the store, the
-view, or the undo stack the way a hand does. See "What hand-use found" below —
-the lesson is worth more than the individual fixes.
+What the tutorials made us build, in one line each (STATUS 46–47 for detail):
+
+- the **Graph tab** — sketched graphs, the file form measured on the engine;
+- **lollipop display** (Widgets ▸ Lollipop diagram) and a **line per member**
+  when plotting a population variable;
+- the **population symbols export** (creation, immigration, loss, reproduction —
+  palette shows Simile's names), and `{size}` for a list leaving a population;
+- three exporter bugs that had stopped models running at all (`time()`,
+  capitalised names unquoted twice over);
+- running fixes: the time step applies from a reset, ▶ reloads an edited
+  model, run settings remembered per model;
+- File ▸ **Rename model**; renames carried into equations; the **name rule
+  imposed** (underscores, no spaces — a red box and a suggestion);
+- names shown **like file paths**: relative inside the viewer's own submodel
+  (`a`, `S3/f`), absolute with a leading `/` outside it (`/c`, `/S1/a`);
+- displays can take a variable **not yet loaded** ("from the next run"),
+  filled in when ▶ next loads the model.
 
 **Standing numbers.** Quote these only after re-running the checks below, since
-they are exactly what a regression would change. The two no-file pages were
-re-run repeatedly through 2026-09-01 and have not moved; the catalogue round
-trip was last measured 2026-08-29, after the naming change:
+they are exactly what a regression would change. All three re-run 2026-10-13:
 
 | | |
 |---|---|
 | catalogue round trip | **60 of 72 identical, 0 differ, 12 refused, 1 lossy import** |
-| fixtures | 6 of 6 reach a fixed point and audit clean *(re-run 2026-09-09, green)* |
+| fixtures | 6 of 6 reach a fixed point and audit clean |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
 
-The 2026-09-09 work was all above the model layer, so only `fixtures.html` was
-re-run. The other two are unchanged since 2026-09-01 and 2026-08-29 respectively
-— re-run them before quoting them.
+Every remaining refusal is an element left unfinished in its source file,
+except `feeding1` (an association question for the developer).
 
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
-model on SimiLive, which `growth` and `drain` both did on 2026-08-29.
+model on SimiLive.
 
-### Layouts (2026-10-09, branch `layout`)
+## Next: embedded pages (Robert, 2026-10-13)
+
+The next job, ahead of submodel colour and time units. Robert's idea: the
+widgets are self-contained, so they can sit in an **ordinary web page** — an
+editable diagram, a graph of chosen variables further down, and a
+**multiple-slider widget** (not yet built) so readers vary parameters and see
+results live. "Not YAME (yet another modelling environment), but a simple way
+of making dynamic web pages" — and "a way that anyone can document some, any,
+dynamic system, not just for us to present some models." The whole model
+catalogue could be built this way.
+
+**Decided:**
+
+1. reader edits are **not kept** — fresh each visit, with a **reset** button;
+2. the model **runs as soon as the page opens**, graphs already drawn;
+3. the point is **independence**: documentation on how ANYONE can do it, with
+   two or three sample pages, kept in the simile repo. The guide is the
+   product; the samples are its worked examples.
+4. **File ▸ Export as web page** — one self-contained HTML with the model
+   inside (a page opened from disk cannot fetch a file beside it).
+5. a model may also ship as a **`.js` file** loaded by `<script>` (which DOES
+   work over `file://`) — Robert's suggestion. Proposed form, a call rather
+   than a bare assignment so two models on a page cannot collide:
+   `Simile.model('predator-prey', {…})`; offered as File ▸ Export model as
+   script.
+
+**Plan:** a plain predator-prey page first (Stage 2's Lotka-Volterra form):
+diagram, rabbit and fox plots, runs on open. Then sliders. Then the export
+commands and the guide. Samples: predator-prey, Trees (lollipop — shows it is
+not only plots), and a catalogue model straight from its `.pl`.
+
+**What is known already:**
+
+- A widget finds its model through its host PANEL's `ref`
+  (`widgetBase._ref`). Outside a workspace there is no panel, so the shell
+  needs a way to give a widget its `ref` directly — a small sienna change.
+  Everything else a widget needs is the shell scripts and a model in
+  `userData`; one `Sienna.Simulation` session serves the page.
+- **Live sliders exist in the engine.** SimiLive's own slider helper posts
+  `act=Parameterize` with `data={"<captpath>": "NOW <value>"}` (its `run.js`
+  `sendValues`, `slider.js` `toModel`) — no recompile, so a re-run takes about
+  a second. Only components whose Describe entry has **`eval == "INPUT"`**
+  qualify, with `min`/`max` for the slider. In Simile files those carry
+  `min_val=`/`max_val=` on the function — which our **importer currently drops**
+  (`DROPPED` in `import-simile.js`). So sliders need: a way to mark a variable
+  as a parameter with a range, the exporter writing it as Simile does (find a
+  catalogue model whose Describe shows `INPUT`, and copy its form), the
+  `Parameterize` call, and the widget. Rebuilding the model per slider move
+  would work but takes seconds — not live.
+- Ask the Simile developer whether SimiLive can bear public pages' load.
+
+**After that:** submodel background colour (`fill_colour`, also currently
+dropped by the importer), and the model's own **time units** (displays say
+"unit"). Two small TODOs from the tutorials: caret insertion in the equation
+dialog tracks `keyup` only (on-screen keyboards).
+
+## Layouts (2026-10-09, merged)
 
 The workspace is no longer one floating pile. sienna gained containers,
 tiled/tabbed modes, placement by role, per-document collections and layouts
@@ -133,6 +189,9 @@ No build, no npm, no server. Open each page and read the coloured bar.
    **`reference/catalogue/`**. The slow one, and the one that matters most.
 
 Then open `index.html` itself and check the devtools console is clean.
+
+All three can be run without a hand: `tools/headless/scripts/test-pages.py`
+and `roundtrip.py` (see `tools/headless/README.md`).
 
 **None of that exercises the editor.** Add a stock, drag it, name it, undo it.
 Four of the day's five bugs lived in the half-second between a click and the
@@ -223,6 +282,8 @@ DESIGN-diagram.md §23 is the record; the short version:
 
 ## Jobs queued
 
+**Embedded pages come first** (above). These are the older queue, still true:
+
 ### 1. A regression net for the EDITOR — still the first job, and now overdue
 
 Everything above argues for it. What is missing is a page that drives the
@@ -304,12 +365,13 @@ means the next session starts from the queue above rather than from his notes.
 
 ## Waiting on the developer
 
-`NOTE-email-population-symbols.md` is **drafted and NOT sent**. Three questions
-now, all things a file cannot answer:
+`NOTE-email-population-symbols.md` is **drafted and NOT sent**. The Trees
+tutorial has since answered most of it (`NOTE-questions-for-developer.md` A2):
+`immigration` IS a rate (our label is fixed), and the symbols now export. What
+is left:
 
-1. Is our `migrator` dialog mislabelled? It asks for a "migration condition",
-   but every `immigration` node in the catalogue holds a **number**.
-2. Is `loss` a probability or a condition? The catalogue shows both.
+1. Is `loss` below 1 (`0.6`) a chance per time unit? Booleans work as 1/0.
+2. Can SimiLive take the load of public embedded pages? (new)
 3. *(Question 0b in `NOTE-questions-for-developer.md`.)* **What does N mean
    in `use(N,in_assoc,…)`?** `feeding1`'s association joins two different bases
    and writes index 0 for BOTH consumers. Our reading says the second should be
@@ -330,7 +392,13 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   to ask the engine; `unload()` afterwards, it is a shared public host.
 - **The scratch directory is `/tmp` and does not survive a reboot.** It has been
   wiped twice, taking every analysis harness with it. That is why the regression
-  net lives in `test/` as pages. Put anything you want to keep in the repo.
+  net lives in `test/` as pages, and the headless harness in `tools/headless/`.
+  Put anything you want to keep in the repo.
+- **Changes to sienna must be copied into `simile/sienna` to be tried** —
+  Robert tests the app, which loads the submodule. On "commit and push both":
+  commit and push sienna, then in `simile/sienna` check out `origin/main`
+  (after making sure the copied files match), then commit simile.
+- **Offer Robert choices numbered #1, #2…** — he answers by number.
 - **Chrome caches the app's scripts hard, and it lies convincingly.** Serve with
   **`python3 tools/serve.py`** rather than `python3 -m http.server`: the plain
   server sends only `Last-Modified`, so Chrome caches heuristically and can run
