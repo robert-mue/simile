@@ -78,3 +78,27 @@ Running models
 Windows and menus
 - Choosing a window from View > Windows makes its model current.
 - Menu separators are drawn as lines.
+
+
+------------------------------------------------------------------------
+Release 2026-10-13c
+------------------------------------------------------------------------
+
+Tutorials
+- Help > Tutorials > Trees, the third of the old Simile tutorials:
+  modelling a population of trees as individuals.
+
+Running models
+- Widgets > Lollipop diagram shows the members of a population as
+  lollipops standing on a gridded patch of ground: each at its x and y,
+  as tall as its size. Turn and tilt the view with the sliders or by
+  dragging; point at one to see its values.
+- A plotter draws a variable in a population as one line for each
+  member, from when it appears to when it goes.
+
+Building models
+- The population symbols are called creation, immigration and loss,
+  as in Simile, and models using them can now be run.
+- An immigration symbol asks for arrivals per time unit.
+- An influence leaving a population is offered in the equation dialog
+  as a list, such as {size}.
