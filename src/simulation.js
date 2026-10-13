@@ -773,6 +773,42 @@
   };
 
   /**
+   * The variables a model HAS, read from the diagram rather than the engine,
+   * named as the engine will name them once it is loaded (`tree/size`).
+   *
+   * A display lists what it can show from the engine's description of the
+   * model loaded, which is the only place values come from — so a variable
+   * added since the last load was missing from the list, and the modeller had
+   * to load before they could even choose it. Offering these as well lets a
+   * display take one at once and fill it in when the model next loads, which
+   * ▶ does by itself after an edit (Robert, 2026-10-13).
+   *
+   * `many` marks one with a value per member of a population. Members of a
+   * fixed membership, or of a population inside another multi-instance
+   * submodel, are left out: no display here draws those.
+   */
+  Simulation.variablesOf = function (ref) {
+    var m = ref && Sienna.userData ? Sienna.userData.get(ref) : null;
+    if (!m || !m.nodes) return [];
+    var subs = m.submodels || {};
+    var KINDS = { stock: true, variable: true, valve: true };
+    var out = [];
+    Object.keys(m.nodes).forEach(function (id) {
+      var n = m.nodes[id];
+      if (!KINDS[n.type] || !n.label) return;
+      var path = [];
+      var multi = [];
+      for (var p = n.parent; p && subs[p]; p = subs[p].parent) {
+        path.unshift(subs[p].label || p);
+        if (subs[p].kind && subs[p].kind !== 'single') multi.push(subs[p].kind);
+      }
+      if (multi.length > 1 || (multi.length === 1 && multi[0] !== 'population')) return;
+      out.push({ label: path.concat([n.label]).join('/'), many: multi.length === 1 });
+    });
+    return out.sort(function (a, b) { return a.label.localeCompare(b.label); });
+  };
+
+  /**
    * The session as seen by a panel that belongs to ONE model (its `ref`) — a
    * run control or display in that model's Simulation collection. There is one
    * session, so one model loaded at a time, and another model's panels must

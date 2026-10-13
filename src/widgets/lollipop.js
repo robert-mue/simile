@@ -69,6 +69,10 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
     this._buildView();
 
     this._unsub = this._sim.subscribe((e) => this._onEvent(e));
+    this._watchModel(() => {
+      window.clearTimeout(this._listTimer);
+      this._listTimer = window.setTimeout(() => this._syncComponents(), 250);
+    });
     this._watchPanelResize(() => this._draw());
     if (window.ResizeObserver) {
       this._ro = new ResizeObserver(() => this._draw());
@@ -161,8 +165,19 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
 
   // ---- choosing the variables ---------------------------------------
 
+  /**
+   * Population variables from the loaded model, and — as the plotter does —
+   * those the diagram has that the loaded model does not yet, offered as
+   * `next:<name>` and taken up when the model is next loaded and described.
+   */
   _syncComponents() {
-    const list = this._sim.memberComponents ? this._sim.memberComponents() : [];
+    const list = (this._sim.memberComponents ? this._sim.memberComponents() : []).slice();
+    const known = {};
+    list.forEach((c) => { known[c.label] = true; });
+    Sienna.Simulation.variablesOf(this._ref()).forEach((v) => {
+      if (v.many && !known[v.label]) list.push({ id: 'next:' + v.label, label: v.label, next: true });
+    });
+    list.sort((a, b) => a.label.localeCompare(b.label));
     this._byId = {};
     list.forEach((c) => { this._byId[c.id] = c; });
 
@@ -179,7 +194,8 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
         return;
       }
       $('<option>').val('').text('choose…').appendTo(pick);
-      list.forEach((c) => $('<option>').val(c.id).text(c.label).appendTo(pick));
+      list.forEach((c) => $('<option>').val(c.id)
+        .text(c.label + (c.next ? '  (from the next run)' : '')).appendTo(pick));
       const c = guess[role];
       pick.val(c ? c.id : '');
       if (c) this.options[role] = c.label;
@@ -189,8 +205,10 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
 
   /** Ask the session for whichever of the three are chosen, and show a frame now. */
   _bind() {
+    this._waiting = [];
     ['x', 'y', 'size'].forEach((role) => {
-      const id = this._picks[role].val() || null;
+      let id = this._picks[role].val() || null;
+      if (id && id.indexOf('next:') === 0) { this._waiting.push(role); id = null; }
       this._ids[role] = id;
       if (id) this._sim.addTarget(this._owner + ':' + role, id);
       else this._sim.removeTarget(this._owner + ':' + role);
@@ -307,6 +325,11 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
     this._placed = [];
 
     if (!this._sim.base) { this._say('Load a model in a Run control panel.'); return; }
+    if (this._waiting && this._waiting.length) {
+      this._say(this._waiting.join(', ') + (this._waiting.length === 1 ? ' is' : ' are')
+        + ' not in the model loaded yet. Press ▶: the model is loaded again first, and shown from then on.');
+      return;
+    }
     if (!this._ready()) {
       this._say(this._sim.memberComponents && this._sim.memberComponents().length
         ? 'Choose the variables for x, y and size.'

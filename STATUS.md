@@ -1556,6 +1556,14 @@ population submodel, and it needed:
 
 Not done, noted in the page: submodel background colour.
 
+*Then, the same day (Robert's #2):* a display no longer needs the model loaded
+before a NEW variable can be chosen. The plotter's and lollipop's lists also
+offer what the diagram has and the loaded model lacks
+(`Simulation.variablesOf(ref)`, named as the engine will name it), marked
+"(from the next run)"; choosing one adds a trace that waits, and binds by
+name when the model is next described — which ▶ causes after an edit. The
+Trees page lost its "load first" step in Stage 3.
+
 ---
 
 ## Known gaps and loose ends

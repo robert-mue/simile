@@ -94,6 +94,12 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._buildLegend();
 
     this._unsub = this._sim.subscribe((e) => this._onEvent(e));
+    // The list also offers what the diagram has and the loaded model does not
+    // yet, so it follows edits to the model — a burst of them at a time.
+    this._watchModel(() => {
+      window.clearTimeout(this._listTimer);
+      this._listTimer = window.setTimeout(() => this._syncComponents(), 250);
+    });
     // Same pairing as the diagram: the panel says so directly when it resizes
     // itself, the observer catches everything else.
     this._watchPanelResize(() => this._draw());
@@ -156,11 +162,28 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
 
   // ---- series ---------------------------------------------------------
 
+  /**
+   * The list to choose from: what the loaded model has, and also what the
+   * diagram has that the loaded model does not yet — a variable added since
+   * the last load. One of those is offered as `next:<name>` and plotted as a
+   * trace that waits, filled in when the model is next loaded (▶ does that
+   * after an edit) and matched up by name like any other trace.
+   */
   _syncComponents() {
     const was = this._pick.val();
     this._pick.empty();
-    const list = this._sim.scalarComponents();
-    const members = this._sim.memberComponents ? this._sim.memberComponents() : [];
+    const list = this._sim.scalarComponents().slice();
+    const members = (this._sim.memberComponents ? this._sim.memberComponents() : []).slice();
+
+    const known = {};
+    list.concat(members).forEach((c) => { known[c.label] = true; });
+    Sienna.Simulation.variablesOf(this._ref()).forEach((v) => {
+      if (known[v.label]) return;
+      (v.many ? members : list).push({ id: 'next:' + v.label, label: v.label, next: true });
+    });
+    const byLabel = (a, b) => a.label.localeCompare(b.label);
+    list.sort(byLabel);
+    members.sort(byLabel);
 
     if (!list.length && !members.length) {
       $('<option>').val('').text(this._sim.base ? '(nothing to plot)' : '(no model loaded)')
@@ -172,7 +195,8 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     const group = (title, items) => {
       const into = list.length && members.length
         ? $('<optgroup>').attr('label', title).appendTo(this._pick) : this._pick;
-      items.forEach((c) => $('<option>').val(c.id).text(c.label).appendTo(into));
+      items.forEach((c) => $('<option>').val(c.id)
+        .text(c.label + (c.next ? '  (from the next run)' : '')).appendTo(into));
     };
     group('Single values', list);
     group('A line for each member', members);
@@ -223,13 +247,28 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
   },
 
   _add(id) {
-    if (!id || !this._sim.base) return;
-    if (this._series.some((s) => s.id === id)) return;   // already plotted
+    if (!id) return;
+    const next = id.indexOf('next:') === 0 ? id.slice(5) : null;
+    if (!next && !this._sim.base) return;
+    if (this._series.some((s) => (next ? s.label === next : s.id === id))) return;   // already plotted
 
     const slot = this._claimSlot();
     if (slot < 0) {
       this._say('This plot is full at ' + this._PALETTE.length + ' traces. '
         + 'Open a second plotter panel for more — two plots read better than one crowded one.');
+      return;
+    }
+
+    if (next) {
+      // Not in the loaded model yet: a trace that waits for it, with no
+      // target to ask for. `_rebind` gives it an id when the model that has
+      // it is described.
+      const v = Sienna.Simulation.variablesOf(this._ref()).find((x) => x.label === next) || {};
+      this._series.push({
+        id: null, label: next, units: '', slot, pts: [], many: !!v.many, lines: {}, waiting: true,
+      });
+      this._renderLegend();
+      this._draw();
       return;
     }
 
@@ -257,12 +296,14 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._draw();
   },
 
-  _remove(id) {
-    const i = this._series.findIndex((s) => s.id === id);
+  /** Take a trace off, given it or its component id. */
+  _remove(which) {
+    const i = this._series.findIndex((s) => s === which || (s.id != null && s.id === which));
     if (i < 0) return;
+    const id = this._series[i].id;
     delete this._used[this._series[i].slot];
     this._series.splice(i, 1);
-    this._sim.removeTarget(this._owner + ':' + id);
+    if (id != null) this._sim.removeTarget(this._owner + ':' + id);
     this._renderLegend();
     this._draw();
   },
@@ -286,12 +327,13 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     });
     this._series.slice().forEach((s) => {
       const c = byLabel[s.label] || byTail[this._short(s.label)];
-      if (!c) { this._remove(s.id); return; }
+      if (!c) { this._remove(s); return; }
       s.label = c.label;
+      s.waiting = false;
       this._forget(s);
       s.many = this._isMembers(c.id);
       if (c.id === s.id) return;
-      this._sim.removeTarget(this._owner + ':' + s.id);
+      if (s.id != null) this._sim.removeTarget(this._owner + ':' + s.id);
       s.id = c.id;
       this._sim.addTarget(this._owner + ':' + s.id, s.id);
     });
@@ -299,7 +341,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
   },
 
   _clear() {
-    this._series.slice().forEach((s) => this._remove(s.id));
+    this._series.slice().forEach((s) => this._remove(s));
   },
 
   // ---- events ---------------------------------------------------------
@@ -421,9 +463,15 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._plot = { W, H, iw, ih };
 
     if (!this._series.length || !this._domain()) {
-      this._say(this._sim.base
-        ? 'Choose a variable and press add.'
-        : 'Load a model in a Run control panel.');
+      const waiting = this._series.filter((s) => s.waiting).map((s) => this._short(s.label));
+      this._say(waiting.length
+        ? waiting.join(', ') + (waiting.length === 1 ? ' is' : ' are')
+          + (this._sim.base
+            ? ' not in the model loaded yet. Press ▶: the model is loaded again first, and plotted from then on.'
+            : ' plotted once the model is loaded.')
+        : this._sim.base
+          ? 'Choose a variable and press add.'
+          : 'Load a model in a Run control panel.');
       return;
     }
     this._say('');
@@ -590,14 +638,16 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
       const row = $('<span class="slx-plot-key">').appendTo(this._legend);
       $('<span class="slx-plot-swatch">').css('background', this._PALETTE[s.slot]).appendTo(row);
       $('<span class="slx-plot-name">').text(s.label).appendTo(row);
-      if (s.many) {
+      if (s.waiting) {
+        $('<span class="slx-plot-val">').text('from the next run').appendTo(row);
+      } else if (s.many) {
         if (s.at != null) $('<span class="slx-plot-val">').text(s.now + (s.now === 1 ? ' member' : ' members')).appendTo(row);
       } else {
         const last = s.pts[s.pts.length - 1];
         if (last) $('<span class="slx-plot-val">').text(this._fmt(last[1])).appendTo(row);
       }
       $('<button type="button" class="slx-plot-drop">').attr('title', 'Remove this trace').text('×')
-        .appendTo(row).on('click', () => this._remove(s.id));
+        .appendTo(row).on('click', () => this._remove(s));
     });
   },
 

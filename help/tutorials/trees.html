@@ -191,12 +191,10 @@
 <p>The dialog's Variables list shows the name in braces already, <code>{size}</code>, because it knows the arrow comes out of a population: clicking it puts in exactly what to type.</p>
 
 <h3>Step 4</h3>
-<p>Re-build the model: click <span class="ui">load</span> in the Simulation window. The plotter offers only what is in the model loaded, so this is what makes <em>total</em> available to plot.</p>
+<p>Call up a plotter for the variable <em>total</em>: <span class="ui">Widgets &rsaquo; Plotter</span>, choose <code>total</code>, and click <span class="ui">add</span>. To see both plots at once, click the <span class="ui">Arrange contents</span> button on the Displays titlebar and choose <span class="ui">Tiled side by side</span>.</p>
+<p>The list shows <em>total</em> as &ldquo;from the next run&rdquo;: it is in your diagram, but not yet in the model that was loaded. It is plotted as soon as the model is loaded again, which the next step does for you.</p>
 
 <h3>Step 5</h3>
-<p>Call up a plotter for the variable <em>total</em>: <span class="ui">Widgets &rsaquo; Plotter</span>, choose <code>total</code>, and click <span class="ui">add</span>. To see both plots at once, click the <span class="ui">Arrange contents</span> button on the Displays titlebar and choose <span class="ui">Tiled side by side</span>.</p>
-
-<h3>Step 6</h3>
 <p>Set <span class="ui">Execute for</span> to <code>300</code>, and run the model again.</p>
 
 <figure>
@@ -228,7 +226,7 @@
 <p>The trees can be anywhere between the front and the back of the 1 hectare plot. Hence, the y-coordinate for each tree is randomly determined between 0 and 100 m.</p>
 
 <h3>Step 4</h3>
-<p>Re-build the model: click <span class="ui">load</span>.</p>
+<p>Re-build the model: click <span class="ui">load</span>. (You could leave this to the next run, as in Stage 3, but loading now lets the display show the trees at the start.)</p>
 
 <h3>Step 5</h3>
 <p>Call up the lollipop display: <span class="ui">Widgets &rsaquo; Lollipop diagram</span>. It needs three variables, chosen in the three lists along its top: <span class="ui">x</span>, <span class="ui">y</span> and <span class="ui">size</span>. Because our variables are called <em>x</em>, <em>y</em> and <em>size</em>, it has chosen them already; in a model whose variables are named differently, you choose them yourself.</p>
