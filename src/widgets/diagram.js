@@ -1464,6 +1464,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (!input.parent().length) return;
       const text = String(input.val() || '').trim();
       input.remove();
+      this.element[0].removeEventListener('pointerdown', pressElsewhere, true);
       if (!save) return;
       try {
         d.setLabel(id, text);
@@ -1482,6 +1483,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // before the user can type.
     input.on('focus', () => { live = true; });
     input.on('blur', () => { if (live) commit(true); });
+    // A press anywhere else in the diagram is Enter too. Blur does not cover
+    // it: pressing a glyph to drag it cancels the press's default, so focus
+    // never leaves the field, and dragging a just-placed stock left its name
+    // box floating where the stock had been. Capturing, so the name is taken
+    // before the press starts whatever it starts.
+    const pressElsewhere = (e) => { if (e.target !== input[0]) commit(true); };
+    this.element[0].addEventListener('pointerdown', pressElsewhere, true);
     // preventScroll matters: this element is the panel's scrollable content, so
     // focusing a field near the edge would otherwise scroll the whole diagram.
     setTimeout(() => {
