@@ -24,6 +24,25 @@
 (function (Sienna) {
   'use strict';
 
+  /**
+   * A **sketched graph**: a relationship drawn by hand rather than written,
+   * used in the element's equation as `graph(x)` — the curve's value at `x`.
+   * It belongs to the element (one per element) and is edited on the
+   * properties dialog's Graph tab (`src/sketch.js`). Stored in `props.graph`:
+   *
+   *   { xmin, xmax, ymin, ymax,      // the axes
+   *     points: [f0, f1, …],          // heights as fractions of the y range,
+   *                                   //   evenly spaced from xmin to xmax
+   *     outside: 'truncate' | 'extrapolate' | 'wraparound',
+   *     between: 'interpolate' | 'round' }
+   *
+   * Heights are FRACTIONS, not values, so rescaling an axis keeps the shape
+   * drawn and changes what it means — as Simile's own graph pad does. The
+   * file form (`table_data`) was decoded from the catalogue and confirmed
+   * against the engine on 2026-10-13; see `src/export-simile.js`.
+   */
+  var SKETCH = { name: 'graph', label: 'Sketched graph', type: 'sketch' };
+
   // --- a minimal schema registry (app-level; the shell has no opinion) ------
   if (!Sienna.schemas) {
     var registry = {};
@@ -90,6 +109,7 @@
       variable:     { has_label: true,  fields: [
         { name: 'value', label: 'Value or expression', type: 'expression', required: true },
         { name: 'units', label: 'Units', type: 'text' },
+        SKETCH,
       ] },
       cloud:        { has_label: 'optional', autoCreated: true, fields: [] },
       // A valve has no position of its own: it rides at the midpoint of its
@@ -108,6 +128,7 @@
         { name: 'rate',  label: 'Rate', type: 'expression', required: true,
           help: 'Rate of flow.' },
         { name: 'units', label: 'Units', type: 'text' },
+        SKETCH,
       ] },
       condition:    { has_label: true,  fields: [
         { name: 'expr', label: 'Condition', type: 'expression', required: true,

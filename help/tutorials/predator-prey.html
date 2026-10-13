@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: Predator-prey</title>
+  <link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<main>
+
+<h1>Modelling predator-prey interactions</h1>
+<p class="byline">Tutorial 2 &middot; Level 1 &middot; Predator-prey. Adapted for Simile on the web from the Simulistics tutorial by Robert Muetzelfeldt.</p>
+
+<p>This tutorial works through the classic predator-prey model: rabbits and foxes. It begins with the textbook (Lotka-Volterra) form, recasts the diagram so that it says more about the biology, and then replaces two of the textbook's simplistic assumptions with relationships sketched by hand. A bonus section shows how to enter a model given as differential equations.</p>
+
+<p>It assumes you have done <a href="bank-account.html">Tutorial 1, Bank account</a>, and know how to add stocks, flows, variables and influences, open an element's properties dialog, and run a model.</p>
+
+<nav class="contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#stage1">Stage 1: Modelling the dynamics of a single population</a></li>
+    <li><a href="#stage2">Stage 2: Adding in predator dynamics</a></li>
+    <li><a href="#stage3">Stage 3: Re-casting the model diagram</a></li>
+    <li><a href="#stage4">Stage 4: Sketching biologically meaningful relationships</a></li>
+    <li><a href="#stage5">Stage 5: Bonus section: re-visiting the classic predator-prey model</a></li>
+  </ol>
+</nav>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage1">Stage 1: Modelling the dynamics of a single population</h2>
+
+<h3>Step 1</h3>
+<p>Choose <span class="ui">File &rsaquo; New model</span>, then <span class="ui">File &rsaquo; Rename model&hellip;</span> and call it <code>Predator-prey</code>.</p>
+
+<h3>Step 2</h3>
+<p>Add two <span class="ui">stock</span>s to the diagram, one above the other, and name them <code>rabbits</code> and <code>foxes</code>.</p>
+
+<h3>Step 3</h3>
+<p>Draw a <span class="ui">flow</span> into the <em>rabbits</em> stock, from empty space on its left, and name it <code>rabbit_repro</code>.</p>
+
+<h3>Step 4</h3>
+<p>Draw a <span class="ui">flow</span> out of the <em>rabbits</em> stock, into empty space on its right, and name it <code>predation</code>.</p>
+
+<h3>Step 5</h3>
+<p>Draw an <span class="ui">influence</span> arrow:</p>
+<ul>
+  <li>from the <em>rabbits</em> stock to the <em>rabbit_repro</em> flow;</li>
+  <li>from the <em>rabbits</em> stock to the <em>predation</em> flow;</li>
+  <li>from the <em>foxes</em> stock to the <em>predation</em> flow.</li>
+</ul>
+<p>Remember that an influence into a flow ends on its valve. Your model diagram should now look like this:</p>
+
+<figure>
+  <img src="img/predator-prey/s1-diagram.png" alt="Rabbits with an inflow rabbit_repro and an outflow predation; foxes below; influences from rabbits to both flows and from foxes to predation" width="681" height="480">
+  <figcaption>Stage 1: the diagram.</figcaption>
+</figure>
+
+<h3>Step 6</h3>
+<p>Enter the following expression for the <em>rabbit_repro</em> flow: <code>0.5*rabbits</code></p>
+
+<h3>Step 7</h3>
+<p>Enter the following expression for the <em>predation</em> flow: <code>0.01*rabbits*foxes</code></p>
+
+<h3>Step 8</h3>
+<p>Set the initial value for the <em>rabbits</em> stock to <code>5000</code>.</p>
+
+<h3>Step 9</h3>
+<p>Set the initial value for the <em>foxes</em> stock to <code>45</code>.</p>
+
+<p>Everything on the diagram is now black. (The <em>foxes</em> stock has no flows yet, so it simply stays at 45.)</p>
+
+<h3>Step 10</h3>
+<p>In the Simulation window, click <span class="ui">load</span> to build the model.</p>
+
+<h3>Step 11</h3>
+<p>Change the run settings:</p>
+<ul>
+  <li>set <span class="ui">Execute for</span> to <code>50</code>;</li>
+  <li>leave <span class="ui">Time step(s)</span> at <code>0.1</code>.</li>
+</ul>
+
+<h3>Step 12</h3>
+<p>Set up a plotter for the <em>rabbits</em> stock: <span class="ui">Widgets &rsaquo; Plotter</span>, choose <code>rabbits</code>, and click <span class="ui">add</span>.</p>
+
+<h3>Step 13</h3>
+<p>Run the model with <span class="ui">&#9654;</span>.</p>
+
+<figure>
+  <img src="img/predator-prey/s1-run.png" alt="The rabbits plot rising exponentially from 5000 to about 60,500 over 50 years" width="1280" height="713">
+  <figcaption>Stage 1: rabbits after 50 years.</figcaption>
+</figure>
+
+<p>Note that the rabbit population grows exponentially: there is nothing to hold it in check. With 45 foxes, predation takes 0.45 of the rabbits a year while reproduction adds 0.5, so the population grows by about 5% a year, to just over 60,000 after 50 years.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage2">Stage 2: Adding in predator dynamics</h2>
+
+<h3>Step 1</h3>
+<p>Add a <span class="ui">flow</span> into the <em>foxes</em> stock, and name it <code>fox_repro</code>.</p>
+
+<h3>Step 2</h3>
+<p>Add a <span class="ui">flow</span> out of the <em>foxes</em> stock, and name it <code>fox_mortality</code>.</p>
+
+<h3>Step 3</h3>
+<p>Draw an <span class="ui">influence</span> from the <em>predation</em> flow (its valve) to the <em>fox_repro</em> flow.</p>
+<p>This reflects the assumption in the standard textbook model that the predators' reproduction is proportional to the rate of predation on the prey.</p>
+
+<h3>Step 4</h3>
+<p>Draw an <span class="ui">influence</span> from the <em>foxes</em> stock to the <em>fox_mortality</em> flow: the number of foxes dying depends on the number of foxes.</p>
+<p>Your model diagram should now look like this:</p>
+
+<figure>
+  <img src="img/predator-prey/s2-diagram.png" alt="The diagram with fox_repro into foxes and fox_mortality out of it, an influence from predation to fox_repro and from foxes to fox_mortality" width="681" height="480">
+  <figcaption>Stage 2: the diagram.</figcaption>
+</figure>
+
+<h3>Step 5</h3>
+<p>Enter the following expression for the <em>fox_repro</em> flow: <code>0.01*predation</code></p>
+
+<h3>Step 6</h3>
+<p>Enter the following expression for the <em>fox_mortality</em> flow: <code>0.2*foxes</code></p>
+
+<h3>Step 7</h3>
+<p>Set up a second plotter, for the <em>foxes</em> stock: <span class="ui">Widgets &rsaquo; Plotter</span> again, choose <code>foxes</code>, and click <span class="ui">add</span>.</p>
+<p>You need a separate plotter because the number of foxes is a couple of orders of magnitude less than the number of rabbits: on the same graph, the line for the foxes would lie along the bottom.</p>
+<p>The two plotters share the Displays area as tabs. To see both at once, click the <span class="ui">Arrange contents</span> button on the Displays titlebar (the first of its buttons) and choose <span class="ui">Tiled side by side</span>.</p>
+
+<figure>
+  <img src="img/predator-prey/s2-arrange-menu.png" alt="The Arrange contents menu on the Displays titlebar: Floating, Tiled side by side, Tiled stacked, Tabbed" width="580" height="300">
+  <figcaption>Arranging the Displays area.</figcaption>
+</figure>
+
+<h3>Step 8</h3>
+<p>Run the model again with <span class="ui">&#9654;</span>. You have changed the model since it was loaded, so the run control loads it again first; your run settings and your plots are kept.</p>
+<p>To see the model and its results side by side, choose <span class="ui">View &rsaquo; Arrange windows &rsaquo; This model beside its simulation</span>.</p>
+
+<figure>
+  <img src="img/predator-prey/s2-run.png" alt="Model window on the left, Simulation window on the right with two plots: rabbits and foxes cycling" width="1280" height="713">
+  <figcaption>Stage 2: the populations cycle.</figcaption>
+</figure>
+
+<p>You should now see that the rabbit and fox populations cycle: the rabbit population crashes as the fox population increases, followed by a crash in the fox population, after which the rabbits recover again.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage3">Stage 3: Re-casting the model diagram</h2>
+
+<p>The present model is based on a number of assumptions that are biologically unsound. For example, it assumes that the number of rabbits eaten per fox is directly proportional to the number of rabbits, so doubling the number of rabbits doubles the number eaten per fox &mdash; even if there are millions of rabbits around!</p>
+
+<p>We will tackle the problem of making the model more biologically realistic in two stages. First, we will change the model diagram a little, adding a couple of variables and changing the influence arrows, but keeping the same mathematical structure: the revised model should produce exactly the same results. These changes give our model better handles for expressing biologically meaningful relationships. Then, in the following stage, we will replace some of the simplistic assumptions with others that are biologically more realistic.</p>
+
+<h3>Step 1</h3>
+<p>Remove the influence arrows from <em>rabbits</em> to <em>predation</em>, and from <em>predation</em> to <em>fox_repro</em>. To remove an arrow, click on it to select it &mdash; it turns blue &mdash; and press <kbd>Delete</kbd>.</p>
+
+<figure>
+  <img src="img/predator-prey/s3-selected.png" alt="The influence from rabbits to predation drawn in blue, selected" width="681" height="480">
+  <figcaption>The influence from <em>rabbits</em> to <em>predation</em>, selected.</figcaption>
+</figure>
+
+<p>(Pressing on an arrow and dragging bends it instead; a click without dragging selects it.)</p>
+
+<h3>Step 2</h3>
+<p>Add two new <span class="ui">variable</span>s, naming them <code>rfox</code> and <code>eaten_per_fox</code>.</p>
+
+<h3>Step 3</h3>
+<p>Draw <span class="ui">influence</span> arrows:</p>
+<ul>
+  <li>from the <em>rabbits</em> stock to <em>eaten_per_fox</em>;</li>
+  <li>from <em>eaten_per_fox</em> to <em>rfox</em>;</li>
+  <li>from <em>eaten_per_fox</em> to the <em>predation</em> flow;</li>
+  <li>from <em>rfox</em> to the <em>fox_repro</em> flow; and</li>
+  <li>from the <em>foxes</em> stock to the <em>fox_repro</em> flow.</li>
+</ul>
+<p>Your model diagram should now look something like this:</p>
+
+<figure>
+  <img src="img/predator-prey/s3-diagram.png" alt="The re-cast diagram, with variables rfox and eaten_per_fox between the two populations" width="681" height="480">
+  <figcaption>Stage 3: the re-cast diagram.</figcaption>
+</figure>
+
+<h3>Step 4</h3>
+<p>Enter the following expression for each variable or flow:</p>
+<ul>
+  <li><em>eaten_per_fox</em>: <code>0.01*rabbits</code></li>
+  <li><em>rfox</em>: <code>0.01*eaten_per_fox</code></li>
+  <li><em>predation</em>: <code>eaten_per_fox*foxes</code></li>
+  <li><em>fox_repro</em>: <code>rfox*foxes</code></li>
+</ul>
+<p>Satisfy yourself that these changes have not altered the mathematical nature of the model.</p>
+
+<h3>Step 5</h3>
+<p>Run the model again with <span class="ui">&#9654;</span>, confirming that you do indeed get the same behaviour that you had before.</p>
+
+<figure>
+  <img src="img/predator-prey/s3-run.png" alt="The same cycling results as in Stage 2" width="1280" height="713">
+  <figcaption>Stage 3: the same results as Stage 2.</figcaption>
+</figure>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage4">Stage 4: Sketching biologically meaningful relationships</h2>
+
+<p>What we now have are some variables in our model (<em>eaten_per_fox</em> and <em>rfox</em>) for introducing biologically meaningful relationships. The influence arrows we have drawn to these two variables express the biologically reasonable assumptions that:</p>
+<ul>
+  <li>the number of rabbits eaten per fox, <em>eaten_per_fox</em>, depends on the number of rabbits; and</li>
+  <li>the number of baby foxes produced per fox, <em>rfox</em>, depends on the number of rabbits eaten per fox.</li>
+</ul>
+
+<p>So far, however, we have kept the simplistic assumptions of the conventional model: that the number of rabbits eaten per fox is directly proportional to the number of rabbits, and that the rate of reproduction per fox is directly proportional to the number of rabbits eaten. In reality, both assumptions are way off the mark: if there are lots of rabbits around, foxes reach a limit to how many they can eat. Similarly, however many rabbits foxes eat, there is an upper limit to the number of offspring they can produce in a year.</p>
+
+<p>How can we incorporate these refinements? We have two options. One is to find some mathematical expression that better captures our understanding. If you are mathematically inclined, you might like to give that a try. The other is to use Simile's ability to <strong>sketch a graph</strong> of the relationship between two variables, and that is what we will do here.</p>
+
+<h3>Step 1</h3>
+<p>Open the properties dialog for the variable <em>eaten_per_fox</em>, and delete the existing expression.</p>
+
+<h3>Step 2</h3>
+<p>Click the <span class="ui">Graph</span> tab.</p>
+
+<figure>
+  <img src="img/predator-prey/s4-graph-new.png" alt="The Graph tab: a graph pad with a flat line across the middle, Y limits beside it, X limits beneath, and options for points, out of range and between points" width="628" height="481">
+  <figcaption>The Graph tab, before sketching.</figcaption>
+</figure>
+
+<p>The graph pad shows a flat line across the middle, made of 21 points joined by straight lines. The scale of each axis is set by the boxes at its ends: Y max and Y min beside the pad, X min and X max beneath it. As you move the mouse over the pad, the position under it is shown underneath.</p>
+
+<h3>Step 3</h3>
+<p>Scale the X axis, which stands for the number of rabbits: enter <code>10000</code> in the X max box, at the right-hand end beneath the pad.</p>
+
+<h3>Step 4</h3>
+<p>Scale the Y axis, the number of rabbits eaten per fox per year: enter <code>100</code> in the Y max box, at the top beside the pad.</p>
+
+<h3>Step 5</h3>
+<p>Move the mouse into the pad and drag across it, holding the mouse button down. Notice how the line follows the mouse: every point you pass over takes the height of the mouse. (A single click sets just the nearest point.)</p>
+
+<h3>Step 6</h3>
+<p>Adjust it so that it passes through the origin at (0,0), and rises smoothly until it reaches a plateau, looking something like this:</p>
+
+<figure>
+  <img src="img/predator-prey/s4-graph-eaten.png" alt="A curve rising from the origin and levelling off at about 80 rabbits eaten per fox, at 10,000 rabbits" width="628" height="481">
+  <figcaption>Rabbits eaten per fox, against the number of rabbits.</figcaption>
+</figure>
+
+<p>When the model runs, Simile uses linear interpolation to work out the value on the Y axis from the value on the X axis. Beyond the ends of the X axis it holds the end values: that is what <span class="ui">Out of range: Truncate</span> means.</p>
+
+<h3>Step 7</h3>
+<p>Click <span class="ui">Back to the equation</span>. (The Graph tab has no OK button: the graph is only half the job until the equation uses it, so you OK the dialog from the Equation tab.) Because the expression was empty, and <em>eaten_per_fox</em> has only one influence, Simile has entered <code>graph(rabbits)</code>: the value of the sketched graph at the current number of rabbits.</p>
+
+<figure>
+  <img src="img/predator-prey/s4-eq-eaten.png" alt="The Equation tab showing graph(rabbits)" width="628" height="494">
+  <figcaption>The equation that uses the graph.</figcaption>
+</figure>
+
+<p>Click <span class="ui">OK</span>.</p>
+
+<h3>Step 8</h3>
+<p>Open the properties dialog for the variable <em>rfox</em>, delete the existing expression, and click the <span class="ui">Graph</span> tab.</p>
+<p>We are now going to sketch the relationship between <em>rfox</em>, the number of foxes produced per fox per year, and <em>eaten_per_fox</em>, the number of rabbits eaten per fox per year.</p>
+
+<h3>Step 9</h3>
+<p>Scale it, setting X max to <code>100</code> and Y max to <code>1</code>.</p>
+<p>Note that the X max value (100) is the same as the Y max value in the previous graph. This is because they refer to the same quantity: the number of rabbits eaten per fox per year. The Y max of 1 says that a fox cannot produce more than one young a year.</p>
+
+<h3>Step 10</h3>
+<p>Sketch a graph looking something like this:</p>
+
+<figure>
+  <img src="img/predator-prey/s4-graph-rfox.png" alt="A graph that is zero up to about 12 rabbits eaten, rises in a straight line to about 0.8 at 70, and is flat after that" width="628" height="481">
+  <figcaption>Young per fox per year, against rabbits eaten per fox.</figcaption>
+</figure>
+
+<p>Before reading on, try to work out for yourself what this says&hellip; It shows that a fox does not reproduce at all when its food intake is below some lower threshold. Above that, its rate of reproduction rises in proportion to the extra food it eats, up to a plateau: the most young it can produce in a year.</p>
+
+<h3>Step 11</h3>
+<p>Click <span class="ui">Back to the equation</span>: the expression now reads <code>graph(eaten_per_fox)</code>. Click <span class="ui">OK</span>.</p>
+
+<h3>Step 12</h3>
+<p>Run the model again with <span class="ui">&#9654;</span>.</p>
+
+<figure>
+  <img src="img/predator-prey/s4-run.png" alt="Rabbits fall, recover, boom to several hundred thousand, then plunge far below zero; foxes boom to about 10,000" width="1280" height="713">
+  <figcaption>Stage 4, with a time step of 0.1.</figcaption>
+</figure>
+
+<p>You should notice a big difference in the shape of the graphs. With the sketches above, the foxes first eat the rabbits down to a handful; then, with little to eat, the foxes dwindle; the rabbits, freed from predation, boom; the foxes boom after them &mdash; and then the rabbits plunge <em>below zero</em>, which no population can do.</p>
+
+<div class="note">
+  <strong>Why the rabbits went negative</strong>
+  The model moves forward in steps of 0.1 years. At the height of the fox boom, the foxes eat more rabbits in one step than there are, so the stock overshoots past zero; a negative stock then breeds &ldquo;negative rabbits&rdquo; ever faster. It is an artefact of the time step, not of the biology. Set <span class="ui">Time step(s)</span> to <code>0.01</code>, click <span class="ui">&#9632;</span> to go back to the start, and run again: the rabbits now fall to zero and stay there, and the foxes, with nothing left to eat, die away after them.
+</div>
+
+<figure>
+  <img src="img/predator-prey/s4-run-dt001.png" alt="With a time step of 0.01: rabbits boom and then fall to zero at about year 40; foxes decline after them" width="1280" height="713">
+  <figcaption>Stage 4, with a time step of 0.01.</figcaption>
+</figure>
+
+<p>Your own sketches will not be exactly these, and small differences in them can make large differences to the results: try redrawing either graph and running again.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage5">Stage 5: Bonus section: re-visiting the classic predator-prey model</h2>
+
+<p>In this tutorial, I began by sticking faithfully to the mathematical form of the traditional Lotka-Volterra predator-prey model, but designed the System Dynamics diagram to put more emphasis on biological processes. So I used four flows, for the reproduction and mortality of the two populations, even though these were not explicitly mentioned in the original model: all it had were two rate-of-change equations. This reflects my own attitude to modelling: that it should begin as a conceptual design activity, rather than being driven by mathematical notation.</p>
+
+<p>Nevertheless, there will be times when you come across a model expressed as a set of differential equations, and you feel you have neither the inclination nor the ability to re-express it in terms of biological processes, represented as separate flows. What can you do?</p>
+
+<p>Well, it is really pretty straightforward. All you have to do is to follow four simple steps:</p>
+<ol>
+  <li>Create one stock for each state variable.</li>
+  <li>Make a single inflow for each stock.</li>
+  <li>Draw influence arrows from stocks to inflows, as required by the differential equations.</li>
+  <li>Enter each differential equation into the flow for the corresponding state variable.</li>
+</ol>
+
+<p>Let's see this in action.</p>
+
+<h3>Step 1</h3>
+<p>Start a new model with <span class="ui">File &rsaquo; New model</span>, and rename it <code>Lotka-Volterra</code>.</p>
+
+<h3>Step 2</h3>
+<p>Add two stocks, and name them <code>X</code> and <code>Y</code>.</p>
+
+<h3>Step 3</h3>
+<p>Add a single flow into each stock, and name them <code>dXdt</code> and <code>dYdt</code>.</p>
+
+<h3>Step 4</h3>
+<p>Draw influence arrows from both stocks to both flows (four arrows in total). Your model diagram should now look like this:</p>
+
+<figure>
+  <img src="img/predator-prey/s5-diagram.png" alt="Stocks X and Y, each with one inflow, dXdt and dYdt, and influences from both stocks to both flows" width="681" height="480">
+  <figcaption>Stage 5: the differential-equation form.</figcaption>
+</figure>
+
+<h3>Step 5</h3>
+<p>Enter the following expressions into the flows:</p>
+<ul>
+  <li><em>dXdt</em>: <code>0.5*X - 0.01*X*Y</code></li>
+  <li><em>dYdt</em>: <code>0.01*0.01*X*Y - 0.2*Y</code></li>
+</ul>
+<p>and give the stocks the same initial values as before: <code>5000</code> for <em>X</em> and <code>45</code> for <em>Y</em>.</p>
+
+<h3>Step 6</h3>
+<p>Load and run the model, with <span class="ui">Execute for</span> <code>50</code> and a time step of <code>0.1</code>, plotting <em>X</em> and <em>Y</em>.</p>
+
+<figure>
+  <img src="img/predator-prey/s5-run.png" alt="X and Y cycling exactly as rabbits and foxes did in Stage 2" width="1280" height="713">
+  <figcaption>Stage 5: exactly the results of Stage 2.</figcaption>
+</figure>
+
+<p>The results are exactly those of Stage 2: <em>X</em> plays the rabbits and <em>Y</em> the foxes. The two diagrams are two ways of writing down the same mathematics, but only one of them says anything about rabbits and foxes.</p>
+
+<p>That completes the tutorial. Next: <em>Trees</em> (coming soon).</p>
+
+</main>
+</body>
+</html>

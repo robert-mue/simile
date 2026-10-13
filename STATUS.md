@@ -1475,6 +1475,50 @@ is plain data… so it stays exportable to other tools". It is now
 Nothing used the old hook, so nothing broke. Registry precedence is smoke-tested;
 **the on-screen check is still owed** — Chrome's extension is disconnected.
 
+**46. Sketched graphs, and three export bugs that kept models from running**
+*(2026-10-13)*
+Built for the Predator-prey tutorial (Stage 4), which sketches two
+relationships by hand. A variable or flow now has a **Graph** tab beside
+Equation on its properties dialog (`src/sketch.js`): a pad of 21 points, flat
+across the middle to start, drawn by sweeping across it; X and Y limits; more
+or fewer points; out of range truncate / extrapolate / wraparound; between
+points interpolate / round. A graph drawn into an empty equation writes
+`graph(x)`, with x filled in when there is a single influence. Stored as
+`props.graph` with heights as fractions, so rescaling keeps the shape (schema,
+`SKETCH`); `graph()` with nothing drawn is reported by the equation check.
+OK and Cancel are the Equation tab's: Robert finished a drawing and pressed
+OK meaning "OK, that graph", but OK closes the whole dialog — so the Graph
+tab's one button is **Back to the equation** (Enter and Escape there do the
+same), where the `graph(x)` just written can be seen before OK.
+
+*The file form was measured, not guessed.* `table_data=[file='/graph/',
+data=[Ymax,Ymin,400], indices=[Xmin,Xmax,400,M], current=[…], …, dims=N]`,
+heights as pixel rows counted down from the top of a 400-high pad. `M` was
+the unknown: one curve run on SimiLive under each value showed 0 truncate, 1
+extrapolate, 2 wraparound, +4 round. Our evaluation (`Sienna.sketch.evaluate`)
+matches the engine point for point. The importer used to drop `table_data`:
+all 28 graphs in the catalogue now import, the 26 in exportable models
+survive a round trip exactly, and `p040` imported runs identically to the
+original file.
+
+*Three exporter bugs, each one that stopped models running outright:*
+- `time()` was written as `time()`, which is not a Prolog term — the line
+  failed to parse. Written `time('')` now, as Simile writes it.
+- an influence's alias was written bare in `use(…,X,…)`: a capitalised alias is
+  a Prolog VARIABLE, and the server fell over drawing the diagram.
+- names in equations likewise: `0.5*X` compiled as the flow in terms of
+  itself. Both are quoted now (`'X'`), as Simile quotes them; the importer
+  stores them plain, so the round trip is still a fixed point (54 of 72).
+
+*Found on the way, through the tutorial:* an influence arrow could not be
+selected — a press always began bending it, and the drawn line swallowed
+presses aimed at it — so none could be deleted; a click now selects (blue)
+and Delete removes it. The properties dialog's tab strip had been floating
+off its top edge since sienna's tabbed workspaces took the same class name;
+it has its own classes now, and only the tab's contents scroll, so the tabs
+and OK stay in view. And bringing a window forward from View ▸ Windows now
+makes its model current, as a click does (sienna).
+
 ---
 
 ## Known gaps and loose ends

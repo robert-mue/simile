@@ -192,6 +192,18 @@
               at: part.at + c.at, len: c.name.length,
               message: f.label + ': no such function "' + c.name + '"',
             });
+          } else if (c.name === 'graph' && !props.graph) {
+            // `graph(x)` reads THIS element's sketched graph; with none drawn
+            // the engine has nothing to read.
+            var typeSpec = String(id).indexOf('submodel') === 0 ? schema.submodel : schema.nodes[el.type];
+            var canSketch = ((typeSpec && typeSpec.fields) || []).some(function (x) { return x.type === 'sketch'; });
+            out.push({
+              id: id, label: label, kind: 'function', field: f.name,
+              at: part.at + c.at, len: c.name.length,
+              message: f.label + ': graph() uses this element\'s sketched graph, '
+                + (canSketch ? 'and none has been drawn yet — draw one on the Graph tab'
+                  : 'which this kind of element cannot have'),
+            });
           } else if (!arityOk(table[c.name], c.count)) {
             out.push({
               id: id, label: label, kind: 'function', field: f.name,

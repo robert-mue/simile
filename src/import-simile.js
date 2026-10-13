@@ -599,6 +599,18 @@
         var u = unquote(units);
         if (u !== (BOOLEAN_TYPE[type] ? 'boolean' : '1')) out.units = u;
       }
+
+      // A sketched graph (`table_data` with `file='/graph/'`); the format is
+      // documented beside its writer, `tableData` in export-simile.js. A
+      // table read from a data FILE (`file='C:/…/x.csv'`) is not a sketch and
+      // has nowhere to go here, so it is reported rather than half-kept.
+      var tdRaw = (f && f.p.table_data) || (own && own.p.table_data);
+      if (tdRaw != null) {
+        var g = readGraph(tdRaw);
+        if (g) out.graph = g;
+        else this.note('ignored', '`table_data` on ' + (own ? unquote(own.p.name || ownId) : fnId)
+          + ' — a table read from a data file, not a sketched graph');
+      }
       return out;
     },
 
@@ -1149,6 +1161,24 @@
     return items(raw).map(function (s) { return parseFloat(s); });
   }
 
+  /** `table_data=[…]` as our sketched graph, or null if it is not one. */
+  function readGraph(raw) {
+    var p = pairs(raw, '=');
+    if (unquote(p.file || '') !== '/graph/') return null;
+    var data = items(p.data).map(function (v) { return Number(unquote(v)); });
+    var idx = items(p.indices).map(function (v) { return Number(unquote(v)); });
+    var cur = items(p.current).map(function (v) { return Number(unquote(v)); });
+    if (data.length < 2 || idx.length < 2 || cur.length < 2) return null;
+    var rows = data[2] || 400;
+    var mode = idx[3] || 0;
+    return {
+      xmin: idx[0], xmax: idx[1], ymin: data[1], ymax: data[0],
+      points: cur.map(function (v) { return Math.max(0, Math.min(1, 1 - v / rows)); }),
+      outside: ['truncate', 'extrapolate', 'wraparound'][mode & 3] || 'truncate',
+      between: mode & 4 ? 'round' : 'interpolate',
+    };
+  }
+
   /**
    * An equation as we should store it. Simile writes `value=(…)` and our
    * exporter puts those parentheses on unconditionally (item 31), so one
@@ -1162,7 +1192,19 @@
       if (!inner) break;
       t = inner;
     }
-    return t;
+    return plainNames(t);
+  }
+
+  /**
+   * Quoted NAMES made plain: `graph('Q')` → `graph(Q)`. In the file the quotes
+   * are Prolog's — a name starting with a capital must be quoted or it is a
+   * variable — and the exporter puts them back (`prologExpr`), so they are
+   * file syntax, not part of the equation. Kept, they showed in the equation
+   * box, and a round trip turned `A` into `'A'`. Only identifiers are touched;
+   * `''` (in `time('')`) and anything with a space in it are left as written.
+   */
+  function plainNames(t) {
+    return t.replace(/'([A-Za-z_][A-Za-z0-9_]*)'/g, '$1');
   }
 
   Sienna.importSimile = {

@@ -158,6 +158,30 @@
     return "'" + t.replace(/\\/g, '\\\\').replace(/'/g, "''") + "'";
   }
 
+  /**
+   * An alias as a Prolog term: quoted where it must be, with any `[…]`/`{…}`
+   * that marks it as a list or array kept outside the quotes. A bare `X` in
+   * `use(none,in_hierarchy,X,1)` is a Prolog VARIABLE, not a name — the file
+   * loads, the equation's `X` is bound to nothing, and the server fell over
+   * drawing the diagram ("expr $l-50" on "image-50"), so any model whose
+   * capitalised element fed an equation could not be run (found 2026-10-13
+   * by the Predator-prey tutorial's X and Y). Simile writes `'X'`.
+   */
+  function aliasTerm(alias) {
+    // Every layer of brackets is peeled — `[[c]]` is a list of lists of `c` —
+    // and only the name at the centre is quoted.
+    var t = String(alias == null ? '' : alias).trim();
+    var open = '';
+    var close = '';
+    var m;
+    while ((m = /^([[{])\s*([\s\S]*?)\s*([\]}])$/.exec(t))) {
+      open += m[1];
+      close = m[3] + close;
+      t = m[2];
+    }
+    return open + atom(t) + close;
+  }
+
   /** A Simile element id: `node00007`, `arc00012`. */
   function simId(prefix, n) {
     var s = String(n);
@@ -515,10 +539,10 @@
         var i;
         if (pair.dir === 'in_assoc') {
           for (i = 0; i < extra + 1; i++) dim = 'list(' + dim + ')';
-          return 'use(' + idx + ',in_assoc,{' + name + '},' + dim + ')';
+          return 'use(' + idx + ',in_assoc,{' + atom(name) + '},' + dim + ')';
         }
         for (i = 0; i < extra; i++) dim = 'list(' + dim + ')';
-        return 'use(' + idx + ',in_base,' + name + ',' + dim + ')';
+        return 'use(' + idx + ',in_base,' + atom(name) + ',' + dim + ')';
       }).join(',');
     },
 
@@ -581,8 +605,10 @@
         'complete=true',
         'name=' + atom('fn' + (++this.fnN)),
         'units=' + units,
-        'value=(' + String((n.props || {})[field]).trim() + ')',
+        'value=(' + prologExpr((n.props || {})[field]) + ')',
       ];
+      var td = tableData((n.props || {}).graph);
+      if (td) props.splice(3, 0, td);
 
       // A valve's function rides on its flow; `along` is where along the arc.
       var layout = n.type === 'valve' ? ['along=500'] : [];
@@ -726,7 +752,7 @@
         var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
         var dim = '1';
         for (var i = 0; i < this.listCrossings(a.from, a.to); i++) dim = 'list(' + dim + ')';
-        role = 'use(none,in_hierarchy,' + alias.trim() + ',' + dim + ')';
+        role = 'use(none,in_hierarchy,' + aliasTerm(alias) + ',' + dim + ')';
       }
 
       var last = simId('arc', ++this.arcN);
@@ -916,6 +942,88 @@
       '',
       base64(body),
       ''].join('\n');
+  }
+
+  /**
+   * A sketched graph (`props.graph`, see the schema's SKETCH) as Simile's
+   * `table_data`, decoded from the catalogue and confirmed against the engine
+   * on 2026-10-13 by running one curve under every setting:
+   *
+   *   table_data=[file='/graph/', data=[Ymax,Ymin,400],
+   *               indices=[Xmin,Xmax,400,M], current=[…], units=1, bounds=1, dims=N]
+   *
+   * `current` holds each point's height as a pixel row on a 400-high pad,
+   * counted DOWN from the top — 0 is Ymax, 400 is Ymin. `M` is two settings in
+   * one number: 0 truncate, 1 extrapolate, 2 wraparound, plus 4 to round to the
+   * nearest point rather than interpolate. (The 400 in `indices` is the pad's
+   * width; we write what Simile writes.) Heights are whole pixels in the file,
+   * so a curve keeps 1/400 of its range of precision there — the same as a
+   * graph drawn in Simile itself.
+   */
+  function tableData(g) {
+    if (!g || !Array.isArray(g.points) || g.points.length < 2) return null;
+    var mode = ({ truncate: 0, extrapolate: 1, wraparound: 2 })[g.outside] || 0;
+    if (g.between === 'round') mode += 4;
+    var rows = g.points.map(function (f) {
+      return Math.round((1 - Math.max(0, Math.min(1, Number(f) || 0))) * 400);
+    });
+    return 'table_data=[' + [
+      "file='/graph/'",
+      'data=[' + [plNum(g.ymax), plNum(g.ymin), 400].join(',') + ']',
+      'indices=[' + [plNum(g.xmin), plNum(g.xmax), 400, mode].join(',') + ']',
+      'current=[' + rows.join(',') + ']',
+      'units=1', 'bounds=1', 'dims=' + rows.length,
+    ].join(',') + ']';
+  }
+
+  /** A number Prolog will read: no exponent (`1e-7` is not a Prolog number). */
+  function plNum(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return '0';
+    var t = String(n);
+    if (!/e/i.test(t)) return t;
+    return n.toFixed(20).replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  /**
+   * Our expression text in the form Simile's file wants. Verbatim but for one
+   * thing: a call with no arguments. We write `time()`, as Simile's equation
+   * box does; its FILE writes `time('')`, because `time()` is not a Prolog term
+   * — the whole line fails to parse and the model will not load ("expression
+   * expected"). Every model using `time()` was unrunnable until 2026-10-13.
+   * And a name starting with a capital letter is quoted, as Simile quotes it.
+   */
+  function prologExpr(text) {
+    var t = String(text == null ? '' : text).trim();
+    var out = '';
+    var i = 0;
+    while (i < t.length) {
+      var c = t.charAt(i);
+      var m;
+      if (c === "'") {                                   // already a quoted name
+        var j = i + 1;
+        while (j < t.length && !(t.charAt(j) === "'" && t.charAt(j + 1) !== "'")) j += t.charAt(j) === "'" ? 2 : 1;
+        out += t.slice(i, j + 1);
+        i = j + 1;
+      } else if ((m = /^\d+(\.\d+)?([eE][+-]?\d+)?/.exec(t.slice(i)))) {
+        out += m[0];                                     // a number, `1E5` included
+        i += m[0].length;
+      } else if ((m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(t.slice(i)))) {
+        var name = m[0];
+        i += name.length;
+        // `f()` → `f('')`: see above.
+        var call = /^\(\s*\)/.exec(t.slice(i));
+        if (call) { out += name + "('')"; i += call[0].length; continue; }
+        // A name starting with a capital or `_` is a Prolog VARIABLE unless
+        // quoted — `0.5*X` binds X to nothing, and the engine then compiled
+        // `dXdt = 0.5*dXdt…`, the flow in terms of itself. Simile writes 'X'.
+        out += /^[A-Z_]/.test(name) ? "'" + name + "'" : name;
+      } else {
+        out += c;
+        i++;
+      }
+    }
+    return out;
   }
 
   Sienna.exportSimile = {

@@ -938,11 +938,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (curved) {
         hit.setAttribute('class', 'slx-arc-hit slx-arc-hit-bow');
         hit.addEventListener('pointerdown', (e) => this._beginBowDrag(e, d, id, pts[i], pts[i + 1]));
+      } else if (arc.type !== 'flow') {
+        // A straight influence or role: a click selects it. (A flow is
+        // selected by its valve, which deleting takes the flow with.)
+        hit.addEventListener('click', (e) => {
+          if (this._tool) return;
+          this._select(id, e.shiftKey || e.ctrlKey || e.metaKey);
+          this._render();
+        });
       }
       this._layer.arcs.appendChild(hit);
 
       const path = this._el('path', {
-        class: 'slx-arc slx-arc-' + arc.type + (crossings ? ' slx-arc-split' : ''),
+        class: 'slx-arc slx-arc-' + arc.type + (crossings ? ' slx-arc-split' : '')
+          + (this._sel.indexOf(id) >= 0 ? ' slx-arc-selected' : ''),
         'data-id': id,
         'data-segment': i,
         d: dAttr,
@@ -1024,8 +1033,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
     }
     const start = this._bowOf(d, id);
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+    const from = { x: e.clientX, y: e.clientY };
+    let moved = false;
 
     const move = (ev) => {
+      // A few pixels of wobble is still a click: a press that bends nothing
+      // must be able to select the arrow, or an influence could never be
+      // selected — and so never deleted — at all.
+      if (!moved && Math.hypot(ev.clientX - from.x, ev.clientY - from.y) < 4) return;
+      moved = true;
       const w = this._toWorld(ev.clientX, ev.clientY);
       const dx = z.x - a.x;
       const dy = z.y - a.y;
@@ -1044,6 +1061,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const final = this._bowDrag && this._bowDrag.bow;
       this._bowDrag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
+      if (!moved) {
+        this._select(id, additive);               // a press that never moved selects
+        this._render();
+        return;
+      }
       if (final != null && final !== start) d.setArcBow(id, final);
       this._render();
     };

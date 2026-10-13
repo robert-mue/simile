@@ -83,6 +83,11 @@ text.slx-incomplete {
 
 .slx-arc {
   fill: none;
+  /* The drawn line lets presses through to the wide invisible strip beneath
+     it (.slx-arc-hit), which is what selects and bends an arrow. Painted on
+     top, the line used to swallow a press aimed squarely at it, so only a
+     press just BESIDE an arrow did anything. */
+  pointer-events: none;
 }
 
 /* A flow carries stuff: heavy line. 70% of its first weight, with the valve
@@ -358,6 +363,12 @@ text.slx-incomplete {
   cursor: default;         /* not the canvas's grab: this strip IS an element */
 }
 
+/* A selected arrow: Delete removes it. */
+.slx-arc.slx-arc-selected {
+  stroke: #2f7de1;
+  stroke-width: 2.4;
+}
+
 /* Only an arc that CAN be bent says so. A flow is routed by the model, not by
    the pointer, so it gets no adjust cursor — the widget adds this class exactly
    where it attaches the bow drag, so the two cannot drift apart. */
@@ -473,7 +484,8 @@ text.slx-incomplete {
 }
 
 .slx-dlg-buttons button[data-act='ok'],
-.slx-dlg-buttons button[data-act='edit'] {
+.slx-dlg-buttons button[data-act='edit'],
+.slx-dlg-buttons button[data-act='back'] {
   background: #2f7fd0;
   border-color: #2f7fd0;
   color: #fff;
@@ -903,16 +915,34 @@ text.slx-incomplete {
   min-width: 420px;
   width: 620px;
   max-width: 92%;
+  /* Name and tabs stay at the top, OK and Cancel at the bottom, and only the
+     tab's contents scroll. Scrolling the whole dialog, as it did, carried the
+     tabs out of sight above and left OK out of sight below, in a Model window
+     of ordinary size. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.slx-dlg-tabbed > .slx-dlg-fields {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.slx-dlg-tabbed > * {
+  flex-shrink: 0;
+}
+.slx-dlg-tabbed > .slx-dlg-fields {
+  flex-shrink: 1;
 }
 
-.slx-tabs {
+.slx-dlg-tabs {
   display: flex;
   gap: 2px;
   margin: 4px 0 0;
   border-bottom: 1px solid #dfe3e9;
 }
 
-.slx-tab {
+.slx-dlg-tab {
   padding: 5px 12px;
   border: 1px solid transparent;
   border-bottom: none;
@@ -923,9 +953,9 @@ text.slx-incomplete {
   cursor: pointer;
 }
 
-.slx-tab:hover { color: #2f3540; }
+.slx-dlg-tab:hover { color: #2f3540; }
 
-.slx-tab-on {
+.slx-dlg-tab-on {
   border-color: #dfe3e9;
   background: #fff;
   color: #2f3540;
@@ -936,7 +966,7 @@ text.slx-incomplete {
   padding-bottom: 6px;
 }
 
-.slx-tab-panel { padding-top: 12px; }
+.slx-dlg-tab-panel { padding-top: 12px; }
 
 .slx-hidden { display: none; }
 
@@ -1096,3 +1126,108 @@ button.slx-fn:hover { background: #eaf2fa; }
 }
 
 .slx-eq-aids > .slx-dlg-aside:first-child { flex: 1.4 1 240px; }
+
+/* --- sketched graph (properties dialog, Graph tab; src/sketch.js) ------- */
+
+.slx-sketch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+.slx-sketch-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.slx-sketch-yaxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 72px;
+  flex: none;
+}
+.slx-sketch-xaxis {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-left: 80px;
+}
+.slx-sketch-axis-name {
+  color: #888;
+  font-weight: 600;
+}
+.slx-sketch-lim {
+  width: 72px;
+  font: inherit;
+  padding: 2px 4px;
+  border: 1px solid #ccd2da;
+  border-radius: 3px;
+  text-align: right;
+}
+.slx-sketch-lim-bad {
+  border-color: #b23b3b;
+  box-shadow: 0 0 0 2px rgba(178, 59, 59, 0.25);
+}
+.slx-sketch-pad {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #ccd2da;
+  border-radius: 3px;
+  background: #fbfcfd;
+  cursor: crosshair;
+  touch-action: none;   /* a finger draws; it must not scroll the dialog */
+}
+.slx-sketch-svg {
+  display: block;
+  width: 100%;
+  height: 180px;
+  cursor: crosshair;
+  touch-action: none;   /* a finger draws; it must not scroll the dialog */
+}
+.slx-sketch-grid line {
+  stroke: #e3e6eb;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.slx-sketch-mid {
+  stroke: #d0d4da;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+.slx-sketch-line {
+  fill: none;
+  stroke: #2f6fb5;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.slx-sketch-dots circle {
+  fill: #2f6fb5;
+}
+.slx-sketch-readout {
+  min-height: 1.4em;
+  margin-left: 80px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+.slx-sketch-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+}
+.slx-sketch-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.slx-sketch-opt label {
+  color: #444;
+}
+.slx-sketch-count {
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

@@ -572,6 +572,7 @@
           label: 'Tutorials',
           items: [
             { label: 'Bank account', onSelect: function () { window.open('help/tutorials/bank-account.html', '_blank'); } },
+            { label: 'Predator-prey', onSelect: function () { window.open('help/tutorials/predator-prey.html', '_blank'); } },
           ],
         },
         // Plain text, oldest first.

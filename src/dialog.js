@@ -439,8 +439,10 @@
       var f = fields.filter(function (x) { return x.name === name; })[0];
       return f ? fieldHtml(f, readValue(el, f)) : '';
     }
+    // A sketched graph is not a row: it has a tab of its own (below).
     function allRows() {
-      return fields.map(function (f) { return fieldHtml(f, readValue(el, f)); }).join('');
+      return fields.filter(function (f) { return f.type !== 'sketch'; })
+        .map(function (f) { return fieldHtml(f, readValue(el, f)); }).join('');
     }
 
     var hasEquation = fields.some(isExpression);
@@ -493,13 +495,21 @@
       label: hasEquation ? 'Equation' : 'Properties',
       body: body,
     }];
+    // **Graph** — the sketched graph, as a tab where Simile has a button that
+    // opens a separate window (Robert, 2026-10-13): it is a property of this
+    // element like its equation, so it belongs in the element's dialog, and a
+    // tab keeps the equation one click away while drawing.
+    var sketchField = fields.filter(function (f) { return f.type === 'sketch'; })[0];
+    if (sketchField && Sienna.sketch) {
+      tabs.push({ key: 'graph', label: 'Graph', body: '<div class="slx-sketch-host"></div>' });
+    }
 
     var strip = tabs.map(function (t, i) {
-      return '<button type="button" class="slx-tab' + (i === 0 ? ' slx-tab-on' : '')
+      return '<button type="button" class="slx-dlg-tab' + (i === 0 ? ' slx-dlg-tab-on' : '')
         + '" data-tab="' + esc(t.key) + '">' + esc(t.label) + '</button>';
     }).join('');
     var panels = tabs.map(function (t, i) {
-      return '<div class="slx-tab-panel' + (i === 0 ? '' : ' slx-hidden')
+      return '<div class="slx-dlg-tab-panel' + (i === 0 ? '' : ' slx-hidden')
         + '" data-panel="' + esc(t.key) + '"></div>';
     }).join('');
 
@@ -514,11 +524,12 @@
       // equation name (§14), not a property of one tab among several.
       + '<div class="slx-dlg-row"><label for="fld-label">Name</label>'
       + '<input type="text" id="fld-label" data-field=":label" value="' + esc(el.label || '') + '"></div>'
-      + '<div class="slx-tabs" role="tablist">' + strip + '</div>'
+      + '<div class="slx-dlg-tabs" role="tablist">' + strip + '</div>'
       + '<div class="slx-dlg-fields">' + panels + '</div>'
       + '<div class="slx-dlg-buttons">'
       + '<button type="button" data-act="cancel">Cancel</button>'
       + '<button type="button" data-act="ok">OK</button>'
+      + '<button type="button" data-act="back" class="slx-hidden">Back to the equation</button>'
       + '</div></div>'
     ).appendTo($back);
 
@@ -527,13 +538,51 @@
       $dlg.find('[data-panel="' + t.key + '"]').html(t.body);
     });
 
-    $dlg.on('click', '.slx-tab', function () {
-      var key = $(this).attr('data-tab');
-      $dlg.find('.slx-tab').removeClass('slx-tab-on');
-      $(this).addClass('slx-tab-on');
-      $dlg.find('.slx-tab-panel').addClass('slx-hidden')
+    var sketch = sketchField && Sienna.sketch
+      ? Sienna.sketch.pad($dlg.find('.slx-sketch-host'), readValue(el, sketchField) || null)
+      : null;
+    var hadGraph = !!(sketchField && (el.props || {})[sketchField.name]);
+
+    // A graph just drawn is used as `graph(x)`; Simile writes `graph( )` into
+    // an empty equation and leaves the modeller to fill in x. Here x is filled
+    // in too when there is only one thing it could be — the single influence.
+    // Only into an EMPTY equation: one already written is the modeller's, and
+    // they may mean to use the graph inside it (`k*graph(x)`).
+    function offerGraphCall() {
+      if (!sketch || !sketch.touched()) return;
+      var $eq = $dlg.find('[data-panel="equation"] textarea.slx-expression').first();
+      if (!$eq.length || String($eq.val()).trim() !== '') return;
+      var names = influenceNames(d, id);
+      $eq.val('graph(' + (names.length === 1 ? names[0].name : '') + ')');
+    }
+
+    // OK and Cancel belong to the EQUATION tab. Finishing a drawing and
+    // pressing OK reads as "OK, that graph", but OK closes the whole dialog
+    // (Robert, 2026-10-13) — and the graph is only half the job until the
+    // equation uses it. So the Graph tab's one button goes back to the
+    // equation, where `graph(x)` has just been filled in to be looked at,
+    // and the dialog is OK'd from there.
+    function showTab(key) {
+      if (key !== 'graph') offerGraphCall();
+      $dlg.find('.slx-dlg-tab').removeClass('slx-dlg-tab-on')
+        .filter('[data-tab="' + key + '"]').addClass('slx-dlg-tab-on');
+      $dlg.find('.slx-dlg-tab-panel').addClass('slx-hidden')
         .filter('[data-panel="' + key + '"]').removeClass('slx-hidden');
-    });
+      var drawing = key === 'graph';
+      $dlg.find('[data-act=ok], [data-act=cancel]').toggleClass('slx-hidden', drawing);
+      $dlg.find('[data-act=back]').toggleClass('slx-hidden', !drawing);
+      if (!drawing) {
+        var $eq = $dlg.find('[data-panel="' + key + '"] textarea.slx-expression').first();
+        if ($eq.length) $eq.focus();
+      }
+    }
+    function onGraphTab() {
+      var $g = $dlg.find('[data-panel="graph"]');
+      return $g.length > 0 && !$g.hasClass('slx-hidden');
+    }
+
+    $dlg.on('click', '.slx-dlg-tab', function () { showTab($(this).attr('data-tab')); });
+    $dlg.on('click', '[data-act=back]', function () { showTab(tabs[0].key); });
 
     // ---- inserting at the caret -----------------------------------------
     //
@@ -611,6 +660,14 @@
         if (f.target) direct[f.target] = v;
         else props[name] = v;
       });
+      // The graph is kept only if there is one to keep: visiting the tab and
+      // drawing nothing must not give the element a graph it never asked for.
+      if (sketch && (sketch.touched() || hadGraph)) {
+        offerGraphCall();
+        props[sketchField.name] = sketch.value();
+        var eqField = fields.filter(isExpression)[0];
+        if (eqField) props[eqField.name] = $dlg.find('[data-field="' + eqField.name + '"]').val();
+      }
 
       function reject(message) {
         $dlg.find('.slx-dlg-error').remove();
@@ -671,7 +728,14 @@
       // lose the very text the report is asking about, and Enter would commit
       // the edit the modeller is still being asked about.
       if ($host.find('.slx-dlg-problems').length) return;
-      if (e.key === 'Escape') close();
+      // On the Graph tab both keys go back to the equation, like its button:
+      // Escape should not throw away an equation edited before the drawing
+      // began. (Enter in an axis-limit box never gets here — the pad keeps it
+      // to apply the limit.)
+      if (onGraphTab() && (e.key === 'Escape' || e.key === 'Enter')) {
+        e.preventDefault();
+        showTab(tabs[0].key);
+      } else if (e.key === 'Escape') close();
       else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') commit();
     });
 

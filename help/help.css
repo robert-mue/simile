@@ -58,7 +58,6 @@ figure img {
 figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
 .ui {
   font-weight: 600;
-  white-space: nowrap;
 }
 code {
   font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
