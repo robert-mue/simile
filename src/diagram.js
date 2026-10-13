@@ -35,6 +35,34 @@
   }
 
   /**
+   * `text` with every reference to the name `was` made `now`, found by the
+   * equation parser so that only identifiers change — not `accounts`, not a
+   * quoted string. Text that does not parse, or an expression list (several
+   * comma-separated expressions), is done one comma-separated part at a time;
+   * a part that still does not parse is left exactly as it was.
+   */
+  function renameIn(text, was, now) {
+    var whole = renameParsed(text, was, now);
+    if (whole != null) return whole;
+    if (text.indexOf(',') < 0) return text;
+    return text.split(',').map(function (part) {
+      var r = renameParsed(part, was, now);
+      return r == null ? part : r;
+    }).join(',');
+  }
+
+  function renameParsed(text, was, now) {
+    var r = Sienna.equation.parse(text);
+    if (!r.ok) return null;
+    var at = Sienna.equation.references(r.ast)
+      .filter(function (x) { return x.name === was && text.substr(x.at, was.length) === was; })
+      .map(function (x) { return x.at; })
+      .sort(function (a, b) { return b - a; });
+    at.forEach(function (i) { text = text.slice(0, i) + now + text.slice(i + was.length); });
+    return text;
+  }
+
+  /**
    * Where the segment p→q crosses the boundary of `rect` (centre cx/cy, w/h),
    * or null if it does not. Used to seed a port's position on the boundary it
    * pierces.
@@ -804,11 +832,17 @@
      * Rename an element. The label IS the equation name (§14), so this is a
      * model change, validated against the notation's naming rule.
      *
-     * Note what is deliberately NOT done: no equation anywhere is rewritten,
-     * and no influence alias is re-synced. Equations are stored verbatim and
-     * the editor never resolves them (§4), which is exactly why an alias is
-     * copied at arc creation rather than linked (§14.1) — so a rename cannot
-     * break a stored equation.
+     * The rename is carried through, as Simile carries it: an influence out
+     * of the element that still uses its old name (the alias it was given by
+     * default, §14.1) takes the new one, and so does every equation of the
+     * influenced element where that name appears. Before 2026-10-13 neither
+     * happened — the alias was copied once and left — so renaming a variable
+     * after drawing its arrows left the dialog offering `variable1 ←
+     * interest_rate`, and an equation written with the new name did not match
+     * its influence. An alias the modeller chose (anything but the old name)
+     * is theirs and is left alone, and so is everything it is used in.
+     * Identifiers are found by the equation parser, never by text search, so
+     * `account` is renamed and `accounts` and `"account"` are not.
      */
     setLabel: function (id, label) {
       this.checkLabel(label);
@@ -823,12 +857,63 @@
       // other press appeared dead.
       var cur = Sienna.userData.get(this.path + '/' + map + '/' + id + '/label');
       if ((cur || '') === (label || '')) return;
+      var follow = cur && label ? this._followRename(id, cur, label) : [];
       Sienna.actions.dispatch(
         { type: 'diagram.setLabel', target: this.path, payload: { id: id, label: label } },
         function () {
-          Sienna.userData.set(self.path + '/' + map + '/' + id + '/label', label || '');
+          Sienna.userData.batch(function () {
+            Sienna.userData.set(self.path + '/' + map + '/' + id + '/label', label || '');
+            follow.forEach(function (w) { Sienna.userData.set(w.ref, w.value); });
+          });
         }
       );
+    },
+
+    /**
+     * The writes that carry a rename of `id` from `was` to `now` through its
+     * influences and the equations they feed (see `setLabel`): `[{ref, value}]`.
+     */
+    _followRename: function (id, was, now) {
+      var model = Sienna.userData.get(this.path) || {};
+      var arcs = model.arcs || {};
+      var nodes = model.nodes || {};
+      var schema = this.schema();
+      var self = this;
+      var out = [];
+      var rewritten = {};   // target id + field -> text so far (two arrows, one target)
+      Object.keys(arcs).forEach(function (arcId) {
+        var arc = arcs[arcId];
+        if (arc.from !== id || arc.type !== 'influence') return;
+        if (Diagram.bareAlias(model, arc) !== was) return;   // a name the modeller chose
+        if (arc.alias != null) {
+          out.push({
+            ref: self.path + '/arcs/' + arcId + '/alias',
+            value: String(arc.alias).replace(was, now),
+          });
+        }
+        var target = nodes[arc.to] || (model.submodels || {})[arc.to];
+        if (!target || !Sienna.equation) return;
+        var spec = String(arc.to).indexOf('submodel') === 0
+          ? schema.submodel : (schema.nodes || {})[target.type];
+        ((spec && spec.fields) || []).forEach(function (f) {
+          if (!/^expression/.test(f.type)) return;
+          var key = arc.to + '/' + f.name;
+          var text = key in rewritten ? rewritten[key] : (target.props || {})[f.name];
+          if (typeof text !== 'string' || !text) return;
+          var next = renameIn(text, was, now);
+          if (next === text) return;
+          rewritten[key] = next;
+        });
+      });
+      Object.keys(rewritten).forEach(function (key) {
+        var parts = key.split('/');
+        var to = parts[0];
+        out.push({
+          ref: self.path + '/' + mapOf(to) + '/' + to + '/props/' + parts[1],
+          value: rewritten[key],
+        });
+      });
+      return out;
     },
 
     /**
@@ -853,11 +938,14 @@
         this.checkSiblingName(id, c.label);   // the dialog renames through here too
       }
       var base = this.path + '/' + map + '/' + id;
+      var was = Sienna.userData.get(base + '/label');
+      var follow = c.label && was && c.label !== was ? this._followRename(id, was, c.label) : [];
 
       Sienna.actions.dispatch(
         { type: 'diagram.setProperties', target: this.path, payload: { id: id, fields: Object.keys(c.props || {}) } },
         function () {
           if (c.label !== undefined) Sienna.userData.set(base + '/label', c.label || '');
+          follow.forEach(function (w) { Sienna.userData.set(w.ref, w.value); });
           Object.keys(c.direct || {}).forEach(function (k) {
             Sienna.userData.set(base + '/' + k, c.direct[k]);
           });

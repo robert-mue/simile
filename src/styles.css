@@ -318,6 +318,14 @@ text.slx-incomplete {
   z-index: 5;
 }
 
+.slx-label-edit--bad,
+.slx-label-edit--bad:focus {
+  outline-color: #b23b3b;
+  border-color: #b23b3b;
+  box-shadow: 0 0 0 2px rgba(178, 59, 59, 0.25);
+  color: #b23b3b;
+}
+
 .slx-flash {
   position: absolute;
   left: 50%;
@@ -507,6 +515,11 @@ text.slx-incomplete {
   color: #666;
   min-height: 1.4em;
 }
+/* The panel is sized to its contents once, when it opens: a row that grows
+   later must not be squeezed under its neighbours. */
+.slx-run > * {
+  flex-shrink: 0;
+}
 
 /* A failed load is the one thing here the user must not miss: the play
    button will simply be dead until it is dealt with. */
@@ -570,15 +583,20 @@ text.slx-incomplete {
 }
 
 .slx-run-fields {
-  border-collapse: collapse;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
   margin: 0 10px 8px;
 }
-.slx-run-fields td {
-  padding: 2px 4px 2px 0;
+.slx-run-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #444;
+  white-space: nowrap;
 }
 .slx-run-fields input {
-  width: 76px;
+  width: 64px;
   font: inherit;
   padding: 2px 4px;
   border: 1px solid #ccd2da;
@@ -587,7 +605,6 @@ text.slx-incomplete {
 }
 .slx-run-unit {
   color: #888;
-  margin-left: 5px;
 }
 
 /* --- spatial grid ---------------------------------------------------- */

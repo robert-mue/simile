@@ -29,8 +29,15 @@
    * persists — a title that renumbered itself as neighbours came and went would
    * not be an identifier at all.
    */
+  /** What a model is called — its name, which may be changed; else its id. */
+  function modelName(subjectPath) {
+    if (!subjectPath) return '';
+    var doc = Sienna.userData.get(subjectPath);
+    return (doc && doc.name) || String(subjectPath).split('/').pop();
+  }
+
   function panelTitle(subjectPath, widget) {
-    var id = subjectPath ? String(subjectPath).split('/').pop() : '';
+    var id = modelName(subjectPath);
     var taken = {};
     app.panels().forEach(function ($p) {
       if ($p.panel('ref') !== subjectPath) return;
@@ -51,12 +58,15 @@
    * and went, would not be an identifier at all.
    */
   function hasSchemeTitle($p) {
-    var widget = app.widgetOf($p);
-    var ref = $p.panel('ref') || '';
-    var id = ref ? ref.split('/').pop() : '';
-    var prefix = (id ? id + ': ' : '') + widget + '/';
+    return schemeNumber($p, modelName($p.panel('ref') || '')) != null;
+  }
+
+  /** The `n` of a title `<prefix>: <widget>/<n>`, or null if it is not one. */
+  function schemeNumber($p, name) {
+    var prefix = (name ? name + ': ' : '') + app.widgetOf($p) + '/';
     var title = $p.panel('title') || '';
-    return title.indexOf(prefix) === 0 && /^\d+$/.test(title.slice(prefix.length));
+    var rest = title.slice(prefix.length);
+    return title.indexOf(prefix) === 0 && /^\d+$/.test(rest) ? rest : null;
   }
 
   /**
@@ -71,7 +81,12 @@
     var widget = app.widgetOf($p);
     if (!widget || widget === 'container') return;
     if (hasSchemeTitle($p)) return;
-    $p.panel('title', panelTitle($p.panel('ref') || '', widget));
+    var ref = $p.panel('ref') || '';
+    // Titled after the model's id, as panels were before a model could be
+    // renamed: the same title under its name, number kept.
+    var n = ref ? schemeNumber($p, ref.split('/').pop()) : null;
+    if (n != null) { $p.panel('title', modelName(ref) + ': ' + widget + '/' + n); return; }
+    $p.panel('title', panelTitle(ref, widget));
   }
 
   // Every panel as it appears, from any depth. Not while restoring: a restored
@@ -552,7 +567,14 @@
     {
       label: 'Help',
       items: [
-        // Plain text, oldest first, in a tab of its own.
+        // Help pages open in a tab of their own, beside the app rather than over it.
+        {
+          label: 'Tutorials',
+          items: [
+            { label: 'Bank account', onSelect: function () { window.open('help/tutorials/bank-account.html', '_blank'); } },
+          ],
+        },
+        // Plain text, oldest first.
         { label: 'Release notes', onSelect: function () { window.open('RELEASES.txt', '_blank'); } },
       ],
     },

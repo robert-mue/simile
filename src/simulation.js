@@ -98,6 +98,34 @@
     return Math.min(run, steps * log);
   }
 
+  /**
+   * The run settings a modeller chose, per model, so loading a model again —
+   * after an edit, or another day — does not put them back to the model's
+   * defaults. Kept beside the models rather than inside them: they are how
+   * this person likes to run it, not part of what the model says.
+   */
+  var SETTINGS_KEY = 'simile.runSettings.v1';
+
+  /** A model's Prolog without its first line, which is stamped with the time. */
+  function essence(prolog) {
+    return String(prolog).replace(/^source\(.*\)\.\n/, '');
+  }
+  var KEPT = ['runLength', 'updateEach', 'logEach', 'timeStep'];
+
+  function rememberedFor(key) {
+    var all = (Sienna.persistence && Sienna.persistence.readJSON(SETTINGS_KEY)) || {};
+    return key && all[key] ? all[key] : null;
+  }
+
+  function remember(key, settings) {
+    if (!key || !Sienna.persistence) return;
+    var all = Sienna.persistence.readJSON(SETTINGS_KEY) || {};
+    var keep = {};
+    KEPT.forEach(function (k) { keep[k] = settings[k]; });
+    all[key] = keep;
+    Sienna.persistence.writeJSON(SETTINGS_KEY, all);
+  }
+
   var Simulation = {
     SERVER: SERVER,
     keyOf: keyOf,
@@ -327,6 +355,11 @@
           logEach: logEach,
           timeStep: String(self.params.phaseList),
         };
+        // What the modeller set last time for this model, over its defaults.
+        var kept = rememberedFor(self._settingsKey());
+        if (kept) {
+          KEPT.forEach(function (k) { if (kept[k] != null) self.settings[k] = kept[k]; });
+        }
         if (self.params.errLimit == null) self.params.errLimit = 0;
         self._emit({ type: 'settings' });
 
@@ -377,6 +410,10 @@
       return this.unload().then(function () {
         self.modelLink = model.name || model.id || path;
         self.modelPath = path;
+        // What the engine was given, to tell later whether the model has been
+        // edited since. The Prolog, not the .sml: the .sml wraps it in MIME
+        // with a fresh random boundary each time.
+        self._loadedText = essence(Sienna.exportSimile.prolog(model));
         self._setStatus('loading', 'Uploading model…');
 
         var fd = new FormData();
@@ -408,6 +445,8 @@
       // failed leaves a claim behind and no base, and the next load is not it.
       this.modelPath = null;
       this.loadedFor = null;
+      this._loadedText = null;
+      this._runStep = null;
       if (!this.base) return Promise.resolve();
       var dead = this.base;
       this.base = null;
@@ -432,10 +471,15 @@
       this._running = false;
       var note = this.noteList();
       var current = this.params ? parseFloat(this.params.resetTo) : 0;
+      // The step a run is made with is fixed here, at its start. The engine
+      // takes a new step one request late — a change made at the start of a
+      // run gave 320.18 for a first year that is 320 — so a change waits for
+      // the next reset rather than being half applied (see `start`).
+      this._runStep = String(this.settings.timeStep);
 
       return this._post('Reset', {
         current: current * this.timeUnit,
-        step: this._scaleTimes(this.settings.timeStep),
+        step: this._scaleTimes(this._runStep),
         method: this.params.intMethod,
         // -2 on the first reset of a session is what SimiLive sends, and the
         // server takes it as "initialise everything"; later resets are 0.
@@ -473,13 +517,78 @@
      * Run from the current time for `runLength`. The loop is here rather than
      * in the widget because two display panels must not each be driving it.
      */
-    start: function () {
+    start: function (justLoaded) {
+      var self = this;
       if (!this.base || this._running) return;
+
+      // Edited since it was loaded: ▶ means "run what I have drawn", so load
+      // it again first — as Simile's Run rebuilds before it runs. The run
+      // settings come back with it (`remember`), and plots rebind by name.
+      if (!justLoaded && this.isStale()) {
+        this._reload().then(function () { self.start(true); }, function () { /* reported */ });
+        return;
+      }
+      // A time step changed before anything has run: start again with it, so
+      // the whole run is made with the step it shows.
+      if (this.stepPending() && this.atStart()) {
+        this.reset().then(function () { self.start(); }, function () { /* reported */ });
+        return;
+      }
+
       this._running = true;
       this._runStart = Number(this.settings.current);
       this._runEnd = this._runStart + Number(this.settings.runLength);
       this._setStatus('running', '');
       this._step();
+    },
+
+    /** True while nothing has been run since the last reset. */
+    atStart: function () {
+      var from = this.params ? parseFloat(this.params.resetTo) : 0;
+      return Number(this.settings.current) === from;
+    },
+
+    /** A time step has been typed that the run in progress is not using. */
+    stepPending: function () {
+      return !!this.base && this._runStep != null
+        && String(this.settings.timeStep).trim() !== this._runStep;
+    },
+
+    /** Change one run setting, and remember it for this model. */
+    setSetting: function (key, value) {
+      this.settings[key] = value;
+      remember(this._settingsKey(), this.settings);
+      this._emit({ type: 'settings' });
+    },
+
+    _settingsKey: function () {
+      return this.modelPath || (this.modelLink ? 'server:' + this.modelLink : null);
+    },
+
+    /**
+     * One of our models, edited since it was loaded. Compared as what would be
+     * sent — so moving an element about, which changes nothing the engine
+     * sees, does not count. A model that will not export counts as changed:
+     * reloading it is how the modeller gets told why.
+     */
+    isStale: function () {
+      if (!this.base || !this.modelPath || this._loadedText == null) return false;
+      var model = Sienna.userData.get(this.modelPath);
+      if (!model) return false;
+      try {
+        return essence(Sienna.exportSimile.prolog(model)) !== this._loadedText;
+      } catch (e) {
+        return true;
+      }
+    },
+
+    /** Load the same model again, keeping whose session it is. */
+    _reload: function () {
+      var owner = this.loadedFor;
+      var p = this.loadOwn(this.modelPath);
+      // `loadOwn` begins with a synchronous unload, which drops the claim.
+      this.loadedFor = owner;
+      return p;
     },
 
     /** Stop after the chunk in flight. `settings.current` is left where it is. */
@@ -507,7 +616,7 @@
       this._post('ExecuteMulti', {
         runlength: interval * this.timeUnit,
         current: current * this.timeUnit,
-        step: this._scaleTimes(this.settings.timeStep),
+        step: this._scaleTimes(this._runStep),
         method: this.params.intMethod,
         log: Number(this.settings.logEach) * this.timeUnit,
         errLimit: this.params.errLimit,
@@ -679,6 +788,11 @@
       unload: function () { return mine() ? sim.unload() : Promise.resolve(); },
       reset: function () { return mine() ? sim.reset() : Promise.resolve(); },
       start: function () { if (mine()) sim.start(); },
+      setSetting: function (key, value) { return sim.setSetting(key, value); },
+      stepPending: function () { return mine() && sim.stepPending(); },
+      atStart: function () { return sim.atStart(); },
+      isStale: function () { return mine() && sim.isStale(); },
+      get modelPath() { return mine() ? sim.modelPath : null; },
       stop: function () { if (mine()) sim.stop(); },
       subscribe: function (fn) {
         return sim.subscribe(function (e) {

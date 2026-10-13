@@ -82,6 +82,14 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
       this._followCurrent();
     });
 
+    // An edit to the loaded model changes what ▶ will do (it reloads first),
+    // so the status line says so. After the edit settles: comparing means
+    // exporting the model, which is not for every keystroke.
+    this._unsubEdits = Sienna.userData.subscribe('models', () => {
+      clearTimeout(this._staleTimer);
+      this._staleTimer = setTimeout(() => this._syncStatus(), 400);
+    });
+
     this._followCurrent();
     this._syncAll();
   },
@@ -145,15 +153,18 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
   },
 
   _buildFields() {
-    const table = $('<table class="slx-run-fields">').appendTo(this.element);
+    // Fields wrap, several to a line, rather than one per row: a column of
+    // five left the run control so tall that the Displays under it, in a
+    // Simulation window of ordinary height, were too small for the plotter's
+    // own toolbar — it became a thumbnail before it had been used.
+    const box = $('<div class="slx-run-fields">').appendTo(this.element);
     this._inputs = {};
 
     this._FIELDS.forEach(([label, key, title]) => {
-      const row = $('<tr>').attr('title', title).appendTo(table);
-      $('<td>').text(label).appendTo(row);
-      const cell = $('<td>').appendTo(row);
-      const input = $('<input type="text">').appendTo(cell);
-      $('<label class="slx-run-unit">').appendTo(cell);
+      const row = $('<label class="slx-run-field">').attr('title', title).appendTo(box);
+      $('<span class="slx-run-label">').text(label).appendTo(row);
+      const input = $('<input type="text">').appendTo(row);
+      $('<span class="slx-run-unit">').appendTo(row);
       this._inputs[key] = input;
 
       // Commit on change, not on every keystroke: half a typed number is a
@@ -282,13 +293,19 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
    * refused by putting the old one back rather than by an alert.
    */
   _commit(key, raw) {
+    let value;
     if (key === 'timeStep') {
-      this._sim.settings.timeStep = String(raw).trim();
+      value = String(raw).trim();
+      if (!value) return this._syncFields();
     } else {
-      const n = parseFloat(raw);
-      if (!isFinite(n)) return this._syncFields();
-      this._sim.settings[key] = n;
+      value = parseFloat(raw);
+      if (!isFinite(value)) return this._syncFields();
     }
+    if (value === this._sim.settings[key]) return undefined;
+    // Through the session, which remembers it for this model: loading the
+    // model again (after an edit, say) keeps what was typed here.
+    this._sim.setSetting(key, value);
+    this._syncStatus();
     return undefined;
   },
 
@@ -340,7 +357,15 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     if (!sim.base) return 'No model loaded.';
     const what = sim.modelLink + (sim.params ? ' — ' + sim.params.intMethod : '');
     if (sim.status === 'running') return 'Running ' + what;
-    return (sim.message ? sim.message + ' — ' : 'Ready — ') + what;
+    let text = (sim.message ? sim.message + ' — ' : 'Ready — ') + what;
+    // Said, not just done: either would otherwise look like ▶ misbehaving.
+    // On the same line: the panel is sized to its contents when it opens,
+    // and a second line has nowhere to go.
+    if (sim.isStale()) text += '. Edited since loaded: ▶ loads it again first.';
+    else if (sim.stepPending() && !sim.atStart()) {
+      text += '. New time step: used from the next start (■).';
+    }
+    return text;
   },
 
   _syncFields() {
@@ -367,6 +392,8 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
   _destroy() {
     if (this._unsub) this._unsub();
     if (this._unsubData) this._unsubData();
+    if (this._unsubEdits) this._unsubEdits();
+    clearTimeout(this._staleTimer);
     this.element.removeClass('slx-run').empty();
   },
 });

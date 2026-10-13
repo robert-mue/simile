@@ -212,6 +212,26 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._draw();
   },
 
+  /**
+   * After a (re)load, point each trace at the component of the same name in
+   * the model now loaded — ids are the engine's and need not survive a
+   * rebuild — and drop any that the model no longer has.
+   */
+  _rebind() {
+    const byLabel = {};
+    this._sim.scalarComponents().forEach((c) => { byLabel[c.label] = c; });
+    this._series.slice().forEach((s) => {
+      const c = byLabel[s.label];
+      if (!c) { this._remove(s.id); return; }
+      s.pts.length = 0;
+      if (c.id === s.id) return;
+      this._sim.removeTarget(this._owner + ':' + s.id);
+      s.id = c.id;
+      this._sim.addTarget(this._owner + ':' + s.id, s.id);
+    });
+    this._renderLegend();
+  },
+
   _clear() {
     this._series.slice().forEach((s) => this._remove(s.id));
   },
@@ -221,6 +241,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
   _onEvent(e) {
     switch (e.type) {
       case 'describe':
+        this._rebind();
         this._syncComponents();
         break;
       case 'data': {
@@ -233,7 +254,10 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
         break;
       }
       case 'status':
-        if (!this._sim.base) { this._clear(); this._syncComponents(); }
+        // Traces outlive the session: loading the model again (▶ does, after
+        // an edit) must not take away what the modeller chose to plot. They
+        // are matched up again by name when the next model is described.
+        if (!this._sim.base) this._syncComponents();
         this._draw();
         break;
       default: break;

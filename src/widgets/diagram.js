@@ -1459,25 +1459,63 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       .css({ left, top })
       .appendTo(this.element);
 
+    // What is wrong with the name as typed, or null. The name is also the
+    // equation name, so the naming rule is imposed rather than repaired: a
+    // space is refused, not quietly turned into an underscore, and the box
+    // says so as it is typed — not only after Enter has thrown the name away.
+    const problem = (text) => {
+      try {
+        d.checkLabel(text);
+        d.checkSiblingName(id, text);
+        return null;
+      } catch (err) {
+        // The commonest refusal by far is a space, from habit or from older
+        // Simile; say what to type instead.
+        const fix = /\s/.test(text) ? text.replace(/\s+/g, '_') : null;
+        return err.message + (fix && !problemOf(fix) ? ' Try "' + fix + '".' : '');
+      }
+    };
+    const problemOf = (text) => {
+      try { d.checkLabel(text); d.checkSiblingName(id, text); return false; } catch (e) { return true; }
+    };
+    const showProblem = () => {
+      const text = String(input.val() || '').trim();
+      const why = text && text !== el.label ? problem(text) : null;
+      input.toggleClass('slx-label-edit--bad', !!why).attr('title', why || null);
+    };
+
     let live = false;
-    const commit = (save) => {
+    // `insist`: Enter on a refused name keeps the box open to be put right.
+    // Leaving it any other way (a press elsewhere, focus going) cannot wait,
+    // so the old name stays and the reason is shown.
+    const commit = (save, insist) => {
       if (!input.parent().length) return;
       const text = String(input.val() || '').trim();
+      const why = save && text !== el.label ? problem(text) : null;
+      if (why && insist) {
+        this._flash(why);
+        input[0].focus({ preventScroll: true });
+        return;
+      }
       input.remove();
       this.element[0].removeEventListener('pointerdown', pressElsewhere, true);
       if (!save) return;
-      try {
-        d.setLabel(id, text);
-      } catch (err) {
-        this._flash(err.message);                 // the schema refused the name
+      if (why) this._flash(why);
+      else {
+        try {
+          d.setLabel(id, text);
+        } catch (err) {
+          this._flash(err.message);               // the schema refused the name
+        }
       }
       this._render();
     };
     input.on('keydown', (e) => {
       e.stopPropagation();
-      if (e.key === 'Enter') commit(true);
+      if (e.key === 'Enter') commit(true, true);
       else if (e.key === 'Escape') commit(false);
     });
+    input.on('input', showProblem);
     // Only honour a blur once the field has actually held focus: the mouseup of
     // the very click that created the element would otherwise blur it away
     // before the user can type.
