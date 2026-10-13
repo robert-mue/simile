@@ -1519,6 +1519,43 @@ it has its own classes now, and only the tab's contents scroll, so the tabs
 and OK stay in view. And bringing a window forward from View ▸ Windows now
 makes its model current, as a click does (sienna).
 
+**47. Tutorial 3, Trees: populations run, plot and stand on the ground**
+*(2026-10-13)*
+`help/tutorials/trees.html`, Help ▸ Tutorials ▸ Trees — all four stages built
+and run from a fresh user, 12 screenshots. It is the first tutorial with a
+population submodel, and it needed:
+
+- **A lollipop display** (`src/widgets/lollipop.js`, Widgets ▸ Lollipop
+  diagram), Simile's helper rebuilt: choose x, y and size (variables called
+  that are chosen already); each member stands at (x, y) on a gridded ground,
+  its stick as tall as its size and its ball a third of that, drawn back to
+  front; **turn** and **tilt** sliders (Simile's view angle and elevation) or
+  drag; point at a tree for its values. Orthographic, so sizes compare anywhere.
+- **The plotter draws a population as a line per member** (Simulation
+  `memberComponents`, `dims` `['MEMBERS',0]`). The engine sends `{member:
+  value}` with keys kept for life — measured on `indivpop1` — so lines are
+  joined by key. End label gives the count, the tooltip count and range. A
+  trace now follows a variable boxed into a submodel (`size` → `tree/size`)
+  when its last name is unique.
+- **The population symbols export.** Their meanings were the open question
+  (NOTE-questions A2); the tutorial uses three by name, which answers it:
+  `creation` (initial number), `immigration` (arrivals per time unit — our
+  "Migration condition" label was wrong), `loss`. The palette and dialog now
+  call them by Simile's names (schema `label`). Round trip **60 of 72**
+  identical (was 54); every refusal left is an unfinished element in its
+  source file, bar `feeding1`'s association.
+- **A list leaving a population exports.** The editor names an influence
+  after its source (`size`), but leaving a population it is a list, which
+  Simile writes `{size}`. When the receiving equation already says `{size}`
+  (`sum({size})`), the exporter brackets the alias (`aliasFor`); the dialog's
+  Variables list now offers `{size}` (`Diagram.asWritten`), so the name
+  clicked is the one that exports. Matches `indivpop1`'s
+  `use(none,in_hierarchy,{one},list(1))`.
+- The population symbols got an invisible hit box: the zigzag is all gaps,
+  and a double-click at its middle fell through to the canvas.
+
+Not done, noted in the page: submodel background colour.
+
 ---
 
 ## Known gaps and loose ends

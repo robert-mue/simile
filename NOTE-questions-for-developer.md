@@ -71,7 +71,18 @@ are the `obsolete` and `ancestor(0)` entries we see in some `references` lists �
 must we ever emit them? (c) Anything different about a self-association (both
 relation arcs from the same base, as in `ranking1`) that we would not see there?
 
-## A2 — The population symbols *(spellings ANSWERED 2026-08-13; semantics still need you)*
+## A2 — The population symbols *(spellings ANSWERED 2026-08-13; meanings largely answered 2026-10-13)*
+
+**Update 2026-10-13: the Trees tutorial answers most of this.** It uses three
+of the symbols by name, so their meanings no longer need asking: a `creation`
+symbol of 5 "is used to specify the initial number of trees"; an `immigration`
+symbol of 2 means "two new trees are created every year" — a RATE, confirming
+(b): our "Migration condition" label was wrong, and is now "Arrivals per time
+unit"; and a `loss` symbol `size>17` removes a tree when true. We now emit all
+four, and the palette names three of them as Simile does (creation,
+immigration, loss). What remains of (c) is only the probability reading of
+`loss` (`0.6`): whether a number below 1 is a chance per time unit. We label
+the field "Removal rate or condition" meanwhile.
 
 **Answered by observation.** Simile 7.4, re-saving `ranking1`, `johadP` and
 `prime`, writes `creation`, `loss`, `immigration` and `alarm` **unchanged**. The

@@ -697,6 +697,50 @@ text.slx-incomplete {
   color: #888;
 }
 
+/* --- lollipop diagram ------------------------------------------------ */
+
+.slx-lolly {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  font: 12px/1.4 system-ui, sans-serif;
+  background: #fff;
+}
+.slx-lolly-bar select {
+  font: inherit;
+  padding: 2px 4px;
+  border: 1px solid #ccd2da;
+  border-radius: 3px;
+  background: #fff;
+  max-width: 150px;
+}
+.slx-lolly-slider { width: 110px; }
+.slx-lolly-view {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.slx-lolly-canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.slx-lolly-canvas:active { cursor: grabbing; }
+.slx-lolly-note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 16px;
+  color: #667;
+  pointer-events: none;
+}
+
 /* --- plotter ---------------------------------------------------------
    Chart chrome is deliberately recessive: hairline grid, muted ticks, and
    ink-coloured text throughout. A series colour appears only as a mark or as

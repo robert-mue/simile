@@ -150,7 +150,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
           .appendTo(bar);
         return;
       }
-      add('node', t, t);
+      add('node', t, spec.label || t);
     });
     add('submodel', 'submodel', 'submodel');
 
@@ -663,6 +663,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const x2 = b.cx + w / 2, y2 = b.cy + h / 2;
     const line = (d) => g.appendChild(this._el('path', { class: 'slx-glyph-line', d }));
     const solid = (d) => g.appendChild(this._el('path', { d }));
+    // The whole symbol is the target, not just its strokes: the zigzag is
+    // nothing but two-unit lines, and a double-click aimed at its middle fell
+    // through to the canvas, so its dialog would not open (Trees tutorial).
+    g.appendChild(this._el('rect', {
+      class: 'slx-hit-box', x: x1 - 2, y: y1 - 2, width: w + 4, height: h + 4,
+    }));
 
     switch (b.shape) {
       case 'sprout':                     // initialiser: something coming up

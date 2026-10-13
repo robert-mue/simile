@@ -39,6 +39,17 @@
  * per point would be wasteful, so draws are coalesced into an animation frame.
  * A reset clears the traces, since the run they belonged to no longer happened.
  *
+ * ## Populations
+ *
+ * A variable in a population submodel has a value per member, and members
+ * come and go. It is plotted as ONE series drawn as many lines — a line per
+ * member, from when it appears to when it goes, all in the series' colour —
+ * which is what Simile's plotter shows and what the Trees tutorial asks the
+ * modeller to read: each line a tree, its slope that tree's growth rate, its
+ * end that tree's death. The engine keys each member's value by a number the
+ * member keeps for life, so the lines are joined by key (`s.lines`), never by
+ * position in the reply, which shifts every time a member goes.
+ *
  * Classic script, injected on demand by the widget registry.
  */
 $.widget('sienna.plotter', $.sienna.widgetBase, {
@@ -74,7 +85,8 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     // the one loaded (Simulation.viewFor).
     this._sim = Sienna.Simulation.viewFor(this._ref());
     this._owner = this._panelId() || ('plot' + Math.random().toString(36).slice(2));
-    this._series = [];      // {id, label, slot, pts: [[t,v],…]}
+    this._series = [];      // {id, label, slot, pts: [[t,v],…]} — or, for a
+                            // population, many: true and lines: {member: pts}
     this._used = {};        // slot index -> taken
 
     this._buildBar();
@@ -148,16 +160,58 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     const was = this._pick.val();
     this._pick.empty();
     const list = this._sim.scalarComponents();
+    const members = this._sim.memberComponents ? this._sim.memberComponents() : [];
 
-    if (!list.length) {
-      $('<option>').val('').text(this._sim.base ? '(no single-valued variables)' : '(no model loaded)')
+    if (!list.length && !members.length) {
+      $('<option>').val('').text(this._sim.base ? '(nothing to plot)' : '(no model loaded)')
         .appendTo(this._pick);
       return;
     }
-    list.forEach((c) => {
-      $('<option>').val(c.id).text(c.label).appendTo(this._pick);
+    // Two groups only when there are both, so a model without a population
+    // shows the plain list it always did.
+    const group = (title, items) => {
+      const into = list.length && members.length
+        ? $('<optgroup>').attr('label', title).appendTo(this._pick) : this._pick;
+      items.forEach((c) => $('<option>').val(c.id).text(c.label).appendTo(into));
+    };
+    group('Single values', list);
+    group('A line for each member', members);
+    if (was && list.concat(members).some((c) => c.id === was)) this._pick.val(was);
+  },
+
+  /** Is this component a value per member of a population? */
+  _isMembers(id) {
+    const c = (this._sim.components || {})[id] || {};
+    const dims = c.dims || [];
+    return dims.length === 2 && dims[0] === 'MEMBERS';
+  },
+
+  /** Every run of points a series draws: one, or one per member. */
+  _tracks(s) {
+    return s.many ? Object.keys(s.lines).map((k) => s.lines[k]) : [s.pts];
+  },
+
+  /** Record one reported value — a number, or a population's {member: number}. */
+  _record(s, t, v) {
+    if (!s.many) {
+      const n = Number(v);
+      if (isFinite(n)) s.pts.push([t, n]);
+      return;
+    }
+    s.now = 0;
+    s.at = t;
+    if (!v || typeof v !== 'object') return;          // an empty population
+    Object.keys(v).forEach((k) => {
+      const n = Number(v[k]);
+      if (!isFinite(n)) return;
+      (s.lines[k] || (s.lines[k] = [])).push([t, n]);
+      s.now++;
     });
-    if (was && list.some((c) => c.id === was)) this._pick.val(was);
+  },
+
+  _forget(s) {
+    s.pts.length = 0;
+    if (s.many) { s.lines = {}; s.now = 0; s.at = null; }
   },
 
   /** The lowest unclaimed palette slot — identity, so it outlives its neighbours. */
@@ -186,15 +240,16 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
       units: comp.units || '',
       slot,
       pts: [],
+      many: this._isMembers(id),
+      lines: {},
     };
     this._series.push(s);
     this._sim.addTarget(this._owner + ':' + id, id);
 
     // Show something at once rather than waiting for the model to be stepped.
     this._sim.query([id]).then((values) => {
-      if (!this._series.includes(s) || s.pts.length) return;
-      const v = Number(values[id]);
-      if (isFinite(v)) s.pts.push([Number(this._sim.settings.current), v]);
+      if (!this._series.includes(s) || this._tracks(s).some((p) => p.length)) return;
+      this._record(s, Number(this._sim.settings.current), values[id]);
       this._draw();
     }).catch(() => { /* the trace simply starts when the model next steps */ });
 
@@ -219,11 +274,22 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
    */
   _rebind() {
     const byLabel = {};
-    this._sim.scalarComponents().forEach((c) => { byLabel[c.label] = c; });
+    this._sim.scalarComponents().concat(this._sim.memberComponents ? this._sim.memberComponents() : [])
+      .forEach((c) => { byLabel[c.label] = c; });
+    // Failing the full name, the last part of it when only one variable has
+    // that: boxing a model into a submodel turns `size` into `tree/size`, and
+    // the modeller's plot should follow it there rather than go blank.
+    const byTail = {};
+    Object.keys(byLabel).forEach((label) => {
+      const tail = this._short(label);
+      byTail[tail] = byTail[tail] === undefined ? byLabel[label] : null;
+    });
     this._series.slice().forEach((s) => {
-      const c = byLabel[s.label];
+      const c = byLabel[s.label] || byTail[this._short(s.label)];
       if (!c) { this._remove(s.id); return; }
-      s.pts.length = 0;
+      s.label = c.label;
+      this._forget(s);
+      s.many = this._isMembers(c.id);
       if (c.id === s.id) return;
       this._sim.removeTarget(this._owner + ':' + s.id);
       s.id = c.id;
@@ -245,11 +311,8 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
         this._syncComponents();
         break;
       case 'data': {
-        if (e.reset) this._series.forEach((s) => { s.pts.length = 0; });
-        this._series.forEach((s) => {
-          const v = Number(e.values[s.id]);
-          if (isFinite(v)) s.pts.push([e.time, v]);
-        });
+        if (e.reset) this._series.forEach((s) => this._forget(s));
+        this._series.forEach((s) => this._record(s, e.time, e.values[s.id]));
         this._schedule();
         break;
       }
@@ -298,12 +361,17 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
   _domain() {
     let x0 = Infinity; let x1 = -Infinity; let y0 = Infinity; let y1 = -Infinity;
     this._series.forEach((s) => {
-      s.pts.forEach((p) => {
+      this._tracks(s).forEach((pts) => pts.forEach((p) => {
         if (p[0] < x0) x0 = p[0];
         if (p[0] > x1) x1 = p[0];
         if (p[1] < y0) y0 = p[1];
         if (p[1] > y1) y1 = p[1];
-      });
+      }));
+      // A population that has emptied still has a time: keep the axis moving.
+      if (s.many && s.at != null) {
+        if (s.at < x0) x0 = s.at;
+        if (s.at > x1) x1 = s.at;
+      }
     });
     if (!isFinite(x0)) return null;
 
@@ -409,6 +477,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     const ends = [];
 
     this._series.forEach((s) => {
+      if (s.many) { this._drawMembers(s, marks, ends, sx, sy); return; }
       if (s.pts.length < 1) return;
       const colour = this._PALETTE[s.slot];
       const step = Math.max(1, Math.ceil(s.pts.length / this.options.drawCap));
@@ -461,6 +530,51 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._renderLegend();
   },
 
+  /**
+   * A population: a thinner line per member, so a crowd of them stays
+   * readable, and one end label for the series at the middle of the members
+   * still there, saying how many that is.
+   */
+  _drawMembers(s, marks, ends, sx, sy) {
+    const colour = this._PALETTE[s.slot];
+    const m = this._M;
+    const ih = this._plot.ih;
+    let sum = 0;
+    let alive = 0;
+    Object.keys(s.lines).forEach((k) => {
+      const pts = s.lines[k];
+      if (!pts.length) return;
+      const step = Math.max(1, Math.ceil(pts.length / this.options.drawCap));
+      let dstr = '';
+      for (let i = 0; i < pts.length; i += step) {
+        dstr += (dstr ? 'L' : 'M') + sx(pts[i][0]).toFixed(1) + ',' + sy(pts[i][1]).toFixed(1);
+      }
+      const last = pts[pts.length - 1];
+      dstr += 'L' + sx(last[0]).toFixed(1) + ',' + sy(last[1]).toFixed(1);
+      marks.appendChild(this._el('path', {
+        d: dstr, fill: 'none', stroke: colour, 'stroke-width': 1.25, 'stroke-opacity': 0.85,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      }));
+      if (last[0] === s.at) { sum += last[1]; alive++; }
+    });
+    if (!alive) return;
+    ends.push({
+      y: Math.max(m.top + 4, Math.min(m.top + ih - 2, sy(sum / alive))),
+      colour,
+      text: this._short(s.label) + ' (' + alive + ')',
+    });
+  },
+
+  /** The values a population has at time t, or null if it had none then. */
+  _membersAt(s, t) {
+    const vals = [];
+    Object.keys(s.lines).forEach((k) => {
+      const p = s.lines[k].find((q) => Math.abs(q[0] - t) < 1e-9);
+      if (p) vals.push(p[1]);
+    });
+    return vals;
+  },
+
   /** Caption paths are long; the tail is the part that identifies the variable. */
   _short(label) {
     const parts = String(label).split('/').filter(Boolean);
@@ -476,8 +590,12 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
       const row = $('<span class="slx-plot-key">').appendTo(this._legend);
       $('<span class="slx-plot-swatch">').css('background', this._PALETTE[s.slot]).appendTo(row);
       $('<span class="slx-plot-name">').text(s.label).appendTo(row);
-      const last = s.pts[s.pts.length - 1];
-      if (last) $('<span class="slx-plot-val">').text(this._fmt(last[1])).appendTo(row);
+      if (s.many) {
+        if (s.at != null) $('<span class="slx-plot-val">').text(s.now + (s.now === 1 ? ' member' : ' members')).appendTo(row);
+      } else {
+        const last = s.pts[s.pts.length - 1];
+        if (last) $('<span class="slx-plot-val">').text(this._fmt(last[1])).appendTo(row);
+      }
       $('<button type="button" class="slx-plot-drop">').attr('title', 'Remove this trace').text('×')
         .appendTo(row).on('click', () => this._remove(s.id));
     });
@@ -502,13 +620,25 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
 
     const rows = [];
     let snapped = null;
+    // Snap to the nearest logged time of any series; a population's times
+    // are those of its members, so they are gathered from every line.
     this._series.forEach((s) => {
+      this._tracks(s).forEach((pts) => pts.forEach((p) => {
+        if (snapped == null || Math.abs(p[0] - t) < Math.abs(snapped - t)) snapped = p[0];
+      }));
+    });
+    if (snapped == null) return this._unhover();
+    this._series.forEach((s) => {
+      if (s.many) {
+        const vals = this._membersAt(s, snapped);
+        rows.push({ s, many: vals });
+        return;
+      }
       if (!s.pts.length) return;
       let best = 0;
       for (let i = 1; i < s.pts.length; i++) {
-        if (Math.abs(s.pts[i][0] - t) < Math.abs(s.pts[best][0] - t)) best = i;
+        if (Math.abs(s.pts[i][0] - snapped) < Math.abs(s.pts[best][0] - snapped)) best = i;
       }
-      if (snapped == null) snapped = s.pts[best][0];
       rows.push({ s, p: s.pts[best] });
     });
     if (snapped == null) return this._unhover();
@@ -523,8 +653,14 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     rows.forEach((r) => {
       const row = $('<div class="slx-plot-tip-row">').appendTo(this._tip);
       $('<span class="slx-plot-swatch">').css('background', this._PALETTE[r.s.slot]).appendTo(row);
-      // Values lead, labels follow.
-      $('<b>').text(this._fmt(r.p[1])).appendTo(row);
+      // Values lead, labels follow. A population gives its count and range.
+      if (r.many) {
+        const v = r.many;
+        $('<b>').text(v.length ? v.length + ': ' + this._fmt(Math.min(...v))
+          + (v.length > 1 ? '–' + this._fmt(Math.max(...v)) : '') : 'none').appendTo(row);
+      } else {
+        $('<b>').text(this._fmt(r.p[1])).appendTo(row);
+      }
       $('<span class="slx-plot-name">').text(this._short(r.s.label)).appendTo(row);
     });
 

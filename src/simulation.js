@@ -707,6 +707,31 @@
     },
 
     /**
+     * Components with one number per member of a population — `dims` is
+     * `['MEMBERS', 0]`. The engine sends one as an object keyed by member
+     * (`{"2": 3, "3": 1.6}`), and a member keeps its key for as long as it
+     * exists, so a display can follow each one through time: a line per tree on
+     * a plot, a lollipop per tree on the ground. Members of a population inside
+     * another multi-instance submodel are not offered — their value is nested
+     * a level deeper, and nothing here draws that yet.
+     */
+    memberComponents: function () {
+      var comps = this.components;
+      if (!comps) return [];
+      return Object.keys(comps).filter(function (id) {
+        var c = comps[id];
+        var dims = c.dims || [];
+        return c.type !== 'VALUELESS' && dims.length === 2 && dims[0] === 'MEMBERS';
+      }).map(function (id) {
+        return {
+          id: id,
+          label: displayName(comps[id]),
+          units: comps[id].units || '',
+        };
+      }).sort(function (a, b) { return a.label.localeCompare(b.label); });
+    },
+
+    /**
      * Components that could be shown on a spatial grid: a value-bearing
      * variable two dimensions deep. `dims` is [rows, cols, 0] for a scalar per
      * cell and [rows, cols, n, 0] for an array per cell, so the width is only
@@ -790,6 +815,7 @@
       get settings() { return sim.settings; },
       get unitName() { return sim.unitName; },
       scalarComponents: function () { return mine() ? sim.scalarComponents() : []; },
+      memberComponents: function () { return mine() ? sim.memberComponents() : []; },
       gridCandidates: function () { return mine() ? sim.gridCandidates() : []; },
       addTarget: function (owner, spec) { return sim.addTarget(owner, spec); },
       removeTarget: function (owner) { return sim.removeTarget(owner); },

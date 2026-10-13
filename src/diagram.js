@@ -392,6 +392,23 @@
    * equation parser reports a reference. Usually one; one per role across an
    * association.
    */
+  /**
+   * `name` as an equation has to write it when the influence leaves a
+   * population (`{size}`) or a fixed membership (`[size]`): one pair of
+   * brackets per such submodel it comes out of, since there it is a list.
+   * The exporter writes the alias the same way (`aliasFor`), so a name
+   * inserted from the property dialog is the one that exports.
+   */
+  Diagram.asWritten = function (model, arc, name) {
+    var out = Diagram.crossings(model, arc.from, arc.to).out || [];
+    out.forEach(function (sub) {
+      var kind = ((model.submodels || {})[sub] || {}).kind;
+      if (kind === 'population') name = '{' + name + '}';
+      else if (kind === 'fixed-membership') name = '[' + name + ']';
+    });
+    return name;
+  };
+
   Diagram.namesSuppliedBy = function (model, arcId) {
     var arc = (model.arcs || {})[arcId];
     if (!arc || arc.type !== 'influence') return [];

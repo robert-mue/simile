@@ -57,7 +57,10 @@ footing (`src/widgets/grid.js` is the first).
   the specification of the mapping; the importer reads it backwards. Menu:
   `Simile ▸ Import model… / Export current model…`.
 - `src/simulation.js` — the SimiLive session layer (no DOM): upload, compile,
-  step, query. Its results feed the `plotter` and `grid` widgets. ONE session:
+  step, query. Its results feed the `plotter`, `grid` and `lollipop` widgets
+  (a population variable is sent as `{member: value}`, keys kept for a
+  member's life: the plotter draws a line per member, `lollipop` a lollipop at
+  x, y as tall as size). ONE session:
   panels bound to a model (`ref`) see it through `Simulation.viewFor(ref)`,
   which shows it only while it is that model's (`loadedFor` / `modelPath`), so
   another model's run control and displays read "no model loaded".

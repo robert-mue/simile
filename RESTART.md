@@ -73,7 +73,7 @@ trip was last measured 2026-08-29, after the naming change:
 
 | | |
 |---|---|
-| catalogue round trip | **54 of 72 identical, 0 differ, 18 refused, 1 lossy import** |
+| catalogue round trip | **60 of 72 identical, 0 differ, 12 refused, 1 lossy import** |
 | fixtures | 6 of 6 reach a fixed point and audit clean *(re-run 2026-09-09, green)* |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
 

@@ -52,6 +52,16 @@
     role: 'display',
   });
 
+  // Simile's lollipop diagram: the members of a population standing on the
+  // ground at (x, y), each as tall as its size.
+  reg.register('lollipop', {
+    src: 'src/widgets/lollipop.js',
+    label: 'Lollipop diagram',
+    title: 'Lollipop diagram',
+    workingSize: { width: 640, height: 560 },
+    role: 'display',
+  });
+
   reg.register('grid', {
     src: 'src/widgets/grid.js',
     label: 'Spatial grid',

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: Trees</title>
+  <link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<main>
+
+<h1>Individual-based modelling of a population of trees</h1>
+<p class="byline">Tutorial 3 &middot; Trees. Adapted for Simile on the web from the Simulistics tutorial by Robert Muetzelfeldt.</p>
+
+<p>The main aim of this tutorial is to introduce you to individual-based modelling.</p>
+
+<p>System Dynamics (or &ldquo;compartment-flow&rdquo;) modelling generally does not represent individuals in a population. Instead, all the individuals are lumped together and represented by a single value: the number of individuals in a population, the total weight of all the individuals, or the total amount of some substance they contain (water, carbon or nitrogen, for example).</p>
+
+<p>However, there are many situations when it is important to represent each individual in the population separately. For example, the behaviour of the whole population may be partly a product of interactions between individuals, or between individuals and their environment.</p>
+
+<p>In this tutorial, we will look at how to model a population in terms of a set of individuals &mdash; in this case, trees. We will not consider how to handle interactions. However, we will see how to specify a set of individuals, how to give them individual behaviour (growth), and how to represent the creation of new trees and the death of existing ones.</p>
+
+<p>It assumes you have done <a href="bank-account.html">Tutorial 1, Bank account</a>, and know how to add stocks, flows, variables and influences, open an element's properties dialog, and run a model.</p>
+
+<nav class="contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#stage1">Stage 1: Modelling the growth of a single tree</a></li>
+    <li><a href="#stage2">Stage 2: Extending the model to represent a population of trees</a></li>
+    <li><a href="#stage3">Stage 3: Calculating aggregate information</a></li>
+    <li><a href="#stage4">Stage 4: Visualising the trees in space</a></li>
+  </ol>
+</nav>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage1">Stage 1: Modelling the growth of a single tree</h2>
+
+<p>Start with <span class="ui">File &rsaquo; New model</span>, then <span class="ui">File &rsaquo; Rename model&hellip;</span> and call it <code>Trees</code>.</p>
+
+<h3>Step 1</h3>
+<p>Add a <span class="ui">stock</span> to the diagram, and name it <code>size</code>. Leave plenty of room above it: by the end of the tutorial, several more things go there.</p>
+
+<h3>Step 2</h3>
+<p>Draw a <span class="ui">flow</span> into the <em>size</em> stock, from empty space on its left, and name it <code>growth</code>.</p>
+
+<h3>Step 3</h3>
+<p>Add a <span class="ui">variable</span> above the <em>growth</em> flow, and name it <code>gr</code>.</p>
+<p>The variable <em>gr</em> represents the maximum rate of growth of the tree.</p>
+
+<h3>Step 4</h3>
+<p>Draw an <span class="ui">influence</span> arrow from both the <em>size</em> stock and <em>gr</em> to the <em>growth</em> flow (its valve).</p>
+<p>Your model diagram should now look like this:</p>
+
+<figure>
+  <img src="img/trees/s1-diagram.png" alt="A stock, size, with an inflow, growth, from a cloud; a variable gr above; influences from size and gr to growth" width="477" height="294">
+  <figcaption>Stage 1: the diagram.</figcaption>
+</figure>
+
+<h3>Step 5</h3>
+<p>Enter the following expression for the <em>growth</em> flow: <code>gr*(1-size/25)</code></p>
+<p>In this expression, the value 25 is the maximum size the tree will reach. Its growth rate will fall from the maximum given by <em>gr</em> at the start of the simulation. This form of mathematical expression is a convenient way of achieving the behaviour we want: rapid initial growth, slowing as the final maximum size is approached.</p>
+
+<h3>Step 6</h3>
+<p>Set the initial value for the <em>size</em> stock to <code>3</code>.</p>
+
+<h3>Step 7</h3>
+<p>Set the value for the variable <em>gr</em> to <code>0.2</code>.</p>
+
+<h3>Step 8</h3>
+<p>Prepare the model for running: in the Simulation window, click <span class="ui">load</span>.</p>
+
+<h3>Step 9</h3>
+<p>Set up a plotter for the <em>size</em> stock: <span class="ui">Widgets &rsaquo; Plotter</span>, choose <code>size</code>, and click <span class="ui">add</span>.</p>
+
+<h3>Step 10</h3>
+<p>Run the model with <span class="ui">&#9654;</span>, for the 50 years it offers.</p>
+
+<figure>
+  <img src="img/trees/s1-run.png" alt="The model beside its simulation; the size plot rises from 3 to just over 10 in 50 years" width="1280" height="713">
+  <figcaption>Stage 1: one tree, growing.</figcaption>
+</figure>
+
+<p>The tree grows from 3 to just over 10 in 50 years, its growth slowing a little as it goes. (To see the model and the results side by side, as here, choose <span class="ui">View &rsaquo; Arrange windows &rsaquo; This model beside its simulation</span>.)</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage2">Stage 2: Extending the model to represent a population of trees</h2>
+
+<h3>Step 1</h3>
+<p>Draw a submodel box to completely enclose your model diagram:</p>
+<ul>
+  <li>click the <span class="ui">submodel</span> tool on the toolbar;</li>
+  <li>move the mouse to empty space at the top left of your model diagram, well above <em>gr</em>;</li>
+  <li>drag the mouse (that is, hold down the mouse button and move the mouse) to the bottom right of your model diagram;</li>
+  <li>release the mouse button.</li>
+</ul>
+<p>Everything inside the box you draw goes into the submodel.</p>
+
+<h3>Step 2</h3>
+<p>Name the submodel <code>tree</code>: as soon as you release the mouse, you are typing its name.</p>
+<p>This submodel will represent a population of trees. However, rather than calling it &ldquo;trees&rdquo;, it is conventional to name the class of objects after one individual, so here we call it &ldquo;tree&rdquo;.</p>
+
+<figure>
+  <img src="img/trees/s2-boxed.png" alt="The Stage 1 diagram inside a submodel box named tree, with empty space above gr" width="600" height="548">
+  <figcaption>The model inside the <em>tree</em> submodel.</figcaption>
+</figure>
+
+<h3>Step 3</h3>
+<p>Open the submodel's properties dialog: double-click on an empty part of the submodel, inside its box.</p>
+
+<h3>Step 4</h3>
+<p>Set <span class="ui">Membership</span> to <span class="ui">Population</span>. (Older versions of Simile called this &ldquo;Using population symbols&rdquo;.) You may need to scroll the dialog down to see it.</p>
+
+<figure>
+  <img src="img/trees/s2-dlg-population.png" alt="The submodel properties dialog, named tree, with Membership set to Population" width="593" height="543">
+  <figcaption>Making <em>tree</em> a population.</figcaption>
+</figure>
+
+<h3>Step 5</h3>
+<p>Click <span class="ui">OK</span> to close the dialog.</p>
+<p class="note"><strong>Not yet in the web version</strong> The original tutorial also chooses a background colour for the submodel here. Submodels cannot be coloured yet.</p>
+
+<p>Note that the submodel boundary now has an extra line along the top-and-left, and another along the bottom-and-right. This is a visual signal that Simile now treats it as a <em>population submodel</em>: one whose members come and go.</p>
+
+<h3>Step 6</h3>
+<p>Change the expression for <em>gr</em> from its current value (<code>0.2</code>) to <code>rand_const(0.1,0.3)</code></p>
+<p>Since we will now be simulating the growth of several trees, we are giving each one a different growth rate, randomly selected between 0.1 and 0.3. This could reflect, for example, differences in the soil conditions where each tree grows, or genetic differences between trees.</p>
+
+<h3>Step 7</h3>
+<p>Add a <span class="ui">creation</span> symbol to the submodel, near its top, name it <code>initial</code>, and give it a value of <code>5</code>.</p>
+<p>This is used to specify the initial number of trees (that is, the number at time zero). If we didn't put this into our model, then our population would start off empty, with no trees.</p>
+
+<h3>Step 8</h3>
+<p>Add an <span class="ui">immigration</span> symbol beside it, name it <code>recruitment</code>, and give it a value of <code>2</code>.</p>
+<p>We are stating that two new trees are created every year.</p>
+
+<h3>Step 9</h3>
+<p>Add a <span class="ui">loss</span> symbol, and name it <code>death</code>.</p>
+
+<h3>Step 10</h3>
+<p>Draw an <span class="ui">influence</span> arrow from the <em>size</em> stock to this symbol.</p>
+<p>Your model diagram should now look like this:</p>
+
+<figure>
+  <img src="img/trees/s2-diagram.png" alt="The tree population submodel with three symbols along its top: initial, recruitment and death; an influence from size up to death" width="624" height="572">
+  <figcaption>Stage 2: the population symbols.</figcaption>
+</figure>
+
+<h3>Step 11</h3>
+<p>Enter the expression <code>size&gt;17</code> for the symbol named <em>death</em>.</p>
+<p>This states that a tree will &ldquo;die&rdquo; (be removed from the model) when its size exceeds 17.</p>
+
+<h3>Step 12</h3>
+<p>Set <span class="ui">Execute for</span> to <code>100</code>, and run the model again with <span class="ui">&#9654;</span>. You have changed the model since it was loaded, so the run control loads it again first.</p>
+
+<figure>
+  <img src="img/trees/s2-run.png" alt="The size plot now has a line for each tree: lines start at 3 at different times and rise at different slopes; the steepest stop at 17" width="1280" height="713">
+  <figcaption>Stage 2: a line for each tree.</figcaption>
+</figure>
+
+<p>You should see multiple lines on the graph. Each line represents the growth of a single tree. Note that each line has a different slope, since each tree has a randomly different growth rate (as determined by the variable <em>gr</em>). Note also that each year two new trees are created, and that trees disappear when their size exceeds 17 &mdash; the fastest-growing ones reach it in about 85 years. The label at the end of the lines says how many trees there are.</p>
+
+<p>Your plot from Stage 1 carried on working: <em>size</em> is now <em>tree/size</em>, a value for every tree, and the plotter draws a line for each. Point at the plot to see how many trees there were at that time, and the smallest and largest size among them.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage3">Stage 3: Calculating aggregate information</h2>
+
+<h3>Step 1</h3>
+<p>Add a <span class="ui">variable</span> outside the <em>tree</em> submodel, and name it <code>total</code>.</p>
+
+<h3>Step 2</h3>
+<p>Draw an <span class="ui">influence</span> arrow from the <em>size</em> stock inside the <em>tree</em> submodel to the variable <em>total</em>.</p>
+<p>Your model diagram should now look like this:</p>
+
+<figure>
+  <img src="img/trees/s3-diagram.png" alt="The variable total outside the submodel, with an influence from size crossing the submodel boundary to it" width="734" height="572">
+  <figcaption>Stage 3: an influence leaving the population.</figcaption>
+</figure>
+
+<p>Notice how the influence arrow crosses the submodel boundary.</p>
+
+<h3>Step 3</h3>
+<p>Enter the expression <code>sum({size})</code> for the variable <em>total</em>.</p>
+
+<figure>
+  <img src="img/trees/s3-dlg-total.png" alt="The properties dialog for total; its Variables list offers {size}, from tree/size" width="593" height="543">
+  <figcaption>The dialog offers <code>{size}</code>: a list of sizes, one per tree.</figcaption>
+</figure>
+
+<p>Be very careful to get the brackets right. The outer (round) brackets enclose the argument for the built-in function <code>sum( )</code>, which can find the total value of an array or a list. In this case, we want the <code>sum( )</code> function to find the total value of a list of <em>size</em> values, one for each tree. It's a &ldquo;list&rdquo; rather than an &ldquo;array&rdquo; of values, because the number of trees (and hence the number of values to be summed) is not fixed, but changes over time. Simile uses braces <code>{&hellip;}</code> to denote a list, and square brackets <code>[&hellip;]</code> to denote an array.</p>
+
+<p>The dialog's Variables list shows the name in braces already, <code>{size}</code>, because it knows the arrow comes out of a population: clicking it puts in exactly what to type.</p>
+
+<h3>Step 4</h3>
+<p>Re-build the model: click <span class="ui">load</span> in the Simulation window. The plotter offers only what is in the model loaded, so this is what makes <em>total</em> available to plot.</p>
+
+<h3>Step 5</h3>
+<p>Call up a plotter for the variable <em>total</em>: <span class="ui">Widgets &rsaquo; Plotter</span>, choose <code>total</code>, and click <span class="ui">add</span>. To see both plots at once, click the <span class="ui">Arrange contents</span> button on the Displays titlebar and choose <span class="ui">Tiled side by side</span>.</p>
+
+<h3>Step 6</h3>
+<p>Set <span class="ui">Execute for</span> to <code>300</code>, and run the model again.</p>
+
+<figure>
+  <img src="img/trees/s3-run.png" alt="Two plots: the size of every tree over 300 years, and total, rising smoothly to about 3000 and then wandering around that value" width="1280" height="713">
+  <figcaption>Stage 3: the total size of all the trees.</figcaption>
+</figure>
+
+<p>In addition to the plot for the growth of individual trees, you should see a graph with a single line for the total size of all the trees, rising smoothly, then bouncing around an asymptotic value. Why does it show this behaviour? First, trees are growing and more are being added, with none dying. Later, the growth of existing trees and the addition of new (small) ones is balanced by the sporadic death of big trees. The top of the curve is not smooth because the time it takes for a tree to die depends on its growth rate, which is randomly determined.</p>
+
+<p>Your numbers will not be exactly those in the pictures: every run gives the trees new random growth rates.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="stage4">Stage 4: Visualising the trees in space</h2>
+
+<h3>Step 1</h3>
+<p>Add two <span class="ui">variable</span>s inside the <em>tree</em> submodel, and name them <code>x</code> and <code>y</code>.</p>
+
+<figure>
+  <img src="img/trees/s4-diagram.png" alt="Two new variables, x and y, inside the tree submodel, shown in red because they have no values yet" width="734" height="572">
+  <figcaption>Stage 4: <em>x</em> and <em>y</em> added.</figcaption>
+</figure>
+
+<h3>Step 2</h3>
+<p>Enter the following expression for the variable <em>x</em>: <code>rand_const(0,50)</code></p>
+<p>We imagine a 1 hectare plot, with the trees on the left-hand side: that is, their x-coordinate is between 0 and 50 m. The actual x-coordinate for each tree is randomly determined.</p>
+
+<h3>Step 3</h3>
+<p>Enter the following expression for the variable <em>y</em>: <code>rand_const(0,100)</code></p>
+<p>The trees can be anywhere between the front and the back of the 1 hectare plot. Hence, the y-coordinate for each tree is randomly determined between 0 and 100 m.</p>
+
+<h3>Step 4</h3>
+<p>Re-build the model: click <span class="ui">load</span>.</p>
+
+<h3>Step 5</h3>
+<p>Call up the lollipop display: <span class="ui">Widgets &rsaquo; Lollipop diagram</span>. It needs three variables, chosen in the three lists along its top: <span class="ui">x</span>, <span class="ui">y</span> and <span class="ui">size</span>. Because our variables are called <em>x</em>, <em>y</em> and <em>size</em>, it has chosen them already; in a model whose variables are named differently, you choose them yourself.</p>
+<p>You should see a gridded area, with five lollipops on it, representing the five trees created at initialisation time. To give it more room, maximise the Simulation window with the <span class="ui">&#9633;</span> button on its titlebar.</p>
+
+<figure>
+  <img src="img/trees/s4-lolly-t0-big.png" alt="The lollipop diagram: a gridded square seen at an angle, x along the front edge and y up the left edge, with five small lollipops on it" width="1280" height="713">
+  <figcaption>Stage 4: the five trees at the start.</figcaption>
+</figure>
+
+<h3>Step 6</h3>
+<p>Run the model again.</p>
+<p>Now you can see the trees growing, new trees being created, and trees dying off when they reach the threshold height. Note that we have not changed the mathematical nature of the model. All we have done is to change the way we visualise its behaviour &mdash; but this has a dramatic effect on our appreciation of what's going on.</p>
+
+<figure>
+  <img src="img/trees/s4-lolly-run.png" alt="After 300 years, a dense stand of lollipops of many sizes on the left half of the plot" width="1280" height="713">
+  <figcaption>Stage 4: the stand after 300 years (here with the Displays area maximised too).</figcaption>
+</figure>
+
+<p>Each lollipop is one tree: it stands at the tree's <em>x</em> and <em>y</em>, and both its height and the size of its ball come from the tree's <em>size</em>. To look at the plot from another direction, use the <span class="ui">turn</span> and <span class="ui">tilt</span> sliders, or drag across the picture; <span class="ui">reset view</span> puts it back. Point at a tree to see its values.</p>
+
+<p>That completes the tutorial.</p>
+
+</main>
+</body>
+</html>

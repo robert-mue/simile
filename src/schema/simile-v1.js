@@ -134,9 +134,16 @@
         { name: 'expr', label: 'Condition', type: 'expression', required: true,
           help: 'The submodel exists for a member when this is true.' },
       ] },
-      initialiser:  { has_label: true,  fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true }] },
-      migrator:     { has_label: true,  fields: [{ name: 'expr', label: 'Migration condition', type: 'expression', required: true }] },
-      exterminator: { has_label: true,  fields: [{ name: 'expr', label: 'Removal condition', type: 'expression', required: true }] },
+      // `label` is what the palette and the dialog call a type when it is not
+      // the type's own name. These three are named for Simile's words —
+      // creation, immigration, loss: the tutorials and every Simile modeller
+      // use them, and the type names are only ours.
+      initialiser:  { has_label: true,  label: 'creation', fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true }] },
+      // Immigration is a RATE (new members per time unit: Trees has 2 a year,
+      // AntsWorld 0.1), and loss a chance per time unit or a condition, which
+      // is 1 when true (Trees: `size>17`; animal1: 0.6).
+      migrator:     { has_label: true,  label: 'immigration', fields: [{ name: 'expr', label: 'Arrivals per time unit', type: 'expression', required: true }] },
+      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Removal rate or condition', type: 'expression', required: true }] },
       reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Number of offspring', type: 'expression', required: true }] },
 
       // ---- event-based modelling: DECLARED, NOT IMPLEMENTED ----

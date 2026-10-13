@@ -277,7 +277,13 @@
         seen[name] = true;
         // Where it comes from, named as seen from here: `S1/a` when it lives in
         // another submodel, plain `a` when it is a neighbour.
-        out.push({ name: name, from: d.relativeName(arc.from, id) || from.label || arc.from });
+        out.push({
+          name: name,
+          from: d.relativeName(arc.from, id) || from.label || arc.from,
+          // What to type: `{size}` for one that comes out of a population.
+          insert: Sienna.Diagram.rolesCrossedBy(d.model(), a).length
+            ? name : Sienna.Diagram.asWritten(d.model(), arc, name),
+        });
       });
     });
     return out;
@@ -307,7 +313,7 @@
         var also = n.from && n.from !== n.name
           ? '<span class="slx-influence-from">' + esc(n.from) + '</span>' : '';
         return '<li><button type="button" class="slx-influence" data-insert="'
-          + esc(n.name) + '">' + esc(n.name) + '</button>' + also + '</li>';
+          + esc(n.insert || n.name) + '">' + esc(n.insert || n.name) + '</button>' + also + '</li>';
       }).join('') + '</ul>';
     }
     // **Variables**, not Simile's "Parameters". Matching Simile's layout is
@@ -519,7 +525,7 @@
     var $back = $('<div class="slx-dlg-backdrop">').appendTo($host);
     var $dlg = $(
       '<div class="slx-dlg slx-dlg-tabbed" role="dialog" aria-modal="true">'
-      + '<h2>' + esc(typeName) + '</h2>'
+      + '<h2>' + esc(((schema.nodes || {})[typeName] || {}).label || typeName) + '</h2>'
       // Name sits ABOVE the tabs: it is the element's identity, and its own
       // equation name (§14), not a property of one tab among several.
       + '<div class="slx-dlg-row"><label for="fld-label">Name</label>'

@@ -199,10 +199,16 @@
    * How our node types map onto Simile's. A `valve` is deliberately absent: it
    * becomes an attached function plus the flow arc's name, never a node.
    *
-   * The population symbols are left out because their Simile spellings are not
-   * confirmed — `forest.sml` shows `loss` and `immigration`, which are probably
-   * two of ours, but guessing which would produce a model that loads and means
-   * something else. Refusing says so; guessing would not.
+   * The population symbols were left out until their meaning was confirmed,
+   * because guessing which of ours was Simile's `loss` and which `immigration`
+   * would have produced a model that loads and means something else. The
+   * spellings were settled by the 2026 re-save, and the meaning by the Trees
+   * tutorial (2026-10-13), which uses three of them by name: a `creation`
+   * symbol "used to specify the initial number of trees", an `immigration`
+   * symbol of 2 meaning "two new trees are created every year", and a `loss`
+   * symbol `size>17` that removes a tree. That is our initialiser, migrator
+   * and exterminator, as the importer had inferred. All four carry `units=1`
+   * in every catalogue file, `loss` included (`0.6`, `m`).
    */
   var NODE_TYPE = {
     // OUR type on the left, SIMILE's on the right, and they differ for the one
@@ -219,6 +225,10 @@
     // The spelling is confirmed: Simile 7.4 re-saving `prime.pl` writes
     // `alarm` unchanged (2026-08-13).
     alarm: 'alarm',
+    initialiser: 'creation',
+    migrator: 'immigration',
+    exterminator: 'loss',
+    reproduction: 'reproduction',
   };
 
   /**
@@ -296,8 +306,9 @@
         // An outward crossing of a multi-instance submodel produces a LIST, and
         // the alias has to say so, because the consumer's equation uses the
         // alias verbatim. Adding the brackets here would silently disagree with
-        // the equation the modeller wrote.
-        var alias = (a.alias || '').trim();
+        // the equation the modeller wrote — unless the equation already uses
+        // them (`aliasFor`).
+        var alias = self.aliasFor(a);
 
         // An association crossing renames: our one alias becomes one name per
         // role, `<alias>_<role>`, because Simile needs a name per end. So the
@@ -446,6 +457,31 @@
     },
 
     /** How many list-making boundaries an influence leaves — 0 for a scalar. */
+    /**
+     * The alias an influence is written with. Ours as held — except that one
+     * leaving a population or fixed membership arrives as a list, which Simile
+     * writes `{size}` (`[size]` for a fixed membership), and the editor names
+     * an influence after its source, plainly. When the equation receiving it
+     * already says `{size}`, as the Trees tutorial's `sum({size})` does, the
+     * modeller has told us which they mean, and the alias takes the brackets.
+     * When it does not, the alias is left alone for `check` to report.
+     */
+    aliasFor: function (a) {
+      var self = this;
+      var alias = String(a.alias || (this.m.nodes[a.from] || {}).label || '').trim();
+      if (!alias || /^[{[]/.test(alias)) return alias;
+      var left = this.crossings(a.from, a.to).out.filter(function (sub) { return self.isMulti(sub); });
+      if (!left.length) return alias;
+      var wrapped = alias;
+      left.forEach(function (sub) {
+        var fixed = ((self.m.submodels || {})[sub] || {}).kind === 'fixed-membership';
+        wrapped = fixed ? '[' + wrapped + ']' : '{' + wrapped + '}';
+      });
+      var to = this.m.nodes[a.to] || {};
+      var eq = String((to.props || {})[this.exprField(to.type)] || '');
+      return eq.indexOf(wrapped) >= 0 ? wrapped : alias;
+    },
+
     listCrossings: function (from, to) {
       var self = this;
       return this.crossings(from, to).out.filter(function (s) {
@@ -749,7 +785,7 @@
       if (pair) {
         role = this.assocRole(a, pair, cross, id);
       } else {
-        var alias = a.alias || (this.m.nodes[a.from] || {}).label || '';
+        var alias = this.aliasFor(a);
         var dim = '1';
         for (var i = 0; i < this.listCrossings(a.from, a.to); i++) dim = 'list(' + dim + ')';
         role = 'use(none,in_hierarchy,' + aliasTerm(alias) + ',' + dim + ')';
