@@ -643,24 +643,31 @@
     },
 
     /**
-     * How `source` is named as seen from `target`: plainly, `a`, when they sit
-     * in the same submodel; otherwise with the path of submodels that leads
-     * down to it from the deepest submodel the two share — `S1/a` for an `a`
-     * in S1 seen from S2. The path is relative, so it never starts with `/`,
-     * and an element at a level the target sits inside is named plainly too:
-     * it is not in a submodel outside the target's.
+     * How `source` is named as seen from `target` — like a file path, relative
+     * or absolute:
+     *   - **inside** the target's own submodel (beside it, or further in):
+     *     relative, `a` or `S3/f`. Nothing else can be meant: the path starts
+     *     where the target stands.
+     *   - **outside** it: absolute, from the top of the model, with a leading
+     *     slash — `/c` for a top-level `c`, `/S1/a` for an `a` in S1.
+     * A path relative to anything but the target's own submodel would be
+     * ambiguous (Robert, 2026-10-13): S2 may hold a `c` of its own, or a
+     * submodel of its own called S1, so `c` or `S1/a` seen from S2 could name
+     * either. At the top level everything is inside, so a flat model never
+     * shows a slash.
      */
     relativeName: function (source, target) {
-      var common = this.nearestCommonAncestor(source, target);
-      var path = [];
+      var home = this.parentOf(target);
       var up = this.ancestorsOf(source);
-      for (var i = 0; i < up.length && up[i] !== common; i++) {
+      var inside = home == null || up.indexOf(home) >= 0;
+      var path = [];
+      for (var i = 0; i < up.length && (!inside || up[i] !== home); i++) {
         var sub = this.get(up[i]) || {};
         path.unshift(sub.label || up[i]);
       }
       var el = this.get(source) || {};
       path.push(el.label || source);
-      return path.join('/');
+      return (inside ? '' : '/') + path.join('/');
     },
 
     /**
