@@ -25,7 +25,7 @@
 
     // 1. The stock the flow runs into. (x/y are layout only — the model
     //    itself is position-free; see DESIGN-diagram.md §6.)
-    var biomass = d.addNode('stock', { label: 'biomass', x: 340, y: 220, w: 36, h: 24,
+    var biomass = d.addNode('stock', { label: 'biomass', x: 340, y: 220, w: 25, h: 17,
       props: { initial: '10' } });
 
     // 2. The flow. Drawn from blank space, so its source cloud is auto-created,

@@ -652,28 +652,31 @@
     // colours and fonts arrive with the renderer.
     // Sizes are 60% of the first draft: the glyphs were chunky relative to the
     // spacing between them, which is what a diagram's scale really means here.
+    // Then 70% of THAT (2026-10-13, format 3): a new or small model, fitted at
+    // the zoom cap, still drew glyphs too large beside text of the right size.
+    // Text is not scaled with them; stored stock sizes are (Diagram.migrate).
     style: {
-      stock:        { shape: 'rect',    resizable: true,  w: 36, h: 24 },
-      variable:     { shape: 'circle',  resizable: false, w: 18, h: 18 },
-      cloud:        { shape: 'cloud',   resizable: false, w: 24, h: 16 },
-      valve:        { shape: 'valve',   resizable: false, w: 12, h: 12 },
-      condition:    { shape: 'diamond', resizable: false, w: 18, h: 18 },
+      stock:        { shape: 'rect',    resizable: true,  w: 25, h: 17 },
+      variable:     { shape: 'circle',  resizable: false, w: 12.6, h: 12.6 },
+      cloud:        { shape: 'cloud',   resizable: false, w: 16.8, h: 11.2 },
+      valve:        { shape: 'valve',   resizable: false, w: 8.4, h: 8.4 },
+      condition:    { shape: 'diamond', resizable: false, w: 12.6, h: 12.6 },
       // The four population symbols. Shapes follow Simile's toolbar icons —
       // a sprouting mound, a wandering zigzag, an egg, an axe — reduced to
       // strokes that survive being zoomed out (§6). Until 2026-08-06 these had
       // no entry at all and fell through to the renderer's default circle,
       // indistinguishable from a variable and from each other.
-      initialiser:  { shape: 'sprout',  resizable: false, w: 18, h: 16 },
-      migrator:     { shape: 'zigzag',  resizable: false, w: 20, h: 12 },
-      reproduction: { shape: 'egg',     resizable: false, w: 15, h: 19 },
-      exterminator: { shape: 'axe',     resizable: false, w: 18, h: 18 },
+      initialiser:  { shape: 'sprout',  resizable: false, w: 12.6, h: 11.2 },
+      migrator:     { shape: 'zigzag',  resizable: false, w: 14, h: 8.4 },
+      reproduction: { shape: 'egg',     resizable: false, w: 10.5, h: 13.3 },
+      exterminator: { shape: 'axe',     resizable: false, w: 12.6, h: 12.6 },
       // `alarm` is not implemented (see the vocabulary above) but it IS drawn,
       // because a model imported from Simile may contain one and losing it
       // silently is worse than showing something we cannot yet edit. A bell,
       // for want of Simile's own icon — a guess about appearance only, not
       // about meaning, and the one shape here that has not been checked
       // against the real toolbar.
-      alarm:        { shape: 'bell',    resizable: false, w: 17, h: 18 },
+      alarm:        { shape: 'bell',    resizable: false, w: 11.9, h: 12.6 },
       // A submodel's MEMBERSHIP KIND is drawn, not just stored (ruled
       // 2026-08-06, on building the reference models: the three kinds were
       // indistinguishable, though how many instances a submodel has is

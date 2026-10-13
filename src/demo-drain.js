@@ -47,7 +47,7 @@
     });
 
     var store = d.addNode('stock', {
-      label: 'store', parent: tank, x: 400, y: 240, w: 40, h: 26,
+      label: 'store', parent: tank, x: 400, y: 240, w: 28, h: 18,
       props: { initial: '0' },
     });
 

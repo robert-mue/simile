@@ -40,7 +40,7 @@
     });
 
     var wealth = d.addNode('stock', {
-      label: 'wealth', parent: farmer, x: 150, y: 160, w: 40, h: 26,
+      label: 'wealth', parent: farmer, x: 150, y: 160, w: 28, h: 18,
       props: { initial: '100' },
     });
 
@@ -73,7 +73,7 @@
     });
 
     d.addNode('stock', {
-      label: 'area', parent: field, x: 560, y: 160, w: 40, h: 26,
+      label: 'area', parent: field, x: 560, y: 160, w: 28, h: 18,
       props: { initial: '2.5' },
     });
 

@@ -117,8 +117,8 @@
     node('other_fires', 'variable', 'conditional_fire', 646, 762);
 
     // fire_patch
-    node('fuel_load', 'stock', 'fire_patch', 288, 375, { w: 36, h: 24 });
-    node('fuel_load_lost', 'stock', 'fire_patch', 672, 400, { w: 36, h: 24 });
+    node('fuel_load', 'stock', 'fire_patch', 288, 375, { w: 25, h: 17 });
+    node('fuel_load_lost', 'stock', 'fire_patch', 672, 400, { w: 25, h: 17 });
     var burningLosses = d.addFlow({
       from: N.fuel_load, to: N.fuel_load_lost, parent: S.fire_patch,
       label: 'burning_losses', x: 438, y: 205,
@@ -170,7 +170,7 @@
     node('n5', 'variable', 'plants', 1409, 662);
 
     // plant_species
-    node('number', 'stock', 'plant_species', 1237, 455, { w: 40, h: 30 });
+    node('number', 'stock', 'plant_species', 1237, 455, { w: 28, h: 21 });
     var repro = d.addFlow({ to: N.number, parent: S.plant_species,
       label: 'reproduction', x: 1130, y: 285, fromXY: { x: 1023, y: 288 } });
     N.reproduction = repro.valve;
@@ -190,7 +190,7 @@
     node('seeds_in', 'variable', 'plant_species', 1350, 576);
 
     // soil_water
-    node('water', 'stock', 'soil_water', 1180, 843, { w: 40, h: 32 });
+    node('water', 'stock', 'soil_water', 1180, 843, { w: 28, h: 22 });
     var rainFlow = d.addFlow({ to: N.water, parent: S.soil_water,
       label: 'rain', x: 1083, y: 636, fromXY: { x: 1035, y: 600 } });
     N.rain = rainFlow.valve;

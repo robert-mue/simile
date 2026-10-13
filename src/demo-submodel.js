@@ -40,7 +40,7 @@
 
     // --- inside PLANT ---
     var biomass = d.addNode('stock', {
-      label: 'biomass', parent: plant, x: 330, y: 220, w: 36, h: 24,
+      label: 'biomass', parent: plant, x: 330, y: 220, w: 25, h: 17,
       props: { initial: '10' },
     });
     var flow = d.addFlow({

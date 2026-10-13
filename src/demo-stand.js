@@ -38,7 +38,7 @@
     });
 
     var biomass = d.addNode('stock', {
-      label: 'biomass', parent: plant, x: 360, y: 240, w: 36, h: 24,
+      label: 'biomass', parent: plant, x: 360, y: 240, w: 25, h: 17,
       props: { initial: '1' },
     });
 

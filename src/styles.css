@@ -85,10 +85,11 @@ text.slx-incomplete {
   fill: none;
 }
 
-/* A flow carries stuff: heavy line. */
+/* A flow carries stuff: heavy line. 70% of its first weight, with the valve
+   it runs through (the glyphs shrank to 70% in format 3). */
 .slx-arc-flow {
   stroke: #222;
-  stroke-width: 2.7;
+  stroke-width: 1.9;
 }
 
 /* An influence carries information: hairline. */

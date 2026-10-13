@@ -103,7 +103,7 @@
    * It exists from the start because it cannot be added retrospectively: a file
    * already saved without a version can never be told apart from a future one.
    */
-  Diagram.FORMAT = 2;
+  Diagram.FORMAT = 3;
 
   /**
    * Node types this app has RENAMED, old spelling to new. Nothing to do with
@@ -111,6 +111,9 @@
    * `compartment` exactly as before, because that word belongs to Simile.
    */
   var LEGACY_NODE_TYPE = { compartment: 'stock' };
+
+  /** How much format 3 shrank the node glyphs by (see `migrate`). */
+  var GLYPH_SHRINK = 0.7;
 
   /**
    * Bring a stored or imported model up to the current format, in place.
@@ -134,7 +137,21 @@
       var to = node && LEGACY_NODE_TYPE[node.type];
       if (to) { node.type = to; changed = true; }
     });
-    if (changed || (model.format == null ? 1 : model.format) < Diagram.FORMAT) {
+    var from = model.format == null ? 1 : model.format;
+    // Format 3 drew the node glyphs at 70% of their old size (the schema's
+    // `style`). A stock's size is STORED — it is resizable — so a stored one
+    // shrinks with them, or every existing model would keep its old, large
+    // stocks beside new, small variables. Submodels are containers sized to
+    // what they hold, not glyphs, and keep theirs.
+    if (from < 3) {
+      Object.keys(model.nodes || {}).forEach(function (id) {
+        var g = model.layout && model.layout[id];
+        if (!g || typeof g !== 'object') return;
+        if (typeof g.w === 'number') g.w = Math.round(g.w * GLYPH_SHRINK * 10) / 10;
+        if (typeof g.h === 'number') g.h = Math.round(g.h * GLYPH_SHRINK * 10) / 10;
+      });
+    }
+    if (changed || from < Diagram.FORMAT) {
       model.format = Diagram.FORMAT;
       changed = true;
     }

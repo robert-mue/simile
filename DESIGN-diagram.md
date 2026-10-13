@@ -1037,6 +1037,15 @@ rewrites the old spelling, `FORMAT` goes to 2, and it runs both over the store
 at startup and over anything the File menu opens. The store is the only copy of
 a model a user built here; there is no file to re-import.
 
+**Format 3 shrank the glyphs, so the stored sizes shrink too.** On 2026-10-13
+every node glyph went to 70% of its size (schema `style`), with the arrowheads
+and the flow line, the text staying as it was: a new or small model, fitted at
+the zoom cap, drew glyphs too large beside labels of the right size. A stock is
+resizable, so its size is stored in layout — and an old model would otherwise
+have kept large stocks beside small variables. `migrate` therefore scales a
+format-2 model's stored node sizes by 0.7. Submodels are containers sized to
+what they hold, not glyphs, and keep theirs.
+
 **A new element is named after its type, not its id.** `stock1`, `variable2` —
 not `node5`. Naming it after the id told the modeller what the editor calls the
 thing internally, the one fact about it they have no use for. Numbering restarts

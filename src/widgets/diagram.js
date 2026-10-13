@@ -52,7 +52,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   // Arrowhead length per arc type, in world units — must match the marker
   // paths built in _buildCanvas, since the line is shortened by exactly this.
-  _ARROW_LEN: { flow: 9, influence: 6.75, role: 6.75 },
+  _ARROW_LEN: { flow: 6.3, influence: 4.725, role: 4.725 },
 
   // Sagitta as a fraction of the chord may not reach 0.5: at 0.5 the arc is a
   // semicircle, and beyond it the drawn arc is no longer the one intended.
@@ -372,8 +372,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     // Arrowheads: one marker per arc type, so the schema's styling can grow.
     const defs = this._el('defs');
-    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L9,3.75 L0,7.5 z', 9, 3.75));
-    defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.75 L6.75,3.75 L0,6.75 z', 6.75, 3.75));
+    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L6.3,2.625 L0,5.25 z', 6.3, 2.625));
+    defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.525 L4.725,2.625 L0,4.725 z', 4.725, 2.625));
     svg.appendChild(defs);
 
     // THE root transform — pan/zoom lives here and nowhere else.

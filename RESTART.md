@@ -174,8 +174,10 @@ most valuable thing this note can tell you.
   style, CSS, demos. `.pl` and `.sml` still say `compartment`, because that word
   belongs to Simile's format; both converters map through an explicit table.
 - **Stored models are migrated, not aliased.** `Diagram.migrate` rewrites the old
-  spelling, `FORMAT` is 2, and it runs over the store at startup and over
-  anything File ▸ Open reads. A file saved now is refused by an older build.
+  spelling, and it runs over the store at startup and over anything File ▸ Open
+  reads. A file saved now is refused by an older build. `FORMAT` is now 3:
+  node glyphs were shrunk to 70% (2026-10-13; text unchanged), and `migrate`
+  scales a format-2 model's stored stock sizes to match.
 - A new element is **named after its type** — `stock1`, `variable2`, not
   `node5`. Numbering restarts inside each parent (uniqueness is a sibling rule).
 - A **valve is called `flow1`**: the node is a valve and holds the rate, but what
