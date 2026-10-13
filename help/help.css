@@ -1,0 +1,83 @@
+/* Help pages (Help menu). Plain reading pages: no app scripts, opened in a tab of their own. */
+:root {
+  --ink: #1f2430;
+  --muted: #5d6475;
+  --rule: #dfe2e8;
+  --accent: #2f6f86;
+  --note-bg: #fff7e0;
+  --note-rule: #f0b429;
+  --page: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e6e8ee;
+    --muted: #a5abb8;
+    --rule: #3a404d;
+    --accent: #7cc0d8;
+    --note-bg: #3a3220;
+    --note-rule: #c9962a;
+    --page: #1b1e25;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+main {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+h1 { font-size: 30px; line-height: 1.25; margin: 8px 0 4px; }
+h2 {
+  font-size: 22px;
+  margin: 48px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+h3 { font-size: 17px; margin: 28px 0 6px; }
+.byline { color: var(--muted); margin: 0 0 24px; }
+a { color: var(--accent); }
+nav.contents {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 20px;
+}
+nav.contents ol { margin: 6px 0; padding-left: 20px; }
+figure { margin: 16px 0 20px; }
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.ui {
+  font-weight: 600;
+  white-space: nowrap;
+}
+code {
+  font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: rgba(127, 127, 127, 0.14);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.note {
+  background: var(--note-bg);
+  border-left: 4px solid var(--note-rule);
+  padding: 10px 14px;
+  margin: 16px 0;
+  border-radius: 0 6px 6px 0;
+}
+.note strong:first-child { display: block; margin-bottom: 2px; }
+table.calc { border-collapse: collapse; margin: 12px 0 20px; font-variant-numeric: tabular-nums; }
+table.calc th, table.calc td { padding: 3px 14px 3px 0; text-align: left; }
+table.calc td.n { text-align: right; }
+table.calc td.how { color: var(--muted); }
+table.calc tr.year th { padding-top: 12px; }
+table.calc tr.close td { border-top: 1px solid var(--rule); font-weight: 600; }
+.wide { overflow-x: auto; }

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: Bank account</title>
+  <link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<main>
+
+<h1>Getting started: how to build and run a simple model</h1>
+<p class="byline">Tutorial 1 &middot; Level 0 &middot; Bank account. Adapted for Simile on the web from the Simulistics tutorial by Robert Muetzelfeldt.</p>
+
+<p>This tutorial takes you through the basic steps of building and running a model in Simile: drawing the model diagram, giving it values and equations, running it, looking at the results, changing it and running it again, and saving it.</p>
+
+<nav class="contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#model">Simple bank account model</a></li>
+    <li><a href="#step1">Step 1: Starting Simile: what's on the screen</a></li>
+    <li><a href="#step2">Step 2: Making the model diagram</a></li>
+    <li><a href="#step3">Step 3: Adding initial values, parameter values and equations</a></li>
+    <li><a href="#step4">Step 4: Preparing to run the model</a></li>
+    <li><a href="#step5">Step 5: Choosing the output displays</a></li>
+    <li><a href="#step6">Step 6: Running the model</a></li>
+    <li><a href="#step7">Step 7: Repeating the model edit/run cycle</a></li>
+    <li><a href="#step8">Step 8: Saving and loading the model</a></li>
+  </ol>
+</nav>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="model">Simple bank account model</h2>
+
+<p>We will make a model for a simple bank account, with interest paid annually at a rate of 10%, and $10 taken out every year. The account initially contains $300. This is what we expect to happen:</p>
+
+<div class="wide">
+<table class="calc">
+  <tr class="year"><th colspan="4">Year 1</th></tr>
+  <tr><td>Opening balance</td><td class="n">$300.00</td><td></td><td class="how"></td></tr>
+  <tr><td>Interest paid in</td><td class="n">$30.00</td><td></td><td class="how">0.1 &times; 300</td></tr>
+  <tr><td>Withdrawal</td><td></td><td class="n">$10.00</td><td class="how"></td></tr>
+  <tr class="close"><td>Closing balance</td><td class="n">$320.00</td><td></td><td class="how">300 + 30 &minus; 10</td></tr>
+  <tr class="year"><th colspan="4">Year 2</th></tr>
+  <tr><td>Opening balance</td><td class="n">$320.00</td><td></td><td class="how"></td></tr>
+  <tr><td>Interest paid in</td><td class="n">$32.00</td><td></td><td class="how">0.1 &times; 320</td></tr>
+  <tr><td>Withdrawal</td><td></td><td class="n">$10.00</td><td class="how"></td></tr>
+  <tr class="close"><td>Closing balance</td><td class="n">$342.00</td><td></td><td class="how">320 + 32 &minus; 10</td></tr>
+  <tr class="year"><th colspan="4">Year 3</th></tr>
+  <tr><td>Opening balance</td><td class="n">$342.00</td><td></td><td class="how"></td></tr>
+  <tr><td>Interest paid in</td><td class="n">$34.20</td><td></td><td class="how">0.1 &times; 342</td></tr>
+  <tr><td>Withdrawal</td><td></td><td class="n">$10.00</td><td class="how"></td></tr>
+  <tr class="close"><td>Closing balance</td><td class="n">$366.20</td><td></td><td class="how">342 + 34.2 &minus; 10</td></tr>
+</table>
+</div>
+
+<p>And so on. Note that the increments get bigger each year: each time the balance goes up, the interest paid goes up too. The balance of the bank account increases at a faster and faster rate.</p>
+
+<p>Having understood the calculations we are going to perform, we now turn to the concepts needed to express these ideas in Simile.</p>
+
+<p>We use a <strong>stock</strong> (called a <em>compartment</em> in earlier versions of Simile) to represent the amount of money held in the bank account, since this is a quantity that changes incrementally over time. We use two <strong>flows</strong>: one for the gain of money from interest, the other for the loss of money by withdrawal. The interest flow goes into the stock, and the withdrawal flow comes out of it. We also use a <strong>variable</strong> to represent the interest rate (10%, or 0.1). This variable is linked to the interest flow by an <strong>influence</strong> arrow, showing that the amount of interest paid depends on the interest rate. Since the amount of interest paid also depends on the amount in the bank account, we also draw an influence arrow from the stock to the interest flow.</p>
+
+<p>In this tutorial we want mainly to introduce you to the mechanics of working with Simile, which are explained in detail in the following steps. The concepts involved in representing even a simple system like this one in a modelling language can be quite complex.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step1">Step 1: Starting Simile: what's on the screen</h2>
+
+<h3>Starting Simile</h3>
+<p>Simile on the web runs in your browser: there is nothing to install. Open <a href="https://robert-mue.github.io/simile/">robert-mue.github.io/simile</a>. Any modern browser will do; Chrome or Edge give you the fullest <span class="ui">File</span> menu (see <a href="#step8">Step 8</a>).</p>
+
+<p>The first time you open it, you see an empty workspace with a menu bar along the top.</p>
+
+<h3>Starting a new model</h3>
+<p>Open the <span class="ui">File</span> menu and choose <span class="ui">New model</span>.</p>
+
+<figure>
+  <img src="img/bank-account/01-file-menu.png" alt="The File menu, with New model at the top" width="420" height="330">
+  <figcaption>The File menu.</figcaption>
+</figure>
+
+<p>Two windows appear, both belonging to your new model, which for now is called <em>model</em>.</p>
+
+<h3>Naming the model</h3>
+<ul>
+  <li>Open the <span class="ui">File</span> menu again and choose <span class="ui">Rename model&hellip;</span>.</li>
+  <li>Type <code>Bank account</code> and click <span class="ui">OK</span>.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/01b-file-rename.png" alt="The File menu, showing Rename model" width="420" height="420">
+  <figcaption>Renaming the model.</figcaption>
+</figure>
+
+<p>The model's windows, and the menu bar, now use its new name. You can rename a model like this at any time.</p>
+
+<h3>The model's windows</h3>
+<p>Your model has two windows:</p>
+<ul>
+  <li>the <strong>Model window</strong>, where you draw and edit the model diagram, and</li>
+  <li>the <strong>Simulation window</strong>, where you run the model and look at its results (you will use it from <a href="#step4">Step 4</a>).</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/02-new-model.png" alt="The Simile screen after File, New model: a Model window on the left and a Simulation window behind it on the right" width="1280" height="713">
+  <figcaption>The new model, named: the Model window in front, the Simulation window behind it.</figcaption>
+</figure>
+
+<h3>What's on the screen</h3>
+<ul>
+  <li>The <strong>menu bar</strong> along the top, containing <span class="ui">File</span>, some menus specific to Simile, and <span class="ui">Help</span>. To its right it says which model is <em>current</em>: the one that commands such as <span class="ui">File &rsaquo; Save model</span> act on.</li>
+  <li>Each <strong>window</strong> has a coloured titlebar. Every window belonging to the same model has the same colour. Drag a window by its titlebar; resize it from its edges or corners. The buttons at the right of a titlebar minimise, maximise and close it.</li>
+  <li>Inside the Model window is the <strong>diagram</strong> panel. Its first toolbar row has a button for each kind of model-diagram element (<span class="ui">ADD</span>), and for each kind of arrow (<span class="ui">CONNECT</span>): you use these to build up your model diagram. Hold the mouse over any button to see what it does.</li>
+  <li>The second toolbar row is for zooming and moving around the diagram (<span class="ui">VIEW</span>), and for selecting several elements at once (<span class="ui">SELECT</span>).</li>
+  <li>The large white area below the toolbars is the <strong>canvas</strong>. This is where you draw your model diagram.</li>
+</ul>
+
+<p>Values and equations are entered in a <strong>properties dialog</strong> that you open from an element on the diagram (see <a href="#step3">Step 3</a>). This replaces the equation bar of earlier versions of Simile.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step2">Step 2: Making the model diagram</h2>
+
+<p>We begin by drawing the model diagram for the bank account model. A note on colours: an element that still needs some information (like a value or an equation) before the model can be run is drawn in <strong>red</strong>. Once it has everything it needs, it turns <strong>black</strong>. A <em>selected</em> element has a dashed blue box around it.</p>
+
+<h3>1. Add a stock to the model diagram</h3>
+<ul>
+  <li>Click on the <span class="ui">stock</span> button in the toolbar.</li>
+  <li>Move the mouse to the middle of the canvas, and click.</li>
+  <li>You should see a box, with a name box underneath it ready for you to type in.</li>
+</ul>
+
+<h3>2. Name the stock "account"</h3>
+<ul>
+  <li>Type <code>account</code>, and press <kbd>Enter</kbd>.</li>
+</ul>
+<p>Immediately after you add an element its name is selected, so you can just type the new name. See section 6 below for how to change it later.</p>
+
+<figure>
+  <img src="img/bank-account/03-stock.png" alt="A new stock with its name being typed: account" width="248" height="225">
+  <figcaption>Naming the new stock.</figcaption>
+</figure>
+
+<p>A name is also the name the element has in equations, so it may contain only letters, digits and underscores, and may not start with a digit. Where you would use a space, use an underscore: <code>interest_rate</code>, not <code>interest rate</code>. If you type a name that is not allowed, the name box turns red as you type, and pressing <kbd>Enter</kbd> leaves it open, with a message saying what to type instead (see below, in section 4).</p>
+
+<h3>3. Add an interest flow and a withdrawal flow</h3>
+<ul>
+  <li>Click on the <span class="ui">flow</span> button in the toolbar.</li>
+  <li>Move the mouse into some empty space to the left of the stock labelled <em>account</em>, hold the mouse button down, and drag into the middle of the stock. Release the mouse button.</li>
+  <li>Type <code>interest</code> and press <kbd>Enter</kbd>.</li>
+  <li>Click on <span class="ui">flow</span> again. Move the mouse into the middle of the stock, and drag to the empty space on its right. Release the mouse button.</li>
+  <li>Type <code>withdrawal</code> and press <kbd>Enter</kbd>.</li>
+</ul>
+<p>A flow that starts or ends in empty space gets a <em>cloud</em> at that end: a source or sink outside the model.</p>
+
+<figure>
+  <img src="img/bank-account/04-flows.png" alt="The account stock with an interest flow coming in from a cloud and a withdrawal flow going out to a cloud" width="681" height="165">
+  <figcaption>The two flows.</figcaption>
+</figure>
+
+<h3>4. Add a variable for the interest rate</h3>
+<ul>
+  <li>Click on the <span class="ui">variable</span> button in the toolbar.</li>
+  <li>Move the mouse to the empty area above the interest flow, and click once.</li>
+  <li>Type <code>interest_rate</code> and press <kbd>Enter</kbd>.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/05a-bad-name.png" alt="The name box in red holding 'interest rate', with a message suggesting interest_rate" width="714" height="451">
+  <figcaption>What you see if you type <code>interest rate</code> with a space: correct it to <code>interest_rate</code> and press <kbd>Enter</kbd> again.</figcaption>
+</figure>
+
+<figure>
+  <img src="img/bank-account/05-variable.png" alt="The diagram with an interest_rate variable above the interest flow" width="681" height="309">
+  <figcaption>The interest_rate variable.</figcaption>
+</figure>
+
+<h3>5. Draw the influences</h3>
+<ul>
+  <li>Click on the <span class="ui">influence</span> button in the toolbar.</li>
+  <li>Move the mouse to the middle of the stock labelled <em>account</em>, and drag an influence arrow to the valve (the bow-tie symbol) on the interest flow. Release the mouse button.</li>
+  <li>Click on <span class="ui">influence</span> again. Move the mouse to the middle of the variable labelled <em>interest_rate</em>, and again drag an influence arrow to the valve on the interest flow.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/06-influences.png" alt="Two influence arrows ending at the interest valve: one from interest_rate, one from account" width="681" height="309">
+  <figcaption>The two influences.</figcaption>
+</figure>
+
+<h3>6. Re-arrange the model diagram</h3>
+<ul>
+  <li>Move the mouse to the middle of the stock labelled <em>account</em>.</li>
+  <li>Drag it, and watch the stock and its arrows re-arrange themselves.</li>
+</ul>
+<p>You can move the other elements in the same way, including the clouds at the ends of the flows. You can also:</p>
+<ul>
+  <li>drag the middle of an influence arrow to bend it more or less. In the picture below, the influence from <em>account</em> has been bent upwards so that it is clear of the flow;</li>
+  <li>drag a name to move it relative to its element;</li>
+  <li>click a name to change it. The new name is carried through to the influence arrows from that element, and to the equations that use it.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/07-arranged.png" alt="The diagram with the influence from account bent into a clear arc above the flow" width="681" height="309">
+  <figcaption>The finished diagram: everything is still red, because nothing has a value yet.</figcaption>
+</figure>
+
+<p>This completes the drawing of the model diagram. In the next step you will provide the values and equations needed to simulate the behaviour of the bank account. This order (diagram first, then values) is followed here for convenience. In general you are free to give the values at any stage while you draw the diagram.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step3">Step 3: Adding initial values, parameter values and equations</h2>
+
+<p>Every element's value or equation is set in its <strong>properties dialog</strong>. To open it, <strong>double-click the element</strong> on the diagram. To close it, click <span class="ui">OK</span> to keep your changes, or <span class="ui">Cancel</span> (or press <kbd>Esc</kbd>) to discard them.</p>
+
+<h3>1. Assign the initial value for the stock</h3>
+<ul>
+  <li>Double-click the stock labelled <em>account</em>.</li>
+  <li>Enter the value <code>300</code> in the <span class="ui">Initial value</span> box.</li>
+  <li>Click <span class="ui">OK</span>.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/08-dlg-account.png" alt="The properties dialog for the stock account, with 300 in the Initial value box" width="628" height="494">
+  <figcaption>The properties dialog for <em>account</em>.</figcaption>
+</figure>
+
+<h3>2. Add the interest equation</h3>
+<ul>
+  <li>Double-click the valve on the interest flow.</li>
+  <li>The <span class="ui">VARIABLES</span> list shows the two influences on <em>interest</em>: <em>account</em> and <em>interest_rate</em>. Clicking one inserts its name into the equation where the cursor is.</li>
+  <li>Enter the expression <code>account*interest_rate</code> in the <span class="ui">Rate</span> box, either by clicking each variable in turn and typing the <code>*</code> between them, or by typing it all.</li>
+  <li>Click <span class="ui">OK</span>.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/09-dlg-interest.png" alt="The properties dialog for the interest flow, with account and interest_rate listed under Variables and account*interest_rate in the Rate box" width="628" height="494">
+  <figcaption>The properties dialog for <em>interest</em>.</figcaption>
+</figure>
+
+<p>The <span class="ui">FUNCTIONS</span> list beside it holds Simile's built-in functions, grouped by kind. Clicking one inserts it in the same way. You do not need any for this model.</p>
+
+<h3>3. Assign the value for the withdrawal flow</h3>
+<ul>
+  <li>Double-click the valve on the withdrawal flow.</li>
+  <li>Enter the value <code>10</code> in the <span class="ui">Rate</span> box.</li>
+  <li>Click <span class="ui">OK</span>.</li>
+</ul>
+
+<h3>4. Assign the value for the interest rate</h3>
+<ul>
+  <li>Double-click the variable labelled <em>interest_rate</em>.</li>
+  <li>Enter the value <code>0.1</code>.</li>
+  <li>Click <span class="ui">OK</span>.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/10-complete.png" alt="The diagram with every element now drawn in black" width="681" height="309">
+  <figcaption>Every element is now black.</figcaption>
+</figure>
+
+<p>Every element of the model diagram is now black rather than red. This shows that every element has been specified mathematically, so the model is ready to run: Simile has enough information to work out the flows, and so to update the amount of money in your bank account forward through time.</p>
+
+<p>If you type an equation that Simile cannot understand, it tells you what is wrong when you click <span class="ui">OK</span>, and offers to take you back to fix it.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step4">Step 4: Preparing to run the model</h2>
+
+<h3>1. Go to the Simulation window</h3>
+<ul>
+  <li>Click on the titlebar of the Simulation window to bring it to the front. If you cannot see it, choose it from <span class="ui">View &rsaquo; Windows</span>.</li>
+</ul>
+
+<p>The Simulation window contains the <strong>run control</strong>, with the controls for running the model, and below it an area called <strong>Displays</strong>, where the tools for showing model results go.</p>
+
+<figure>
+  <img src="img/bank-account/11-simulation.png" alt="The Simulation window brought to the front, showing the run control and an empty Displays area" width="1280" height="713">
+  <figcaption>The Simulation window, in front of the Model window.</figcaption>
+</figure>
+
+<h3>2. Load the model</h3>
+<ul>
+  <li>The <span class="ui">MODEL</span> box at the top of the run control already names your model.</li>
+  <li>Click <span class="ui">load</span>.</li>
+</ul>
+<p>Simile sends your model to the Simile engine, which builds it ready to run. This takes a few seconds. When it is done, the run control says <em>Ready</em>.</p>
+
+<h3>3. Change the time step</h3>
+<p>Simile supplies a default time step of 0.1 when you first run a model. In the natural sciences, a time step shorter than the time unit gives greater accuracy. Here, though, we are dealing with an unnatural example: a bank paying compound interest on the balance of the account at the start of each year.</p>
+<ul>
+  <li>Change <span class="ui">Time step(s)</span> from <code>0.1</code> to <code>1</code>.</li>
+</ul>
+<p>This is because we want a time step of 1 year rather than 0.1 years.</p>
+
+<h3>4. Change the duration of the simulation run</h3>
+<ul>
+  <li>Change <span class="ui">Execute for</span> from <code>100</code> to <code>10</code>.</li>
+</ul>
+<p>This is because we want to run the model for just 10 years at a time.</p>
+
+<figure>
+  <img src="img/bank-account/12-runcontrol.png" alt="The run control with Execute for set to 10 and Time step set to 1" width="716" height="200">
+  <figcaption>The run control, ready to go.</figcaption>
+</figure>
+
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step5">Step 5: Choosing the output displays</h2>
+
+<h3>1. Add a plotter</h3>
+<ul>
+  <li>Open the <span class="ui">Widgets</span> menu and choose <span class="ui">Plotter</span>.</li>
+</ul>
+<p>A plotter appears in the Displays area of the Simulation window. It scales itself with sensible values on both axes, and rescales as the results come in.</p>
+
+<figure>
+  <img src="img/bank-account/13-widgets-menu.png" alt="The Widgets menu, with Plotter among its items" width="500" height="300">
+  <figcaption>The Widgets menu.</figcaption>
+</figure>
+
+<p>The run settings you typed in <a href="#step4">Step 4</a> are remembered for this model, so they are still there whenever you load it again.</p>
+
+
+<h3>2. Choose the variable you want to see</h3>
+<ul>
+  <li>In the plotter's toolbar, choose <code>/account</code> from the <span class="ui">PLOT</span> list.</li>
+  <li>Click <span class="ui">add</span>.</li>
+</ul>
+<p>You can add as many variables to one plotter as you like, and remove one again with the &times; beside its name.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step6">Step 6: Running the model</h2>
+
+<h3>1. Start the simulation</h3>
+<ul>
+  <li>Click the <span class="ui">&#9654;</span> (<em>Run</em>) button in the run control.</li>
+</ul>
+<p>A line appears on the graph, ending at $618.75 after 10 years. The first three years are the ones we worked out by hand: $320, $342 and $366.20. Hold the mouse over the graph to read off values.</p>
+
+<figure>
+  <img src="img/bank-account/17-run10.png" alt="The plotter showing account rising from 300 to about 619 over 10 years" width="1280" height="713">
+  <figcaption>After the first run.</figcaption>
+</figure>
+
+<h3>2. Continue the simulation</h3>
+<ul>
+  <li>Click the <span class="ui">&#9654;</span> button again.</li>
+</ul>
+<p>The simulation carries on for another 10 years, to $1,445.50.</p>
+
+<figure>
+  <img src="img/bank-account/18-run20.png" alt="The plotter showing account rising from 300 to about 1446 over 20 years" width="1280" height="713">
+  <figcaption>After running for another 10 years.</figcaption>
+</figure>
+
+<p>To start again from the beginning, click <span class="ui">&#9632;</span> (<em>Back to the start</em>).</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step7">Step 7: Repeating the model edit/run cycle</h2>
+
+<h3>1. Return to the Model window</h3>
+<ul>
+  <li>Click on the titlebar of the Model window, or choose it from <span class="ui">View &rsaquo; Windows</span>.</li>
+</ul>
+
+<h3>2. Change the interest rate from 10% to 15%</h3>
+<ul>
+  <li>Double-click the variable <em>interest_rate</em>.</li>
+  <li>Change its value from <code>0.1</code> to <code>0.15</code>.</li>
+  <li>Click <span class="ui">OK</span>.</li>
+</ul>
+
+<h3>3. Run the model again</h3>
+<ul>
+  <li>Go back to the Simulation window. The run control notices that the model has changed.</li>
+  <li>Click the <span class="ui">&#9654;</span> button.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/19-edited.png" alt="The run control saying the model has been edited since it was loaded, and that Run will load it again first" width="716" height="200">
+  <figcaption>The run control after the edit.</figcaption>
+</figure>
+
+<p>The model will automatically rebuild, re-initialise and run again, keeping your run settings and your plot. After 10 years the account now holds $1,010.63.</p>
+
+<figure>
+  <img src="img/bank-account/20-rerun.png" alt="The plotter showing account rising from 300 to about 1011 over 10 years at 15% interest" width="1280" height="713">
+  <figcaption>The same model with 15% interest.</figcaption>
+</figure>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="step8">Step 8: Saving and loading the model</h2>
+
+<p>Simile on the web keeps your models in your browser as you work, and they are still there next time you open it in the same browser: open the <span class="ui">File</span> menu and choose <span class="ui">Models</span>. But to keep a model safe, to move it to another computer, or to give it to someone else, save it to a file.</p>
+
+<h3>1. Save the model to a file</h3>
+<ul>
+  <li>Open the <span class="ui">File</span> menu and choose <span class="ui">Save model as file&hellip;</span>.</li>
+  <li>Navigate to the folder where you want to save the model, in the usual way.</li>
+  <li>Enter a name for the file, and save it.</li>
+</ul>
+<p>After that, <span class="ui">File &rsaquo; Save model</span> saves straight back to the same file.</p>
+
+<figure>
+  <img src="img/bank-account/21-file-save.png" alt="The File menu, showing Save model and Save model as file" width="420" height="460">
+  <figcaption>Saving from the File menu.</figcaption>
+</figure>
+
+<div class="note">
+  <strong>Which browser</strong>
+  In Chrome and Edge you choose where the file goes, and <span class="ui">Save model</span> writes back to it. Other browsers can't do that: they put a copy in your Downloads folder each time instead.
+</div>
+
+<h3>2. Load a model from a file</h3>
+<p>Either:</p>
+<ul>
+  <li>Open the <span class="ui">File</span> menu and choose <span class="ui">Open model file&hellip;</span>.</li>
+  <li>Find your model file, and open it.</li>
+</ul>
+<p>or:</p>
+<ul>
+  <li>Open the <span class="ui">File</span> menu and choose <span class="ui">Recent</span>.</li>
+  <li>Choose from the list of recently used models.</li>
+</ul>
+
+<figure>
+  <img src="img/bank-account/22-file-recent.png" alt="File, Recent, showing the model just built" width="700" height="600">
+  <figcaption>Recently used models.</figcaption>
+</figure>
+
+<p>That completes the tutorial. Next: <em>Predator-prey</em> (coming soon).</p>
+
+</main>
+</body>
+</html>
