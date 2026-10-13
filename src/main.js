@@ -549,10 +549,20 @@
         },
       ],
     },
+    {
+      label: 'Help',
+      items: [
+        // Plain text, oldest first, in a tab of its own.
+        { label: 'Release notes', onSelect: function () { window.open('RELEASES.txt', '_blank'); } },
+      ],
+    },
     ];
   }
 
   app.setMenu(buildMenu());
+  if (window.SIMILE_RELEASE) {
+    app.setNote('Release ' + window.SIMILE_RELEASE, 'Help > Release notes says what is in it');
+  }
 
   // Keyboard: Ctrl/Cmd-Z = undo, Ctrl/Cmd-Shift-Z (or Ctrl-Y) = redo. Skip when
   // typing in a field so native text undo keeps working there.

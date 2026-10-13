@@ -1,0 +1,47 @@
+SIMILE (web) - RELEASE NOTES
+============================
+
+Oldest first. The release you are running is shown at the right of the
+menu bar. Each release is a date.
+
+The site was first published on 8 August 2026, straight from the
+development branch, without separate releases; the first release below
+covers everything from then until 13 October 2026.
+
+
+------------------------------------------------------------------------
+Release 2026-10-13
+------------------------------------------------------------------------
+
+Running models
+- Models run on the Simile engine, with a run control, a plotter of
+  variables against time, and a spatial grid.
+- Models with submodels and associations run too.
+- Simile .pl model files can be imported, and a set of built-in models
+  is listed under File > Models.
+
+Building models
+- A node properties dialog, with an Equation tab, a tree of Simile's
+  functions, and clear messages when an equation is wrong.
+- The alarm element is shown, greyed out until it is supported.
+  Submodels can have more than one dimension.
+- Elements are drawn smaller (70%), with text at the same size.
+- Dragging a newly placed element keeps the name you were typing, as
+  Enter does.
+
+Windows and files
+- Each model opens in its own Model window and Simulation window, with
+  titlebars coloured by model. Panels inside a window have a quiet grey
+  titlebar.
+- View > Windows and Arrange windows are new. Closing a model's window
+  closes its simulation window too.
+- The current model is shown in the menu bar.
+- Each panel is titled with a number, such as diagram/1.
+- A small panel shrinks to a thumbnail of its picture.
+- File > Export all backs up every model to one file.
+- Session > Open as a new user shows the first-run screen in a new tab.
+- A clicked window always comes to the front, and a reload keeps the
+  order the windows were stacked in.
+
+Touch screens
+- Windows and diagrams can be dragged with a finger.
