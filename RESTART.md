@@ -118,9 +118,9 @@ session per model — two runs side by side — is the obvious next step and was
 deliberately deferred.
 
 Every collection has an **Arrange contents** button (its titlebar, or its tab
-in a tabbed area) to switch it between floating, tiled and tabbed. Not yet: a
-run control supplied by the Simulation template is titled "Run control" until
-the next reload renames it `growth: runControl/1`.
+in a tabbed area) to switch it between floating, tiled and tabbed. Every panel
+is titled `<model>: <widget>/<n>` from the moment it appears (a template's run
+control included), and keeps its number across a refresh.
 
 ## Check nothing has rotted, in three minutes
 

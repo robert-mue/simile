@@ -44,32 +44,46 @@
   }
 
   /**
-   * Re-derive every open panel's title, in workspace order (§25.2).
-   *
-   * Needed because a restored workspace brings its titles back verbatim, so a
-   * panel saved before this scheme existed — or saved by a build with different
-   * rules — comes back named the old way and stays that way for ever. The title
-   * is DERIVED data (model, widget, ordinal); the stored copy is a cache, and
-   * this is what makes the cache honest.
-   *
-   * Numbering here runs 1, 2, 3… through the panels as they come, rather than
-   * filling the lowest free slot the way creation does: after a restore every
-   * panel is being named at once, so there are no gaps to fill.
+   * Does `$p` already carry a title in the scheme above? Then it keeps it —
+   * number and all. Two panels of the same widget on the same model are
+   * perfectly allowed, side by side in one window, and the number is how you
+   * tell them apart; a number that changed on a refresh, or as neighbours came
+   * and went, would not be an identifier at all.
    */
-  function renamePanels() {
-    var n = {};
-    app.panels().forEach(function ($p) {
-      var widget = app.widgetOf($p);
-      if (!widget) return;                    // a bare panel names itself
-      // A collection is named after its model and its template ("growth:
-      // Simulation") when it is made; it is not one of a numbered series.
-      if (widget === 'container') return;
-      var ref = $p.panel('ref') || '';
-      var key = ref + '|' + widget;
-      n[key] = (n[key] || 0) + 1;
-      var id = ref ? ref.split('/').pop() : '';
-      $p.panel('title', (id ? id + ': ' : '') + widget + '/' + n[key]);
-    });
+  function hasSchemeTitle($p) {
+    var widget = app.widgetOf($p);
+    var ref = $p.panel('ref') || '';
+    var id = ref ? ref.split('/').pop() : '';
+    var prefix = (id ? id + ': ' : '') + widget + '/';
+    var title = $p.panel('title') || '';
+    return title.indexOf(prefix) === 0 && /^\d+$/.test(title.slice(prefix.length));
+  }
+
+  /**
+   * Name a panel that has no scheme title yet (§25.2): one a template made
+   * ("Run control"), or one restored from a session saved before the scheme
+   * or by a build with other rules. It takes the lowest free number, like any
+   * panel made from the menu. A collection is named after its model and its
+   * template ("growth: Simulation") when it is made, and a bare panel names
+   * itself; neither is one of a numbered series.
+   */
+  function nameIfUnnamed($p) {
+    var widget = app.widgetOf($p);
+    if (!widget || widget === 'container') return;
+    if (hasSchemeTitle($p)) return;
+    $p.panel('title', panelTitle($p.panel('ref') || '', widget));
+  }
+
+  // Every panel as it appears, from any depth. Not while restoring: a restored
+  // panel's title is only checked once all of them are back, so an old one
+  // cannot take a number a later one in the session already has.
+  var restoring = true;
+  app.$workspace.on('slxpaneladd', function (e, $p) {
+    if (!restoring) nameIfUnnamed($p);
+  });
+  function afterRestore() {
+    restoring = false;
+    app.panels().forEach(nameIfUnnamed);
     app.persist();
   }
 
@@ -581,7 +595,7 @@
   if (!Sienna.userData.get('models/rank') && Sienna.demoRank) Sienna.demoRank();
   if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
 
-  app.restore().then(renamePanels);
+  app.restore().then(afterRestore);
 
   // Handy for tinkering from the browser console.
   window.app = app;

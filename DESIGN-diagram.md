@@ -1285,12 +1285,18 @@ than counting upward for ever, and it does not change again while the session
 lasts: a number that renumbered itself as neighbours came and went would not be
 an identifier at all.
 
-**The title is derived data, and the stored copy is a cache.** The first version
-of this treated the persisted title as the record, which meant a workspace saved
-before the scheme existed came back named the old way and stayed that way for
-ever — the first thing hand-testing found. Every title is now re-derived after a
-restore, walking the panels in order and numbering 1, 2, 3… (at restore every
-panel is being named at once, so unlike creation there are no gaps to fill).
+**A title in the scheme is kept; anything else is named when it appears.**
+The first version treated the persisted title as the record, so a workspace
+saved before the scheme came back named the old way and stayed that way for
+ever. The second re-derived every title after a restore, numbering 1, 2, 3… in
+panel order — which fixed that but broke the number: with `plotter/1` closed, a
+refresh turned `plotter/2` into `plotter/1`, and two plots of one model side by
+side are exactly what the number is for. So now a panel whose title already
+reads `<model id>: <widget>/<n>` for its own model and widget keeps it, number
+and all, and any other panel — one a template made ("Run control"), one restored
+from an older save — is given the lowest free number as it appears (the
+workspace's `slxpaneladd`) or, for a restored session, once all of it is back,
+so an old panel cannot take a number a later one already holds.
 
 Fixing that turned up a second fault beneath it: `workspace.serialize` was
 reading the title the panel was *created with* rather than the one it has, so
