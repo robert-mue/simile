@@ -106,6 +106,18 @@
    */
   var SETTINGS_KEY = 'simile.runSettings.v1';
 
+  /**
+   * What to call a component in a list or a legend. The engine names one by
+   * its path from the top of the model — `/account`, `/forest/tree/height`.
+   * A display looks at the whole model, so names are given as seen from the
+   * top (the convention everywhere: a name carries the path of submodels
+   * outside the one it is seen from, and nothing more): `account` at the top,
+   * `forest/tree/height` in a submodel. Never a leading `/`.
+   */
+  function displayName(c) {
+    return String(c.captpath || c.text || '').replace(/\s+/g, ' ').replace(/^\/+/, '');
+  }
+
   /** A model's Prolog without its first line, which is stamped with the time. */
   function essence(prolog) {
     return String(prolog).replace(/^source\(.*\)\.\n/, '');
@@ -129,6 +141,7 @@
   var Simulation = {
     SERVER: SERVER,
     keyOf: keyOf,
+    displayName: displayName,
 
     /** 'idle' | 'loading' | 'ready' | 'running' | 'error' */
     status: 'idle',
@@ -687,7 +700,7 @@
       }).map(function (id) {
         return {
           id: id,
-          label: String(comps[id].captpath || comps[id].text).replace(/\s+/g, ' '),
+          label: displayName(comps[id]),
           units: comps[id].units || '',
         };
       }).sort(function (a, b) { return a.label.localeCompare(b.label); });
@@ -717,7 +730,7 @@
           id: id,
           // Caption paths carry the line breaks from the diagram's labels —
           // "/cell/live\nneighbours" — which would break a one-line menu.
-          label: String(c.captpath || c.text).replace(/\s+/g, ' '),
+          label: displayName(c),
           rows: rows,
           cols: knownCols ? parseInt(dims[1], 10) : null,
           hex: !!(parent && parent.eval === 'HONEYCOMB'),

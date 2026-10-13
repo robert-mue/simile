@@ -182,7 +182,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     const comp = (this._sim.components || {})[id] || {};
     const s = {
       id,
-      label: String(comp.captpath || id).replace(/\s+/g, ' '),
+      label: comp.captpath || comp.text ? Sienna.Simulation.displayName(comp) : id,
       units: comp.units || '',
       slot,
       pts: [],

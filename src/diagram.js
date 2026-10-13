@@ -643,6 +643,27 @@
     },
 
     /**
+     * How `source` is named as seen from `target`: plainly, `a`, when they sit
+     * in the same submodel; otherwise with the path of submodels that leads
+     * down to it from the deepest submodel the two share — `S1/a` for an `a`
+     * in S1 seen from S2. The path is relative, so it never starts with `/`,
+     * and an element at a level the target sits inside is named plainly too:
+     * it is not in a submodel outside the target's.
+     */
+    relativeName: function (source, target) {
+      var common = this.nearestCommonAncestor(source, target);
+      var path = [];
+      var up = this.ancestorsOf(source);
+      for (var i = 0; i < up.length && up[i] !== common; i++) {
+        var sub = this.get(up[i]) || {};
+        path.unshift(sub.label || up[i]);
+      }
+      var el = this.get(source) || {};
+      path.push(el.label || source);
+      return path.join('/');
+    },
+
+    /**
      * Deepest submodel containing both, or null for "the diagram itself".
      * This is the turning point of an arc's path (§13.2).
      */

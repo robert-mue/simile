@@ -539,10 +539,10 @@
         // What someone opening simile for the first time sees: a new tab with a
         // store of its own, emptied each time. Nothing here is touched.
         { label: 'Open as a new user (new tab)', onSelect: function () { Sienna.openAsNewUser(); } },
-        { label: '—' },
+        { separator: true },
         { label: 'Watch replay', onSelect: function () { replaySession(true); } },
         { label: 'Replay at once', onSelect: function () { replaySession(false); } },
-        { label: '—' },
+        { separator: true },
         {
           label: 'Save session log…',
           onSelect: function () {

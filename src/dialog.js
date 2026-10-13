@@ -275,7 +275,9 @@
       d.namesSuppliedBy(a).forEach(function (name) {
         if (!name || seen[name]) return;
         seen[name] = true;
-        out.push({ name: name, from: from.label || arc.from });
+        // Where it comes from, named as seen from here: `S1/a` when it lives in
+        // another submodel, plain `a` when it is a neighbour.
+        out.push({ name: name, from: d.relativeName(arc.from, id) || from.label || arc.from });
       });
     });
     return out;
