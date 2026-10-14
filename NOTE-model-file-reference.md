@@ -51,7 +51,7 @@ careful person writing a model by hand:
 - **Common mistakes,** stated outright.
 
 So the plan is one "Model file reference" in the simile repo, for humans and
-Claude alike. It would also be a natural chapter of the embedded-pages guide,
+Claude alike. It would also be a natural chapter of the embedded-widget pages guide,
 since "make a page about any dynamic system" needs a way to write a model
 without the app.
 

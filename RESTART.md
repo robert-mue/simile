@@ -2,7 +2,7 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded pages. If you are picking this up cold — a new session, a new
+embedded-widget pages. If you are picking this up cold — a new session, a new
 machine, or a week later — read this first. `STATUS.md` is the full record
 (items 46–47 are the last two days); this is the part you need to get moving.*
 
@@ -85,7 +85,7 @@ except `feeding1` (an association question for the developer).
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive.
 
-## Next: embedded pages (Robert, 2026-10-13)
+## Next: embedded-widget pages (Robert, 2026-10-13)
 
 The next job, ahead of submodel colour and time units. Robert's idea: the
 widgets are self-contained, so they can sit in an **ordinary web page** — an
@@ -96,25 +96,36 @@ of making dynamic web pages" — and "a way that anyone can document some, any,
 dynamic system, not just for us to present some models." The whole model
 catalogue could be built this way.
 
-**Decided:**
+**Decided** (narrowed by Robert, 2026-10-14):
 
 1. reader edits are **not kept** — fresh each visit, with a **reset** button;
 2. the model **runs as soon as the page opens**, graphs already drawn;
-3. the point is **independence**: documentation on how ANYONE can do it, with
-   two or three sample pages, kept in the simile repo. The guide is the
-   product; the samples are its worked examples.
-4. **File ▸ Export as web page** — one self-contained HTML with the model
-   inside (a page opened from disk cannot fetch a file beside it).
-5. a model may also ship as a **`.js` file** loaded by `<script>` (which DOES
-   work over `file://`) — Robert's suggestion. Proposed form, a call rather
-   than a bare assignment so two models on a page cannot collide:
-   `Simile.model('predator-prey', {…})`; offered as File ▸ Export model as
-   script.
+3. the point is **independence**: documentation on how ANYONE can do it, kept
+   in the simile repo. The guide is the product; the samples are its worked
+   examples.
+4. **One new command for now: File ▸ Export model as script** — a `.js` file
+   loaded by `<script>` (which DOES work over `file://`; a page opened from disk
+   cannot fetch a file beside it). Proposed form, a call rather than a bare
+   assignment so two models on a page cannot collide:
+   `Simile.model('predator-prey', {…})`. Export as a self-contained web page is
+   **not** in the goal now.
+5. the **multiple-slider widget is needed by the app itself**, not only by the
+   pages — it is an ordinary widget first. It offers every variable that has a
+   **value specified and a min/max**.
 
-**Plan:** a plain predator-prey page first (Stage 2's Lotka-Volterra form):
-diagram, rabbit and fox plots, runs on open. Then sliders. Then the export
-commands and the guide. Samples: predator-prey, Trees (lollipop — shows it is
-not only plots), and a catalogue model straight from its `.pl`.
+**Plan:**
+
+1. **Predator-prey page**, using the **re-cast model of Stage 3, Step 3** of the
+   tutorial (`help/tutorials/predator-prey.html#stage3`, picture
+   `img/predator-prey/s3-diagram.png`: `eaten_per_fox` and `rfox` between the
+   two populations). Mathematically the same as Stage 2's Lotka-Volterra form,
+   but it does not hide important design aspects in an equation (Robert).
+   Diagram, rabbit and fox plots, runs on open.
+2. **The multi-slider widget** — in the app and on the page.
+3. **File ▸ Export model as script**, and the guide.
+4. **One more sample only: Trees** — the multi-line graph (a line per member)
+   and the lollipop display, showing a page is not only plots. (The catalogue
+   model straight from its `.pl` is dropped for now.)
 
 **What is known already:**
 
@@ -129,8 +140,8 @@ not only plots), and a catalogue model straight from its `.pl`.
   a second. Only components whose Describe entry has **`eval == "INPUT"`**
   qualify, with `min`/`max` for the slider. In Simile files those carry
   `min_val=`/`max_val=` on the function — which our **importer currently drops**
-  (`DROPPED` in `import-simile.js`). So sliders need: a way to mark a variable
-  as a parameter with a range, the exporter writing it as Simile does (find a
+  (`DROPPED` in `import-simile.js`). So sliders need: keeping those on import,
+  a way to give a variable its range in the node dialog, the exporter writing it as Simile does (find a
   catalogue model whose Describe shows `INPUT`, and copy its form), the
   `Parameterize` call, and the widget. Rebuilding the model per slider move
   would work but takes seconds — not live.
@@ -282,7 +293,7 @@ DESIGN-diagram.md §23 is the record; the short version:
 
 ## Jobs queued
 
-**Embedded pages come first** (above). These are the older queue, still true:
+**Embedded-widget pages come first** (above). These are the older queue, still true:
 
 ### 1. A regression net for the EDITOR — still the first job, and now overdue
 
@@ -374,7 +385,7 @@ is in `NOTE-model-file-reference.md`. Settled:
   (`compartment`/`stock`, the name rule, what is not implemented). Not
   "optimised for Claude" either — what serves Claude (precise, complete,
   example-heavy) serves a person writing a file by hand. One "Model file
-  reference" in this repo, for both; also a chapter of the embedded-pages guide.
+  reference" in this repo, for both; also a chapter of the embedded-widget pages guide.
 - **The format is STATED, in field tables** — every node type, every field,
   required or not, defaults, what is refused. Examples illustrate it; they do not
   define it (anything no example happens to use would otherwise be guessed).
@@ -402,7 +413,7 @@ tutorial has since answered most of it (`NOTE-questions-for-developer.md` A2):
 is left:
 
 1. Is `loss` below 1 (`0.6`) a chance per time unit? Booleans work as 1/0.
-2. Can SimiLive take the load of public embedded pages? (new)
+2. Can SimiLive take the load of public embedded-widget pages? (new)
 3. *(Question 0b in `NOTE-questions-for-developer.md`.)* **What does N mean
    in `use(N,in_assoc,…)`?** `feeding1`'s association joins two different bases
    and writes index 0 for BOTH consumers. Our reading says the second should be
