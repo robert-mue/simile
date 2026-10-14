@@ -363,6 +363,37 @@ His written list of UI refinements is otherwise **finished**; he ticked the last
 of it off on 2026-09-09. There is no backlog of his sitting unaddressed, which
 means the next session starts from the queue above rather than from his notes.
 
+### 6. A model file reference — writing models without the app (2026-10-14)
+
+Robert's question: someone who wants a model built by describing it to Claude,
+without using the app, needs a document to point Claude at. The full reasoning
+is in `NOTE-model-file-reference.md`. Settled:
+
+- **Its own document, not the Simile manual.** The manual never describes our
+  JSON format, is written around the GUI, and differs from us in places
+  (`compartment`/`stock`, the name rule, what is not implemented). Not
+  "optimised for Claude" either — what serves Claude (precise, complete,
+  example-heavy) serves a person writing a file by hand. One "Model file
+  reference" in this repo, for both; also a chapter of the embedded-pages guide.
+- **The format is STATED, in field tables** — every node type, every field,
+  required or not, defaults, what is refused. Examples illustrate it; they do not
+  define it (anything no example happens to use would otherwise be guessed).
+  Concepts get a paragraph each, in the manual's words, so they can be looked up.
+- **Complete worked examples**, each one a file known to load and run:
+  predator-prey (Robert's), one with a submodel, one population model.
+- **Checking is part of the procedure, written in the document** as a required
+  step, not something the user has to ask for: import + completeness check, then
+  build and run on SimiLive, fix, repeat, and report the result. It needs a
+  route that takes a file and returns a list of problems — the pieces exist
+  (importer, `Diagram` checks, `Simulation.loadOwn`, `tools/headless/`) but
+  nothing yet accepts a file from outside. The document must also say what to do
+  where Claude cannot run anything (claude.ai chat): hand over the file with the
+  check spelled out for the user. Remember SimiLive is a shared host — `unload()`.
+- **It must not rot.** The examples are checked with the fixtures; field lists
+  generated from the schema where possible (the `test/corpus.js` lesson).
+- Do not target `.pl`: harder to get right, and errors would come back through
+  the importer instead of our own checks.
+
 ## Waiting on the developer
 
 `NOTE-email-population-symbols.md` is **drafted and NOT sent**. The Trees
