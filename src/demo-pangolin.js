@@ -1,0 +1,1058 @@
+/**
+ * `Sienna.demoPangolin` — **Pangolin harvest**, a published model converted
+ * from R: Almeida et al. (2023), "Multiple co-occurring bioeconomic drivers of
+ * overexploitation accelerate rare species extinction risk" (`AAE_OE` in the
+ * authors' script).
+ *
+ * Three ODEs — a rare focal species (pangolins), a common species hunted
+ * alongside it, and harvest effort — split into flows as System Dynamics does
+ * it: each positive term an inflow, each negative term an outflow. Effort's
+ * equation is drawn out as revenue (made from the three catch flows, at a
+ * price that rises as pangolins get rarer) and cost, which is the feedback the
+ * paper is about. Every symbol in the paper is a parameter with a range, under
+ * its own name; `s` is the share of pursuit (rather than opportunistic)
+ * hunting. Defaults: the paper's pangolins, a slow common species, its weak
+ * price-abundance relationship (PN.low), s = 0.5.
+ *
+ * As in the R code: `share_pursuit` and `common_price` are redrawn every step
+ * (`s_sd`, `p0_sd`, both 0 by default); `feasible` stops every flow once
+ * either population falls below `Ne` or effort goes negative (R then sets the
+ * population to 0 and ends the run; here it stays where it fell). Not
+ * converted: the script's environmental noise `g`, added straight to the
+ * states (0 in the paper's main runs), and its experiments — scenario sweeps,
+ * Monte Carlo extinction probabilities — which are uses of the model, not it.
+ *
+ * Checked on SimiLive (2026-10-14) against the R loop step for step, at step
+ * 0.1: identical to ~1e-15 for PN.low s=0.5 (1000 years), PN.high s=0.5
+ * (extinct between years 33 and 34) and constant price s=1. Two things the
+ * conversion needed: `feasible` has units `boolean` (a condition with units 1
+ * does not build), and the guards say `else 0.0` (an int branch does not
+ * match a real one).
+ *
+ * Model data, not built step by step like the other demos: it was generated,
+ * and laid out, as a whole. Classic script; no imports/exports.
+ */
+(function (Sienna) {
+  'use strict';
+
+  var MODEL = {
+   "id": "pangolin",
+   "name": "Pangolin harvest",
+   "format": 3,
+   "schema": "simile-v1",
+   "enums": {},
+   "nodes": {
+    "node1": {
+     "type": "stock",
+     "parent": null,
+     "label": "pangolins",
+     "props": {
+      "initial": "initial_pangolins",
+      "units": ""
+     }
+    },
+    "node2": {
+     "type": "stock",
+     "parent": null,
+     "label": "common_species",
+     "props": {
+      "initial": "initial_common",
+      "units": ""
+     }
+    },
+    "node3": {
+     "type": "stock",
+     "parent": null,
+     "label": "effort",
+     "props": {
+      "initial": "initial_effort",
+      "units": ""
+     }
+    },
+    "node4": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node5": {
+     "type": "valve",
+     "parent": null,
+     "label": "pangolin_births",
+     "props": {
+      "rate": "if feasible then r1*pangolins*(1-pangolins/k1) else 0.0",
+      "units": ""
+     }
+    },
+    "node6": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node7": {
+     "type": "valve",
+     "parent": null,
+     "label": "pursuit_catch",
+     "props": {
+      "rate": "if feasible then q1*pangolins*effort*share_pursuit else 0.0",
+      "units": ""
+     }
+    },
+    "node8": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node9": {
+     "type": "valve",
+     "parent": null,
+     "label": "opportunistic_catch",
+     "props": {
+      "rate": "if feasible then gamma*pangolins*effort*(1-share_pursuit) else 0.0",
+      "units": ""
+     }
+    },
+    "node10": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node11": {
+     "type": "valve",
+     "parent": null,
+     "label": "common_births",
+     "props": {
+      "rate": "if feasible then r2*common_species*(1-common_species/k2) else 0.0",
+      "units": ""
+     }
+    },
+    "node12": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node13": {
+     "type": "valve",
+     "parent": null,
+     "label": "common_catch",
+     "props": {
+      "rate": "if feasible then q2*common_species*effort*(1-share_pursuit) else 0.0",
+      "units": ""
+     }
+    },
+    "node14": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node15": {
+     "type": "valve",
+     "parent": null,
+     "label": "effort_increase",
+     "props": {
+      "rate": "alpha*revenue",
+      "units": ""
+     }
+    },
+    "node16": {
+     "type": "cloud",
+     "parent": null,
+     "label": "",
+     "props": {}
+    },
+    "node17": {
+     "type": "valve",
+     "parent": null,
+     "label": "effort_decrease",
+     "props": {
+      "rate": "if feasible then alpha*cost else 0.0",
+      "units": ""
+     }
+    },
+    "node18": {
+     "type": "variable",
+     "parent": null,
+     "label": "feasible",
+     "props": {
+      "value": "pangolins>=Ne and common_species>=Ne and effort>=0",
+      "units": "boolean",
+      "min": "",
+      "max": ""
+     }
+    },
+    "node19": {
+     "type": "variable",
+     "parent": null,
+     "label": "share_pursuit",
+     "props": {
+      "value": "max(0,min(1,gaussian_var(s,s_sd)))",
+      "units": "",
+      "min": "",
+      "max": ""
+     }
+    },
+    "node20": {
+     "type": "variable",
+     "parent": null,
+     "label": "price",
+     "props": {
+      "value": "a+b/(pow(pangolins,z)+1)",
+      "units": "",
+      "min": "",
+      "max": ""
+     }
+    },
+    "node21": {
+     "type": "variable",
+     "parent": null,
+     "label": "common_price",
+     "props": {
+      "value": "gaussian_var(p0,p0_sd)",
+      "units": "",
+      "min": "",
+      "max": ""
+     }
+    },
+    "node22": {
+     "type": "variable",
+     "parent": null,
+     "label": "revenue",
+     "props": {
+      "value": "price*(pursuit_catch+opportunistic_catch)+common_price*common_catch",
+      "units": "",
+      "min": "",
+      "max": ""
+     }
+    },
+    "node23": {
+     "type": "variable",
+     "parent": null,
+     "label": "cost",
+     "props": {
+      "value": "(c*share_pursuit+c0*(1-share_pursuit))*effort",
+      "units": "",
+      "min": "",
+      "max": ""
+     }
+    },
+    "node24": {
+     "type": "variable",
+     "parent": null,
+     "label": "initial_pangolins",
+     "props": {
+      "value": "24000",
+      "units": "",
+      "min": "12000",
+      "max": "48000"
+     }
+    },
+    "node25": {
+     "type": "variable",
+     "parent": null,
+     "label": "r1",
+     "props": {
+      "value": "0.1",
+      "units": "",
+      "min": "0.05",
+      "max": "0.2"
+     }
+    },
+    "node26": {
+     "type": "variable",
+     "parent": null,
+     "label": "k1",
+     "props": {
+      "value": "50000",
+      "units": "",
+      "min": "25000",
+      "max": "100000"
+     }
+    },
+    "node27": {
+     "type": "variable",
+     "parent": null,
+     "label": "q1",
+     "props": {
+      "value": "4.2E-5",
+      "units": "",
+      "min": "2.1e-05",
+      "max": "8.4e-05"
+     }
+    },
+    "node28": {
+     "type": "variable",
+     "parent": null,
+     "label": "gamma",
+     "props": {
+      "value": "4.2E-6",
+      "units": "",
+      "min": "2.1e-06",
+      "max": "8.4e-06"
+     }
+    },
+    "node29": {
+     "type": "variable",
+     "parent": null,
+     "label": "initial_common",
+     "props": {
+      "value": "50000",
+      "units": "",
+      "min": "25000",
+      "max": "100000"
+     }
+    },
+    "node30": {
+     "type": "variable",
+     "parent": null,
+     "label": "r2",
+     "props": {
+      "value": "0.1",
+      "units": "",
+      "min": "0.05",
+      "max": "0.2"
+     }
+    },
+    "node31": {
+     "type": "variable",
+     "parent": null,
+     "label": "k2",
+     "props": {
+      "value": "100000",
+      "units": "",
+      "min": "50000",
+      "max": "200000"
+     }
+    },
+    "node32": {
+     "type": "variable",
+     "parent": null,
+     "label": "q2",
+     "props": {
+      "value": "4.2E-5",
+      "units": "",
+      "min": "2.1e-05",
+      "max": "8.4e-05"
+     }
+    },
+    "node33": {
+     "type": "variable",
+     "parent": null,
+     "label": "initial_effort",
+     "props": {
+      "value": "1",
+      "units": "",
+      "min": "0.5",
+      "max": "2"
+     }
+    },
+    "node34": {
+     "type": "variable",
+     "parent": null,
+     "label": "alpha",
+     "props": {
+      "value": "0.001",
+      "units": "",
+      "min": "0.0005",
+      "max": "0.002"
+     }
+    },
+    "node35": {
+     "type": "variable",
+     "parent": null,
+     "label": "c",
+     "props": {
+      "value": "300",
+      "units": "",
+      "min": "150",
+      "max": "600"
+     }
+    },
+    "node36": {
+     "type": "variable",
+     "parent": null,
+     "label": "c0",
+     "props": {
+      "value": "150",
+      "units": "",
+      "min": "75",
+      "max": "300"
+     }
+    },
+    "node37": {
+     "type": "variable",
+     "parent": null,
+     "label": "a",
+     "props": {
+      "value": "50",
+      "units": "",
+      "min": "25",
+      "max": "100"
+     }
+    },
+    "node38": {
+     "type": "variable",
+     "parent": null,
+     "label": "b",
+     "props": {
+      "value": "3.8E4",
+      "units": "",
+      "min": "19000",
+      "max": "76000"
+     }
+    },
+    "node39": {
+     "type": "variable",
+     "parent": null,
+     "label": "z",
+     "props": {
+      "value": "0.5",
+      "units": "",
+      "min": "0.25",
+      "max": "1"
+     }
+    },
+    "node40": {
+     "type": "variable",
+     "parent": null,
+     "label": "p0",
+     "props": {
+      "value": "300",
+      "units": "",
+      "min": "150",
+      "max": "600"
+     }
+    },
+    "node41": {
+     "type": "variable",
+     "parent": null,
+     "label": "p0_sd",
+     "props": {
+      "value": "0",
+      "units": "",
+      "min": "0",
+      "max": "100"
+     }
+    },
+    "node42": {
+     "type": "variable",
+     "parent": null,
+     "label": "s",
+     "props": {
+      "value": "0.5",
+      "units": "",
+      "min": "0",
+      "max": "1"
+     }
+    },
+    "node43": {
+     "type": "variable",
+     "parent": null,
+     "label": "s_sd",
+     "props": {
+      "value": "0",
+      "units": "",
+      "min": "0",
+      "max": "0.3"
+     }
+    },
+    "node44": {
+     "type": "variable",
+     "parent": null,
+     "label": "Ne",
+     "props": {
+      "value": "10",
+      "units": "",
+      "min": "5",
+      "max": "20"
+     }
+    }
+   },
+   "arcs": {
+    "arc1": {
+     "type": "flow",
+     "from": "node4",
+     "to": "node1",
+     "valve": "node5",
+     "props": {}
+    },
+    "arc2": {
+     "type": "flow",
+     "from": "node1",
+     "to": "node6",
+     "valve": "node7",
+     "props": {}
+    },
+    "arc3": {
+     "type": "flow",
+     "from": "node1",
+     "to": "node8",
+     "valve": "node9",
+     "props": {}
+    },
+    "arc4": {
+     "type": "flow",
+     "from": "node10",
+     "to": "node2",
+     "valve": "node11",
+     "props": {}
+    },
+    "arc5": {
+     "type": "flow",
+     "from": "node2",
+     "to": "node12",
+     "valve": "node13",
+     "props": {}
+    },
+    "arc6": {
+     "type": "flow",
+     "from": "node14",
+     "to": "node3",
+     "valve": "node15",
+     "props": {}
+    },
+    "arc7": {
+     "type": "flow",
+     "from": "node3",
+     "to": "node16",
+     "valve": "node17",
+     "props": {}
+    },
+    "arc8": {
+     "type": "influence",
+     "from": "node1",
+     "to": "node18",
+     "props": {},
+     "alias": "pangolins"
+    },
+    "arc9": {
+     "type": "influence",
+     "from": "node1",
+     "to": "node5",
+     "props": {},
+     "alias": "pangolins"
+    },
+    "arc10": {
+     "type": "influence",
+     "from": "node1",
+     "to": "node7",
+     "props": {},
+     "alias": "pangolins"
+    },
+    "arc11": {
+     "type": "influence",
+     "from": "node1",
+     "to": "node9",
+     "props": {},
+     "alias": "pangolins"
+    },
+    "arc12": {
+     "type": "influence",
+     "from": "node1",
+     "to": "node20",
+     "props": {},
+     "alias": "pangolins"
+    },
+    "arc13": {
+     "type": "influence",
+     "from": "node2",
+     "to": "node18",
+     "props": {},
+     "alias": "common_species"
+    },
+    "arc14": {
+     "type": "influence",
+     "from": "node2",
+     "to": "node11",
+     "props": {},
+     "alias": "common_species"
+    },
+    "arc15": {
+     "type": "influence",
+     "from": "node2",
+     "to": "node13",
+     "props": {},
+     "alias": "common_species"
+    },
+    "arc16": {
+     "type": "influence",
+     "from": "node3",
+     "to": "node18",
+     "props": {},
+     "alias": "effort"
+    },
+    "arc17": {
+     "type": "influence",
+     "from": "node3",
+     "to": "node7",
+     "props": {},
+     "alias": "effort"
+    },
+    "arc18": {
+     "type": "influence",
+     "from": "node3",
+     "to": "node9",
+     "props": {},
+     "alias": "effort"
+    },
+    "arc19": {
+     "type": "influence",
+     "from": "node3",
+     "to": "node13",
+     "props": {},
+     "alias": "effort"
+    },
+    "arc20": {
+     "type": "influence",
+     "from": "node3",
+     "to": "node23",
+     "props": {},
+     "alias": "effort"
+    },
+    "arc21": {
+     "type": "influence",
+     "from": "node44",
+     "to": "node18",
+     "props": {},
+     "alias": "Ne"
+    },
+    "arc22": {
+     "type": "influence",
+     "from": "node18",
+     "to": "node5",
+     "props": {},
+     "alias": "feasible"
+    },
+    "arc23": {
+     "type": "influence",
+     "from": "node18",
+     "to": "node7",
+     "props": {},
+     "alias": "feasible"
+    },
+    "arc24": {
+     "type": "influence",
+     "from": "node18",
+     "to": "node9",
+     "props": {},
+     "alias": "feasible"
+    },
+    "arc25": {
+     "type": "influence",
+     "from": "node18",
+     "to": "node11",
+     "props": {},
+     "alias": "feasible"
+    },
+    "arc26": {
+     "type": "influence",
+     "from": "node18",
+     "to": "node13",
+     "props": {},
+     "alias": "feasible"
+    },
+    "arc27": {
+     "type": "influence",
+     "from": "node18",
+     "to": "node17",
+     "props": {},
+     "alias": "feasible"
+    },
+    "arc28": {
+     "type": "influence",
+     "from": "node24",
+     "to": "node1",
+     "props": {},
+     "alias": "initial_pangolins"
+    },
+    "arc29": {
+     "type": "influence",
+     "from": "node29",
+     "to": "node2",
+     "props": {},
+     "alias": "initial_common"
+    },
+    "arc30": {
+     "type": "influence",
+     "from": "node33",
+     "to": "node3",
+     "props": {},
+     "alias": "initial_effort"
+    },
+    "arc31": {
+     "type": "influence",
+     "from": "node25",
+     "to": "node5",
+     "props": {},
+     "alias": "r1"
+    },
+    "arc32": {
+     "type": "influence",
+     "from": "node26",
+     "to": "node5",
+     "props": {},
+     "alias": "k1"
+    },
+    "arc33": {
+     "type": "influence",
+     "from": "node27",
+     "to": "node7",
+     "props": {},
+     "alias": "q1"
+    },
+    "arc34": {
+     "type": "influence",
+     "from": "node28",
+     "to": "node9",
+     "props": {},
+     "alias": "gamma"
+    },
+    "arc35": {
+     "type": "influence",
+     "from": "node30",
+     "to": "node11",
+     "props": {},
+     "alias": "r2"
+    },
+    "arc36": {
+     "type": "influence",
+     "from": "node31",
+     "to": "node11",
+     "props": {},
+     "alias": "k2"
+    },
+    "arc37": {
+     "type": "influence",
+     "from": "node32",
+     "to": "node13",
+     "props": {},
+     "alias": "q2"
+    },
+    "arc38": {
+     "type": "influence",
+     "from": "node42",
+     "to": "node19",
+     "props": {},
+     "alias": "s"
+    },
+    "arc39": {
+     "type": "influence",
+     "from": "node43",
+     "to": "node19",
+     "props": {},
+     "alias": "s_sd"
+    },
+    "arc40": {
+     "type": "influence",
+     "from": "node19",
+     "to": "node7",
+     "props": {},
+     "alias": "share_pursuit"
+    },
+    "arc41": {
+     "type": "influence",
+     "from": "node19",
+     "to": "node9",
+     "props": {},
+     "alias": "share_pursuit"
+    },
+    "arc42": {
+     "type": "influence",
+     "from": "node19",
+     "to": "node13",
+     "props": {},
+     "alias": "share_pursuit"
+    },
+    "arc43": {
+     "type": "influence",
+     "from": "node19",
+     "to": "node23",
+     "props": {},
+     "alias": "share_pursuit"
+    },
+    "arc44": {
+     "type": "influence",
+     "from": "node37",
+     "to": "node20",
+     "props": {},
+     "alias": "a"
+    },
+    "arc45": {
+     "type": "influence",
+     "from": "node38",
+     "to": "node20",
+     "props": {},
+     "alias": "b"
+    },
+    "arc46": {
+     "type": "influence",
+     "from": "node39",
+     "to": "node20",
+     "props": {},
+     "alias": "z"
+    },
+    "arc47": {
+     "type": "influence",
+     "from": "node40",
+     "to": "node21",
+     "props": {},
+     "alias": "p0"
+    },
+    "arc48": {
+     "type": "influence",
+     "from": "node41",
+     "to": "node21",
+     "props": {},
+     "alias": "p0_sd"
+    },
+    "arc49": {
+     "type": "influence",
+     "from": "node20",
+     "to": "node22",
+     "props": {},
+     "alias": "price"
+    },
+    "arc50": {
+     "type": "influence",
+     "from": "node7",
+     "to": "node22",
+     "props": {},
+     "alias": "pursuit_catch"
+    },
+    "arc51": {
+     "type": "influence",
+     "from": "node9",
+     "to": "node22",
+     "props": {},
+     "alias": "opportunistic_catch"
+    },
+    "arc52": {
+     "type": "influence",
+     "from": "node21",
+     "to": "node22",
+     "props": {},
+     "alias": "common_price"
+    },
+    "arc53": {
+     "type": "influence",
+     "from": "node13",
+     "to": "node22",
+     "props": {},
+     "alias": "common_catch"
+    },
+    "arc54": {
+     "type": "influence",
+     "from": "node35",
+     "to": "node23",
+     "props": {},
+     "alias": "c"
+    },
+    "arc55": {
+     "type": "influence",
+     "from": "node36",
+     "to": "node23",
+     "props": {},
+     "alias": "c0"
+    },
+    "arc56": {
+     "type": "influence",
+     "from": "node34",
+     "to": "node15",
+     "props": {},
+     "alias": "alpha"
+    },
+    "arc57": {
+     "type": "influence",
+     "from": "node34",
+     "to": "node17",
+     "props": {},
+     "alias": "alpha"
+    },
+    "arc58": {
+     "type": "influence",
+     "from": "node22",
+     "to": "node15",
+     "props": {},
+     "alias": "revenue"
+    },
+    "arc59": {
+     "type": "influence",
+     "from": "node23",
+     "to": "node17",
+     "props": {},
+     "alias": "cost"
+    }
+   },
+   "submodels": {},
+   "layout": {
+    "node1": {
+     "x": 360,
+     "y": 120
+    },
+    "node2": {
+     "x": 360,
+     "y": 330
+    },
+    "node3": {
+     "x": 360,
+     "y": 540
+    },
+    "node4": {
+     "x": 170,
+     "y": 120
+    },
+    "node6": {
+     "x": 580,
+     "y": 70
+    },
+    "node8": {
+     "x": 580,
+     "y": 170
+    },
+    "node10": {
+     "x": 170,
+     "y": 330
+    },
+    "node12": {
+     "x": 580,
+     "y": 330
+    },
+    "node14": {
+     "x": 580,
+     "y": 540
+    },
+    "node16": {
+     "x": 170,
+     "y": 540
+    },
+    "node18": {
+     "x": 60,
+     "y": 330
+    },
+    "node19": {
+     "x": 560,
+     "y": 250
+    },
+    "node20": {
+     "x": 700,
+     "y": 120
+    },
+    "node21": {
+     "x": 700,
+     "y": 400
+    },
+    "node22": {
+     "x": 700,
+     "y": 470
+    },
+    "node23": {
+     "x": 260,
+     "y": 460
+    },
+    "node24": {
+     "x": 360,
+     "y": 30
+    },
+    "node25": {
+     "x": 200,
+     "y": 40
+    },
+    "node26": {
+     "x": 270,
+     "y": 30
+    },
+    "node27": {
+     "x": 470,
+     "y": 20
+    },
+    "node28": {
+     "x": 520,
+     "y": 215
+    },
+    "node29": {
+     "x": 360,
+     "y": 260
+    },
+    "node30": {
+     "x": 200,
+     "y": 260
+    },
+    "node31": {
+     "x": 270,
+     "y": 260
+    },
+    "node32": {
+     "x": 530,
+     "y": 400
+    },
+    "node33": {
+     "x": 360,
+     "y": 610
+    },
+    "node34": {
+     "x": 470,
+     "y": 610
+    },
+    "node35": {
+     "x": 200,
+     "y": 400
+    },
+    "node36": {
+     "x": 140,
+     "y": 450
+    },
+    "node37": {
+     "x": 800,
+     "y": 60
+    },
+    "node38": {
+     "x": 820,
+     "y": 120
+    },
+    "node39": {
+     "x": 800,
+     "y": 180
+    },
+    "node40": {
+     "x": 820,
+     "y": 360
+    },
+    "node41": {
+     "x": 820,
+     "y": 430
+    },
+    "node42": {
+     "x": 640,
+     "y": 220
+    },
+    "node43": {
+     "x": 660,
+     "y": 280
+    },
+    "node44": {
+     "x": 60,
+     "y": 250
+    }
+   }
+  };
+
+  function demoPangolin(path) {
+    var p = path || 'models/pangolin';
+    var m = JSON.parse(JSON.stringify(MODEL));
+    m.id = p.split('/').pop();
+    Sienna.Diagram.migrate(m);
+    Sienna.userData.set(p, m);
+    // Long enough to settle: most of the paper's scenarios do by ~1000 years.
+    if (Sienna.Simulation) {
+      Sienna.Simulation.presetSettings(p, { runLength: 1000, timeStep: '0.1', logEach: 1 });
+    }
+    return p;
+  }
+
+  Sienna.demoPangolin = demoPangolin;
+  window.demoPangolin = demoPangolin;
+})(window.Sienna);

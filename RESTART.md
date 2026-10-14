@@ -233,6 +233,30 @@ Trees (reverted, nothing committed):
     would be the cheap option if wanted before then. Two small TODOs from the tutorials: caret insertion in the equation
 dialog tracks `keyup` only (on-screen keyboards).
 
+## Pangolin harvest, converted from R (2026-10-14)
+
+Robert brought an R model (Almeida et al. 2023, `AAE_OE`: pangolins, a
+common species, harvest effort — three ODEs). Built as data, not step by
+step: `src/demo-pangolin.js`, seeded as File ▸ Models ▸ Pangolin harvest
+(1000 years preset). How it was converted and checked is in its header —
+identical to the R Euler loop to ~1e-15 in three scenarios. Found:
+
+- **The exporter wrote 1.0e12 as thirteen digits** (`String()`), and
+  SimiLive's C++ then failed: "call of overloaded min(long int, …) is
+  ambiguous" — a parameter's range is applied as
+  `min(max_val, max(min_val, value))`. `prologNumber` now keeps an exponent
+  (with a fraction) and makes a whole number past an int's range real.
+  Round trip unchanged (60/72 identical, 12 refused).
+- **A condition variable needs `units=boolean`**, or the model does not
+  build (`mismatched_units`). Desktop Simile infers it; we do not — set by
+  hand on `feasible`. TODO: infer `boolean` from an equation whose top is a
+  comparison / and / or / not.
+- **`if c then x else 0` does not build** when x is real: write `0.0`.
+- **SimiLive clamps a parameter to its min/max**, silently. A value typed
+  outside the range runs as the nearer limit — the dialog should say so.
+- Not converted: the script's state noise `g` (0 in the paper's main runs)
+  and its experiments (sweeps, 1000-run Monte Carlo) — no batch runs yet.
+
 ## Layouts (2026-10-09, merged)
 
 The workspace is no longer one floating pile. sienna gained containers,

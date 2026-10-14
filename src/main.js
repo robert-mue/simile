@@ -678,6 +678,7 @@
   if (!Sienna.userData.get('models/drain') && Sienna.demoDrain) Sienna.demoDrain();
   if (!Sienna.userData.get('models/rank') && Sienna.demoRank) Sienna.demoRank();
   if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
+  if (!Sienna.userData.get('models/pangolin') && Sienna.demoPangolin) Sienna.demoPangolin();
 
   app.restore().then(afterRestore);
 

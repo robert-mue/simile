@@ -208,9 +208,24 @@
     if (!isFinite(n)) return null;
     // As written, where Prolog reads it as written: `2.0` stays `2.0`, so a
     // round trip gives back the modeller's spelling.
+    // Otherwise a number keeps its kind. One written with an exponent keeps the
+    // exponent, with a fraction: `String()` would spell 1.0e12 out as thirteen
+    // digits, which SimiLive's generated C++ reads as a long int that no
+    // overload of min/max takes (a parameter's range is applied as
+    // min(max_val, max(min_val, value))), and the model fails to build. For
+    // the same reason a whole number past an int's range is made real.
     var body = t.replace(/^[+-]/, '');
-    var out = /^\d+(\.\d+)?$/.test(body) ? body
-      : String(Math.abs(n)).replace(/^(\d+)e/, '$1.0e');
+    var out;
+    if (/^\d+(\.\d+)?$/.test(body)) {
+      out = body;
+    } else if (/e/i.test(body)) {
+      var parts = Math.abs(n).toExponential().split('e');
+      out = (parts[0].indexOf('.') < 0 ? parts[0] + '.0' : parts[0]) + 'e' + Number(parts[1]);
+    } else {
+      out = String(Math.abs(n));                 // `.5`, `5.`
+      if (out.indexOf('.') < 0) out += '.0';
+    }
+    if (/^\d+$/.test(out) && Math.abs(n) > 2147483647) out += '.0';
     return (n < 0 ? ' -' : '') + out;
   }
 
