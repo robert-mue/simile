@@ -102,3 +102,36 @@ Building models
 - An immigration symbol asks for arrivals per time unit.
 - An influence leaving a population is offered in the equation dialog
   as a list, such as {size}.
+
+
+------------------------------------------------------------------------
+Release 2026-10-14
+------------------------------------------------------------------------
+
+Live models in your own web pages
+- A Simile model can now be put into an ordinary web page, among your
+  own text: its diagram, graphs of its results, a lollipop diagram,
+  and sliders for its parameters. The model runs as the page opens;
+  readers can move the sliders, or edit the model, and see what
+  happens. Nothing they do is kept.
+- Help > Live models in your own web pages explains how, step by step.
+  A page needs one line to bring in Simile, and the model's script.
+- File > Export model as script (.js) writes a model, with its run
+  settings, as the script such a page loads.
+- Two example pages: Rabbits and foxes (pages/predator-prey) and
+  A stand of trees (pages/trees).
+
+Building models
+- A variable can have a Minimum and a Maximum. A variable with a
+  number for its value, a minimum and a maximum, and nothing
+  influencing it, is a parameter; Simile .pl files that give these
+  keep them on import and export.
+
+Running models
+- Widgets > Sliders gives a slider for each of the model's parameters.
+  Moving one runs the model again with that value, without changing
+  the model; "model values" puts them back.
+- A variable added since the model was loaded can be chosen for a plot
+  straight away; it is plotted from the next run.
+- Lengthening a run no longer makes it slower to fetch: the results
+  come back in the same number of pieces whatever the run length.
