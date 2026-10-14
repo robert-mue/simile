@@ -217,7 +217,20 @@ catalogue could be built this way.
 
 **After that:** submodel background colour (`fill_colour`, also currently
 dropped by the importer), and the model's own **time units** (displays say
-"unit"). Two small TODOs from the tutorials: caret insertion in the equation
+"unit") — **PARKED 2026-10-14 (Robert):** more than naming the unit; e.g.
+different submodels can have different time units. Found trying "year" on
+Trees (reverted, nothing committed):
+  - In Simile the unit is a RUN setting (run control "Time unit", saved in
+    the `.sts`), not in the `.pl`: no catalogue `properties(...)` has one.
+  - SimiLive takes `timeUnit year` in the `.sts`, and we already scale
+    times to days (`TIME_LIB`, step/runlength/log × 365) as desktop Simile
+    does (`runmodel.tcl` unitLength, `exec.tcl`). But the compiled model's
+    rates stay per DAY: predator-prey in years blew up to Inf/NaN in its
+    first step (step 36.5), and Trees made ~155 trees/yr, not 2. So a
+    unit is only meaningful with rates given time dimensions (`units=…`,
+    e.g. `units=day` appears in indivpop1.pl) — the units system proper.
+  - A display-only label (say "year" while the engine runs plain units)
+    would be the cheap option if wanted before then. Two small TODOs from the tutorials: caret insertion in the equation
 dialog tracks `keyup` only (on-screen keyboards).
 
 ## Layouts (2026-10-09, merged)
