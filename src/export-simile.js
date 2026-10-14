@@ -193,6 +193,51 @@
     return '[' + items.join(',') + ']';
   }
 
+  var NUMBER = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+
+  /**
+   * A number as Prolog reads one, or null if `text` is not a number. JS
+   * spellings Prolog refuses are mended — `1e-7` needs a fraction (`1.0e-7`),
+   * `.5` a leading digit — and a negative one gets a space before it, since
+   * `min_val=-1` would read as the operator `=-`.
+   */
+  function prologNumber(text) {
+    var t = String(text == null ? '' : text).trim();
+    if (!NUMBER.test(t)) return null;
+    var n = Number(t);
+    if (!isFinite(n)) return null;
+    // As written, where Prolog reads it as written: `2.0` stays `2.0`, so a
+    // round trip gives back the modeller's spelling.
+    var body = t.replace(/^[+-]/, '');
+    var out = /^\d+(\.\d+)?$/.test(body) ? body
+      : String(Math.abs(n)).replace(/^(\d+)e/, '$1.0e');
+    return (n < 0 ? ' -' : '') + out;
+  }
+
+  /**
+   * Is this one of our elements a PARAMETER in Simile's sense — what its
+   * equation dialogue calls a "Variable parameter", which a slider can move
+   * while the model runs? A variable whose value is a plain number, with both
+   * ends of its range given, and which nothing influences.
+   *
+   * Simile writes one as a SINGLE node: the variable carries its value, `spec`,
+   * `min_val` and `max_val` itself, with no function node. Measured against
+   * SimiLive (2026-10-14): that form is described as `eval: "INPUT"` with the
+   * range as `min`/`max`, and `Parameterize` then moves it. The same values on
+   * a function node are taken as the range of an ordinary `DERIVED` value, and
+   * `Parameterize` silently does nothing to it; adding `param_type=variable` or
+   * `fixed` to either form stops the model building at all.
+   */
+  function isParameter(model, id) {
+    var n = model.nodes[id];
+    if (!n || n.type !== 'variable') return false;
+    var p = n.props || {};
+    if (prologNumber(p.value) == null || prologNumber(p.min) == null || prologNumber(p.max) == null) return false;
+    return !Object.keys(model.arcs || {}).some(function (a) {
+      return model.arcs[a].type === 'influence' && model.arcs[a].to === id;
+    });
+  }
+
   // ---- the conversion ---------------------------------------------------
 
   /**
@@ -372,7 +417,7 @@
         // A valve has no visible node — it IS its equation, which the flow arc
         // will carry as `attached`.
         if (n.type !== 'valve') self.vis[id] = simId('node', ++self.nodeN);
-        if (self.exprField(n.type)) self.fn[id] = simId('node', ++self.nodeN);
+        if (self.exprField(n.type) && !isParameter(m, id)) self.fn[id] = simId('node', ++self.nodeN);
       });
 
       // Flow arc ids up front, because a valve can be the SOURCE of an
@@ -606,6 +651,15 @@
       var props = ['complete=true'];
       // A cloud has no user-visible name, but Simile still wants one.
       props.push('name=' + atom(n.label || (n.type === 'cloud' ? 'cd' + (++this.cloudN) : id)));
+      // A parameter is one node, holding what a function node would (see
+      // `isParameter`). `spec` is the text as typed, as Simile keeps it.
+      if (isParameter(this.m, id)) {
+        var p = n.props || {};
+        props.push('max_val=' + prologNumber(p.max), 'min_val=' + prologNumber(p.min),
+          'spec=' + atom(String(p.value).trim()),
+          'units=' + (String(p.units || '').trim() || '1'),
+          'value=' + prologNumber(p.value));
+      }
 
       out.push('node(' + this.vis[id] + ',' + NODE_TYPE[n.type] + ',[],'
         + list(props.sort()) + ',' + list([this.centre(id), 'caption_offset=[0,0]']) + ').');
@@ -645,6 +699,13 @@
       ];
       var td = tableData((n.props || {}).graph);
       if (td) props.splice(3, 0, td);
+      // A range on a variable that is not a parameter (it has an equation, or
+      // something influences it) is only a range — but it is kept, as Simile
+      // keeps it, or a round trip would lose it.
+      var lo = prologNumber((n.props || {}).min);
+      var hi = prologNumber((n.props || {}).max);
+      if (n.type === 'variable' && lo != null) props.splice(1, 0, 'min_val=' + lo);
+      if (n.type === 'variable' && hi != null) props.splice(1, 0, 'max_val=' + hi);
 
       // A valve's function rides on its flow; `along` is where along the arc.
       var layout = n.type === 'valve' ? ['along=500'] : [];
@@ -1063,6 +1124,7 @@
   }
 
   Sienna.exportSimile = {
+    isParameter: isParameter,
     /** @returns {string} the model as Simile Prolog */
     prolog: function (model) {
       return new Emitter(model).run();

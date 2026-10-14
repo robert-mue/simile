@@ -99,6 +99,12 @@
     var sim = Sienna.Simulation;
     if (sim.status === 'loading') return;
     sim.stop();
+    if (sim.parameterValues && Object.keys(sim.parameterValues(pathOf(name))).length) {
+      // The sliders go back too — without running twice: clearing them
+      // re-runs the model only if it is the one loaded and unedited.
+      delete sim._overrides[pathOf(name)];
+      sim._emit({ type: 'parameters', path: pathOf(name) });
+    }
     fresh(name);
     if (sim.base) runAgain();
     else loadAndRun(name);

@@ -66,7 +66,8 @@
  *
  * ## What is dropped, and said out loud
  *
- * `spec` (the user's typed text beside the parsed value), `min_val`, `max_val`,
+ * `spec` (the user's typed text beside the parsed value), `min_val` and
+ * `max_val` on anything but a variable (a variable keeps them as its range),
  * `fill_colour`, `comment`, `course`, `curve`, `caption_offset`, `enum_types`,
  * `use_sofar`, `enabled_roles`. None is load-bearing for a run — question 6 of
  * `NOTE-questions-for-developer.md` asks the developer to confirm that, and
@@ -594,6 +595,20 @@
       // model and make the round trip differ from itself: our four fixtures
       // hold no units and came back holding `1`. A real unit (`kg/ha`, `Kl`)
       // is kept, which is the whole distinction worth drawing.
+      // A variable's range — a slider's ends, if it is a parameter (see
+      // `isParameter` in export-simile.js). Elsewhere Simile also writes one
+      // on rates and initial values; we have nowhere to keep those, and they
+      // are reported with the rest of what is dropped.
+      if (type === 'variable') {
+        var lo = src.min_val != null ? src.min_val : (own && own.p.min_val);
+        var hi = src.max_val != null ? src.max_val : (own && own.p.max_val);
+        if (lo != null && String(lo).trim() !== '') out.min = strip(lo);
+        if (hi != null && String(hi).trim() !== '') out.max = strip(hi);
+        this.ranged = this.ranged || {};          // kept, so not reported dropped
+        if (fnId) this.ranged[fnId] = true;
+        if (ownId) this.ranged[ownId] = true;
+      }
+
       var units = src.units != null ? src.units : ((own && own.p.units) || null);
       if (units != null && units !== '') {
         var u = unquote(units);
@@ -1090,8 +1105,10 @@
     reportDropped: function () {
       var self = this;
       var seen = {};
-      var look = function (bag) {
+      var ranged = this.ranged || {};
+      var look = function (bag, id) {
         Object.keys(bag).forEach(function (k) {
+          if ((k === 'min_val' || k === 'max_val') && ranged[id]) return;
           if (DROPPED.indexOf(k) >= 0 && k !== 'name' && k !== 'value' && k !== 'units'
               && k !== 'role' && k !== 'attached' && k !== 'multiplication_spec'
               && k !== 'centre' && k !== 'bounding_box' && k !== 'internal_extent'
@@ -1100,7 +1117,7 @@
           }
         });
       };
-      this.nodeIds.forEach(function (id) { look(self.N[id].p); look(self.N[id].g); });
+      this.nodeIds.forEach(function (id) { look(self.N[id].p, id); look(self.N[id].g); });
       this.arcIds.forEach(function (id) { look(self.A[id].p); look(self.A[id].g); });
       Object.keys(seen).sort().forEach(function (k) {
         self.note('ignored', '`' + k + '` (' + seen[k] + ') — not part of our model');

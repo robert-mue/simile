@@ -1278,3 +1278,60 @@ button.slx-fn:hover { background: #eaf2fa; }
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- sliders (src/widgets/sliders.js) ------------------------------------ */
+
+.slx-sliders {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  font: 12px/1.4 system-ui, sans-serif;
+}
+.slx-sliders-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 6px 12px 10px;
+}
+.slx-sliders-empty { color: #52514e; margin: 8px 0; }
+.slx-slider { padding: 6px 0; border-bottom: 1px solid #ecebe6; }
+.slx-slider:last-child { border-bottom: 0; }
+.slx-slider-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.slx-slider-name {
+  flex: 1 1 auto;
+  font-weight: 600;
+  color: #0b0b0b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A value the run uses that is not the model's own: say so, quietly. */
+.slx-slider-changed .slx-slider-name::after {
+  content: ' \2022';
+  color: #2a78d6;
+}
+.slx-slider-value {
+  width: 6.5em;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  padding: 1px 4px;
+}
+.slx-slider-units { color: #52514e; }
+.slx-slider-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.slx-slider-track input[type="range"] { flex: 1 1 auto; min-width: 0; }
+.slx-slider-end {
+  color: #898781;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5em;
+}
+.slx-slider-end:last-child { text-align: right; }

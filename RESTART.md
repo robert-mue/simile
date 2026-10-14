@@ -138,8 +138,12 @@ catalogue could be built this way.
    strings as the dialog writes them). The starting populations are
    parameters too, `initial_rabbits` 5000 and `initial_foxes` 45, each
    influencing its stock, whose initial value is the parameter's name.
-2. **The multi-slider widget** — in the app and on the page. It offers the
-   variables that have a numeric value and both `min` and `max`.
+2. **The multi-slider widget** — **DONE 2026-10-14**: `src/widgets/sliders.js`
+   (Widgets ▸ Sliders in the app; `data-simile="sliders"` on a page, which the
+   predator-prey page now has). Measured on the page: a rate slider re-runs in
+   ~1.5 s, a starting population in ~3 s (the model is rebuilt), "model values"
+   puts them back. Slider values never touch the stored model. How it works,
+   and what was found getting there, is under "Sliders" below.
 3. **File ▸ Export model as script**, and the guide.
 4. **One more sample only: Trees** — the multi-line graph (a line per member)
    and the lollipop display, showing a page is not only plots. (The catalogue
@@ -152,19 +156,30 @@ catalogue could be built this way.
   needs a way to give a widget its `ref` directly — a small sienna change.
   Everything else a widget needs is the shell scripts and a model in
   `userData`; one `Sienna.Simulation` session serves the page.
-- **Live sliders exist in the engine.** SimiLive's own slider helper posts
-  `act=Parameterize` with `data={"<captpath>": "NOW <value>"}` (its `run.js`
-  `sendValues`, `slider.js` `toModel`) — no recompile, so a re-run takes about
-  a second. Only components whose Describe entry has **`eval == "INPUT"`**
-  qualify, with `min`/`max` for the slider. In Simile files those carry
-  `min_val=`/`max_val=` on the function — which our **importer currently drops**
-  (`DROPPED` in `import-simile.js`). So sliders need: keeping those on import
-  (as `props.min`/`max` — the dialog already has the fields), the exporter
-  writing them as Simile does (`min_val=0,max_val=1000` in the node's
-  property list, e.g. `reference/catalogue/hexagon.pl`; still find a
-  catalogue model whose Describe shows `INPUT`, and copy its form), the
-  `Parameterize` call, and the widget. Rebuilding the model per slider move
-  would work but takes seconds — not live.
+- **Sliders — what SimiLive does (measured 2026-10-14):**
+  - Only a variable written in Simile's SINGLE-NODE form — value, `spec`,
+    `min_val`, `max_val` on the `variable` node, no function node — is described
+    as `eval: "INPUT"`. The same on a function node is just a `DERIVED` value's
+    range, and `Parameterize` silently does nothing to it. Adding
+    `param_type=variable` or `fixed` to either form stops the build
+    ("Failed to build executable", or a Prolog stack overflow).
+  - `Parameterize {captpath: "NOW v"}` sets a variable parameter at once; every
+    Reset (any depth) puts it back to the model's value. So values are sent
+    again after each reset (`Simulation.reset`).
+  - A stock's starting value is fixed at reset from the parameter's DEFAULT,
+    so `Parameterize` cannot move it (Simile's own equation dialog refuses
+    variable parameters for initial values). `param_type=file` ("fixed
+    parameter", `eval: "TABLE"`) does take a plain value at the next reset —
+    but then the equation's value is ignored (an unset one started rabbits at
+    6.9e-310), which would change the model's meaning in desktop Simile. So
+    instead a parameter leading to a stock reloads the model with the value
+    written in.
+  - Simile 7.5's help and Tcl are installed locally:
+    `/usr/share/doc/simile-7.5/run/sliders.htm`, `…/equations/dialogue.htm`,
+    `/usr/share/simile-7.5/Run/equation.tcl`.
+- The importer now keeps a variable's `min_val`/`max_val` (as `props.min`/
+  `max`, from either form) and the exporter writes them back, so the catalogue
+  round trip is unchanged: 60 of 72 identical, 0 differ, 12 refused.
 - Ask the Simile developer whether SimiLive can bear public pages' load.
 
 **After that:** submodel background colour (`fill_colour`, also currently

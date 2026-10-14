@@ -38,6 +38,7 @@ body.slx-page {
 .slx-page [data-simile="diagram"] { height: 340px; }
 .slx-page [data-simile="plotter"] { height: 300px; }
 .slx-page [data-simile="lollipop"] { height: 420px; }
+.slx-page [data-simile="sliders"] { height: auto; max-height: 460px; }
 
 /* Two displays side by side where there is room, one above the other where
    there is not. */

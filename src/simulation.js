@@ -420,7 +420,10 @@
 
       var sml;
       try {
-        sml = Sienna.exportSimile.sml(model);
+        // With the sliders' values in it: the engine's defaults are then what
+        // the sliders say, so a starting value (which only a load can change,
+        // see `setParameter`) is right, and a reset keeps every value.
+        sml = Sienna.exportSimile.sml(this._withParameters(path, model));
       } catch (err) {
         // A refusal to export is a message about the MODEL, written for the
         // modeller. Surface it as-is rather than wrapping it in transport talk.
@@ -507,6 +510,15 @@
         depth: this._firstReset ? -2 : 0,
         note: JSON.stringify(note),
       }).then(function (text) {
+        // A reset puts every variable parameter back to the model's value, so
+        // the sliders' values go back in — and the values read again, since
+        // what the reset reported was computed before them.
+        var live = self._liveParameters();
+        if (!Object.keys(live).length) return text;
+        live.seqNo = ++self._paramSeq;
+        return self._post('Parameterize', { data: JSON.stringify(live) })
+          .then(function () { return self._post('Query', { note: JSON.stringify(note) }); });
+      }).then(function (text) {
         self._firstReset = false;
         self.settings.current = current;
         self._emit({ type: 'settings' });
@@ -573,6 +585,79 @@
     stepPending: function () {
       return !!this.base && this._runStep != null
         && String(this.settings.timeStep).trim() !== this._runStep;
+    },
+
+    // ---- parameters (sliders) ---------------------------------------------
+
+    /**
+     * Values the sliders have given a model's parameters, by model path and
+     * node id. NOT edits to the model: the stored model keeps its own values,
+     * a slider's is a setting for running it, gone with the page. They apply
+     * to that model whenever it is the one loaded.
+     */
+    _overrides: {},
+    _paramSeq: 0,
+
+    /** The slider values for one model: `{nodeId: number}`. */
+    parameterValues: function (path) {
+      return $.extend({}, this._overrides[path] || {});
+    },
+
+    /**
+     * Run one of a model's parameters at `value` instead of the model's own.
+     * Runs again from the start when that model is the one loaded. A rate
+     * changes in place (`Parameterize`, about a second); a starting value means
+     * loading the model again, since Simile fixes those when it builds it and a
+     * reset puts them back.
+     * @returns {Promise}
+     */
+    setParameter: function (path, nodeId, value) {
+      var o = this._overrides[path] || (this._overrides[path] = {});
+      var reload = Simulation.parameterNeedsLoad(path, nodeId) && o[nodeId] !== value;
+      o[nodeId] = value;
+      this._emit({ type: 'parameters', path: path });
+      return this._rerun(path, reload);
+    },
+
+    /** Every slider back to the model's own value, and run again. */
+    clearParameters: function (path) {
+      var had = this._overrides[path] || {};
+      var reload = Object.keys(had).some(function (id) { return Simulation.parameterNeedsLoad(path, id); });
+      delete this._overrides[path];
+      this._emit({ type: 'parameters', path: path });
+      return this._rerun(path, reload);
+    },
+
+    _rerun: function (path, reload) {
+      var self = this;
+      if (this.modelPath !== path || !this.base || this.status === 'loading') return Promise.resolve();
+      this.stop();
+      var go = reload ? this._reload().then(function () { self.start(true); })
+        : this.reset().then(function () { self.start(); });
+      return go.catch(function () { /* reported through status */ });
+    },
+
+    /** The model as loaded: its slider values written in as its own. */
+    _withParameters: function (path, model) {
+      var o = this._overrides[path];
+      if (!o || !Object.keys(o).length) return model;
+      var copy = JSON.parse(JSON.stringify(model));
+      Object.keys(o).forEach(function (id) {
+        var n = copy.nodes[id];
+        if (n && n.props) n.props.value = String(o[id]);
+      });
+      return copy;
+    },
+
+    /** `{captpath: 'NOW value'}` for the loaded model's rate parameters. */
+    _liveParameters: function () {
+      var path = this.modelPath;
+      var o = (path && this._overrides[path]) || {};
+      var out = {};
+      Simulation.parametersOf(path).forEach(function (p) {
+        if (p.id in o && !p.needsLoad) out[p.captpath] = 'NOW ' + o[p.id];
+      });
+      return out;
     },
 
     /**
@@ -829,6 +914,72 @@
   };
 
   /**
+   * A model's PARAMETERS — what a slider can move: each variable that
+   * `exportSimile.isParameter` says Simile will take as a "variable
+   * parameter" (a number for its value, a minimum and a maximum, nothing
+   * influencing it). Read from the model, so they are there before it is
+   * loaded. Members of a population are left out: Simile gives them no slider.
+   *
+   * `needsLoad` marks one a starting value depends on — an influence path
+   * leads from it to a stock — which only loading the model again changes.
+   * @returns {Array<{id, label, captpath, value, min, max, units, needsLoad}>}
+   */
+  Simulation.parametersOf = function (ref) {
+    var m = ref && Sienna.userData ? Sienna.userData.get(ref) : null;
+    if (!m || !m.nodes || !Sienna.exportSimile) return [];
+    var subs = m.submodels || {};
+    var out = [];
+    Object.keys(m.nodes).forEach(function (id) {
+      if (!Sienna.exportSimile.isParameter(m, id)) return;
+      var n = m.nodes[id];
+      var path = [];
+      var multi = false;
+      for (var p = n.parent; p && subs[p]; p = subs[p].parent) {
+        path.unshift(subs[p].label || p);
+        if (subs[p].kind && subs[p].kind !== 'single') multi = true;
+      }
+      if (multi) return;
+      var label = path.concat([n.label]).join('/');
+      out.push({
+        id: id,
+        label: label,
+        captpath: '/' + label,
+        value: Number(n.props.value),
+        min: Number(n.props.min),
+        max: Number(n.props.max),
+        units: n.props.units || '',
+        needsLoad: reachesStock(m, id),
+      });
+    });
+    return out.sort(function (a, b) { return a.label.localeCompare(b.label); });
+  };
+
+  Simulation.parameterNeedsLoad = function (ref, id) {
+    var m = ref && Sienna.userData ? Sienna.userData.get(ref) : null;
+    return !!(m && m.nodes && reachesStock(m, id));
+  };
+
+  /** Does an influence path lead from `id` to a stock (its starting value)? */
+  function reachesStock(m, id) {
+    var seen = {};
+    var todo = [id];
+    while (todo.length) {
+      var at = todo.pop();
+      if (seen[at]) continue;
+      seen[at] = true;
+      var hit = Object.keys(m.arcs || {}).some(function (k) {
+        var a = m.arcs[k];
+        if (a.type !== 'influence' || a.from !== at) return false;
+        if ((m.nodes[a.to] || {}).type === 'stock') return true;
+        todo.push(a.to);
+        return false;
+      });
+      if (hit) return true;
+    }
+    return false;
+  }
+
+  /**
    * The session as seen by a panel that belongs to ONE model (its `ref`) — a
    * run control or display in that model's Simulation collection. There is one
    * session, so one model loaded at a time, and another model's panels must
@@ -884,6 +1035,11 @@
       reset: function () { return mine() ? sim.reset() : Promise.resolve(); },
       start: function () { if (mine()) sim.start(); },
       setSetting: function (key, value) { return sim.setSetting(key, value); },
+      // A model's slider values are its own whichever model is loaded: they
+      // apply when it next is.
+      parameterValues: function (path) { return sim.parameterValues(path); },
+      setParameter: function (path, id, v) { return sim.setParameter(path, id, v); },
+      clearParameters: function (path) { return sim.clearParameters(path); },
       stepPending: function () { return mine() && sim.stepPending(); },
       atStart: function () { return sim.atStart(); },
       isStale: function () { return mine() && sim.isStale(); },
@@ -891,7 +1047,7 @@
       stop: function () { if (mine()) sim.stop(); },
       subscribe: function (fn) {
         return sim.subscribe(function (e) {
-          if (e.type === 'status' || mine()) fn(e);
+          if (e.type === 'status' || e.type === 'parameters' || mine()) fn(e);
         });
       },
     };

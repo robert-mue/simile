@@ -64,6 +64,17 @@ footing (`src/widgets/grid.js` is the first).
   panels bound to a model (`ref`) see it through `Simulation.viewFor(ref)`,
   which shows it only while it is that model's (`loadedFor` / `modelPath`), so
   another model's run control and displays read "no model loaded".
+- `src/widgets/sliders.js` — a slider per **parameter**: a variable with a
+  numeric value, a Minimum and a Maximum (dialog fields `min`/`max`), and no
+  influence into it (`exportSimile.isParameter`, `Simulation.parametersOf`).
+  A slider's value is a RUN setting (`Simulation.setParameter`), never an edit
+  to the model. A rate is changed in place (`Parameterize` with `NOW v`, sent
+  again after every reset, which restores defaults); a parameter with an
+  influence path to a stock (a starting value) is changed by loading the model
+  again with the value written in. The exporter writes a parameter as Simile's
+  single-node "variable parameter" (value, `spec`, `min_val`, `max_val` on the
+  variable node, no function node) — the only form SimiLive describes as
+  `INPUT`; see the comment on `isParameter`.
 - `src/page.js` — **embedded-widget pages** (`window.Simile`): widgets placed
   straight into an ordinary web page, no workspace. A model ships as a script
   calling `Simile.model(name, model, runSettings)`; elements say

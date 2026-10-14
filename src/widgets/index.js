@@ -44,6 +44,18 @@
     role: 'run-control',
   });
 
+  // A slider for each parameter of a model (src/widgets/sliders.js). It IS
+  // its controls, so it never becomes a thumbnail. A display by role, so it
+  // opens beside the plots it moves.
+  reg.register('sliders', {
+    src: 'src/widgets/sliders.js',
+    label: 'Sliders',
+    title: 'Sliders',
+    thumbnail: false,
+    workingSize: { width: 380, height: 360 },
+    role: 'display',
+  });
+
   reg.register('plotter', {
     src: 'src/widgets/plotter.js',
     label: 'Plotter',
