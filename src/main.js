@@ -195,6 +195,7 @@
       return [
         { label: 'Import Simile model (.pl / .sml)…', onSelect: importSimileFile },
         { label: 'Export current model as .pl…', onSelect: exportSimileFile },
+        { label: 'Export model as script (.js)…', onSelect: exportScriptFile },
       ];
     },
   });
@@ -454,6 +455,54 @@
     var a = document.createElement('a');
     a.href = url;
     a.download = name;
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  /**
+   * File ▸ Export model as script: the current model as a `.js` file that a
+   * page with widgets embedded in it loads with `<script>` (src/page.js) —
+   * which works from disk, where fetching a file beside the page does not.
+   * One call, `Simile.model(name, model, run)`, so several models can share a
+   * page; `run` is the run settings chosen for it here, if any were.
+   *
+   * The name is the model's own, made fit to be a page's `data-model`:
+   * `Predator-prey` → `predator-prey`. The file is named after it.
+   */
+  function scriptName(model, path) {
+    var n = String(model.name || '').trim().toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+    return n || String(path).split('/').pop();
+  }
+
+  function exportScriptFile() {
+    var path = Sienna.documents.current(app);
+    if (!path) { window.alert('There is no current model — open one first.'); return; }
+    var model = Sienna.userData.get(path);
+    // A model that will not convert would not run on a page either: say why
+    // now, in the modeller's terms, rather than in a reader's browser later.
+    try {
+      Sienna.exportSimile.prolog(model);
+    } catch (e) {
+      window.alert(e && e.message ? e.message : String(e));
+      return;
+    }
+    var name = scriptName(model, path);
+    var copy = JSON.parse(JSON.stringify(model));
+    copy.id = name;
+    var run = Sienna.Simulation.settingsFor(path);
+    var text = '// ' + (model.name || name) + ' — a Simile model, exported '
+      + new Date().toISOString().slice(0, 10) + '.\n'
+      + '// For a page with widgets embedded in it: load this file with\n'
+      + '//   <script src="' + name + '.js"></script>\n'
+      + '// and refer to the model as data-model="' + name + '" (see src/page.js).\n'
+      + 'Simile.model(' + JSON.stringify(name) + ', ' + JSON.stringify(copy, null, 2)
+      + (run ? ', ' + JSON.stringify(run) : '') + ');\n';
+    // Text, not JSON, so its own Blob — as for .pl above.
+    var url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name + '.js';
     a.click();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }

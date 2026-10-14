@@ -1,9 +1,8 @@
-// A Simile model, for a page with widgets embedded in it (see src/page.js).
-// Predator-prey, as re-cast in Stage 3 of the Predator-prey tutorial, with
-// each constant in its equations — the starting populations included — drawn
-// out as a parameter: a variable that nothing influences, given a range
-// (min, max) for a slider.
-Simile.model('predator-prey', {
+// Predator-prey — a Simile model, exported 2026-10-14.
+// For a page with widgets embedded in it: load this file with
+//   <script src="predator-prey.js"></script>
+// and refer to the model as data-model="predator-prey" (see src/page.js).
+Simile.model("predator-prey", {
   "id": "predator-prey",
   "name": "Predator-prey",
   "format": 3,
@@ -354,4 +353,4 @@ Simile.model('predator-prey', {
       "y": 238
     }
   }
-}, {"runLength": 50, "timeStep": "0.1", "logEach": 1});
+}, {"runLength":50,"logEach":1,"timeStep":"0.1"});

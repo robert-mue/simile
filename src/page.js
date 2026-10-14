@@ -8,7 +8,9 @@
  *
  * A page needs three things besides the scripts:
  *
- *   1. **The model**, as a script: `Simile.model('predator-prey', {…}, run)`.
+ *   1. **The model**, as a script: `Simile.model('predator-prey', {…}, run)`
+ *      — what File ▸ Export model as script writes (`exportScriptFile` in
+ *      src/main.js).
  *      A page opened from disk cannot fetch a file beside it, but it can load
  *      one with `<script>`, and a call rather than an assignment lets several
  *      models share a page. `run` is how to run it (`runLength`, `timeStep`,

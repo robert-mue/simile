@@ -77,7 +77,9 @@ footing (`src/widgets/grid.js` is the first).
   `INPUT`; see the comment on `isParameter`.
 - `src/page.js` — **embedded-widget pages** (`window.Simile`): widgets placed
   straight into an ordinary web page, no workspace. A model ships as a script
-  calling `Simile.model(name, model, runSettings)`; elements say
+  calling `Simile.model(name, model, runSettings)` — File ▸ Export model as
+  script writes one (`exportScriptFile` in `src/main.js`, with the run
+  settings chosen for the model, `Simulation.settingsFor`); elements say
   `data-simile="diagram|plotter|lollipop|…|controls"` and `data-model`
   (`data-show` = a plot's variables, `data-options` = JSON); `Simile.page({ base })`
   fills them, loads the first model on SimiLive and runs it, and re-runs after

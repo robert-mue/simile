@@ -587,6 +587,22 @@
         && String(this.settings.timeStep).trim() !== this._runStep;
     },
 
+    /**
+     * The run settings chosen for one of our models — as they were last set
+     * for it, over nothing — or null if none were. What File ▸ Export model as
+     * script ships with the model, so a page runs it the way its modeller did.
+     * `updateEach` is left out: it is about the network, not the model.
+     */
+    settingsFor: function (path) {
+      var kept = rememberedFor(path);
+      if (!kept) return null;
+      var out = {};
+      ['runLength', 'logEach', 'timeStep'].forEach(function (k) {
+        if (kept[k] != null) out[k] = kept[k];
+      });
+      return Object.keys(out).length ? out : null;
+    },
+
     // ---- parameters (sliders) ---------------------------------------------
 
     /**

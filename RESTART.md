@@ -144,7 +144,12 @@ catalogue could be built this way.
    ~1.5 s, a starting population in ~3 s (the model is rebuilt), "model values"
    puts them back. Slider values never touch the stored model. How it works,
    and what was found getting there, is under "Sliders" below.
-3. **File ▸ Export model as script**, and the guide.
+3. **File ▸ Export model as script** — **DONE 2026-10-14** (`exportScriptFile`
+   in `src/main.js`): `<name>.js` holding `Simile.model(name, model, run)`,
+   the name made from the model's (`Predator-prey` → `predator-prey`), the run
+   settings those chosen for it. The sample page's `predator-prey.js` IS such
+   an export, checked identical to the hand-made one. **Still to do: the
+   guide.**
 4. **One more sample only: Trees** — the multi-line graph (a line per member)
    and the lollipop display, showing a page is not only plots. (The catalogue
    model straight from its `.pl` is dropped for now.)
@@ -439,6 +444,15 @@ is in `NOTE-model-file-reference.md`. Settled:
   generated from the schema where possible (the `test/corpus.js` lesson).
 - Do not target `.pl`: harder to get right, and errors would come back through
   the importer instead of our own checks.
+
+### 7. Longer term: the Simile engine in the browser (Robert, 2026-10-14)
+
+Run models on the client instead of SimiLive — the whole chain, Prolog
+interpreter and C++ compiler included (WebAssembly, presumably) — for far
+better responsiveness: a model re-run CONTINUOUSLY as a slider moves, rather
+than ~1.5 s after it is let go (~3 s for a starting value, which rebuilds).
+It would also remove the public-load question for embedded-widget pages. For
+another day; a discussion first, not a job to start.
 
 ## Waiting on the developer
 
