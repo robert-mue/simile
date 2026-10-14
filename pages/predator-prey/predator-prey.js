@@ -1,5 +1,8 @@
 // A Simile model, for a page with widgets embedded in it (see src/page.js).
-// Predator-prey, as re-cast in Stage 3 of the Predator-prey tutorial.
+// Predator-prey, as re-cast in Stage 3 of the Predator-prey tutorial, with
+// each constant in its equations — the starting populations included — drawn
+// out as a parameter: a variable that nothing influences, given a range
+// (min, max) for a slider.
 Simile.model('predator-prey', {
   "id": "predator-prey",
   "name": "Predator-prey",
@@ -13,7 +16,7 @@ Simile.model('predator-prey', {
       "parent": null,
       "label": "rabbits",
       "props": {
-        "initial": "5000",
+        "initial": "initial_rabbits",
         "units": ""
       }
     },
@@ -22,7 +25,7 @@ Simile.model('predator-prey', {
       "parent": null,
       "label": "foxes",
       "props": {
-        "initial": "45",
+        "initial": "initial_foxes",
         "units": ""
       }
     },
@@ -37,7 +40,7 @@ Simile.model('predator-prey', {
       "parent": null,
       "label": "rabbit_repro",
       "props": {
-        "rate": "0.5*rabbits",
+        "rate": "rabbit_birth_rate*rabbits",
         "units": ""
       }
     },
@@ -82,7 +85,7 @@ Simile.model('predator-prey', {
       "parent": null,
       "label": "fox_mortality",
       "props": {
-        "rate": "0.2*foxes",
+        "rate": "fox_death_rate*foxes",
         "units": ""
       }
     },
@@ -91,7 +94,7 @@ Simile.model('predator-prey', {
       "parent": null,
       "label": "eaten_per_fox",
       "props": {
-        "value": "0.01*rabbits",
+        "value": "attack_rate*rabbits",
         "units": ""
       }
     },
@@ -100,8 +103,68 @@ Simile.model('predator-prey', {
       "parent": null,
       "label": "rfox",
       "props": {
-        "value": "0.01*eaten_per_fox",
+        "value": "conversion_rate*eaten_per_fox",
         "units": ""
+      }
+    },
+    "node13": {
+      "type": "variable",
+      "parent": null,
+      "label": "rabbit_birth_rate",
+      "props": {
+        "value": "0.5",
+        "min": "0.25",
+        "max": "1"
+      }
+    },
+    "node14": {
+      "type": "variable",
+      "parent": null,
+      "label": "attack_rate",
+      "props": {
+        "value": "0.01",
+        "min": "0.005",
+        "max": "0.02"
+      }
+    },
+    "node15": {
+      "type": "variable",
+      "parent": null,
+      "label": "conversion_rate",
+      "props": {
+        "value": "0.01",
+        "min": "0.005",
+        "max": "0.02"
+      }
+    },
+    "node16": {
+      "type": "variable",
+      "parent": null,
+      "label": "fox_death_rate",
+      "props": {
+        "value": "0.2",
+        "min": "0.1",
+        "max": "0.4"
+      }
+    },
+    "node17": {
+      "type": "variable",
+      "parent": null,
+      "label": "initial_rabbits",
+      "props": {
+        "value": "5000",
+        "min": "2500",
+        "max": "10000"
+      }
+    },
+    "node18": {
+      "type": "variable",
+      "parent": null,
+      "label": "initial_foxes",
+      "props": {
+        "value": "45",
+        "min": "22.5",
+        "max": "90"
       }
     }
   },
@@ -189,6 +252,48 @@ Simile.model('predator-prey', {
       "to": "node8",
       "props": {},
       "alias": "foxes"
+    },
+    "arc15": {
+      "type": "influence",
+      "from": "node13",
+      "to": "node4",
+      "props": {},
+      "alias": "rabbit_birth_rate"
+    },
+    "arc16": {
+      "type": "influence",
+      "from": "node14",
+      "to": "node11",
+      "props": {},
+      "alias": "attack_rate"
+    },
+    "arc17": {
+      "type": "influence",
+      "from": "node15",
+      "to": "node12",
+      "props": {},
+      "alias": "conversion_rate"
+    },
+    "arc18": {
+      "type": "influence",
+      "from": "node16",
+      "to": "node10",
+      "props": {},
+      "alias": "fox_death_rate"
+    },
+    "arc19": {
+      "type": "influence",
+      "from": "node17",
+      "to": "node1",
+      "props": {},
+      "alias": "initial_rabbits"
+    },
+    "arc20": {
+      "type": "influence",
+      "from": "node18",
+      "to": "node2",
+      "props": {},
+      "alias": "initial_foxes"
     }
   },
   "layout": {
@@ -223,6 +328,30 @@ Simile.model('predator-prey', {
     "node12": {
       "x": 91.66666666666667,
       "y": 116.11111111111111
+    },
+    "node13": {
+      "x": 128,
+      "y": 22
+    },
+    "node14": {
+      "x": 312,
+      "y": 116
+    },
+    "node15": {
+      "x": 32,
+      "y": 116
+    },
+    "node16": {
+      "x": 222,
+      "y": 238
+    },
+    "node17": {
+      "x": 240,
+      "y": 22
+    },
+    "node18": {
+      "x": 110,
+      "y": 238
     }
   }
 }, {"runLength": 50, "timeStep": "0.1", "logEach": 1});

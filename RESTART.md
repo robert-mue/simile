@@ -130,7 +130,16 @@ catalogue could be built this way.
    (its demo: `examples/demo/embedded/`). On a page the diagram shows only
    the view commands (Robert chose this over hiding the palette entirely);
    elements still open by double-click.
-2. **The multi-slider widget** — in the app and on the page.
+   **Parameters (2026-10-14, Robert):** on the page, every constant in the
+   rate equations is a parameter variable (nothing influences it) with a range
+   of 0.5–2× its value: `rabbit_birth_rate` 0.5, `attack_rate` 0.01,
+   `conversion_rate` 0.01, `fox_death_rate` 0.2. Results unchanged. The range
+   is `props.min` / `props.max` on a variable (schema fields Minimum/Maximum,
+   strings as the dialog writes them). The starting populations are
+   parameters too, `initial_rabbits` 5000 and `initial_foxes` 45, each
+   influencing its stock, whose initial value is the parameter's name.
+2. **The multi-slider widget** — in the app and on the page. It offers the
+   variables that have a numeric value and both `min` and `max`.
 3. **File ▸ Export model as script**, and the guide.
 4. **One more sample only: Trees** — the multi-line graph (a line per member)
    and the lollipop display, showing a page is not only plots. (The catalogue
@@ -149,8 +158,10 @@ catalogue could be built this way.
   a second. Only components whose Describe entry has **`eval == "INPUT"`**
   qualify, with `min`/`max` for the slider. In Simile files those carry
   `min_val=`/`max_val=` on the function — which our **importer currently drops**
-  (`DROPPED` in `import-simile.js`). So sliders need: keeping those on import,
-  a way to give a variable its range in the node dialog, the exporter writing it as Simile does (find a
+  (`DROPPED` in `import-simile.js`). So sliders need: keeping those on import
+  (as `props.min`/`max` — the dialog already has the fields), the exporter
+  writing them as Simile does (`min_val=0,max_val=1000` in the node's
+  property list, e.g. `reference/catalogue/hexagon.pl`; still find a
   catalogue model whose Describe shows `INPUT`, and copy its form), the
   `Parameterize` call, and the widget. Rebuilding the model per slider move
   would work but takes seconds — not live.

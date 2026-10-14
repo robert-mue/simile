@@ -109,6 +109,13 @@
       variable:     { has_label: true,  fields: [
         { name: 'value', label: 'Value or expression', type: 'expression', required: true },
         { name: 'units', label: 'Units', type: 'text' },
+        // The range a slider may move a PARAMETER over — a variable whose
+        // value is a number and which nothing influences. Simile keeps the
+        // same pair on the function node, as `min_val`/`max_val`.
+        { name: 'min', label: 'Minimum', type: 'number',
+          help: 'For a parameter: the lowest value a slider offers.' },
+        { name: 'max', label: 'Maximum', type: 'number',
+          help: 'For a parameter: the highest value a slider offers.' },
         SKETCH,
       ] },
       cloud:        { has_label: 'optional', autoCreated: true, fields: [] },
