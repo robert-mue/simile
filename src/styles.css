@@ -408,6 +408,9 @@ text.slx-incomplete {
   justify-content: center;
   z-index: 20;
 }
+/* Over the whole window, where there is no panel to cover (a diagram embedded
+   in a page): fixed, or it would cover the top of the page, not what is seen. */
+body > .slx-dlg-backdrop { position: fixed; z-index: 1000; }
 
 .slx-dlg {
   min-width: 300px;

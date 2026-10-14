@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rabbits and foxes</title>
+    <link rel="stylesheet" href="../../sienna/src/styles.css" />
+    <link rel="stylesheet" href="../../src/styles.css" />
+    <link rel="stylesheet" href="../pages.css" />
+  </head>
+  <body class="slx-page">
+    <main>
+      <h1>Rabbits and foxes</h1>
+
+      <p>Rabbits breed; foxes eat rabbits, and breed on what they eat; foxes die.
+      That is the whole of the classic predator-prey model, and it is enough to
+      make both populations rise and fall in turn, for ever.</p>
+
+      <p>Here it is as a Simile model. The two boxes are the populations, the
+      arrows with valves are flows into and out of them, and the thin arrows
+      show what each rate depends on.</p>
+
+      <div data-simile="diagram" data-model="predator-prey"></div>
+
+      <p>Two variables sit between the populations. <em>eaten_per_fox</em> is
+      how many rabbits one fox eats in a unit of time, here simply proportional
+      to the number of rabbits; <em>rfox</em> is how many young a fox raises on
+      that. Mathematically this is the textbook Lotka-Volterra model, but
+      drawing these two out, rather than leaving them inside the equations for
+      <em>predation</em> and <em>fox_repro</em>, puts the model's real
+      assumptions where they can be seen and argued with.</p>
+
+      <h2>What it does</h2>
+
+      <p>The model ran as this page opened, for 50 time units.</p>
+
+      <div data-simile="controls" data-model="predator-prey"></div>
+
+      <div class="slx-page-row">
+        <div data-simile="plotter" data-model="predator-prey" data-show="rabbits"></div>
+        <div data-simile="plotter" data-model="predator-prey" data-show="foxes"></div>
+      </div>
+
+      <p>Rabbits multiply while foxes are few. Foxes then multiply on the
+      plenty, eat the rabbits down, and starve back. Each peak in foxes comes
+      just after a peak in rabbits.</p>
+
+      <h2>Try it</h2>
+
+      <p>Double-click any element of the diagram to see and change its equation
+      — try a lower fox death rate in <em>fox_mortality</em> — and the model
+      runs again with your change. Nothing you do here is kept: <strong>Reset
+      model</strong> puts it back, and so does coming back to this page.</p>
+
+      <p class="slx-page-note">This model is built step by step in the
+      <a href="../../help/tutorials/predator-prey.html#stage3">Predator-prey
+      tutorial</a> (Stage 3). The page runs it on SimiLive, the Simile engine
+      at simulistics.com.</p>
+    </main>
+
+    <!-- Keep nothing a reader does (sienna/src/core/namespace.js). Before the
+         shell, which reads storage as it loads. -->
+    <script>window.SIENNA_EPHEMERAL = true;</script>
+
+    <script src="../../sienna/vendor/jquery.min.js"></script>
+    <script src="../../sienna/vendor/jquery-ui.js"></script>
+    <script src="../../vendor/peggy.min.js"></script>
+
+    <!-- What a widget needs of the shell: no panels, workspace or menus. -->
+    <script src="../../sienna/src/core/namespace.js"></script>
+    <script src="../../sienna/src/core/persistence.js"></script>
+    <script src="../../sienna/src/core/widget-registry.js"></script>
+    <script src="../../sienna/src/core/user-data.js"></script>
+    <script src="../../sienna/src/core/actions.js"></script>
+    <script src="../../sienna/src/core/history.js"></script>
+    <script src="../../sienna/src/core/widget-base.js"></script>
+
+    <!-- simile: the model, its equations, and running it. -->
+    <script src="../../src/schema/simile-v1.js"></script>
+    <script src="../../src/diagram.js"></script>
+    <script src="../../src/sketch.js"></script>
+    <script src="../../src/dialog.js"></script>
+    <script src="../../src/grammar.js"></script>
+    <script src="../../src/predicates.js"></script>
+    <script src="../../src/equation-grammar.js"></script>
+    <script src="../../src/equation.js"></script>
+    <script src="../../src/equation-check.js"></script>
+    <script src="../../src/export-simile.js"></script>
+    <script src="../../src/simulation.js"></script>
+    <script src="../../src/widgets/index.js"></script>
+    <script src="../../src/page.js"></script>
+
+    <!-- The model this page is about, and then the page. -->
+    <script src="predator-prey.js"></script>
+    <script>Simile.page({ base: '../../' });</script>
+  </body>
+</html>

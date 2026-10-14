@@ -58,6 +58,13 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     zeroBased: false,
     /** Beyond this many points per series, draw every nth. Storage is unaffected. */
     drawCap: 1500,
+    /**
+     * Variables to plot from the start, by name as the list shows them
+     * (`rabbits`, `tree/size`). Each waits, if need be, for the model to be
+     * loaded, as one chosen "from the next run" does. How a page with a plot
+     * embedded in it says what the plot is of.
+     */
+    variables: [],
   },
 
   /**
@@ -108,7 +115,16 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
       this._ro.observe(this.element[0]);
     }
     this._syncComponents();
+    (this.options.variables || []).forEach((name) => this._addByName(name));
     this._draw();
+  },
+
+  /** Plot a variable given by name: now if the loaded model has it, else when it does. */
+  _addByName(name) {
+    const all = this._sim.scalarComponents()
+      .concat(this._sim.memberComponents ? this._sim.memberComponents() : []);
+    const c = all.find((x) => x.label === name);
+    this._add(c ? c.id : 'next:' + name);
   },
 
   // ---- construction ---------------------------------------------------

@@ -124,16 +124,24 @@
   }
   var KEPT = ['runLength', 'updateEach', 'logEach', 'timeStep'];
 
+  // The same, for this visit only. Where nothing is stored — a page that keeps
+  // nothing (`Sienna.ephemeral`), or no storage at all — settings must still
+  // survive a reload of the model within the visit, or ▶ after an edit would
+  // quietly put the run back to the model's defaults.
+  var keptThisVisit = {};
+
   function rememberedFor(key) {
     var all = (Sienna.persistence && Sienna.persistence.readJSON(SETTINGS_KEY)) || {};
-    return key && all[key] ? all[key] : null;
+    return key ? all[key] || keptThisVisit[key] || null : null;
   }
 
   function remember(key, settings) {
-    if (!key || !Sienna.persistence) return;
-    var all = Sienna.persistence.readJSON(SETTINGS_KEY) || {};
+    if (!key) return;
     var keep = {};
-    KEPT.forEach(function (k) { keep[k] = settings[k]; });
+    KEPT.forEach(function (k) { if (settings[k] != null) keep[k] = settings[k]; });
+    keptThisVisit[key] = keep;
+    if (!Sienna.persistence) return;
+    var all = Sienna.persistence.readJSON(SETTINGS_KEY) || {};
     all[key] = keep;
     Sienna.persistence.writeJSON(SETTINGS_KEY, all);
   }
@@ -565,6 +573,18 @@
     stepPending: function () {
       return !!this.base && this._runStep != null
         && String(this.settings.timeStep).trim() !== this._runStep;
+    },
+
+    /**
+     * Say how one of our models is to be run before it is loaded — what a
+     * page with the model embedded in it ships with (`Simile.model`). Taken
+     * as if the modeller had set them: they replace the model's defaults on
+     * every load. Only the settings named are given.
+     */
+    presetSettings: function (path, settings) {
+      var keep = $.extend({}, rememberedFor(path) || {});
+      KEPT.forEach(function (k) { if (settings && settings[k] != null) keep[k] = settings[k]; });
+      remember(path, keep);
     },
 
     /** Change one run setting, and remember it for this model. */

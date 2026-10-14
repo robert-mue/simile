@@ -1,0 +1,73 @@
+/* Pages with simile widgets embedded in them (src/page.js). Shared by every
+   sample page; a page's own look is its author's business. */
+
+:root {
+  --pg-ink: #1d1d1b;
+  --pg-muted: #5f5e5a;
+  --pg-rule: #d9d8d1;
+  --pg-bg: #fbfbf9;
+}
+
+body.slx-page {
+  margin: 0;
+  background: var(--pg-bg);
+  color: var(--pg-ink);
+  font: 17px/1.6 Georgia, 'Times New Roman', serif;
+}
+
+.slx-page main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2rem 16px 4rem;
+}
+
+.slx-page h1, .slx-page h2 { font-family: system-ui, sans-serif; line-height: 1.25; }
+.slx-page h1 { font-size: 1.9rem; margin: 0 0 1rem; }
+.slx-page h2 { font-size: 1.25rem; margin: 2.2rem 0 0.6rem; }
+.slx-page code { font-size: 0.9em; }
+
+/* Every embedded widget: a bordered box on the page. Heights are set per kind,
+   since a widget fills the box it is given. */
+.slx-page .slx-embedded {
+  box-sizing: border-box;
+  border: 1px solid var(--pg-rule);
+  border-radius: 6px;
+  background: #fff;
+  margin: 1rem 0;
+}
+.slx-page [data-simile="diagram"] { height: 340px; }
+.slx-page [data-simile="plotter"] { height: 300px; }
+.slx-page [data-simile="lollipop"] { height: 420px; }
+
+/* Two displays side by side where there is room, one above the other where
+   there is not. */
+.slx-page .slx-page-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0 1rem;
+}
+
+.slx-page-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 1rem 0;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+.slx-page-controls button {
+  font: inherit;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--pg-rule);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+.slx-page-controls button:disabled { opacity: 0.5; cursor: default; }
+.slx-page-status { color: var(--pg-muted); }
+.slx-page-status.slx-page-error { color: #b3261e; }
+
+.slx-page .slx-page-note {
+  font-size: 0.9rem;
+  color: var(--pg-muted);
+}

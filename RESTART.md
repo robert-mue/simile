@@ -121,6 +121,15 @@ catalogue could be built this way.
    two populations). Mathematically the same as Stage 2's Lotka-Volterra form,
    but it does not hide important design aspects in an equation (Robert).
    Diagram, rabbit and fox plots, runs on open.
+   **DONE 2026-10-14**: `pages/predator-prey/` (model in `predator-prey.js`,
+   made by running the tutorial scripts P1–P3 headless; `src/page.js` is the
+   runtime; `pages/pages.css` shared). Runs on open (final values 469.50 /
+   79.75, as the tutorial's), an edit re-runs it after 1.2 s of quiet, **Run
+   again** and **Reset model** work, nothing is kept. sienna gained
+   `SIENNA_EPHEMERAL`, a widget `ref` option, `widgetRegistry.embed`/`setBase`
+   (its demo: `examples/demo/embedded/`). On a page the diagram shows only
+   the view commands (Robert chose this over hiding the palette entirely);
+   elements still open by double-click.
 2. **The multi-slider widget** — in the app and on the page.
 3. **File ▸ Export model as script**, and the guide.
 4. **One more sample only: Trees** — the multi-line graph (a line per member)

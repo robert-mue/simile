@@ -45,6 +45,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
      * like one arc (§7.5, and see `_bowFor`).
      */
     fanBow: 0.18,
+    /**
+     * Which bars to show: `'all'`, or `'view'` for the view commands alone —
+     * zoom, fit, re-centre. A diagram embedded in a page is mostly there to be
+     * read, in a box too small for the whole palette; its elements can still
+     * be opened and edited by double-click.
+     */
+    tools: 'all',
   },
 
   // Layers, painted in this order (SVG has no z-index).
@@ -77,6 +84,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     this._buildPalette();
     this._buildViewBar();
+    if (this.options.tools === 'view') {
+      this._palette.hide();
+      this._viewBar.find('.slx-select-group, [data-tool="select:box"]').hide();
+    }
     this._buildCanvas();
     this._bindView();
     // The view is only real once it is on the root transform. Nothing else
@@ -228,7 +239,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     cmd('reset', '100%', 'Back to the default zoom level');
     cmd('recentre', 're-centre', 'Centre the model without changing the zoom');
 
-    $('<span class="slx-palette-group">').text('select').appendTo(bar);
+    $('<span class="slx-palette-group slx-select-group">').text('select').appendTo(bar);
     $('<button type="button" data-tool="select:box">')
       .attr('title', 'Drag a box to select what it encloses')
       .text('select box')
@@ -1664,11 +1675,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * (c) The element's own settings dialog, built from the schema's field model
    * for its type (see src/dialog.js). It writes through the model layer, so the
    * widget re-renders from the resulting userData change like any other edit.
+   *
+   * Over the diagram, inside its panel — but a diagram embedded in a page has
+   * no panel and is often too short to hold the dialog, so there it goes over
+   * the whole window instead.
    */
   _openDialog(d, id) {
     this._select(id, false);
     this._render();
-    if (Sienna.propertyDialog) Sienna.propertyDialog(d, id, this.element);
+    const host = this._panel().length ? this.element : $('body');
+    if (Sienna.propertyDialog) Sienna.propertyDialog(d, id, host);
   },
 
   /**

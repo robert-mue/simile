@@ -64,6 +64,16 @@ footing (`src/widgets/grid.js` is the first).
   panels bound to a model (`ref`) see it through `Simulation.viewFor(ref)`,
   which shows it only while it is that model's (`loadedFor` / `modelPath`), so
   another model's run control and displays read "no model loaded".
+- `src/page.js` — **embedded-widget pages** (`window.Simile`): widgets placed
+  straight into an ordinary web page, no workspace. A model ships as a script
+  calling `Simile.model(name, model, runSettings)`; elements say
+  `data-simile="diagram|plotter|lollipop|…|controls"` and `data-model`
+  (`data-show` = a plot's variables, `data-options` = JSON); `Simile.page({ base })`
+  fills them, loads the first model on SimiLive and runs it, and re-runs after
+  an edit. A diagram there shows the view commands only (its `tools: 'view'`
+  option). Pages set `SIENNA_EPHEMERAL`, so a reader's edits are not kept.
+  ONE model runs per page (one session). Samples live in `pages/<name>/`
+  (`pages/pages.css` is shared); each lists the scripts a page needs.
 - `src/demo-*.js` — fixtures seeded on first run: `growth`, `submodel`, and the
   three reference models `landuse`, `farmers` and `lamos` (§9).
 - `src/styles.css` — app-specific styles, loaded after the shell's.
