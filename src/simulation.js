@@ -380,6 +380,12 @@
         var kept = rememberedFor(self._settingsKey());
         if (kept) {
           KEPT.forEach(function (k) { if (kept[k] != null) self.settings[k] = kept[k]; });
+          // The chunk follows the run actually made, not the model's default
+          // length: a page running 300 where the model says 100 would
+          // otherwise ask for it in 60 pieces, each one a redraw.
+          if (kept.updateEach == null) {
+            self.settings.updateEach = chunkFor(Number(self.settings.runLength), Number(self.settings.logEach));
+          }
         }
         if (self.params.errLimit == null) self.params.errLimit = 0;
         self._emit({ type: 'settings' });
@@ -690,6 +696,15 @@
 
     /** Change one run setting, and remember it for this model. */
     setSetting: function (key, value) {
+      // A chunk nobody chose follows the run's length and log interval; one
+      // set by hand (Update each) stays.
+      if ((key === 'runLength' || key === 'logEach')
+          && Number(this.settings.updateEach)
+            === chunkFor(Number(this.settings.runLength), Number(this.settings.logEach))) {
+        var next = $.extend({}, this.settings);
+        next[key] = value;
+        this.settings.updateEach = chunkFor(Number(next.runLength), Number(next.logEach));
+      }
       this.settings[key] = value;
       remember(this._settingsKey(), this.settings);
       this._emit({ type: 'settings' });
@@ -937,7 +952,7 @@
    * loaded. Members of a population are left out: Simile gives them no slider.
    *
    * `needsLoad` marks one a starting value depends on — an influence path
-   * leads from it to a stock — which only loading the model again changes.
+   * leads from it to a stock or a creation — which only loading the model again changes.
    * @returns {Array<{id, label, captpath, value, min, max, units, needsLoad}>}
    */
   Simulation.parametersOf = function (ref) {
@@ -975,7 +990,11 @@
     return !!(m && m.nodes && reachesStock(m, id));
   };
 
-  /** Does an influence path lead from `id` to a stock (its starting value)? */
+  /**
+   * Does an influence path lead from `id` to a starting value: a stock's, or
+   * the number a population's creation makes (`initialiser`)? Both are
+   * evaluated once, as the model is built.
+   */
   function reachesStock(m, id) {
     var seen = {};
     var todo = [id];
@@ -986,7 +1005,8 @@
       var hit = Object.keys(m.arcs || {}).some(function (k) {
         var a = m.arcs[k];
         if (a.type !== 'influence' || a.from !== at) return false;
-        if ((m.nodes[a.to] || {}).type === 'stock') return true;
+        var t = (m.nodes[a.to] || {}).type;
+        if (t === 'stock' || t === 'initialiser') return true;
         todo.push(a.to);
         return false;
       });

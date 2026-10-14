@@ -158,11 +158,29 @@ catalogue could be built this way.
    next release. Checked: the example exactly as printed (pointed at the local
    copy), and an author's page in an unrelated folder. sienna's `styles.css`
    now keeps its whole-window rules off a page that is not the app's
-   (`slx-embedding` on `<html>`). To verify with Trees: the lollipop's
-   `data-options` names in the guide's table (`tree/x` etc.) are a guess.
-4. **One more sample only: Trees** — the multi-line graph (a line per member)
-   and the lollipop display, showing a page is not only plots. (The catalogue
-   model straight from its `.pl` is dropped for now.)
+   (`slx-embedding` on `<html>`). The lollipop's names (`tree/x` …) were
+   checked with Trees: they are right, and the lollipop picks variables
+   called x, y and size by itself, which the guide now says.
+4. **One more sample only: Trees** — **DONE 2026-10-14**: `pages/trees/`
+   ("A stand of trees"), the tutorial's Stage 4 model, built by
+   `tools/headless/scripts/trees.py`, re-cast as for predator-prey: four
+   top-level parameters with influences INTO the population — initial_trees
+   (2.5–10), recruitment_rate (1–4), max_size (12.5–50), death_size
+   (3.5–14, value 7, see below) — and `trees.js` is an actual export. Diagram, multi-line plot
+   of tree/size, total, lollipop, sliders. Found on the way:
+   - A parameter feeding a CREATION (`initialiser`) is a starting value too:
+     `reachesStock` now counts it, so initial_trees rebuilds the model.
+     Simile truncates a fractional count (7.5 → 7 trees).
+   - The run was fetched in 60 chunks, not 20: `updateEach` was worked out
+     from the model's default run length (100), and the page's 300 applied
+     after. Now it follows the run length in force, on load and when
+     runLength/logEach change (unless set by hand in Update each). Run again
+     8 s → 4.3 s. The app had the same fault when a run was lengthened.
+   - With death_size 17 and 300 years (the tutorial's), ~280 trees and ≈5 MB
+     per run: a slider took 8–11 s. Robert: fewer trees tell the story as
+     well, so death_size is now 7 (3.5–14) and the run 60 years — the stand
+     settles by ~35 years at ~50–60 trees. Run again 1.2 s, a rate slider
+     1.5 s, initial_trees (rebuild) 5–11 s.
 
 **What is known already:**
 

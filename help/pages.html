@@ -16,7 +16,7 @@
 
 <p>It takes three files: the page, the model, and one line that brings in Simile. You do not need to install anything, run a server, or know any programming beyond copying a few lines of HTML.</p>
 
-<p>For a finished example, open <a href="../pages/predator-prey/index.html">Rabbits and foxes</a> and look at its source.</p>
+<p>For finished examples, open <a href="../pages/predator-prey/index.html">Rabbits and foxes</a> or <a href="../pages/trees/index.html">A stand of trees</a> and look at their source.</p>
 
 <nav class="contents">
   <strong>Contents</strong>
@@ -106,7 +106,7 @@ Simile.model("predator-prey", { &hellip; }, {"runLength":50,"logEach":1,"timeSte
   <tr><th><code>data-simile</code></th><th>What it shows</th><th>Settings</th></tr>
   <tr><td><code>diagram</code></td><td>The model's diagram. Readers can zoom and pan, and double-click an element to see or change its equation.</td><td></td></tr>
   <tr><td><code>plotter</code></td><td>A graph of variables against time, drawn as the model runs.</td><td><code>data-show</code>: the variables to plot, separated by spaces. A variable in a submodel is named with its path: <code>tree/size</code>.</td></tr>
-  <tr><td><code>lollipop</code></td><td>The members of a population standing at their positions, each as tall as its size, in 3-D.</td><td><code>data-options='{"x":"tree/x", "y":"tree/y", "size":"tree/size"}'</code></td></tr>
+  <tr><td><code>lollipop</code></td><td>The members of a population standing at their positions, each as tall as its size, in 3-D.</td><td>None, when the population's variables are called <code>x</code>, <code>y</code> and <code>size</code>. Otherwise, name them: <code>data-options='{"x":"tree/east", "y":"tree/north", "size":"tree/height"}'</code></td></tr>
   <tr><td><code>sliders</code></td><td>A slider for each of the model's <a href="#build">parameters</a>.</td><td></td></tr>
   <tr><td><code>controls</code></td><td>The run's status, and buttons to <span class="ui">Run again</span> and to <span class="ui">Reset model</span>.</td><td></td></tr>
 </table>
@@ -127,7 +127,7 @@ Simile.model("predator-prey", { &hellip; }, {"runLength":50,"logEach":1,"timeSte
 
 <ul>
   <li><strong>Watch it.</strong> The model runs as the page opens, so the graphs are already drawn.</li>
-  <li><strong>Move a slider.</strong> When they let go, the model runs again with that value. A rate takes about a second; a starting value a few, because the model is built again with it. <span class="ui">model values</span> puts the sliders back.</li>
+  <li><strong>Move a slider.</strong> When they let go, the model runs again with that value. A rate takes a second or two for a small model, and longer for a population of hundreds, whose every member's values come back; a starting value takes a few seconds more, because the model is built again with it. <span class="ui">model values</span> puts the sliders back.</li>
   <li><strong>Change the model.</strong> Double-clicking an element of the diagram opens its equation. After an edit, the model runs again by itself.</li>
   <li><strong>Start again.</strong> <span class="ui">Reset model</span> undoes every change and runs the model as your page gave it.</li>
 </ul>

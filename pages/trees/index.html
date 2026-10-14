@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A stand of trees</title>
+    <!-- simile, and everything it needs. From the public site, this would be
+         https://robert-mue.github.io/simile/embed.js -->
+    <script src="../../embed.js"></script>
+    <link rel="stylesheet" href="../pages.css" />
+  </head>
+  <body class="slx-page">
+    <main>
+      <h1>A stand of trees</h1>
+
+      <p>A few trees are planted, and more arrive every year. Each grows at a
+      rate of its own, more slowly as it gets bigger, and is felled once it
+      reaches a certain size. How many trees will there be, and how much
+      timber, once the stand has settled down?</p>
+
+      <p>Here it is as a Simile model. The large box is a <em>population</em>:
+      what is inside it is the model of one tree, and the model has as many
+      trees as the population holds at the time, each with its own values.</p>
+
+      <div data-simile="diagram" data-model="trees"></div>
+
+      <p>Inside the box, <em>size</em> grows through <em>growth</em>, at a rate
+      <em>gr</em> that is drawn at random for each tree, between 0.1 and 0.3,
+      when it appears. <em>x</em> and <em>y</em> say where the tree stands, also
+      at random. The three symbols along the top of the box are how trees come
+      and go: <em>initial</em> creates the first ones, <em>recruitment</em> adds
+      more each year, and <em>death</em> removes a tree once its size passes a
+      threshold. Outside the box, <em>total</em> adds up the sizes of all the
+      trees there are.</p>
+
+      <p>The four circles on the edge of the diagram are the model's
+      <em>parameters</em>: <em>initial_trees</em> and
+      <em>recruitment_rate</em>, the trees planted at the start and each year;
+      <em>max_size</em>, the size growth slows towards; and
+      <em>death_size</em>, the size at which a tree is felled.</p>
+
+      <h2>What it does</h2>
+
+      <p>The model ran as this page opened, for 60 years. Each line is one
+      tree, from the year it arrived to the year it was felled; the label at
+      the end says how many there are.</p>
+
+      <div data-simile="controls" data-model="trees"></div>
+
+      <div class="slx-page-row">
+        <div data-simile="plotter" data-model="trees" data-show="tree/size"></div>
+        <div data-simile="plotter" data-model="trees" data-show="total"></div>
+      </div>
+
+      <p>At first the stand fills up, and the total rises. After about 17
+      years the fastest growers reach the felling size and start to go; by
+      about 35 years trees are leaving as fast as they arrive, and from then
+      on the stand holds at around 50 to 60 trees, wandering about a level it
+      keeps to. Because each tree's growth rate is drawn at random, each run
+      is a little different.</p>
+
+      <h2>Where they stand</h2>
+
+      <p>The same trees, each standing where it is, as tall as its size. Drag
+      across the picture, or use the sliders above it, to look from another
+      side.</p>
+
+      <div data-simile="lollipop" data-model="trees"></div>
+
+      <h2>Try it</h2>
+
+      <p>Move a slider and the model runs again with that value, and the
+      displays above follow. A rate changes the run in a second or two; the
+      number of trees planted at the start takes several, because the model is
+      built again with it. The model itself is not changed: <strong>model values</strong> puts
+      the sliders back.</p>
+
+      <div data-simile="sliders" data-model="trees"></div>
+
+      <p>You can also change the model itself. Double-click any element of the
+      diagram to see and change its equation, and the model runs again with
+      your change. Nothing you do here is kept: <strong>Reset model</strong>
+      puts it back, and so does coming back to this page.</p>
+
+      <p class="slx-page-note">This model is built step by step in the
+      <a href="../../help/tutorials/trees.html#stage4">Trees tutorial</a>
+      (Stage 4); here its constants are drawn out as parameters, and trees are
+      felled at size 7 rather than 17, so the stand settles within 60 years
+      rather than 300, with tens of trees rather than hundreds. The page runs
+      it on SimiLive, the Simile engine at simulistics.com.</p>
+    </main>
+
+    <!-- The model this page is about, and then the page. -->
+    <script src="trees.js"></script>
+    <script>Simile.page();</script>
+  </body>
+</html>
