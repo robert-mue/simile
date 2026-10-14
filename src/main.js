@@ -625,6 +625,7 @@
             { label: 'Trees', onSelect: function () { window.open('help/tutorials/trees.html', '_blank'); } },
           ],
         },
+        { label: 'Live models in your own web pages', onSelect: function () { window.open('help/pages.html', '_blank'); } },
         // Plain text, oldest first.
         { label: 'Release notes', onSelect: function () { window.open('RELEASES.txt', '_blank'); } },
       ],

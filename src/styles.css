@@ -1335,3 +1335,44 @@ button.slx-fn:hover { background: #eaf2fa; }
   min-width: 2.5em;
 }
 .slx-slider-end:last-child { text-align: right; }
+
+/* ---- widgets embedded in an ordinary page (src/page.js, embed.js) -------- */
+
+/* A widget fills the box it is given, and on a page nothing else gives it
+   one: so a height per kind, which a page overrides with its own CSS or a
+   style attribute (both win over these). */
+.slx-embedded {
+  box-sizing: border-box;
+  border: 1px solid #d9d8d1;
+  border-radius: 6px;
+  background: #fff;
+  margin: 1rem 0;
+}
+.slx-embedded.slx-diagram { height: 340px; }
+.slx-embedded.slx-plot { height: 300px; }
+.slx-embedded.slx-lolly { height: 420px; }
+.slx-embedded.slx-grid { height: 420px; }
+.slx-embedded.slx-run { height: auto; }
+.slx-embedded.slx-sliders { height: auto; max-height: 460px; }
+
+/* data-simile="controls": the run's status, Run again, Reset model. */
+.slx-page-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 1rem 0;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+.slx-page-controls button {
+  font: inherit;
+  color: #1d1d1b;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #d9d8d1;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+.slx-page-controls button:disabled { opacity: 0.5; cursor: default; }
+.slx-page-status { color: #5f5e5a; }
+.slx-page-status.slx-page-error { color: #b3261e; }

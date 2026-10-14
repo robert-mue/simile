@@ -148,8 +148,18 @@ catalogue could be built this way.
    in `src/main.js`): `<name>.js` holding `Simile.model(name, model, run)`,
    the name made from the model's (`Predator-prey` → `predator-prey`), the run
    settings those chosen for it. The sample page's `predator-prey.js` IS such
-   an export, checked identical to the hand-made one. **Still to do: the
-   guide.**
+   an export, checked identical to the hand-made one.
+   **The guide — DONE 2026-10-14**: `help/pages.html` (Help ▸ Live models in
+   your own web pages). It rests on **`embed.js`** at the top of the repo: the
+   ONE script tag a page needs, which loads the rest from wherever it came
+   from, sets SIENNA_EPHEMERAL, and queues `Simile.model`/`Simile.page` calls
+   until loaded. The guide's example page uses the PUBLIC address,
+   `https://robert-mue.github.io/simile/embed.js`, which exists only from the
+   next release. Checked: the example exactly as printed (pointed at the local
+   copy), and an author's page in an unrelated folder. sienna's `styles.css`
+   now keeps its whole-window rules off a page that is not the app's
+   (`slx-embedding` on `<html>`). To verify with Trees: the lollipop's
+   `data-options` names in the guide's table (`tree/x` etc.) are a guess.
 4. **One more sample only: Trees** — the multi-line graph (a line per member)
    and the lollipop display, showing a page is not only plots. (The catalogue
    model straight from its `.pl` is dropped for now.)

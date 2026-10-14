@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rabbits and foxes</title>
-    <link rel="stylesheet" href="../../sienna/src/styles.css" />
-    <link rel="stylesheet" href="../../src/styles.css" />
+    <!-- simile, and everything it needs. From the public site, this would be
+         https://robert-mue.github.io/simile/embed.js -->
+    <script src="../../embed.js"></script>
     <link rel="stylesheet" href="../pages.css" />
   </head>
   <body class="slx-page">
@@ -77,40 +78,8 @@
       at simulistics.com.</p>
     </main>
 
-    <!-- Keep nothing a reader does (sienna/src/core/namespace.js). Before the
-         shell, which reads storage as it loads. -->
-    <script>window.SIENNA_EPHEMERAL = true;</script>
-
-    <script src="../../sienna/vendor/jquery.min.js"></script>
-    <script src="../../sienna/vendor/jquery-ui.js"></script>
-    <script src="../../vendor/peggy.min.js"></script>
-
-    <!-- What a widget needs of the shell: no panels, workspace or menus. -->
-    <script src="../../sienna/src/core/namespace.js"></script>
-    <script src="../../sienna/src/core/persistence.js"></script>
-    <script src="../../sienna/src/core/widget-registry.js"></script>
-    <script src="../../sienna/src/core/user-data.js"></script>
-    <script src="../../sienna/src/core/actions.js"></script>
-    <script src="../../sienna/src/core/history.js"></script>
-    <script src="../../sienna/src/core/widget-base.js"></script>
-
-    <!-- simile: the model, its equations, and running it. -->
-    <script src="../../src/schema/simile-v1.js"></script>
-    <script src="../../src/diagram.js"></script>
-    <script src="../../src/sketch.js"></script>
-    <script src="../../src/dialog.js"></script>
-    <script src="../../src/grammar.js"></script>
-    <script src="../../src/predicates.js"></script>
-    <script src="../../src/equation-grammar.js"></script>
-    <script src="../../src/equation.js"></script>
-    <script src="../../src/equation-check.js"></script>
-    <script src="../../src/export-simile.js"></script>
-    <script src="../../src/simulation.js"></script>
-    <script src="../../src/widgets/index.js"></script>
-    <script src="../../src/page.js"></script>
-
     <!-- The model this page is about, and then the page. -->
     <script src="predator-prey.js"></script>
-    <script>Simile.page({ base: '../../' });</script>
+    <script>Simile.page();</script>
   </body>
 </html>

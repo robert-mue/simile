@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live models in your own web pages</title>
+  <link rel="stylesheet" href="help.css">
+</head>
+<body>
+<main>
+
+<h1>Live models in your own web pages</h1>
+<p class="byline">A guide for anyone who wants to explain a dynamic system with a model readers can run.</p>
+
+<p>A model is easier to understand when you can watch it run, change it, and run it again. This guide shows how to put a Simile model into an ordinary web page of your own, among your own text: its diagram, graphs of its results, and sliders for its parameters. The model runs as soon as the page opens. Readers can move the sliders, or change the model itself, and see what happens.</p>
+
+<p>It takes three files: the page, the model, and one line that brings in Simile. You do not need to install anything, run a server, or know any programming beyond copying a few lines of HTML.</p>
+
+<p>For a finished example, open <a href="../pages/predator-prey/index.html">Rabbits and foxes</a> and look at its source.</p>
+
+<nav class="contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#build">Build the model</a></li>
+    <li><a href="#export">Export it as a script</a></li>
+    <li><a href="#page">Write the page</a></li>
+    <li><a href="#widgets">What you can put in a page</a></li>
+    <li><a href="#readers">What your readers can do</a></li>
+    <li><a href="#more">Good to know</a></li>
+  </ol>
+</nav>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="build">1. Build the model</h2>
+
+<p>Build and run your model in Simile on the web, as usual. The <a href="tutorials/bank-account.html">tutorials</a> show how.</p>
+
+<p>Two things are worth doing before you export it.</p>
+
+<h3>Give it parameters, if you want sliders</h3>
+
+<p>A slider can move a <em>parameter</em>: a <span class="ui">variable</span> whose value is a plain number, which nothing else in the model influences, and which has a <span class="ui">Minimum</span> and a <span class="ui">Maximum</span> (set them in the variable's properties dialog). The page gives every parameter a slider running from its minimum to its maximum.</p>
+
+<p>So instead of writing a number into an equation, such as <code>0.2*foxes</code>, draw it out as a variable of its own, <code>fox_death_rate</code> = <code>0.2</code>, with an influence into the flow, and write <code>fox_death_rate*foxes</code>. The model means the same, and now the number has a name, a place on the diagram, and a slider.</p>
+
+<p>A starting value can be a parameter too: a variable such as <code>initial_rabbits</code> with an influence into the stock, whose initial value is then <code>initial_rabbits</code>.</p>
+
+<h3>Set how it runs</h3>
+
+<p>In the run control, set <span class="ui">Execute for</span> and <span class="ui">Time step(s)</span> as you want the page to run the model. The settings go with the model when you export it.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="export">2. Export it as a script</h2>
+
+<p>With the model current, choose <span class="ui">File &rsaquo; Export model as script (.js)&hellip;</span>. You get a file named after the model, such as <code>predator-prey.js</code>. Put it in the same folder as your page.</p>
+
+<p>The file is the model, with one line round it that hands it to the page. The first lines say what to call it:</p>
+
+<pre><code>// Predator-prey — a Simile model, exported 2026-10-14.
+// For a page with widgets embedded in it: load this file with
+//   &lt;script src="predator-prey.js"&gt;&lt;/script&gt;
+// and refer to the model as data-model="predator-prey" (see src/page.js).
+Simile.model("predator-prey", { &hellip; }, {"runLength":50,"logEach":1,"timeStep":"0.1"});</code></pre>
+
+<p>If the model is not complete, the export refuses and says which elements need attention, as running it would.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="page">3. Write the page</h2>
+
+<p>Here is a complete page. Save it as <code>index.html</code> beside <code>predator-prey.js</code> and open it in a browser.</p>
+
+<pre><code>&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;title&gt;Rabbits and foxes&lt;/title&gt;
+  &lt;script src="https://robert-mue.github.io/simile/embed.js"&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Rabbits and foxes&lt;/h1&gt;
+  &lt;p&gt;Your own text, as much as you like.&lt;/p&gt;
+
+  &lt;div data-simile="diagram"  data-model="predator-prey"&gt;&lt;/div&gt;
+  &lt;div data-simile="controls" data-model="predator-prey"&gt;&lt;/div&gt;
+  &lt;div data-simile="plotter"  data-model="predator-prey" data-show="rabbits"&gt;&lt;/div&gt;
+  &lt;div data-simile="plotter"  data-model="predator-prey" data-show="foxes"&gt;&lt;/div&gt;
+  &lt;div data-simile="sliders"  data-model="predator-prey"&gt;&lt;/div&gt;
+
+  &lt;script src="predator-prey.js"&gt;&lt;/script&gt;
+  &lt;script&gt;Simile.page();&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<p>Three things make it work:</p>
+<ol>
+  <li><strong>The <code>embed.js</code> line</strong> in the head brings in Simile: everything needed to draw and run models, and the styles for them.</li>
+  <li><strong>An empty <code>&lt;div&gt;</code> for each thing you want to show</strong>, where you want it. <code>data-simile</code> says what goes there and <code>data-model</code> which model it shows. Everything else on the page is yours: text, pictures, headings, your own styles.</li>
+  <li><strong>At the end, the model's script and then <code>Simile.page()</code></strong>, which fills in the <code>&lt;div&gt;</code>s and runs the model.</li>
+</ol>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="widgets">4. What you can put in a page</h2>
+
+<div class="wide">
+<table class="ref">
+  <tr><th><code>data-simile</code></th><th>What it shows</th><th>Settings</th></tr>
+  <tr><td><code>diagram</code></td><td>The model's diagram. Readers can zoom and pan, and double-click an element to see or change its equation.</td><td></td></tr>
+  <tr><td><code>plotter</code></td><td>A graph of variables against time, drawn as the model runs.</td><td><code>data-show</code>: the variables to plot, separated by spaces. A variable in a submodel is named with its path: <code>tree/size</code>.</td></tr>
+  <tr><td><code>lollipop</code></td><td>The members of a population standing at their positions, each as tall as its size, in 3-D.</td><td><code>data-options='{"x":"tree/x", "y":"tree/y", "size":"tree/size"}'</code></td></tr>
+  <tr><td><code>sliders</code></td><td>A slider for each of the model's <a href="#build">parameters</a>.</td><td></td></tr>
+  <tr><td><code>controls</code></td><td>The run's status, and buttons to <span class="ui">Run again</span> and to <span class="ui">Reset model</span>.</td><td></td></tr>
+</table>
+</div>
+
+<p>Any widget's other settings can be given as JSON in <code>data-options</code>. For example, a diagram shows only its zoom buttons on a page; <code>data-options='{"tools":"all"}'</code> gives it the whole editing palette.</p>
+
+<h3>Sizes</h3>
+
+<p>Each widget fills the box it is given, and has a sensible height of its own. To change it, give the <code>&lt;div&gt;</code> a height, in a style attribute or your own stylesheet:</p>
+
+<pre><code>&lt;div data-simile="diagram" data-model="predator-prey" style="height: 500px"&gt;&lt;/div&gt;</code></pre>
+
+<p>Widths follow the page. To put two graphs side by side, use your own layout, such as a CSS grid; the example page does this.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="readers">5. What your readers can do</h2>
+
+<ul>
+  <li><strong>Watch it.</strong> The model runs as the page opens, so the graphs are already drawn.</li>
+  <li><strong>Move a slider.</strong> When they let go, the model runs again with that value. A rate takes about a second; a starting value a few, because the model is built again with it. <span class="ui">model values</span> puts the sliders back.</li>
+  <li><strong>Change the model.</strong> Double-clicking an element of the diagram opens its equation. After an edit, the model runs again by itself.</li>
+  <li><strong>Start again.</strong> <span class="ui">Reset model</span> undoes every change and runs the model as your page gave it.</li>
+</ul>
+
+<p>Nothing a reader does is kept. Each visit starts with the model exactly as you exported it, and nothing is written to the reader's computer.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="more">6. Good to know</h2>
+
+<h3>The model runs on a server</h3>
+<p>The page draws everything itself, but the model runs on SimiLive, the Simile engine at simulistics.com. A reader needs an internet connection, and each page visit starts a run there.</p>
+
+<h3>One running model per page</h3>
+<p>A page can show several models' diagrams, but only one model runs: the first one the page loads. Put each model you want running on a page of its own.</p>
+
+<h3>The page can be anywhere</h3>
+<p>The page and the model's script are ordinary files. Open them from your own disk, or put them on any web host: a university page, a blog that accepts HTML, GitHub Pages. Nothing has to be set up on the host.</p>
+
+<h3>Using your own copy of Simile</h3>
+<p><code>embed.js</code> loads everything else from wherever it was itself loaded from. If you have a copy of Simile on the web, or on your disk, point the <code>&lt;script&gt;</code> at that copy's <code>embed.js</code> instead, and nothing else changes. The example page does this, with <code>../../embed.js</code>.</p>
+
+<h3>Changing the model later</h3>
+<p>Edit it in Simile on the web, export it again, and replace the <code>.js</code> file beside your page. The page itself does not change.</p>
+
+</main>
+</body>
+</html>

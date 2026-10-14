@@ -26,11 +26,15 @@
  *      `data-options` takes any other widget options as JSON. `controls` is
  *      this file's own: the run's status, and buttons to run it again and to
  *      put the model back as the page gave it.
- *   3. **`Simile.page({ base })`** once the elements exist, `base` being the
- *      way from the page to the app's folder (`'../../'`), which is where the
- *      widget manifest's script URLs start from.
+ *   3. **`Simile.page()`** once the elements exist.
  *
- * What a reader changes is NOT kept: the page sets `SIENNA_EPHEMERAL`, so each
+ * and the scripts, which `embed.js` (at the top of this repository) loads
+ * from wherever it was itself loaded: one `<script>` tag. A page that lists
+ * the scripts itself instead passes `Simile.page({ base })`, `base` being the
+ * way from the page to the app's folder (`'../../'`), which is where the widget
+ * manifest's script URLs start from.
+ *
+ * What a reader changes is NOT kept: `SIENNA_EPHEMERAL` is set, so each
  * visit starts from the model as the page gave it. An edit to the diagram runs
  * the model again once the editing pauses.
  *

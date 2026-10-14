@@ -85,8 +85,12 @@ footing (`src/widgets/grid.js` is the first).
   fills them, loads the first model on SimiLive and runs it, and re-runs after
   an edit. A diagram there shows the view commands only (its `tools: 'view'`
   option). Pages set `SIENNA_EPHEMERAL`, so a reader's edits are not kept.
-  ONE model runs per page (one session). Samples live in `pages/<name>/`
-  (`pages/pages.css` is shared); each lists the scripts a page needs.
+  ONE model runs per page (one session). A page loads everything with ONE
+  script, **`embed.js`** (repo root: loads the shell and simile from its own
+  location, sets `SIENNA_EPHEMERAL`, queues `Simile.*` calls until loaded).
+  Samples live in `pages/<name>/` (`pages/pages.css` is their own look; what
+  any page needs is in `src/styles.css`). The author's guide is
+  `help/pages.html`.
 - `src/demo-*.js` — fixtures seeded on first run: `growth`, `submodel`, and the
   three reference models `landuse`, `farmers` and `lamos` (§9).
 - `src/styles.css` — app-specific styles, loaded after the shell's.
