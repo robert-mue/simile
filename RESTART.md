@@ -99,7 +99,10 @@ simulistics.com/source-code-on-github).
 Plan (2026-10-15), each step a spike first: 1 build Simile from source with
 SWI-Prolog and get a real `model.cpp` (**DONE 2026-10-15**); 2 compile it with
 the fixed engine (`shank.cpp`, `support*.cpp`) by Emscripten, replace the pipes
-and threads with direct calls, and time it against SimiLive; 3 run the generator
+and threads with direct calls, and time it against SimiLive (**DONE
+2026-10-15**: unchanged Simile source, ~1000x faster than SimiLive, 0.5 ms a
+predator-prey run and 1.5 ms a Trees run in Chrome over file://; two models
+in one engine collide, unsolved); 3 run the generator
 in SWI-Prolog WebAssembly, with the Tcl calls stubbed; 4 choose between clang
 in the browser (#2) and a JavaScript target added to the generator (#3, no
 C++ compiler needed), then add a local session to `src/simulation.js`.

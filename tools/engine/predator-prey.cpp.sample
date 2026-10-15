@@ -1,0 +1,235 @@
+#include <support1.cpp>
+const char simile_identifier[] = "program='Simile',version=7.050000,edition=free,date=1792080322,size=8,";
+int phasecount = 1;
+#ifndef ACTION_ONLY
+#include "/tmp/claude-1000/-home-user-Projects-simile/8d787a20-e40d-4840-a7d0-f025c010b290/scratchpad/src/simile/Functions/procs.cpp"
+#endif
+/* EXTERNAL PROC DECLARATIONS */
+/* CONSTANT DECLARATIONS */
+/* STRUCTURE TYPE DECLARATIONS */
+
+class Desktop2type : public submodeltype {
+public:
+    Desktop2type () {
+    }; /* end(procedure,structor) */
+    ~Desktop2type () {
+    }; /* end(procedure,structor) */
+    diffs rabbits_extras;
+    double rabbits;
+    diffs foxes_extras;
+    double foxes;
+    double predation;
+    double fox_repro;
+    double fox_mortality;
+    double eaten_per_fox;
+    double rfox;
+    double rabbit_birth_rate;
+    double attack_rate;
+    double conversion_rate;
+    double fox_death_rate;
+    double initial_rabbits;
+    double initial_foxes;
+    double rabbit_repro;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(rabbits_extras));
+        break; // end(case,1)
+        case 2:
+        return(&(rabbits));
+        break; // end(case,2)
+        case 3:
+        return(&(foxes_extras));
+        break; // end(case,3)
+        case 4:
+        return(&(foxes));
+        break; // end(case,4)
+        case 5:
+        return(&(predation));
+        break; // end(case,5)
+        case 6:
+        return(&(fox_repro));
+        break; // end(case,6)
+        case 7:
+        return(&(fox_mortality));
+        break; // end(case,7)
+        case 8:
+        return(&(eaten_per_fox));
+        break; // end(case,8)
+        case 9:
+        return(&(rfox));
+        break; // end(case,9)
+        case 10:
+        return(&(rabbit_birth_rate));
+        break; // end(case,10)
+        case 11:
+        return(&(attack_rate));
+        break; // end(case,11)
+        case 12:
+        return(&(conversion_rate));
+        break; // end(case,12)
+        case 13:
+        return(&(fox_death_rate));
+        break; // end(case,13)
+        case 14:
+        return(&(initial_rabbits));
+        break; // end(case,14)
+        case 15:
+        return(&(initial_foxes));
+        break; // end(case,15)
+        case 16:
+        return(&(rabbit_repro));
+        break; // end(case,16)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+}; /* end(class,Desktop2type) */
+
+class AME_model : public InstanceOfModel {
+public:
+    AME_model () {
+        curInst = this;
+        c_graphdata = NULL;
+    }; /* end(procedure,structor) */
+    ~AME_model () {
+    }; /* end(procedure,structor) */
+    Desktop2type Desktop2;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(Desktop2));
+        break; // end(case,1)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+/* EVALUATION PROCEDURE DECLARATION */
+
+void advancemodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+
+}; /* end(procedure,advancemodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+/* EVALUATION PROCEDURE DECLARATION */
+
+void updatemodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+    Desktop2type* Desktop2pointer;
+    Desktop2pointer = &(this->Desktop2);
+    Desktop2pointer->rabbits = Desktop2pointer->rabbits+stage_incr(Desktop2pointer->rabbits, &(Desktop2pointer->rabbits_extras), 1, Desktop2pointer->rabbit_repro+ -Desktop2pointer->predation, 0, 0, 0, 105);
+    Desktop2pointer->foxes = Desktop2pointer->foxes+stage_incr(Desktop2pointer->foxes, &(Desktop2pointer->foxes_extras), 1, Desktop2pointer->fox_repro+ -Desktop2pointer->fox_mortality, 0, 0, 0, 107);
+
+}; /* end(procedure,updatemodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+/* EVALUATION PROCEDURE DECLARATION */
+
+void evalmodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+    if (1>=phase) {
+        Desktop2type* Desktop2pointer;
+        Desktop2pointer = &(this->Desktop2);
+        Desktop2pointer->rabbit_birth_rate = min(1,max( 0.25, 0.5));
+        collect(&(Desktop2pointer->rabbit_birth_rate), 113, 0);
+        Desktop2pointer->attack_rate = min( 0.02,max( 0.005, 0.01));
+        collect(&(Desktop2pointer->attack_rate), 114, 0);
+        Desktop2pointer->conversion_rate = min( 0.02,max( 0.005, 0.01));
+        collect(&(Desktop2pointer->conversion_rate), 115, 0);
+        Desktop2pointer->fox_death_rate = min( 0.4,max( 0.1, 0.2));
+        collect(&(Desktop2pointer->fox_death_rate), 116, 0);
+        Desktop2pointer->initial_rabbits = min(10000,max(2500,5000));
+        collect(&(Desktop2pointer->initial_rabbits), 117, 0);
+        Desktop2pointer->initial_foxes = min(90,max( 22.5,45));
+        collect(&(Desktop2pointer->initial_foxes), 118, 0);
+        if (0>=phase) {
+            Desktop2pointer = &(this->Desktop2);
+            Desktop2pointer->rabbits = Desktop2pointer->initial_rabbits;
+            Desktop2pointer->foxes = Desktop2pointer->initial_foxes;
+        }; /* end(cond,0>=phase) */
+    }; /* end(cond,1>=phase) */
+    Desktop2type* Desktop2pointer;
+    Desktop2pointer = &(this->Desktop2);
+    Desktop2pointer->fox_mortality = Desktop2pointer->fox_death_rate*Desktop2pointer->foxes;
+    Desktop2pointer->eaten_per_fox = Desktop2pointer->attack_rate*Desktop2pointer->rabbits;
+    Desktop2pointer->predation = Desktop2pointer->eaten_per_fox*Desktop2pointer->foxes;
+    Desktop2pointer->rfox = Desktop2pointer->conversion_rate*Desktop2pointer->eaten_per_fox;
+    Desktop2pointer->fox_repro = Desktop2pointer->rfox*Desktop2pointer->foxes;
+    Desktop2pointer->rabbit_repro = Desktop2pointer->rabbit_birth_rate*Desktop2pointer->rabbits;
+
+}; /* end(procedure,evalmodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+    /* FREE ALL DATA STRUCTURES */
+
+void do_exitmodel () {
+
+
+}; /* end(procedure,dummy) */
+int do_evalmodel(int);
+}; /* end(class,AME_model) */
+#ifndef ACTION_ONLY
+int nodecount = 15;
+node_data_line nodedata[] = {{"node00001", VALUELESS, 0, NULL, 0, NULL, BLOCK, {0},
+ {1, 0}, 101, 1, 0, SUBMODEL, {"Desktop2", NULL, NULL, NULL}},
+ {"node00002", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 2, 0}, 105, -1.0e+100, 1.0e+100, COMPARTMENT, {"rabbits", "initial_rabbits", "1", NULL}},
+ {"node00004", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 4, 0}, 107, -1.0e+100, 1.0e+100, COMPARTMENT, {"foxes", "initial_foxes", "1", NULL}},
+ {"arc00002", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 5, 0}, 108, -1.0e+100, 1.0e+100, FLOW, {"predation", "eaten_per_fox*foxes", "1", NULL}},
+ {"arc00003", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 6, 0}, 109, -1.0e+100, 1.0e+100, FLOW, {"fox_repro", "rfox*foxes", "1", NULL}},
+ {"arc00004", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 7, 0}, 110, -1.0e+100, 1.0e+100, FLOW, {"fox_mortality", "fox_death_rate*foxes", "1", NULL}},
+ {"node00013", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 8, 0}, 111, -1.0e+100, 1.0e+100, VARIABLE, {"eaten_per_fox", "attack_rate*rabbits", "1", NULL}},
+ {"node00015", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 9, 0}, 112, -1.0e+100, 1.0e+100, VARIABLE, {"rfox", "conversion_rate*eaten_per_fox", "1", NULL}},
+ {"node00017", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 10, 0}, 113, 0.25, 1, VARIABLE, {"rabbit_birth_rate", "0.5", "1", NULL}},
+ {"node00018", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 11, 0}, 114, 0.005, 0.02, VARIABLE, {"attack_rate", "0.01", "1", NULL}},
+ {"node00019", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 12, 0}, 115, 0.005, 0.02, VARIABLE, {"conversion_rate", "0.01", "1", NULL}},
+ {"node00020", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 13, 0}, 116, 0.1, 0.4, VARIABLE, {"fox_death_rate", "0.2", "1", NULL}},
+ {"node00021", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 14, 0}, 117, 2500, 10000, VARIABLE, {"initial_rabbits", "5000", "1", NULL}},
+ {"node00022", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 15, 0}, 118, 22.5, 90, VARIABLE, {"initial_foxes", "45", "1", NULL}},
+ {"arc00001", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 16, 0}, 119, -1.0e+100, 1.0e+100, FLOW, {"rabbit_repro", "rabbit_birth_rate*rabbits", "1", NULL}}};
+#include <support2.cpp>
+#endif

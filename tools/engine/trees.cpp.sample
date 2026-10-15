@@ -1,0 +1,364 @@
+#include <support1.cpp>
+const char simile_identifier[] = "program='Simile',version=7.050000,edition=free,date=1792080314,size=9,";
+int phasecount = 1;
+#ifndef ACTION_ONLY
+#include "/tmp/claude-1000/-home-user-Projects-simile/8d787a20-e40d-4840-a7d0-f025c010b290/scratchpad/src/simile/Functions/procs.cpp"
+#endif
+/* EXTERNAL PROC DECLARATIONS */
+/* CONSTANT DECLARATIONS */
+/* STRUCTURE TYPE DECLARATIONS */
+
+class tree_0type : public vm_submodeltype {
+public:
+    tree_0type () {
+    }; /* end(procedure,structor) */
+    ~tree_0type () {
+    }; /* end(procedure,structor) */
+    submodeltype* baseptrs[1];
+    int channelId;
+    tree_0type* next;
+    int instanceid[1];
+    diffs size_extras;
+    double size;
+    double gr;
+    BOOLEAN death;
+    double death_0;
+    double x;
+    double y;
+    double growth;
+    double gr_at_phase;
+    double x_at_phase;
+    double y_at_phase;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(next));
+        break; // end(case,1)
+        case 2:
+        ++*dims;
+        return(&(instanceid[*(*dims-1)]));
+        break; // end(case,2)
+        case 3:
+        return(&(size_extras));
+        break; // end(case,3)
+        case 4:
+        return(&(size));
+        break; // end(case,4)
+        case 5:
+        return(&(gr));
+        break; // end(case,5)
+        case 6:
+        return(&(death));
+        break; // end(case,6)
+        case 7:
+        return(&(death_0));
+        break; // end(case,7)
+        case 8:
+        return(&(x));
+        break; // end(case,8)
+        case 9:
+        return(&(y));
+        break; // end(case,9)
+        case 10:
+        return(&(growth));
+        break; // end(case,10)
+        case 11:
+        return(&(gr_at_phase));
+        break; // end(case,11)
+        case 12:
+        return(&(x_at_phase));
+        break; // end(case,12)
+        case 13:
+        return(&(y_at_phase));
+        break; // end(case,13)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+}; /* end(class,tree_0type) */
+
+class Desktop2type : public submodeltype {
+public:
+    Desktop2type () {
+        tree_0 = 0;
+    }; /* end(procedure,structor) */
+    ~Desktop2type () {
+        delete_list(tree_0);
+    }; /* end(procedure,structor) */
+    tree_0type **tree_0meta;
+    tree_0type *tree_0;
+    double initial;
+    double recruitment;
+    diffs recruitment_extras;
+    double recruitment_0;
+    double total;
+    double initial_trees;
+    double recruitment_rate;
+    double death_size;
+    double max_size;
+    int tree_0count;
+    double total_sum;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(tree_0));
+        break; // end(case,1)
+        case 2:
+        return(&(initial));
+        break; // end(case,2)
+        case 3:
+        return(&(recruitment));
+        break; // end(case,3)
+        case 4:
+        return(&(recruitment_extras));
+        break; // end(case,4)
+        case 5:
+        return(&(recruitment_0));
+        break; // end(case,5)
+        case 6:
+        return(&(total));
+        break; // end(case,6)
+        case 7:
+        return(&(initial_trees));
+        break; // end(case,7)
+        case 8:
+        return(&(recruitment_rate));
+        break; // end(case,8)
+        case 9:
+        return(&(death_size));
+        break; // end(case,9)
+        case 10:
+        return(&(max_size));
+        break; // end(case,10)
+        case 11:
+        return(&(tree_0count));
+        break; // end(case,11)
+        case 12:
+        return(&(total_sum));
+        break; // end(case,12)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+}; /* end(class,Desktop2type) */
+
+class AME_model : public InstanceOfModel {
+public:
+    AME_model () {
+        curInst = this;
+        c_graphdata = NULL;
+    }; /* end(procedure,structor) */
+    ~AME_model () {
+    }; /* end(procedure,structor) */
+    Desktop2type Desktop2;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(Desktop2));
+        break; // end(case,1)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+/* EVALUATION PROCEDURE DECLARATION */
+
+void advancemodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+
+}; /* end(procedure,advancemodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+/* EVALUATION PROCEDURE DECLARATION */
+
+void updatemodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+    Desktop2type* Desktop2pointer;
+    Desktop2pointer = &(this->Desktop2);
+    Desktop2pointer->recruitment = Desktop2pointer->recruitment+stage_incr(Desktop2pointer->recruitment, &(Desktop2pointer->recruitment_extras), 1, Desktop2pointer->recruitment_0, 0, 0, 0, 118);
+    tree_0type* tree_0pointer;
+    tree_0pointer = Desktop2pointer->tree_0;
+    loopIndexPtrs[0] = &(tree_0pointer);
+    loopIndexCounts[0] = 1;
+    while ( tree_0pointer!=0 ) {
+        ABORT_CHECK
+        tree_0type* tree_0progen;
+        tree_0progen = static_cast<tree_0type*>(tree_0pointer->baseptrs[0]);
+        tree_0pointer->size = tree_0pointer->size+stage_incr(tree_0pointer->size, &(tree_0pointer->size_extras), 1, tree_0pointer->growth, 0, 0, 0, 110);
+        tree_0pointer = tree_0pointer->next;
+    }; /* end(while,tree_0pointer) */
+    loopIndexPtrs[0] = 0;
+
+}; /* end(procedure,updatemodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+/* EVALUATION PROCEDURE DECLARATION */
+
+void evalmodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+    if (1>=phase) {
+        if (0>=phase) {
+            if (-2>=phase) {
+                Desktop2type* Desktop2pointer;
+                Desktop2pointer = &(this->Desktop2);
+                Desktop2pointer->tree_0 = 0;
+            }; /* end(cond,-2>=phase) */
+            Desktop2type* Desktop2pointer;
+            Desktop2pointer = &(this->Desktop2);
+            Desktop2pointer->recruitment = ame_rand(0,1);
+        }; /* end(cond,0>=phase) */
+        Desktop2type* Desktop2pointer;
+        Desktop2pointer = &(this->Desktop2);
+        tree_0type* tree_0pointer;
+        Desktop2pointer->tree_0meta = &(Desktop2pointer->tree_0);
+        while ( *Desktop2pointer->tree_0meta!=0 ) {
+            tree_0pointer = *Desktop2pointer->tree_0meta;
+            tree_0pointer->new_instance = 0;
+            if (dts[phase]&&tree_0pointer->death) {
+                *Desktop2pointer->tree_0meta = tree_0pointer->next;
+                delete tree_0pointer;
+            } else { /* dts[phase]&&tree_0pointer->death */
+                Desktop2pointer->tree_0meta = &(tree_0pointer->next);
+            }; /* end(cond,dts[phase]&&tree_0pointer->death) */
+        }; /* end(while,*Desktop2pointer->tree_0meta) */
+        while ( Desktop2pointer->recruitment>=1 ) {
+            Desktop2pointer->recruitment = Desktop2pointer->recruitment-1;
+            *Desktop2pointer->tree_0meta = new tree_0type;
+            init_pop_member(*Desktop2pointer->tree_0meta, Desktop2pointer->tree_0count, 118);
+            ++Desktop2pointer->tree_0count;
+            Desktop2pointer->tree_0meta = &((*Desktop2pointer->tree_0meta)->next);
+        }; /* end(while,New instances) */
+        Desktop2pointer->total_sum = 0;
+        Desktop2pointer->initial_trees = min(10,max( 2.5,5));
+        collect(&(Desktop2pointer->initial_trees), 122, 0);
+        Desktop2pointer->recruitment_rate = min(4,max(1,2));
+        collect(&(Desktop2pointer->recruitment_rate), 123, 0);
+        Desktop2pointer->recruitment_0 = Desktop2pointer->recruitment_rate;
+        Desktop2pointer->death_size = min(14,max( 3.5,7));
+        collect(&(Desktop2pointer->death_size), 124, 0);
+        Desktop2pointer->max_size = min(50,max( 12.5,25));
+        collect(&(Desktop2pointer->max_size), 125, 0);
+        if (0>=phase) {
+            Desktop2pointer = &(this->Desktop2);
+            Desktop2pointer->initial = Desktop2pointer->initial_trees;
+            Desktop2pointer->tree_0count = 0;
+            Desktop2pointer->tree_0meta = &(Desktop2pointer->tree_0);
+            Desktop2pointer->tree_0count = init_pop(&(Desktop2pointer->tree_0meta), Desktop2pointer->initial, Desktop2pointer->tree_0count, 117);
+            delete_list(*Desktop2pointer->tree_0meta);
+            *Desktop2pointer->tree_0meta = 0;
+        }; /* end(cond,0>=phase) */
+        Desktop2pointer = &(this->Desktop2);
+        tree_0type* tree_0pointer_0;
+        tree_0pointer_0 = Desktop2pointer->tree_0;
+        loopIndexPtrs[0] = &(tree_0pointer_0);
+        loopIndexCounts[0] = 1;
+        while ( tree_0pointer_0!=0 ) {
+            ABORT_CHECK
+            tree_0type* tree_0progen;
+            tree_0progen = static_cast<tree_0type*>(tree_0pointer_0->baseptrs[0]);
+            if (0>=(1>=phase&&tree_0pointer_0->new_instance? -2:phase)) {
+                tree_0pointer_0->size = 3;
+                tree_0pointer_0->gr_at_phase = ame_rand( 0.1, 0.3);
+                tree_0pointer_0->gr = tree_0pointer_0->gr_at_phase;
+                tree_0pointer_0->x_at_phase = ame_rand(0,50);
+                tree_0pointer_0->x = tree_0pointer_0->x_at_phase;
+                tree_0pointer_0->y_at_phase = ame_rand(0,100);
+                tree_0pointer_0->y = tree_0pointer_0->y_at_phase;
+            }; /* end(cond,0>=(1>=phase&&tree_0pointer_0->new_instance? -2:phase)) */
+            tree_0pointer_0->death_0 = tree_0pointer_0->size>Desktop2pointer->death_size;
+            tree_0pointer_0->death = loses(tree_0pointer_0->death_0,1);
+            Desktop2pointer->total_sum = tree_0pointer_0->size+Desktop2pointer->total_sum;
+            tree_0pointer_0 = tree_0pointer_0->next;
+        }; /* end(while,tree_0pointer_0) */
+        loopIndexPtrs[0] = 0;
+        Desktop2pointer->total = Desktop2pointer->total_sum;
+    }; /* end(cond,1>=phase) */
+    Desktop2type* Desktop2pointer;
+    Desktop2pointer = &(this->Desktop2);
+    tree_0type* tree_0pointer;
+    tree_0pointer = Desktop2pointer->tree_0;
+    loopIndexPtrs[0] = &(tree_0pointer);
+    loopIndexCounts[0] = 1;
+    while ( tree_0pointer!=0 ) {
+        ABORT_CHECK
+        tree_0type* tree_0progen;
+        tree_0progen = static_cast<tree_0type*>(tree_0pointer->baseptrs[0]);
+        tree_0pointer->growth = tree_0pointer->gr*(1-(double)(tree_0pointer->size)/Desktop2pointer->max_size);
+        tree_0pointer = tree_0pointer->next;
+    }; /* end(while,tree_0pointer) */
+    loopIndexPtrs[0] = 0;
+
+}; /* end(procedure,evalmodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+    /* FREE ALL DATA STRUCTURES */
+
+void do_exitmodel () {
+
+
+}; /* end(procedure,dummy) */
+int do_evalmodel(int);
+}; /* end(class,AME_model) */
+#ifndef ACTION_ONLY
+int nodecount = 15;
+node_data_line nodedata[] = {{"node00001", VALUELESS, 0, NULL, 0, NULL, BLOCK, {0},
+ {1, 0}, 101, 1, 0, SUBMODEL, {"Desktop2", NULL, NULL, NULL}},
+ {"node00002", VALUELESS, 0, NULL, 0, NULL, POPULATION, {MEMBERS, 0},
+ {1, 1, -1, 0}, 104, 1, 0, SUBMODEL, {"tree", NULL, NULL, NULL}},
+ {"node00003", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 1, -1, 4, 0}, 110, -1.0e+100, 1.0e+100, COMPARTMENT, {"size", "3", "1", NULL}},
+ {"node00006", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 1, -1, 5, 0}, 111, -1.0e+100, 1.0e+100, VARIABLE, {"gr", "rand_const(0.1,0.3)", "1", NULL}},
+ {"node00012", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 1, -1, 7, 0}, 113, -1.0e+100, 1.0e+100, LOSS, {"death", "size>death_size", "1", NULL}},
+ {"node00016", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 1, -1, 8, 0}, 114, -1.0e+100, 1.0e+100, VARIABLE, {"x", "rand_const(0,50)", "1", NULL}},
+ {"node00018", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 1, -1, 9, 0}, 115, -1.0e+100, 1.0e+100, VARIABLE, {"y", "rand_const(0,100)", "1", NULL}},
+ {"arc00001", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 1, -1, 10, 0}, 116, -1.0e+100, 1.0e+100, FLOW, {"growth", "gr*(1-size/max_size)", "1", NULL}},
+ {"node00008", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 2, 0}, 117, -1.0e+100, 1.0e+100, CREATION, {"tree/initial", "initial_trees", "1", NULL}},
+ {"node00010", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 5, 0}, 120, -1.0e+100, 1.0e+100, IMMIGRATION, {"tree/recruitment", "recruitment_rate", "1", NULL}},
+ {"node00014", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 6, 0}, 121, -1.0e+100, 1.0e+100, VARIABLE, {"total", "sum({size})", "1", NULL}},
+ {"node00020", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 7, 0}, 122, 2.5, 10, VARIABLE, {"initial_trees", "5", "1", NULL}},
+ {"node00021", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 8, 0}, 123, 1, 4, VARIABLE, {"recruitment_rate", "2", "1", NULL}},
+ {"node00022", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 9, 0}, 124, 3.5, 14, VARIABLE, {"death_size", "7", "1", NULL}},
+ {"node00023", REAL, 0, NULL, 0, NULL, INPUT, {0},
+ {1, 10, 0}, 125, 12.5, 50, VARIABLE, {"max_size", "25", "1", NULL}}};
+#include <support2.cpp>
+#endif

@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Engine spike</title>
+<style>body{font:14px/1.4 monospace;margin:16px;background:#fff;color:#111}</style>
+<h1>Simile engine, WebAssembly, in the page</h1>
+<pre id="out">loading…</pre>
+<script src="engine-web.js"></script>
+<script src="model-predator-prey.js"></script>
+<script src="model-trees.js"></script>
+<script>
+var out = document.getElementById('out'), lines = [];
+function say(s) { lines.push(s); out.textContent = lines.join('\n'); }
+var t0 = performance.now();
+SimileEngine({ print: say, printErr: say }).then(function (E) {
+  say('engine ready in ' + (performance.now() - t0).toFixed(1) + ' ms');
+  var jobs = [
+    ['predator-prey', ['50', '0.1', '1', '100', 'node00002:rabbits', 'node00004:foxes']],
+    ['trees', ['60', '0.1', '1', '100', 'node00014:total', 'node00003:tree/size']]];
+  jobs.forEach(function (j) {
+    var bytes = Uint8Array.from(atob(window.SIMILE_MODELS[j[0]]), function (c) { return c.charCodeAt(0); });
+    E.FS.writeFile('/' + j[0] + '.wasm', bytes);
+    say('== ' + j[0] + ' (' + bytes.length + ' bytes of model)');
+    var t = performance.now();
+    E.callMain(['/' + j[0] + '.wasm'].concat(j[1]));
+    say('   (whole call, load included: ' + (performance.now() - t).toFixed(1) + ' ms)');
+  });
+  say('DONE');
+});
+</script>
