@@ -1,0 +1,12 @@
+--- a/Run/6d.h	2026-10-15 20:31:49.230823051 +0100
++++ b/Run/6d.h	2026-10-15 20:31:49.241500280 +0100
+@@ -61,7 +61,8 @@
+   FileParamData(ExecutingModel*, HCOMP, int*);
+ 
+   //! Destructor: simple
+-  ~FileParamData();
++  virtual ~FileParamData(); // was not virtual: deleting a VarParamData through
++                            // forget_param_array left it in varParamArrayBase
+ 
+  public:
+   int extract_elt(void*, int*);

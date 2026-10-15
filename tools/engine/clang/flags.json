@@ -1,0 +1,8 @@
+{
+  "_": "emcc's own flags for -O2 -fPIC -sSIDE_MODULE=1 (emcc -v), for clang and wasm-ld running in the page; read by model-kit.mjs and copied by hand into src/engine-build.js. Not --no-export-dynamic: LLVM 22 does not mark default-visibility symbols exported as emsdk's LLVM 24 does, and the module would come out empty.",
+  "compile": ["-target", "wasm32-unknown-emscripten", "-fignore-exceptions", "-fvisibility=default",
+    "-mllvm", "-combiner-global-alias-analysis=false", "-mllvm", "-enable-emscripten-sjlj", "-mllvm", "-disable-lsr",
+    "--sysroot=/sysroot", "-Xclang", "-iwithsysroot/include/compat", "-O2", "-fPIC", "-I/stubs", "-I/simile/Run", "-c"],
+  "link": ["-Bdynamic", "--strip-debug", "--export=__wasm_call_ctors", "--unresolved-symbols=import-dynamic",
+    "-shared", "--no-stack-first"]
+}

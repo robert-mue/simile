@@ -6,8 +6,9 @@
 #   tools/engine/build-engine.sh <simile source>
 #
 # Writes vendor/simile-engine/simile-engine.js. Needs emsdk (~/emsdk).
-# The patches in patches/ are applied to a copy of shank.cpp first: fixes
-# to Simile's engine, kept here until they are in Simile's own source.
+# The patches in patches/ are applied to copies of shank.cpp and 6d.h first:
+# fixes to Simile's engine, kept here until they are in Simile's own source.
+# (6d.h is the engine's own header; a model's C++ does not include it.)
 set -e
 SRC=${1:?usage: build-engine.sh <simile source checkout>}
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -18,11 +19,11 @@ mkdir -p "$OUT"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/Run"
-cp "$SRC/Run/shank.cpp" "$WORK/Run/"
+cp "$SRC/Run/shank.cpp" "$SRC/Run/6d.h" "$WORK/Run/"
 for p in "$HERE"/patches/*.patch; do
   patch -s -d "$WORK" -p1 < "$p"
 done
-em++ -O2 -std=c++11 -I"$HERE/stubs" -I"$SRC/Run" \
+em++ -O2 -std=c++11 -I"$HERE/stubs" -I"$WORK/Run" -I"$SRC/Run" \
   -sMAIN_MODULE=1 -sALLOW_MEMORY_GROWTH=1 -sSINGLE_FILE=1 \
   -sMODULARIZE=1 -sEXPORT_NAME=SimileEngine -sEXIT_RUNTIME=0 \
   -sEXPORTED_RUNTIME_METHODS=FS,ccall,UTF8ToString \

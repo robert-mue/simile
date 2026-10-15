@@ -71,10 +71,19 @@ footing (`src/widgets/grid.js` is the first).
   It answers SimiLive's requests in SimiLive's shapes, so `simulation.js`
   sends them there instead of over the network (`Simulation.local`), but only
   while the model is exactly the one its engine was built from (a fingerprint
-  of the exported Prolog); an edited model runs on SimiLive. A run takes
-  milliseconds, a slider runs as it is dragged, and a starting value needs no
-  rebuild. Nothing is compiled in the page yet. Build tools, findings and
-  patches to Simile's engine: `tools/engine/README.md`.
+  of the exported Prolog). Any other model — edited, or one of the app's —
+  gets its engine made in the page (`build`, below) and runs there too; only
+  if that fails does it go to SimiLive. A run takes milliseconds, a slider
+  runs as it is dragged, and a starting value needs no rebuild. Build tools,
+  findings and patches to Simile's engine: `tools/engine/README.md`.
+- `src/engine-build.js` — **a model's engine made in the page**
+  (`Sienna.EngineBuild`, loaded by `engine-local.js` when first needed):
+  Simile's own generator in SWI-Prolog (WebAssembly) writes the C++, clang
+  (WebAssembly) compiles it. Loads its large tools on first use, from
+  `vendor/swipl/`, `vendor/simile-generator/`, `vendor/clang/` (30 MB) and
+  `vendor/simile-engine/model-kit.js`, all **generated** by
+  `tools/engine/build-browser-tools.sh`. First build of a visit ~9 s, later
+  ones ~3 s; the page is frozen while each stage runs.
 - `src/widgets/sliders.js` — a slider per **parameter**: a variable with a
   numeric value, a Minimum and a Maximum (dialog fields `min`/`max`), and no
   influence into it (`exportSimile.isParameter`, `Simulation.parametersOf`).
@@ -110,10 +119,12 @@ footing (`src/widgets/grid.js` is the first).
   statement of the Simile expression language; there is no generated parser.
 - `vendor/simile-engine/simile-engine.js` — **generated**, by
   `tools/engine/build-engine.sh` from a Simile source checkout; do not edit.
-  Loaded on first use by `src/engine-local.js`, not by `index.html`.
-- `tools/engine/` — building the engine and a model's `<name>.engine.js`
-  (`build-model.sh`, needs Simile built from source in `~/Projects/simile-src`
-  and emsdk in `~/emsdk`),
+  Loaded on first use by `src/engine-local.js`, not by `index.html`. So are
+  the files `src/engine-build.js` loads (above).
+- `tools/engine/` — building the engine, a model's `<name>.engine.js`
+  (`build-model.sh`) and the in-page tools (`build-browser-tools.sh`); they
+  need Simile built from source in `~/Projects/simile-src` and emsdk in
+  `~/emsdk`;
   the patches to Simile's engine, and the record of what was found
   (`README.md`).
 - `reference/` — **data, not code.** `catalogue/` is the 72-model Simile

@@ -156,6 +156,15 @@ starting value. A drag of 40 mouse moves made ~40 runs.
   (shank.cpp ~1190). Whether it is depends on what the heap held: it worked
   until `Describe` had run. `patches/varparam-inheritseries.patch` sets it.
   **For the Simile developer.** It could misfire on SimiLive too.
+- **"Model values" crashed the engine** (memory access out of bounds) — a
+  second bug in Simile's engine: `~FileParamData()` is not virtual (6d.h:64),
+  so `forget_param_array`, deleting a slider's `VarParamData` through a
+  `FileParamData*`, never runs `~VarParamData`, which takes it off the
+  instance's `varParamArrayBase`. The next reset that keeps sliders walks
+  the freed block. Node survived it (the memory not yet reused); the page
+  did not. `patches/fileparam-virtual-destructor.patch` makes it virtual
+  (only the engine includes 6d.h, not a model). **For the Simile developer**:
+  `clearparamarray` in `ame_cmx.c` does the same.
 - **Every run drew the same random numbers** — `setup_randoms` raises
   `rand_inits_updated`, and every reset and execute that sees it starts the
   stream again from the seed. The threaded path lowers it after its first job
@@ -244,8 +253,11 @@ clang's own. `support.cpp` never changes, so a page would ship its object.
 and linked wholly by YoWASP and run in the page's engine: every variable for
 100 steps byte-identical to the emcc build (Trees: 713 KB of values).
 
-**Sizes.** `llvm.core.wasm` 75.5 MB (22.6 MB gzipped): 66 MB of it code, no
-names to strip — smaller only by building LLVM ourselves with less in it.
+**Sizes.** `llvm.core.wasm` 75.5 MB (22.6 MB gzipped, 14.1 MB xz): 66 MB of
+it code, no names to strip. It is already WebAssembly-only (`--print-targets`:
+wasm32, wasm64) but built with assertions. `wasm-opt -Oz` makes it 55.9 MB
+(20.2 MB gzipped; 4.5 min, output not checked). Smaller still only by
+building LLVM ourselves with less in it.
 Its `llvm-resources.tar`, 30 MB, is a WASI C/C++ library Simile never uses:
 cut to the 17 headers (60 KB) the output is byte-identical.
 
@@ -265,13 +277,61 @@ cut to the 17 headers (60 KB) the output is byte-identical.
 `repack-classic.py` makes the package two classic scripts: `clang.js` (its
 bundle, fetch answered from `window.YOWASP_DATA`) and `clang-data.js`, the
 WebAssembly as base64, 100 MB. It works: same output, same compile times,
-~4 s to load. A page would load it only when a model is edited, as
+~4 s to load. It now ships gzipped before the base64 (30 MB), unpacked by
+the browser's own `DecompressionStream` while clang's WebAssembly compiles:
+the same results, a first build about 1 s slower. A page would load it only when a model is edited, as
 `engine-local.js` loads the engine.
 
 **What it means for an edit in the page:** generating the C++ (step 3, ~1–2 s
 for these models) + compiling (~1 s) + load ≈ 2–3 s, all local — about
 SimiLive's time for a small model, and no server. The first edit also pays
 for getting SWI-Prolog and clang (~5 s from file://).
+
+## Steps 3 and 4 in the app and the pages (done 2026-10-15)
+
+A model with no `<name>.engine.js` — an edited one, or any of the app's —
+now gets its engine made in the page, and runs there; SimiLive only if that
+fails. `src/simulation.js` (`loadOwn`) asks `Sienna.LocalEngine.build`, which
+loads `src/engine-build.js`, which loads the tools on first use:
+
+    tools/engine/build-browser-tools.sh ~/Projects/simile-src
+
+| file | size | what |
+|---|---|---|
+| `vendor/swipl/swipl-bundle.js` | 6.3 MB | SWI-Prolog 10.1.18 (npm swipl-wasm 8.2.3) |
+| `vendor/simile-generator/simile-generator.js` | 1.5 MB | Simile's Prolog and function library, `generator/headless.pl`, `struct_db.pl` |
+| `vendor/clang/clang.js`, `clang-data.js` | 0.25 + 30 MB | clang and wasm-ld (npm @yowasp/clang), as classic scripts, gzipped |
+| `vendor/simile-engine/model-kit.js` | 0.9 MB | the headers a model needs, support.cpp compiled (`clang/model-kit.mjs`) |
+
+Each engine made is kept for the visit under the model's fingerprint, so an
+undo finds it made. Each generation has a Prolog of its own (below).
+
+**Checked**, Chrome headless, `file://`:
+- predator-prey page: the slider at 0.6 on the shipped engine, and the model
+  edited to 0.6 and built in the page, give all 14 variables identical.
+- Trees page: an edited model builds and runs (populations, random numbers).
+- the app: growth, landuse, pangolin, none with an engine file, load and run
+  in the page.
+
+**Times** from an edit (after the page's 1.2 s pause): first edit of a visit
+~9 s (C++ 1.3 s, loading clang ~6 s, compile 1.4 s, start 0.25 s); later
+edits ~3 s; undo to a model built before, at once. In the app, a model's
+first load ~9 s, later ones ~3 s. Both run on the page's thread, so the
+page is frozen while each runs; the status line says which stage it is in.
+
+**One Prolog for many models: no.** Loading Simile's Prolog once (~1 s
+saved a model) works only by opening each model in a new desktop, as the GUI
+would — starting Simile again empties the model database while its own facts
+about the models open remain, and opening the same file name twice just
+raises its window. Then all 67 catalogue models generate, but Simile numbers
+each model's nodes after the last's, which reorders the C++ (declarations,
+independent equations) — harmless for the arithmetic, but it could change
+which random number each variable draws — and generation slows as models
+pile up (Molusc 67 s, against 30 s fresh). A fresh Prolog writes exactly what
+desktop Simile writes, so that is what the page does.
+
+**Not yet:** a worker (so the page is not frozen), preparing the next Prolog
+ahead of time, keeping engines made between visits, a smaller clang.
 
 ## What the source shows
 

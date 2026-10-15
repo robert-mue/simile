@@ -6,9 +6,7 @@
 //
 // The headers it hands clang are the ones emcc reads for this model (emsdk's
 // `em++ -M`), from emsdk's sysroot: a page would ship that set (~170 files).
-// The flags are emcc's own for -O2 -fPIC -sSIDE_MODULE=1 (`emcc -v`), but for
-// one link flag: LLVM 22 does not mark default-visibility symbols exported as
-// emsdk's LLVM 24 does, so `--no-export-dynamic` would leave an empty module.
+// The flags are emcc's own, but for one (flags.json).
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -45,9 +43,7 @@ put('simile/Run/support.cpp', fs.readFileSync(SRC + '/Run/support.cpp'));
 put('stubs/portaudio.h', fs.readFileSync(STUBS + '/portaudio.h'));
 put('model.cpp', cpp);
 
-const flags = ['-target', 'wasm32-unknown-emscripten', '-fignore-exceptions', '-fvisibility=default',
-  '-mllvm', '-combiner-global-alias-analysis=false', '-mllvm', '-enable-emscripten-sjlj', '-mllvm', '-disable-lsr',
-  '--sysroot=/sysroot', '-Xclang', '-iwithsysroot/include/compat', '-O2', '-fPIC', '-I/stubs', '-I/simile/Run', '-c'];
+const { compile: flags, link } = JSON.parse(fs.readFileSync(path.join(HERE, 'flags.json'), 'utf8'));
 const opts = { stdout: (b) => b && process.stdout.write(b), stderr: (b) => b && process.stderr.write(b) };
 const timed = async (what, f) => { const t = performance.now(); const r = await f(); console.log(what, Math.round(performance.now() - t), 'ms'); return r; };
 
@@ -56,8 +52,6 @@ let r = await timed('compile model.cpp (first call: clang starting too)',
 r = await timed('compile model.cpp again', () => runClang(['clang++', ...flags, '/model.cpp', '-o', '/model.o'], tree, opts));
 // support.cpp never changes: a page would ship its object, made once.
 r = await timed('compile support.cpp', () => runClang(['clang++', ...flags, '/simile/Run/support.cpp', '-o', '/support.o'], r, opts));
-r = await timed('link', () => runLLVM(['wasm-ld', '-o', '/model.wasm', '-Bdynamic', '--strip-debug',
-  '--export=__wasm_call_ctors', '--unresolved-symbols=import-dynamic', '-shared', '--no-stack-first',
-  '/model.o', '/support.o'], r, opts));
+r = await timed('link', () => runLLVM(['wasm-ld', '-o', '/model.wasm', ...link, '/model.o', '/support.o'], r, opts));
 fs.writeFileSync(out, r['model.wasm']);
 console.log('wrote', out, r['model.wasm'].length, 'bytes');

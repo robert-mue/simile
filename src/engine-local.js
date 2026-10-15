@@ -6,10 +6,14 @@
  * compiled once into `vendor/simile-engine/simile-engine.js`; a model is
  * compiled by Simile into C++ and then into a small WebAssembly module of its
  * own, shipped as `<name>.engine.js` (tools/engine/build-model.sh), which
- * calls `Simile.engine(name, {prolog, wasm})`. Nothing is compiled in the page
- * yet: a model runs here only while it is EXACTLY the model its engine file
- * was made from (`prolog` is a fingerprint of the Simile Prolog the exporter
- * writes for it). An edited model runs on SimiLive as before.
+ * calls `Simile.engine(name, {prolog, wasm})`. That engine is used only while
+ * the model is EXACTLY the one it was made from (`prolog` is a fingerprint of
+ * the Simile Prolog the exporter writes for it). For any other model — an
+ * edited one, or one with no engine file — `build` makes one in the page
+ * (`src/engine-build.js`: Simile's generator and clang, both in WebAssembly),
+ * kept for the visit under its fingerprint, so undoing an edit finds the
+ * engine already made. Should that fail (the tools missing, or a model Simile
+ * cannot generate), the model runs on SimiLive as before.
  *
  * A session answers the requests `Sienna.Simulation` sends to SimiLive, in
  * the shapes SimiLive answers them — the server side is
@@ -34,8 +38,9 @@
 
   // Where the engine is, worked out from where this script came from.
   var me = typeof document !== 'undefined' ? document.currentScript : null;
-  var ENGINE_SRC = (me && me.src ? me.src.replace(/[^/]*$/, '') : 'src/')
-    + '../vendor/simile-engine/simile-engine.js';
+  var HERE = me && me.src ? me.src.replace(/[^/]*$/, '') : 'src/';
+  var ENGINE_SRC = HERE + '../vendor/simile-engine/simile-engine.js';
+  var BUILD_SRC = HERE + 'engine-build.js';
 
   /** The run settings SimiLive reports for a model with none of its own. */
   var DEFAULTS = {
@@ -43,8 +48,10 @@
     displayInt: '1', resetTo: '0', timeUnit: 'unit',
   };
 
-  var registered = {};   // fingerprint -> {name, wasm (base64)}
+  var registered = {};   // fingerprint -> {name, wasm (base64, or bytes if made here)}
   var engineScript = null;
+  var buildScript = null;
+  var cannotBuild = null;  // why the page cannot make engines, once found out
 
   /**
    * A short fingerprint of a model's Simile Prolog, without its `source(…)`
@@ -80,7 +87,25 @@
     return engineScript;
   }
 
+  /** The builder (src/engine-build.js), loaded once, on first use. */
+  function loadBuilder() {
+    if (buildScript) return buildScript;
+    buildScript = new Promise(function (resolve, reject) {
+      if (Sienna.EngineBuild) { resolve(Sienna.EngineBuild); return; }
+      var s = document.createElement('script');
+      s.src = BUILD_SRC;
+      s.onload = function () { resolve(Sienna.EngineBuild); };
+      s.onerror = function () {
+        buildScript = null;
+        reject(new Error('could not load ' + BUILD_SRC));
+      };
+      (document.head || document.documentElement).appendChild(s);
+    });
+    return buildScript;
+  }
+
   function bytesOf(base64) {
+    if (base64 instanceof Uint8Array) return base64;
     var bin = atob(base64);
     var out = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
@@ -230,6 +255,27 @@
     /** The engine made from exactly this Prolog, or null. */
     find: function (prolog) {
       return registered[fingerprint(prolog)] || null;
+    },
+
+    /**
+     * Make the engine for this Prolog in the page, and keep it as if it had
+     * come from an engine file. `say(text)` hears each stage.
+     * @returns {Promise} of the entry, as `find` would give it
+     */
+    build: function (name, prolog, say) {
+      if (cannotBuild) return Promise.reject(cannotBuild);
+      var print = fingerprint(prolog);
+      if (registered[print]) return Promise.resolve(registered[print]);
+      return loadBuilder().then(function (B) {
+        return B.build(prolog, say);
+      }).then(function (wasm) {
+        registered[print] = { name: name, wasm: wasm };
+        return registered[print];
+      }, function (err) {
+        // The tools missing is for good; a model that fails is that model's.
+        if (/could not load/.test(err.message)) cannotBuild = err;
+        throw err;
+      });
     },
 
     /** Start an engine for one model: resolves to a Session. */

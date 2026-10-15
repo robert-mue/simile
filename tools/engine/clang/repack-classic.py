@@ -7,14 +7,17 @@ file://, where Chrome refuses ES modules and fetch (README, step 4).
 writes
   clang.js       the package's bundle.js as a classic script: its fetch reads
                  window.YOWASP_DATA, and it sets window.YoWASPClang when ready
-  clang-data.js  the WebAssembly and the resource archive, base64 (~100 MB)
+  clang-data.js  the WebAssembly and the resource archive, gzipped and then
+                 base64 (30 MB; 100 MB without the gzip). The page unpacks it
+                 with the browser's own DecompressionStream, while clang's
+                 WebAssembly compiles.
 
 A page loads `<script>window.YOWASP_DATA={}</script>`, clang-data.js, then
 clang.js. The resource archive (30 MB in the package: a WASI C/C++ library
 Simile never uses) is cut to the 17 clang headers Simile's models include;
 compiled output is byte-identical with either.
 """
-import base64, io, re, sys, tarfile
+import base64, gzip, io, re, sys, tarfile
 
 # clang's own headers that emcc reads for predator-prey and Trees (em++ -M).
 USED = '''__stdarg___gnuc_va_list.h stdarg.h __stdarg_header_macro.h __stdarg_va_arg.h
@@ -44,8 +47,9 @@ def main(gen, out):
     src = open(gen + '/bundle.js').read()
     src = src.replace('fetch2 = globalThis.fetch;', '''fetch2 = async function(url) {
     const name = String(url).split("/").pop();
-    const bytes = window.YOWASP_BYTES(name);
-    return new Response(bytes, { headers: { "content-type": name.endsWith(".wasm") ? "application/wasm" : "application/octet-stream", "content-length": String(bytes.length) } });
+    const gz = window.YOWASP_BYTES(name);
+    const body = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return new Response(body, { headers: { "content-type": name.endsWith(".wasm") ? "application/wasm" : "application/octet-stream", "content-length": String(window.YOWASP_SIZES[name]) } });
   };''', 1)
     src = src.replace('import.meta.url', '"file:///yowasp/"')
     src, n = re.subn(r'export \{\s*Exit,\s*commands,\s*runClang,\s*runLLVM,\s*version\s*\};',
@@ -53,6 +57,7 @@ def main(gen, out):
     assert n == 1 and 'export {' not in src, 'bundle.js is not shaped as expected'
     with open(out + '/clang.js', 'w') as f:
         f.write('''// npm @yowasp/clang as a classic script (tools/engine/clang/repack-classic.py)
+// Each file's gzip, once: clang-data.js holds them as base64.
 window.YOWASP_BYTES = function (name) {
   const s = window.YOWASP_DATA[name];
   if (typeof s !== "string") return s;
@@ -63,9 +68,12 @@ window.YOWASP_BYTES = function (name) {
 (async function () {
 ''' + src + '\n})();\n')
     with open(out + '/clang-data.js', 'w') as f:
+        f.write('window.YOWASP_SIZES = {};\n')
         for name in ('llvm.core.wasm', 'llvm.core2.wasm', 'llvm.core3.wasm', 'llvm.core4.wasm', 'llvm-resources.tar'):
             data = small_tar(gen + '/' + name) if name.endswith('.tar') else open(gen + '/' + name, 'rb').read()
-            f.write('YOWASP_DATA[%r]="%s";\n' % (name, base64.b64encode(data).decode()))
+            packed = gzip.compress(data, 9, mtime=0)
+            f.write('YOWASP_SIZES[%r]=%d;\n' % (name, len(data)))
+            f.write('YOWASP_DATA[%r]="%s";\n' % (name, base64.b64encode(packed).decode()))
 
 
 if __name__ == '__main__':

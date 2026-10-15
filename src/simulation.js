@@ -454,18 +454,48 @@
         var prolog = Sienna.exportSimile.prolog(model);
         self._loadedText = essence(prolog);
 
-        // Compiled for the engine in the page, exactly as it is now: run it
-        // here. The slider values are not written in (as they are in `sml`):
-        // this engine takes every one at a reset, starting values included.
-        var entry = Sienna.LocalEngine ? Sienna.LocalEngine.find(prolog) : null;
-        if (entry) {
-          self._setStatus('loading', 'Starting the engine in the page…');
-          return Sienna.LocalEngine.open(entry).then(function (session) {
-            self.local = session;
-            return self._startSession(null, 'local:' + entry.name);
+        // Run it in the page: with the engine compiled for exactly this model
+        // if there is one, or one made here now (seconds; the first time, a
+        // few more to load the tools). The slider values are not written in
+        // (as they are in `sml`): this engine takes every one at a reset,
+        // starting values included. Only if no engine can be had, SimiLive.
+        var token = self._loading = {};
+        var LE = Sienna.LocalEngine;
+        var entry = LE ? LE.find(prolog) : null;
+        var made = entry ? Promise.resolve(entry) : !LE ? Promise.resolve(null)
+          : LE.build(self.modelLink, prolog, function (text) {
+            if (self._loading === token) self._setStatus('loading', text);
+          }).catch(function (err) {
+            if (window.console) console.warn('Running the model on SimiLive: ' + err.message);
+            return null;
           });
-        }
+        return made.then(function (entry) {
+          // Another load began while this one was building: it is the one.
+          if (self._loading !== token) throw Object.assign(new Error('superseded'), { superseded: true });
+          if (entry) return self._runHere(entry);
+          return self._upload(sml);
+        });
+      }).catch(function (err) {
+        if (err.superseded) throw err;
+        self._setStatus('error', err.message || String(err));
+        throw err;
+      });
+    },
 
+    /** Start the engine in the page on a model's compiled engine. */
+    _runHere: function (entry) {
+      var self = this;
+      self._setStatus('loading', 'Starting the engine in the page…');
+      return Sienna.LocalEngine.open(entry).then(function (session) {
+        self.local = session;
+        return self._startSession(null, 'local:' + entry.name);
+      });
+    },
+
+    /** Hand the model to SimiLive. */
+    _upload: function (sml) {
+      var self = this;
+      return Promise.resolve().then(function () {
         self._setStatus('loading', 'Uploading model…');
         var fd = new FormData();
         fd.append('model_src', 'file');
@@ -476,12 +506,9 @@
         return Promise.resolve($.ajax({
           type: 'POST', url: SERVER + 'create_model.php', data: fd,
           processData: false, contentType: false, dataType: 'text',
-        })).then(function (html) {
-          return self._startSession(html);
-        });
-      }).catch(function (err) {
-        self._setStatus('error', err.message || String(err));
-        throw err;
+        }));
+      }).then(function (html) {
+        return self._startSession(html);
       });
     },
 

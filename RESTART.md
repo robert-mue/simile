@@ -113,17 +113,26 @@ the page — **clang spike DONE 2026-10-15** (`tools/engine/clang/`): npm
 `@yowasp/clang` (LLVM 22 in WebAssembly) makes the side module, byte-identical
 results to emcc's for predator-prey and Trees; ~1 s a compile once clang is
 up, also from file:// (repacked as a 100 MB classic script, ~4 s to load);
-download 22.6 MB gzipped. NEXT (not started, Robert to choose): wire steps
-3 + 4 into the app, so an edited model is generated, compiled and run in the
-page instead of on SimiLive — after which any model runs in the page.
+download 22.6 MB gzipped. **Steps 3 + 4 in the app and the pages DONE
+2026-10-15**: a model with no engine file (edited, or any of the app's) is
+generated and compiled in the page (`src/engine-build.js`, tools in
+`vendor/` from `tools/engine/build-browser-tools.sh`) and runs there; SimiLive
+only if that fails. First build ~9 s, later ~3 s, undo at once; checked
+identical to a slider run (README, "Steps 3 and 4 in the app"). Found and
+patched a second engine bug on the way ("model values" crashed it: a
+non-virtual destructor, `patches/fileparam-virtual-destructor.patch`).
+Not yet: a worker so the page is not frozen while building, keeping engines
+between visits, a smaller clang. The vendor/ tools are committed
+(Robert, 2026-10-16, option 1); clang-data.js ships gzipped, 30 MB.
 
 Recipe, measurements and findings: **`tools/engine/README.md`**. Emscripten is
 in `~/emsdk` (`source ~/emsdk/emsdk_env.sh`); Simile's source, built with
 SWI-Prolog, is in `~/Projects/simile-src` (a separate clone; both build
 scripts take it as their first argument; README step 1 rebuilds it). GPL v3 is acceptable for simile (Robert, 2026-10-15); no
-LICENSE file added yet. Open: when to involve the developer — there is now
-an engine bug to report (README, "Slider values lost at a reset", with its
-one-line patch in `tools/engine/patches/`).
+LICENSE file added yet. Open: when to involve the developer — there are now
+two engine bugs to report (README, "Slider values lost at a reset" and
+"Model values crashed the engine", each with a one-line patch
+in `tools/engine/patches/`).
 
 **After an edit to a sample model, rebuild its engine file**
 (`tools/engine/build-model.sh`), or the page quietly goes back to SimiLive.
