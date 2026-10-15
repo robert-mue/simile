@@ -169,6 +169,58 @@ starting value. A drag of 40 mouse moves made ~40 runs.
 that are arrays or records, integration methods other than Euler's fixed step,
 models in the app (only pages register engines), and the engine's size.
 
+## Step 3: Simile's generator with no Tcl, then in WebAssembly (done 2026-10-15)
+
+`generator/` — Simile's own Prolog, unchanged, writing a model's C++ with no
+Tcl/Tk, natively or in SWI-Prolog's WebAssembly build.
+
+    swipl generator/headless.pl [--structdb=prolog] ~/Projects/simile-src in.pl out.cpp
+    node generator/run-wasm.js <swipl-wasm package> ~/Projects/simile-src generator in.pl out.cpp
+
+**How.** Simile's Prolog talks to Tcl over a pipe; recording that traffic
+during a real "open model, export C++" session (`SIMILE_PIPE_LOG` in
+`zz_export_cpp.tcl`) showed what it asks: ~40 kinds of request, most of them
+drawing. `headless.pl` replaces the one predicate that sends a request
+(`tcltk:any_tcl_eval/3`) with answers made in Prolog — files directly,
+drawing and progress ignored, the two file choices from settings — and then
+calls the three goals Tcl would (`tk_make_desktop_node`, `tk_menu(…open)`,
+`tk_code(…build_c…)`). Answers that needed care, each checked:
+
+- `ControlDraw` (start-up): version, temp and preference folders, edition.
+- `MakeDesktopNode` at start-up: `none dummy`, as Simile's scripting mode
+  answers — the canvas "dummy" is how `kickoff` knows there is no window.
+- `EatNumber`: the expression parser reads each number through Tcl's
+  `scan` and prints it back as Tcl's `expr` does. Ported, and compared with
+  real `tclsh` on 25 inputs (ints, `.5`, `5.`, `1e20`, `2e-310`, …): same.
+- `compile_c`: only its renaming of `model.cpp` to `model1.cpp`.
+- `PrefValue` "1" (flowRouting on, the GUI default; an empty answer is a
+  type error in `name/2`), `ColourExists` "1" as Simile with no window says.
+- Tcl lists: file names with spaces (`List handling.pl`) must be braced.
+
+**The model database in Prolog.** `struct_db` is a C library loaded into
+Prolog, and the published WebAssembly SWI-Prolog cannot load ours (no
+`dlopen`). `generator/struct_db.pl` is the same thing as clauses, quirks
+kept; `--structdb=prolog` (always, in WebAssembly) uses it.
+
+**Checked against Simile, on the 72-model catalogue:**
+
+| | |
+|---|---|
+| headless (C database) vs Simile's own GUI export | predator-prey, Trees: same C++ but for names (`Desktop1`/`Desktop2`) and the order of independent lines; both run to the same numbers (469.5042746 / 79.75123252; and with sliders) |
+| headless C++ that compiles | 67 of 72; the other 5 fail in Simile 7.5's GUI too, at the same point with the same error (`type_error(atomic,[])` in `name/2`, after the function library is read): ArcieroAggressiveTumorMode, chemical1, TestJarvisStomataMode, TestJarvisStomataModel_V4_P, Thornthwaite. **For the developer.** |
+| Prolog database vs C database | 67 of 67 byte-identical |
+| WebAssembly (SWI-Prolog 10.1.18, npm `swipl-wasm`) vs native (9.0.4) | 66 of 67 identical; edinburgh1 differs only in an equation's display text, `1.0e-6` vs `1.0e-06` (the two SWI versions print a float differently) |
+
+**Time to generate** (Simile's 1.1 MB of Prolog loaded each time): native
+~1 s; WebAssembly mean 1.9 s, Molusc_june06 30 s (12.5 s native).
+In Chrome over `file://`: SWI-Prolog ready in 0.22 s, predator-prey's C++ in
+1.3 s. Loading once and generating many times, or a saved state, would cut
+most of that; not tried.
+
+**Not yet:** a page that does this as part of the app (the spike page packed
+Simile's Prolog into one script, 1.5 MB, beside the 6.3 MB `swipl-bundle.js`),
+and compiling the C++ in the page (step 4).
+
 ## What the source shows
 
 - **Generated per model:** only `model.cpp`. It holds a class with a field per

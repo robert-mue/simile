@@ -105,7 +105,10 @@ requests from the engine in the page, for a model with a compiled
 `<name>.engine.js` (both sample pages have one) and only while it is exactly
 that model. Sliders run as they are dragged (37–140 ms a run, drawn), and a
 starting value needs no rebuild. 3 run the generator in SWI-Prolog
-WebAssembly, with the Tcl calls stubbed; 4 choose between clang in the
+WebAssembly, with the Tcl calls stubbed (**DONE 2026-10-15**: Simile's own
+Prolog, unchanged, writes C++ with no Tcl, natively and in WebAssembly — in
+Chrome over file:// in 1.3 s for predator-prey; the model database ported to
+Prolog; identical C++ on the catalogue, README step 3); 4 choose between clang in the
 browser (#2) and a JavaScript target added to the generator (#3, no C++
 compiler needed) — after which any model, edited or not, runs in the page.
 
