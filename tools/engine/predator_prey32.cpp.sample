@@ -1,0 +1,202 @@
+#include <support1.cpp>
+const char simile_identifier[] = "program='Simile',version=7.050000,edition=free,date=1792079707,size=10,";
+int phasecount = 1;
+#ifndef ACTION_ONLY
+#include "/tmp/claude-1000/-home-user-Projects-simile/8d787a20-e40d-4840-a7d0-f025c010b290/scratchpad/src/simile/Functions/procs.cpp"
+#endif
+/* EXTERNAL PROC DECLARATIONS */
+/* CONSTANT DECLARATIONS */
+/* STRUCTURE TYPE DECLARATIONS */
+
+class Desktop2type : public submodeltype {
+public:
+    Desktop2type () {
+    }; /* end(procedure,structor) */
+    ~Desktop2type () {
+    }; /* end(procedure,structor) */
+    diffs x_extras;
+    double x;
+    diffs y_extras;
+    double y;
+    double repro1;
+    double repro2;
+    double r;
+    double K;
+    double a;
+    double g;
+    double m;
+    int L;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(x_extras));
+        break; // end(case,1)
+        case 2:
+        return(&(x));
+        break; // end(case,2)
+        case 3:
+        return(&(y_extras));
+        break; // end(case,3)
+        case 4:
+        return(&(y));
+        break; // end(case,4)
+        case 5:
+        return(&(repro1));
+        break; // end(case,5)
+        case 6:
+        return(&(repro2));
+        break; // end(case,6)
+        case 7:
+        return(&(r));
+        break; // end(case,7)
+        case 8:
+        return(&(K));
+        break; // end(case,8)
+        case 9:
+        return(&(a));
+        break; // end(case,9)
+        case 10:
+        return(&(g));
+        break; // end(case,10)
+        case 11:
+        return(&(m));
+        break; // end(case,11)
+        case 12:
+        return(&(L));
+        break; // end(case,12)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+}; /* end(class,Desktop2type) */
+
+class AME_model : public InstanceOfModel {
+public:
+    AME_model () {
+        curInst = this;
+        c_graphdata = NULL;
+    }; /* end(procedure,structor) */
+    ~AME_model () {
+    }; /* end(procedure,structor) */
+    Desktop2type Desktop2;
+void* get_pointer (int id, int** dims) {
+    switch (id) {
+        case 1:
+        return(&(Desktop2));
+        break; // end(case,1)
+    }; /* end(switch,id) */
+    return(NULL);
+}; /* end(procedure,get_pointer) */
+
+/* EVALUATION PROCEDURE DECLARATION */
+
+void advancemodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+
+}; /* end(procedure,advancemodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+/* EVALUATION PROCEDURE DECLARATION */
+
+void updatemodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+    Desktop2type* Desktop2pointer;
+    Desktop2pointer = &(this->Desktop2);
+    Desktop2pointer->x = Desktop2pointer->x+stage_incr(Desktop2pointer->x, &(Desktop2pointer->x_extras), 1, Desktop2pointer->repro1, 0, 0, 0, 105);
+    Desktop2pointer->y = Desktop2pointer->y+stage_incr(Desktop2pointer->y, &(Desktop2pointer->y_extras), 1, Desktop2pointer->repro2, 0, 0, 0, 107);
+
+}; /* end(procedure,updatemodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+/* EVALUATION PROCEDURE DECLARATION */
+
+void evalmodel (int phase) {
+
+/* CONSTANT DECLARATIONS */
+
+/* global this
+ */
+
+/* STRUCTURE TYPE DECLARATIONS */
+
+
+    /* UPDATE FUNCTION VALUES */
+
+    if (0>=phase) {
+        if (-2>=phase) {
+            Desktop2type* Desktop2pointer;
+            Desktop2pointer = &(this->Desktop2);
+            Desktop2pointer->r =  0.06;
+            Desktop2pointer->K = 1000;
+            Desktop2pointer->a = 5;
+            Desktop2pointer->g =  0.2;
+            Desktop2pointer->m =  0.9;
+            Desktop2pointer->L = 50;
+        }; /* end(cond,-2>=phase) */
+        Desktop2type* Desktop2pointer;
+        Desktop2pointer = &(this->Desktop2);
+        Desktop2pointer->x = 10;
+        Desktop2pointer->y =  0.02;
+    }; /* end(cond,0>=phase) */
+    Desktop2type* Desktop2pointer;
+    Desktop2pointer = &(this->Desktop2);
+    Desktop2pointer->repro1 = Desktop2pointer->r*Desktop2pointer->x*(1-(double)(Desktop2pointer->x)/Desktop2pointer->K)-(double)(Desktop2pointer->a*Desktop2pointer->x*Desktop2pointer->x)/(Desktop2pointer->x*Desktop2pointer->x+Desktop2pointer->L)*Desktop2pointer->y;
+    Desktop2pointer->repro2 = Desktop2pointer->g*Desktop2pointer->y*((double)(Desktop2pointer->a*Desktop2pointer->x*Desktop2pointer->x)/(Desktop2pointer->x*Desktop2pointer->x+Desktop2pointer->L))-Desktop2pointer->m*Desktop2pointer->y;
+
+}; /* end(procedure,evalmodel) */
+
+/* PROCEDURES FOR SEPARATE SUBMODELS */
+    /* FREE ALL DATA STRUCTURES */
+
+void do_exitmodel () {
+
+
+}; /* end(procedure,dummy) */
+int do_evalmodel(int);
+}; /* end(class,AME_model) */
+#ifndef ACTION_ONLY
+int nodecount = 11;
+node_data_line nodedata[] = {{"node00001", VALUELESS, 0, NULL, 0, NULL, BLOCK, {0},
+ {1, 0}, 101, 1, 0, SUBMODEL, {"Desktop2", NULL, NULL, NULL}},
+ {"node00002", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 2, 0}, 105, -1.0e+100, 1.0e+100, COMPARTMENT, {"x", "10", "1", "Prey"}},
+ {"node00004", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 4, 0}, 107, -1.0e+100, 1.0e+100, COMPARTMENT, {"y", "0.02", "1", "predator"}},
+ {"arc00003", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 5, 0}, 108, -1.0e+100, 1.0e+100, FLOW, {"repro1", "r*x*(1-(x/K))-a*x*x/(x*x+L)*y", "1/day", NULL}},
+ {"arc00005", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 6, 0}, 109, -1.0e+100, 1.0e+100, FLOW, {"repro2", "g*y*(a*x*x/(x*x+L))-m*y", "1/day", NULL}},
+ {"node00010", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 7, 0}, 110, -1.0e+100, 1.0e+100, VARIABLE, {"r", "0.06", "1", NULL}},
+ {"node00012", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 8, 0}, 111, -1.0e+100, 1.0e+100, VARIABLE, {"K", "1000", "1", NULL}},
+ {"node00014", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 9, 0}, 112, -1.0e+100, 1.0e+100, VARIABLE, {"a", "5", "1", NULL}},
+ {"node00016", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 10, 0}, 113, -1.0e+100, 1.0e+100, VARIABLE, {"g", "0.2", "1", NULL}},
+ {"node00018", REAL, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 11, 0}, 114, -1.0e+100, 1.0e+100, VARIABLE, {"m", "0.9", "1", NULL}},
+ {"node00022", INTEGER, 0, NULL, 0, NULL, DERIVED, {0},
+ {1, 12, 0}, 115, -268435455, 268435455, VARIABLE, {"L", "50", "int", NULL}}};
+#include <support2.cpp>
+#endif

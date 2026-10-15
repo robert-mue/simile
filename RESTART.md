@@ -85,9 +85,36 @@ except `feeding1` (an association question for the developer).
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive.
 
-## Next: embedded-widget pages (Robert, 2026-10-13)
+## Now: the Simile engine in the browser (Robert, 2026-10-15)
 
-The next job, ahead of submodel colour and time units. Robert's idea: the
+Priorities changed: job 7 below is now THE job. Its purpose: responsiveness
+first (sliders re-plotting at once, multi-run experiments); everything local
+second. Stages of a run as Robert names them: A to Prolog (ours), B send,
+C Prolog → C++ → binary, D execute, E results to client (the bottleneck),
+F display. Choices: #1 wasm for the binary only, C++ still generated on a
+server; #2 everything in wasm, no server (preferred). The source is on
+GitHub, GPL v3: https://github.com/jal-frezie/simile (see
+simulistics.com/source-code-on-github).
+
+Plan (2026-10-15), each step a spike first: 1 build Simile from source with
+SWI-Prolog and get a real `model.cpp` (**DONE 2026-10-15**); 2 compile it with
+the fixed engine (`shank.cpp`, `support*.cpp`) by Emscripten, replace the pipes
+and threads with direct calls, and time it against SimiLive; 3 run the generator
+in SWI-Prolog WebAssembly, with the Tcl calls stubbed; 4 choose between clang
+in the browser (#2) and a JavaScript target added to the generator (#3, no
+C++ compiler needed), then add a local session to `src/simulation.js`.
+Recipe and findings: **`tools/engine/README.md`**. Emscripten is in
+`~/emsdk` (`source ~/emsdk/emsdk_env.sh`). GPL v3 is acceptable for simile (Robert, 2026-10-15); no LICENSE file added
+yet. Open: when to involve the developer.
+
+**Parked, to come back to** (the queue on 2026-10-15, in no settled order):
+release Pangolin; infer `units=boolean`; warn when a value is outside
+min/max; submodel background colour; the model file reference (job 6); the
+editor regression net (job 1); the arc dialog.
+
+## Done: embedded-widget pages (Robert, 2026-10-13)
+
+Finished 2026-10-14; kept for its findings. Robert's idea: the
 widgets are self-contained, so they can sit in an **ordinary web page** — an
 editable diagram, a graph of chosen variables further down, and a
 **multiple-slider widget** (not yet built) so readers vary parameters and see
