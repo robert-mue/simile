@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Write a model as Simile Prolog, outside the browser, with the app's own
 // exporter. Takes a model script made by File > Export model as script
-// (a call to Simile.model(name, model, run)) and writes <out>.pl.
+// (a call to Simile.model(name, model, run)) and writes <out>: Prolog for
+// .pl, or for .sml the MIME-wrapped form the app uploads to SimiLive.
 //
 //   node tools/engine/export-pl.js pages/trees/trees.js /tmp/trees.pl
 'use strict';
@@ -12,7 +13,7 @@ if (!modelScript || !outFile) {
   console.error('usage: export-pl.js <model script .js> <out .pl>');
   process.exit(2);
 }
-const ctx = { console: console };
+const ctx = { console: console, TextEncoder: TextEncoder, btoa: btoa };
 ctx.window = ctx;
 ctx.Sienna = {};
 let captured = null;
@@ -23,5 +24,7 @@ for (const f of ['src/schema/simile-v1.js', 'src/diagram.js', 'src/export-simile
 }
 vm.runInContext(fs.readFileSync(modelScript, 'utf8'), ctx, { filename: modelScript });
 if (!captured) { console.error('no Simile.model(...) call in ' + modelScript); process.exit(1); }
-fs.writeFileSync(outFile, ctx.Sienna.exportSimile.prolog(captured.model));
+const ex = ctx.Sienna.exportSimile;
+fs.writeFileSync(outFile, /\.sml$/.test(outFile)
+  ? ex.sml(captured.model, captured.run) : ex.prolog(captured.model));
 console.log(captured.name + ' -> ' + outFile + '  run settings: ' + JSON.stringify(captured.run));

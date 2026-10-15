@@ -186,6 +186,18 @@
     },
 
     /**
+     * A model compiled for the engine in the page — what its `<name>.engine.js`
+     * calls (tools/engine/build-model.sh). The model then runs here, in
+     * milliseconds, for as long as it is the model the engine was made from;
+     * an edited one runs on SimiLive.
+     * @param {string} name
+     * @param {{prolog: string, wasm: string}} spec
+     */
+    engine: function (name, spec) {
+      Sienna.LocalEngine.register(name, spec);
+    },
+
+    /**
      * Fill the page: put every declared model in the store, make every
      * `[data-simile]` element its widget, and run the first model.
      * @param {{ base?: string }} [opts]

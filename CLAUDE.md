@@ -64,6 +64,17 @@ footing (`src/widgets/grid.js` is the first).
   panels bound to a model (`ref`) see it through `Simulation.viewFor(ref)`,
   which shows it only while it is that model's (`loadedFor` / `modelPath`), so
   another model's run control and displays read "no model loaded".
+- `src/engine-local.js` — **Simile's engine in the page** (`Sienna.LocalEngine`):
+  Simile's own `shank.cpp` (github.com/jal-frezie/simile, GPL v3) compiled to
+  WebAssembly once (`vendor/simile-engine/simile-engine.js`), and a model
+  compiled by Simile into a `<name>.engine.js` that calls `Simile.engine(…)`.
+  It answers SimiLive's requests in SimiLive's shapes, so `simulation.js`
+  sends them there instead of over the network (`Simulation.local`), but only
+  while the model is exactly the one its engine was built from (a fingerprint
+  of the exported Prolog); an edited model runs on SimiLive. A run takes
+  milliseconds, a slider runs as it is dragged, and a starting value needs no
+  rebuild. Nothing is compiled in the page yet. Build tools, findings and
+  patches to Simile's engine: `tools/engine/README.md`.
 - `src/widgets/sliders.js` — a slider per **parameter**: a variable with a
   numeric value, a Minimum and a Maximum (dialog fields `min`/`max`), and no
   influence into it (`exportSimile.isParameter`, `Simulation.parametersOf`).
@@ -97,6 +108,14 @@ footing (`src/widgets/grid.js` is the first).
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
   statement of the Simile expression language; there is no generated parser.
+- `vendor/simile-engine/simile-engine.js` — **generated**, by
+  `tools/engine/build-engine.sh` from a Simile source checkout; do not edit.
+  Loaded on first use by `src/engine-local.js`, not by `index.html`.
+- `tools/engine/` — building the engine and a model's `<name>.engine.js`
+  (`build-model.sh`, needs Simile built from source in `~/Projects/simile-src`
+  and emsdk in `~/emsdk`),
+  the patches to Simile's engine, and the record of what was found
+  (`README.md`).
 - `reference/` — **data, not code.** `catalogue/` is the 72-model Simile
   catalogue (all format 9.0 or older) that `test/roundtrip.html` and
   `test/corpus.js` are built from; `catalogue-2026/` is six of them re-saved by

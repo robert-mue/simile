@@ -35,6 +35,8 @@ $.widget('sienna.sliders', $.sienna.widgetBase, {
 
     this._unsub = this._sim.subscribe((e) => {
       if (e.type === 'parameters' && e.path === this._ref()) this._sync();
+      // Where the model runs decides what a starting value costs.
+      if (e.type === 'status') this._titles();
     });
     // Rebuilt when the SET of parameters or their ranges change, not on every
     // edit to the model — a slider must not be replaced under the hand.
@@ -112,11 +114,7 @@ $.widget('sienna.sliders', $.sienna.widgetBase, {
   _row(p) {
     const row = $('<div class="slx-slider">').appendTo(this._list);
     const head = $('<div class="slx-slider-head">').appendTo(row);
-    $('<label class="slx-slider-name">').text(p.label)
-      .attr('title', p.needsLoad
-        ? 'A starting value: the model is built again with it (a few seconds)'
-        : 'Changes the run in place')
-      .appendTo(head);
+    $('<label class="slx-slider-name">').text(p.label).appendTo(head);
     const box = $('<input type="number" class="slx-slider-value">')
       .attr({ step: 'any', min: p.min, max: p.max, 'aria-label': p.label + ' value' })
       .appendTo(head);
@@ -130,14 +128,36 @@ $.widget('sienna.sliders', $.sienna.widgetBase, {
     $('<span class="slx-slider-end">').text(this._fmt(p.max)).appendTo(track);
 
     this._rows[p.id] = { p, row, box, range };
+    this._titles();
 
     this._on(range, {
-      input: () => { box.val(this._fmt(range.val())); this._mark(p.id); },
+      // Where the model runs in the page, a run keeps up with the slider: the
+      // plots follow it as it moves. Let go, and that value is the setting.
+      input: () => {
+        box.val(this._fmt(range.val()));
+        this._mark(p.id);
+        if (this._sim.runsHere(this._ref())) {
+          this._sim.previewParameter(this._ref(), p.id, Number(range.val()));
+        }
+      },
       change: () => this._commit(p, Number(range.val())),
     });
     this._on(box, {
       keydown: (e) => { if (e.key === 'Enter') this._commit(p, Number(box.val())); },
       change: () => this._commit(p, Number(box.val())),
+    });
+  },
+
+  /** Say what moving each slider costs, as things stand. */
+  _titles() {
+    const ref = this._ref();
+    Object.keys(this._rows || {}).forEach((id) => {
+      const r = this._rows[id];
+      r.row.find('.slx-slider-name').attr('title',
+        this._sim.runsHere(ref) ? 'The model runs in the page: the run follows the slider'
+          : Sienna.Simulation.parameterNeedsLoad(ref, id)
+            ? 'A starting value: the model is built again with it (a few seconds)'
+            : 'Changes the run in place');
     });
   },
 

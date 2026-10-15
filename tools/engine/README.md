@@ -4,14 +4,20 @@ Work towards running models locally (RESTART.md, "Now"). Simile's source is
 https://github.com/jal-frezie/simile (GPL v3). This folder keeps what the spikes
 need, because the scratch directory does not survive a reboot.
 
+**The Simile checkout lives at `~/Projects/simile-src`**, built as below: a
+separate clone, beside this repository and not in it. Both build scripts take
+it as their first argument. If it is missing, clone and build it again.
+
 ## Step 1: Simile from source, writing a model's C++ (done 2026-10-15)
 
 Needs `swi-prolog-nox gprolog tcl-dev tk-dev libxcursor-dev portaudio19-dev`
 (all installed) and a display, because the Tk GUI is started.
 
-    git clone https://github.com/jal-frezie/simile.git && cd simile
-    mkdir -p bin && printf '#!/bin/sh\nexit 0\n' > bin/patchelf && chmod +x bin/patchelf
-    PATH=$PWD/bin:$PATH make PROLOG=SWI    # patchelf only sets rpaths: use LD_LIBRARY_PATH
+    git clone https://github.com/jal-frezie/simile.git ~/Projects/simile-src
+    cd ~/Projects/simile-src
+    # patchelf is not installed, and only sets rpaths: a do-nothing one will do
+    PE=$(mktemp -d) && printf '#!/bin/sh\nexit 0\n' > $PE/patchelf && chmod +x $PE/patchelf
+    PATH=$PE:$PATH make PROLOG=SWI         # then run with LD_LIBRARY_PATH
     cp <this folder>/zz_export_cpp.tcl Extensions/   # loaded at start-up
 
     mkdir -p /tmp/simhome/.simile && cp Run/mdlrinfo.swi /tmp/simhome/.simile/mdlrinfo.txt
@@ -92,8 +98,8 @@ SimiLive for the same: Run again ~1.2 s, a rate slider ~1.5 s, initial_trees
   `((ExecutingModel*)inst)->set_completion(2)` after each `execute`.
 - **Two models in one engine collide.** Whichever is dlopened first works;
   the second reads nothing (each model carries its own copies of support2's
-  globals, and the first binding wins). Not yet solved: one engine instance
-  per model (instances are cheap) or `RTLD_LOCAL`-style loading.
+  globals, and the first binding wins). Avoided, not solved: the page starts
+  one engine instance per model (`Sienna.LocalEngine.open`).
 - Value blocks: `dimSpecs[0]` is the TYPE for a single value (`REAL` = -1;
   types are zero or negative), `SPARSEARRAY` (-5) for a population, whose
   contents are a `sizeAndPtr` {count, pointer to doubles}.
@@ -102,6 +108,66 @@ SimiLive for the same: Run again ~1.2 s, a rate slider ~1.5 s, initial_trees
   GitHub Pages can give. `reset`/`execute` ("single-threaded versions for
   external clients") avoid them. The engine still calls `pthread_create` for
   group members (1467, 1537); not exercised yet.
+
+## In the app and the pages (done 2026-10-15)
+
+A model with a compiled engine runs in the page; any other runs on SimiLive,
+as before. Nothing is compiled in the page yet (that is step 3).
+
+- **`bridge.cpp`** — the engine's C API as a few calls for JavaScript
+  (`sx_load`, `sx_describe`, `sx_reset`, `sx_execute`, `sx_value`,
+  `sx_param`, …), answering in SimiLive's shapes.
+- **`build-engine.sh <simile source>`** → `vendor/simile-engine/simile-engine.js`
+  (2.1 MB, one script, so `file://` works). Applies `patches/*.patch` to a copy
+  of `shank.cpp` first.
+- **`build-model.sh <simile source> <model script> <out .engine.js>`** — model
+  script → `.pl` (the app's exporter) → C++ (Simile from source, ~10 s, opens
+  its window briefly) → side module → `<name>.engine.js`, which calls
+  `Simile.engine(name, {prolog, wasm})`. `prolog` is a fingerprint of the
+  exported Prolog (`Sienna.LocalEngine.fingerprint`), so the engine is used
+  only for exactly that model: edit it and it runs on SimiLive, undo the edit
+  and it runs here again.
+- **`src/engine-local.js`** — `Sienna.LocalEngine`: holds the engine files,
+  starts an engine instance per model, and answers SimiLive's requests
+  (`web_embed.tcl`'s `ResponseTo`, ported). Checked against a recorded
+  SimiLive session: predator-prey's Describe, Reset and ExecuteMulti identical
+  to the last digit; Trees' Describe identical in structure (populations as
+  `{member: value}`, member numbers kept for life).
+- **`src/simulation.js`** — `loadOwn` uses the engine in the page when one is
+  registered for the model; `_post` goes to it instead of the network. A run
+  is one request rather than `updateEach` chunks.
+- **Sliders** — in the page, the run follows the slider as it is dragged
+  (`previewParameter`; runs are coalesced, only the latest is made), and the
+  value let go at is the setting (`setParameter`, one action). Starting values
+  need no rebuild: the slider values are sent BEFORE the reset, as the whole
+  set, and the reset keeps them (the engine's "slider rollover", `how_int` -1).
+- Pages: `pages/<name>/<name>.engine.js` beside `<name>.js`, loaded by a
+  script tag; `embed.js` queues `Simile.engine` like `Simile.model`.
+
+Measured in Chrome over `file://` (a slider let go, to the run drawn):
+predator-prey 37–47 ms; Trees 60–140 ms. SimiLive: ~1.5 s, and 3–11 s for a
+starting value. A drag of 40 mouse moves made ~40 runs.
+
+**Two faults found on the way, both in how the engine is driven:**
+
+- **Slider values lost at a reset** — a bug in Simile's engine:
+  `VarParamData`'s constructor never sets `inheritSeries` (6d.h:110), and
+  `InitTimeSeries` frees a parameter's value at every reset when it is true
+  (shank.cpp ~1190). Whether it is depends on what the heap held: it worked
+  until `Describe` had run. `patches/varparam-inheritseries.patch` sets it.
+  **For the Simile developer.** It could misfire on SimiLive too.
+- **Every run drew the same random numbers** — `setup_randoms` raises
+  `rand_inits_updated`, and every reset and execute that sees it starts the
+  stream again from the seed. The threaded path lowers it after its first job
+  (`check_thread`); the single-threaded calls did not, so each call restarted
+  it (in Trees, every tree of a year at the same place with the same growth
+  rate). The bridge lowers it after each call. Also: the single-threaded
+  `reset` does not seed; `sx_reset` seeds on the first, full reset, as
+  `go_reset` does from the clock.
+
+**Not yet:** grid renderings (`{format: 'binary'}` notes answer null), values
+that are arrays or records, integration methods other than Euler's fixed step,
+models in the app (only pages register engines), and the engine's size.
 
 ## What the source shows
 

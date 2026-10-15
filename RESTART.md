@@ -97,18 +97,28 @@ GitHub, GPL v3: https://github.com/jal-frezie/simile (see
 simulistics.com/source-code-on-github).
 
 Plan (2026-10-15), each step a spike first: 1 build Simile from source with
-SWI-Prolog and get a real `model.cpp` (**DONE 2026-10-15**); 2 compile it with
-the fixed engine (`shank.cpp`, `support*.cpp`) by Emscripten, replace the pipes
-and threads with direct calls, and time it against SimiLive (**DONE
-2026-10-15**: unchanged Simile source, ~1000x faster than SimiLive, 0.5 ms a
-predator-prey run and 1.5 ms a Trees run in Chrome over file://; two models
-in one engine collide, unsolved); 3 run the generator
-in SWI-Prolog WebAssembly, with the Tcl calls stubbed; 4 choose between clang
-in the browser (#2) and a JavaScript target added to the generator (#3, no
-C++ compiler needed), then add a local session to `src/simulation.js`.
-Recipe and findings: **`tools/engine/README.md`**. Emscripten is in
-`~/emsdk` (`source ~/emsdk/emsdk_env.sh`). GPL v3 is acceptable for simile (Robert, 2026-10-15); no LICENSE file added
-yet. Open: when to involve the developer.
+SWI-Prolog and get a real `model.cpp` (**DONE**); 2 compile it with the fixed
+engine (`shank.cpp`) by Emscripten and time it (**DONE**: unchanged source,
+~1000x faster than SimiLive); **then, ahead of 3, the engine in the app and
+the pages (DONE 2026-10-15)**: `src/engine-local.js` answers SimiLive's
+requests from the engine in the page, for a model with a compiled
+`<name>.engine.js` (both sample pages have one) and only while it is exactly
+that model. Sliders run as they are dragged (37–140 ms a run, drawn), and a
+starting value needs no rebuild. 3 run the generator in SWI-Prolog
+WebAssembly, with the Tcl calls stubbed; 4 choose between clang in the
+browser (#2) and a JavaScript target added to the generator (#3, no C++
+compiler needed) — after which any model, edited or not, runs in the page.
+
+Recipe, measurements and findings: **`tools/engine/README.md`**. Emscripten is
+in `~/emsdk` (`source ~/emsdk/emsdk_env.sh`); Simile's source, built with
+SWI-Prolog, is in `~/Projects/simile-src` (a separate clone; both build
+scripts take it as their first argument; README step 1 rebuilds it). GPL v3 is acceptable for simile (Robert, 2026-10-15); no
+LICENSE file added yet. Open: when to involve the developer — there is now
+an engine bug to report (README, "Slider values lost at a reset", with its
+one-line patch in `tools/engine/patches/`).
+
+**After an edit to a sample model, rebuild its engine file**
+(`tools/engine/build-model.sh`), or the page quietly goes back to SimiLive.
 
 **Parked, to come back to** (the queue on 2026-10-15, in no settled order):
 release Pangolin; infer `units=boolean`; warn when a value is outside

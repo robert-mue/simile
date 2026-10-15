@@ -155,7 +155,8 @@
     status: 'idle',
     message: '',
 
-    base: null,        // the server-side session id ('/tmp/dbx…')
+    base: null,        // the server-side session id ('/tmp/dbx…'), or 'local:…'
+    local: null,       // the engine in the page, when it is running the model
     params: null,      // run defaults from BuildShareLib
     components: null,  // the Describe dictionary: id -> {text, captpath, dims, …}
     modelLink: '',     // what was loaded, for display
@@ -222,6 +223,9 @@
      */
     _post: function (act, extra) {
       var data = $.extend({ base: this.base, act: act }, extra || {});
+      // The engine in the page answers the same requests, in the same shapes
+      // (src/engine-local.js), without leaving the page.
+      if (this.local) return this.local.act(act, data);
       return Promise.resolve(
         $.ajax({ type: 'POST', url: SERVER + 'model_action.php', data: data, dataType: 'text' }),
       ).catch(function (xhr) {
@@ -330,16 +334,20 @@
      * Everything after the model has been handed over, however it was handed
      * over: find the session id, compile, attach, read the structure, reset.
      */
-    _startSession: function (html) {
+    _startSession: function (html, localBase) {
       var self = this;
 
       return Promise.resolve().then(function () {
-        // The session id is embedded in a script tag of an HTML page meant for
-        // a browser. Scraping it is not elegant, but it is the only way in: the
-        // endpoint has no JSON form.
-        var m = /fileBase\s*=\s*'([^']+)'/.exec(html);
-        if (!m) throw new Error('the server did not start a session (is the model path right?)');
-        self.base = m[1];
+        if (localBase) {
+          self.base = localBase;
+        } else {
+          // The session id is embedded in a script tag of an HTML page meant
+          // for a browser. Scraping it is not elegant, but it is the only way
+          // in: the endpoint has no JSON form.
+          var m = /fileBase\s*=\s*'([^']+)'/.exec(html);
+          if (!m) throw new Error('the server did not start a session (is the model path right?)');
+          self.base = m[1];
+        }
 
         self._setStatus('loading', 'Compiling model…');
         return self._post('BuildShareLib');
@@ -443,9 +451,22 @@
         // What the engine was given, to tell later whether the model has been
         // edited since. The Prolog, not the .sml: the .sml wraps it in MIME
         // with a fresh random boundary each time.
-        self._loadedText = essence(Sienna.exportSimile.prolog(model));
-        self._setStatus('loading', 'Uploading model…');
+        var prolog = Sienna.exportSimile.prolog(model);
+        self._loadedText = essence(prolog);
 
+        // Compiled for the engine in the page, exactly as it is now: run it
+        // here. The slider values are not written in (as they are in `sml`):
+        // this engine takes every one at a reset, starting values included.
+        var entry = Sienna.LocalEngine ? Sienna.LocalEngine.find(prolog) : null;
+        if (entry) {
+          self._setStatus('loading', 'Starting the engine in the page…');
+          return Sienna.LocalEngine.open(entry).then(function (session) {
+            self.local = session;
+            return self._startSession(null, 'local:' + entry.name);
+          });
+        }
+
+        self._setStatus('loading', 'Uploading model…');
         var fd = new FormData();
         fd.append('model_src', 'file');
         fd.append('model', new Blob([sml], { type: 'application/octet-stream' }), 'model.sml');
@@ -455,9 +476,9 @@
         return Promise.resolve($.ajax({
           type: 'POST', url: SERVER + 'create_model.php', data: fd,
           processData: false, contentType: false, dataType: 'text',
-        }));
-      }).then(function (html) {
-        return self._startSession(html);
+        })).then(function (html) {
+          return self._startSession(html);
+        });
       }).catch(function (err) {
         self._setStatus('error', err.message || String(err));
         throw err;
@@ -479,10 +500,16 @@
       this._runStep = null;
       if (!this.base) return Promise.resolve();
       var dead = this.base;
+      var local = this.local;
       this.base = null;
+      this.local = null;
       this.components = null;
       this.params = null;
       this._setStatus('idle', '');
+      if (local) {
+        local.exit();
+        return Promise.resolve();
+      }
       return Promise.resolve(
         $.ajax({
           type: 'POST', url: SERVER + 'model_action.php',
@@ -507,15 +534,24 @@
       // the next reset rather than being half applied (see `start`).
       this._runStep = String(this.settings.timeStep);
 
-      return this._post('Reset', {
-        current: current * this.timeUnit,
-        step: this._scaleTimes(this._runStep),
-        method: this.params.intMethod,
-        // -2 on the first reset of a session is what SimiLive sends, and the
-        // server takes it as "initialise everything"; later resets are 0.
-        depth: this._firstReset ? -2 : 0,
-        note: JSON.stringify(note),
+      // The engine in the page takes the slider values BEFORE the reset, and
+      // all of them — the whole set, so one put back is cleared — and keeps
+      // them through it, starting values included.
+      var before = !this.local ? Promise.resolve()
+        : this._post('Parameterize', { data: JSON.stringify(this._liveParameters(true)) });
+
+      return before.then(function () {
+        return self._post('Reset', {
+          current: current * self.timeUnit,
+          step: self._scaleTimes(self._runStep),
+          method: self.params.intMethod,
+          // -2 on the first reset of a session is what SimiLive sends, and the
+          // server takes it as "initialise everything"; later resets are 0.
+          depth: self._firstReset ? -2 : 0,
+          note: JSON.stringify(note),
+        });
       }).then(function (text) {
+        if (self.local) return text;
         // A reset puts every variable parameter back to the model's value, so
         // the sliders' values go back in — and the values read again, since
         // what the reset reported was computed before them.
@@ -618,6 +654,7 @@
      * to that model whenever it is the one loaded.
      */
     _overrides: {},
+    _preview: {},      // a slider being dragged: {path: {nodeId: number}}
     _paramSeq: 0,
 
     /** The slider values for one model: `{nodeId: number}`. */
@@ -625,20 +662,39 @@
       return $.extend({}, this._overrides[path] || {});
     },
 
+    /** Is this model being run by the engine in the page? */
+    runsHere: function (path) {
+      return !!this.local && this.modelPath === path;
+    },
+
     /**
      * Run one of a model's parameters at `value` instead of the model's own.
-     * Runs again from the start when that model is the one loaded. A rate
-     * changes in place (`Parameterize`, about a second); a starting value means
-     * loading the model again, since Simile fixes those when it builds it and a
-     * reset puts them back.
+     * Runs again from the start when that model is the one loaded. On
+     * SimiLive a rate changes in place (`Parameterize`, about a second) and a
+     * starting value means loading the model again, since Simile fixes those
+     * when it builds it and a reset puts them back. In the page, both are a
+     * reset and a run: milliseconds.
      * @returns {Promise}
      */
     setParameter: function (path, nodeId, value) {
       var o = this._overrides[path] || (this._overrides[path] = {});
       var reload = Simulation.parameterNeedsLoad(path, nodeId) && o[nodeId] !== value;
       o[nodeId] = value;
+      delete this._preview[path];
       this._emit({ type: 'parameters', path: path });
       return this._rerun(path, reload);
+    },
+
+    /**
+     * Run with a value a slider is passing through as it is dragged — only
+     * where that is fast enough to keep up, the engine in the page. Nothing is
+     * recorded: the value the slider is let go at is `setParameter`'s.
+     */
+    previewParameter: function (path, nodeId, value) {
+      if (!this.runsHere(path)) return Promise.resolve();
+      var p = this._preview[path] || (this._preview[path] = {});
+      p[nodeId] = value;
+      return this._rerun(path, false);
     },
 
     /** Every slider back to the model's own value, and run again. */
@@ -646,6 +702,7 @@
       var had = this._overrides[path] || {};
       var reload = Object.keys(had).some(function (id) { return Simulation.parameterNeedsLoad(path, id); });
       delete this._overrides[path];
+      delete this._preview[path];
       this._emit({ type: 'parameters', path: path });
       return this._rerun(path, reload);
     },
@@ -653,10 +710,36 @@
     _rerun: function (path, reload) {
       var self = this;
       if (this.modelPath !== path || !this.base || this.status === 'loading') return Promise.resolve();
+      // In the page, runs come faster than a slider moves; one asked for while
+      // another is under way is made when it ends, and only the latest.
+      if (this.local && this._rerunning) {
+        this._rerunAgain = true;
+        return this._rerunning;
+      }
       this.stop();
       var go = reload ? this._reload().then(function () { self.start(true); })
         : this.reset().then(function () { self.start(); });
-      return go.catch(function () { /* reported through status */ });
+      go = go.catch(function () { /* reported through status */ });
+      if (!this.local) return go;
+      this._rerunning = go.then(function () { return self._whenRunEnds(); }).then(function () {
+        self._rerunning = null;
+        if (self._rerunAgain) {
+          self._rerunAgain = false;
+          return self._rerun(path, false);
+        }
+      });
+      return this._rerunning;
+    },
+
+    /** Resolves when the run under way (if any) has finished or stopped. */
+    _whenRunEnds: function () {
+      var self = this;
+      if (!this._running) return Promise.resolve();
+      return new Promise(function (resolve) {
+        var off = self.subscribe(function (e) {
+          if (e.type === 'status' && e.status !== 'running') { off(); resolve(); }
+        });
+      });
     },
 
     /** The model as loaded: its slider values written in as its own. */
@@ -671,13 +754,18 @@
       return copy;
     },
 
-    /** `{captpath: 'NOW value'}` for the loaded model's rate parameters. */
-    _liveParameters: function () {
+    /**
+     * `{captpath: 'NOW value'}` for the loaded model's rate parameters — or,
+     * with `all`, for every parameter a slider has moved (the engine in the
+     * page takes starting values too), a slider being dragged included.
+     */
+    _liveParameters: function (all) {
       var path = this.modelPath;
-      var o = (path && this._overrides[path]) || {};
+      var o = $.extend({}, (path && this._overrides[path]) || {},
+        (all && path && this._preview[path]) || {});
       var out = {};
       Simulation.parametersOf(path).forEach(function (p) {
-        if (p.id in o && !p.needsLoad) out[p.captpath] = 'NOW ' + o[p.id];
+        if (p.id in o && (all || !p.needsLoad)) out[p.captpath] = 'NOW ' + o[p.id];
       });
       return out;
     },
@@ -759,7 +847,10 @@
         return;
       }
 
-      var interval = Math.min(this._runEnd - current, Number(this.settings.updateEach));
+      // In the page the whole run is one request: Update each is about how
+      // often a remote run reports, and a run here is over in milliseconds.
+      var interval = this.local ? this._runEnd - current
+        : Math.min(this._runEnd - current, Number(this.settings.updateEach));
       var note = this.noteList();
 
       this._post('ExecuteMulti', {
@@ -979,13 +1070,15 @@
         min: Number(n.props.min),
         max: Number(n.props.max),
         units: n.props.units || '',
-        needsLoad: reachesStock(m, id),
+        needsLoad: reachesStock(m, id) && !Simulation.runsHere(ref),
       });
     });
     return out.sort(function (a, b) { return a.label.localeCompare(b.label); });
   };
 
   Simulation.parameterNeedsLoad = function (ref, id) {
+    // The engine in the page takes a starting value at a reset (src/engine-local.js).
+    if (Simulation.runsHere(ref)) return false;
     var m = ref && Sienna.userData ? Sienna.userData.get(ref) : null;
     return !!(m && m.nodes && reachesStock(m, id));
   };
@@ -1075,6 +1168,8 @@
       // apply when it next is.
       parameterValues: function (path) { return sim.parameterValues(path); },
       setParameter: function (path, id, v) { return sim.setParameter(path, id, v); },
+      previewParameter: function (path, id, v) { return sim.previewParameter(path, id, v); },
+      runsHere: function (path) { return sim.runsHere(path); },
       clearParameters: function (path) { return sim.clearParameters(path); },
       stepPending: function () { return mine() && sim.stepPending(); },
       atStart: function () { return sim.atStart(); },
@@ -1094,7 +1189,7 @@
   // The session is a process on someone else's server; leaving without saying
   // so strands it until the server times it out.
   $(window).on('unload', function () {
-    if (!Simulation.base) return;
+    if (!Simulation.base || Simulation.local) return;
     Simulation.stop();
     try {
       navigator.sendBeacon(

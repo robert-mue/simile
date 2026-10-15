@@ -15,9 +15,9 @@
  * widget registry where widget scripts live.
  *
  * Loading is asynchronous, so until it is done `Simile` is a stand-in that
- * remembers calls to `Simile.model` and `Simile.page` and makes them, in order,
- * once the real one (src/page.js) is there. A page therefore needs no
- * knowledge of when the scripts arrive.
+ * remembers calls to `Simile.model`, `Simile.engine` and `Simile.page` and
+ * makes them, in order, once the real one (src/page.js) is there. A page
+ * therefore needs no knowledge of when the scripts arrive.
  *
  * Classic script; no imports/exports.
  */
@@ -58,6 +58,7 @@
     'src/equation.js',
     'src/equation-check.js',
     'src/export-simile.js',
+    'src/engine-local.js',
     'src/simulation.js',
     'src/widgets/index.js',
     'src/page.js',
@@ -79,6 +80,7 @@
   var waiting = [];
   window.Simile = {
     model: function () { calls.push(['model', arguments]); },
+    engine: function () { calls.push(['engine', arguments]); },
     page: function () {
       var args = arguments;
       return new Promise(function (resolve, reject) {

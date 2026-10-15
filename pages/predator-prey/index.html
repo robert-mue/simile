@@ -58,11 +58,9 @@
 
       <h2>Try it</h2>
 
-      <p>Move a slider and the model runs again with that value, and the
-      plots above follow. A rate changes the run in about a second; a starting
-      population takes a few, because the model is built again with it. The
-      model itself is not changed: <strong>model values</strong> puts the
-      sliders back.</p>
+      <p>Move a slider and the plots above follow it: the model runs again,
+      here in the page, every time the slider moves. The model itself is not
+      changed: <strong>model values</strong> puts the sliders back.</p>
 
       <div data-simile="sliders" data-model="predator-prey"></div>
 
@@ -80,6 +78,7 @@
 
     <!-- The model this page is about, and then the page. -->
     <script src="predator-prey.js"></script>
+    <script src="predator-prey.engine.js"></script>
     <script>Simile.page();</script>
   </body>
 </html>
