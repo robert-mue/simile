@@ -108,9 +108,14 @@ starting value needs no rebuild. 3 run the generator in SWI-Prolog
 WebAssembly, with the Tcl calls stubbed (**DONE 2026-10-15**: Simile's own
 Prolog, unchanged, writes C++ with no Tcl, natively and in WebAssembly — in
 Chrome over file:// in 1.3 s for predator-prey; the model database ported to
-Prolog; identical C++ on the catalogue, README step 3); 4 choose between clang in the
-browser (#2) and a JavaScript target added to the generator (#3, no C++
-compiler needed) — after which any model, edited or not, runs in the page.
+Prolog; identical C++ on the catalogue, README step 3); 4 compile the C++ in
+the page — **clang spike DONE 2026-10-15** (`tools/engine/clang/`): npm
+`@yowasp/clang` (LLVM 22 in WebAssembly) makes the side module, byte-identical
+results to emcc's for predator-prey and Trees; ~1 s a compile once clang is
+up, also from file:// (repacked as a 100 MB classic script, ~4 s to load);
+download 22.6 MB gzipped. NEXT (not started, Robert to choose): wire steps
+3 + 4 into the app, so an edited model is generated, compiled and run in the
+page instead of on SimiLive — after which any model runs in the page.
 
 Recipe, measurements and findings: **`tools/engine/README.md`**. Emscripten is
 in `~/emsdk` (`source ~/emsdk/emsdk_env.sh`); Simile's source, built with

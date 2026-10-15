@@ -221,6 +221,58 @@ most of that; not tried.
 Simile's Prolog into one script, 1.5 MB, beside the 6.3 MB `swipl-bundle.js`),
 and compiling the C++ in the page (step 4).
 
+## Step 4 spike: compiling the C++ in the page (done 2026-10-15)
+
+`clang/` — a model's `model.cpp` made into the engine's side module by clang
+running as WebAssembly: npm `@yowasp/clang` 22.0.0-git20542-10 (LLVM 22
+with lld, built for WASI, ISC/Apache 2), not installed in the repo.
+
+    node clang/compile.mjs <@yowasp/clang gen/bundle.js> ~/Projects/simile-src model.cpp out.wasm
+    node clang/run-model.cjs out.wasm > values.txt        # every value, 100 steps, fixed seed
+    python3 -I clang/repack-classic.py <@yowasp/clang gen/> <dir>   # for file://
+
+**How.** emcc's own commands (`emcc -v … -sSIDE_MODULE=1`): one `clang -c`
+per file with `-target wasm32-unknown-emscripten -fPIC -O2` and emsdk's
+sysroot headers, then `wasm-ld -shared --unresolved-symbols=import-dynamic`
+with no libraries. Repeated with YoWASP's clang and wasm-ld, one change: LLVM
+22 does not mark default-visibility symbols exported as emsdk's LLVM 24 does,
+so `--no-export-dynamic` must go (else a 505-byte module with nothing in it).
+A model needs ~170 of emsdk's headers (620 KB, 126 KB gzipped) and 17 of
+clang's own. `support.cpp` never changes, so a page would ship its object.
+
+**Checked.** predator-prey and Trees (populations, random numbers), compiled
+and linked wholly by YoWASP and run in the page's engine: every variable for
+100 steps byte-identical to the emcc build (Trees: 713 KB of values).
+
+**Sizes.** `llvm.core.wasm` 75.5 MB (22.6 MB gzipped): 66 MB of it code, no
+names to strip — smaller only by building LLVM ourselves with less in it.
+Its `llvm-resources.tar`, 30 MB, is a WASI C/C++ library Simile never uses:
+cut to the 17 headers (60 KB) the output is byte-identical.
+
+**Times** (this machine):
+
+| | Node | Chrome, http | Chrome, file:// |
+|---|---|---|---|
+| getting clang (fetch, compile its WebAssembly) | | ~1 s | ~4 s to load the 100 MB script |
+| first model compile (clang starting) | 3.5–3.8 s | 3.9 s (1.8 s on reload, code cached) | 1.4–3.6 s |
+| a model compile after that, -O2 | 1.1–1.4 s | 0.9–1.4 s | 0.9–1.4 s |
+| link | 70–90 ms | 25–60 ms | 25–55 ms |
+| engine load + 100 steps | | 60–130 ms | 70–130 ms |
+
+`-O0` compiles in 0.7 s instead of 1.2 (output speed not compared).
+
+**file://.** Chrome refuses ES modules and `fetch` there, so
+`repack-classic.py` makes the package two classic scripts: `clang.js` (its
+bundle, fetch answered from `window.YOWASP_DATA`) and `clang-data.js`, the
+WebAssembly as base64, 100 MB. It works: same output, same compile times,
+~4 s to load. A page would load it only when a model is edited, as
+`engine-local.js` loads the engine.
+
+**What it means for an edit in the page:** generating the C++ (step 3, ~1–2 s
+for these models) + compiling (~1 s) + load ≈ 2–3 s, all local — about
+SimiLive's time for a small model, and no server. The first edit also pays
+for getting SWI-Prolog and clang (~5 s from file://).
+
 ## What the source shows
 
 - **Generated per model:** only `model.cpp`. It holds a class with a field per
