@@ -137,8 +137,8 @@ Simile.model("predator-prey", { &hellip; }, {"runLength":50,"logEach":1,"timeSte
 <!-- ------------------------------------------------------------------ -->
 <h2 id="more">6. Good to know</h2>
 
-<h3>The model runs on a server</h3>
-<p>The page draws everything itself, but the model runs on SimiLive, the Simile engine at simulistics.com. A reader needs an internet connection, and each page visit starts a run there.</p>
+<h3>The model runs in the page</h3>
+<p>The page compiles the model with Simile's own tools and runs it in the reader's browser, with no server. Compiling takes a few seconds, and the first time a page needs to do it, it first loads the compiler: about 38&nbsp;MB, ten seconds or so. A page can avoid that by shipping its model ready compiled, as a <code><em>name</em>.compiled.js</code> file beside the model's script, loaded the same way; the sample pages do. Such a file is made with <code>tools/engine/build-model.sh</code>, which needs Simile built from source. It is used only while the model is exactly the one it was compiled from: if the reader edits the model, the page compiles the edited one. Should compiling fail, the model runs on SimiLive, at simulistics.com.</p>
 
 <h3>One running model per page</h3>
 <p>A page can show several models' diagrams, but only one model runs: the first one the page loads. Put each model you want running on a page of its own.</p>

@@ -107,7 +107,7 @@
   var SETTINGS_KEY = 'simile.runSettings.v1';
 
   /**
-   * What to call a component in a list or a legend. The engine names one by
+   * What to call a component in a list or a legend. Simile names one by
    * its path from the top of the model — `/account`, `/forest/tree/height`.
    * A display looks at the whole model, so names are given as seen from the
    * top (the convention everywhere: a name carries the path of submodels
@@ -156,7 +156,7 @@
     message: '',
 
     base: null,        // the server-side session id ('/tmp/dbx…'), or 'local:…'
-    local: null,       // the engine in the page, when it is running the model
+    local: null,       // the compiled model running in the page, when it is
     params: null,      // run defaults from BuildShareLib
     components: null,  // the Describe dictionary: id -> {text, captpath, dims, …}
     modelLink: '',     // what was loaded, for display
@@ -223,7 +223,7 @@
      */
     _post: function (act, extra) {
       var data = $.extend({ base: this.base, act: act }, extra || {});
-      // The engine in the page answers the same requests, in the same shapes
+      // A model running in the page answers the same requests, in the same shapes
       // (src/engine-local.js), without leaving the page.
       if (this.local) return this.local.act(act, data);
       return Promise.resolve(
@@ -434,7 +434,7 @@
 
       var sml;
       try {
-        // With the sliders' values in it: the engine's defaults are then what
+        // With the sliders' values in it: the model's defaults are then what
         // the sliders say, so a starting value (which only a load can change,
         // see `setParameter`) is right, and a reset keeps every value.
         sml = Sienna.exportSimile.sml(this._withParameters(path, model));
@@ -448,17 +448,17 @@
       return this.unload().then(function () {
         self.modelLink = model.name || model.id || path;
         self.modelPath = path;
-        // What the engine was given, to tell later whether the model has been
+        // What was run, to tell later whether the model has been
         // edited since. The Prolog, not the .sml: the .sml wraps it in MIME
         // with a fresh random boundary each time.
         var prolog = Sienna.exportSimile.prolog(model);
         self._loadedText = essence(prolog);
 
-        // Run it in the page: with the engine compiled for exactly this model
-        // if there is one, or one made here now (seconds; the first time, a
-        // few more to load the tools). The slider values are not written in
-        // (as they are in `sml`): this engine takes every one at a reset,
-        // starting values included. Only if no engine can be had, SimiLive.
+        // Run it in the page: compiled for exactly this model already, if it
+        // is, or compiled here now (seconds; the first time, a few more to
+        // load the tools). The slider values are not written in (as they are
+        // in `sml`): a model run here takes every one at a reset, starting
+        // values included. Only if it cannot be compiled, SimiLive.
         var token = self._loading = {};
         var LE = Sienna.LocalEngine;
         var entry = LE ? LE.find(prolog) : null;
@@ -482,10 +482,10 @@
       });
     },
 
-    /** Start the engine in the page on a model's compiled engine. */
+    /** Start a compiled model in the page. */
     _runHere: function (entry) {
       var self = this;
-      self._setStatus('loading', 'Starting the engine in the page…');
+      self._setStatus('loading', 'Starting the model in the page…');
       return Sienna.LocalEngine.open(entry).then(function (session) {
         self.local = session;
         return self._startSession(null, 'local:' + entry.name);
@@ -555,13 +555,13 @@
       this._running = false;
       var note = this.noteList();
       var current = this.params ? parseFloat(this.params.resetTo) : 0;
-      // The step a run is made with is fixed here, at its start. The engine
+      // The step a run is made with is fixed here, at its start. SimiLive
       // takes a new step one request late — a change made at the start of a
       // run gave 320.18 for a first year that is 320 — so a change waits for
       // the next reset rather than being half applied (see `start`).
       this._runStep = String(this.settings.timeStep);
 
-      // The engine in the page takes the slider values BEFORE the reset, and
+      // A model run in the page takes the slider values BEFORE the reset, and
       // all of them — the whole set, so one put back is cleared — and keeps
       // them through it, starting values included.
       var before = !this.local ? Promise.resolve()
@@ -689,7 +689,7 @@
       return $.extend({}, this._overrides[path] || {});
     },
 
-    /** Is this model being run by the engine in the page? */
+    /** Is this model being run in the page? */
     runsHere: function (path) {
       return !!this.local && this.modelPath === path;
     },
@@ -714,7 +714,7 @@
 
     /**
      * Run with a value a slider is passing through as it is dragged — only
-     * where that is fast enough to keep up, the engine in the page. Nothing is
+     * where that is fast enough to keep up: in the page. Nothing is
      * recorded: the value the slider is let go at is `setParameter`'s.
      */
     previewParameter: function (path, nodeId, value) {
@@ -783,7 +783,7 @@
 
     /**
      * `{captpath: 'NOW value'}` for the loaded model's rate parameters — or,
-     * with `all`, for every parameter a slider has moved (the engine in the
+     * with `all`, for every parameter a slider has moved (a model run in the
      * page takes starting values too), a slider being dragged included.
      */
     _liveParameters: function (all) {
@@ -831,7 +831,7 @@
 
     /**
      * One of our models, edited since it was loaded. Compared as what would be
-     * sent — so moving an element about, which changes nothing the engine
+     * sent — so moving an element about, which changes nothing the simulation
      * sees, does not count. A model that will not export counts as changed:
      * reloading it is how the modeller gets told why.
      */
@@ -962,7 +962,7 @@
 
     /**
      * Components with one number per member of a population — `dims` is
-     * `['MEMBERS', 0]`. The engine sends one as an object keyed by member
+     * `['MEMBERS', 0]`. Simile sends one as an object keyed by member
      * (`{"2": 3, "3": 1.6}`), and a member keeps its key for as long as it
      * exists, so a display can follow each one through time: a line per tree on
      * a plot, a lollipop per tree on the ground. Members of a population inside
@@ -1027,10 +1027,10 @@
   };
 
   /**
-   * The variables a model HAS, read from the diagram rather than the engine,
-   * named as the engine will name them once it is loaded (`tree/size`).
+   * The variables a model HAS, read from the diagram rather than the running model,
+   * named as Simile will name them once it is loaded (`tree/size`).
    *
-   * A display lists what it can show from the engine's description of the
+   * A display lists what it can show from Simile's description of the
    * model loaded, which is the only place values come from — so a variable
    * added since the last load was missing from the list, and the modeller had
    * to load before they could even choose it. Offering these as well lets a

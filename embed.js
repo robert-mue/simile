@@ -15,7 +15,7 @@
  * widget registry where widget scripts live.
  *
  * Loading is asynchronous, so until it is done `Simile` is a stand-in that
- * remembers calls to `Simile.model`, `Simile.engine` and `Simile.page` and
+ * remembers calls to `Simile.model`, `Simile.compiledModel` and `Simile.page` and
  * makes them, in order, once the real one (src/page.js) is there. A page
  * therefore needs no knowledge of when the scripts arrive.
  *
@@ -80,7 +80,7 @@
   var waiting = [];
   window.Simile = {
     model: function () { calls.push(['model', arguments]); },
-    engine: function () { calls.push(['engine', arguments]); },
+    compiledModel: function () { calls.push(['compiledModel', arguments]); },
     page: function () {
       var args = arguments;
       return new Promise(function (resolve, reject) {

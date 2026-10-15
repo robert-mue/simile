@@ -1,16 +1,17 @@
 /**
- * `Sienna.EngineBuild` — a model's engine made in the page: its Simile
- * Prolog to C++ by Simile's own generator, running in SWI-Prolog, and the C++
- * to the engine's WebAssembly side module by clang, also running here. What
+ * `Sienna.ModelCompiler` — a model compiled in the page: its Simile Prolog
+ * to C++ by Simile's own generator, running in SWI-Prolog, and the C++ to a
+ * WebAssembly side module (the compiled model, which runs linked to Simile's
+ * run-time library) by clang, also running here. What
  * tools/engine/build-model.sh does with desktop Simile and emsdk, with no
  * server and no install. Loaded by `src/engine-local.js` the first time a
- * model has no `<name>.engine.js`; the scripts it uses in turn are loaded on
+ * model has no `<name>.compiled.js`; the scripts it uses in turn are loaded on
  * first use too, as they are large (clang is 30 MB):
  *
  *   vendor/swipl/swipl-bundle.js                SWI-Prolog in WebAssembly
  *   vendor/simile-generator/simile-generator.js Simile's Prolog, headless
  *   vendor/clang/clang-data.js, clang.js        clang and wasm-ld
- *   vendor/simile-engine/model-kit.js           the headers, support.cpp built
+ *   vendor/simile-runtime/model-kit.js          the headers, support.cpp built
  *
  * all made by tools/engine/build-browser-tools.sh (README, steps 3 and 4).
  *
@@ -114,14 +115,14 @@
     });
   }
 
-  // ---- compiling: C++ -> the engine's side module -------------------------
+  // ---- compiling: C++ -> the compiled model (a side module) -----------------
 
   var kitTree = null;   // the file tree clang starts from, made once
 
   function clangReady() {
     window.YOWASP_DATA = window.YOWASP_DATA || {};
     return load('clang/clang-data.js').then(function () {
-      return Promise.all([load('clang/clang.js'), load('simile-engine/model-kit.js')]);
+      return Promise.all([load('clang/clang.js'), load('simile-runtime/model-kit.js')]);
     }).then(function () {
       // clang.js finishes setting itself up asynchronously.
       return new Promise(function (resolve) {
@@ -179,7 +180,7 @@
     });
   }
 
-  Sienna.EngineBuild = {
+  Sienna.ModelCompiler = {
     generate: generate,
     compile: compile,
 

@@ -96,13 +96,18 @@ server; #2 everything in wasm, no server (preferred). The source is on
 GitHub, GPL v3: https://github.com/jal-frezie/simile (see
 simulistics.com/source-code-on-github).
 
+**Terms (Robert, 2026-10-16):** the ENGINE is what makes a runnable model;
+one model's WebAssembly is the COMPILED MODEL, never "the engine"; `shank.cpp`
+compiled is Simile's RUN-TIME LIBRARY (`vendor/simile-runtime/`). Older text
+below keeps some old wording; file names are the new ones.
+
 Plan (2026-10-15), each step a spike first: 1 build Simile from source with
 SWI-Prolog and get a real `model.cpp` (**DONE**); 2 compile it with the fixed
 engine (`shank.cpp`) by Emscripten and time it (**DONE**: unchanged source,
 ~1000x faster than SimiLive); **then, ahead of 3, the engine in the app and
 the pages (DONE 2026-10-15)**: `src/engine-local.js` answers SimiLive's
-requests from the engine in the page, for a model with a compiled
-`<name>.engine.js` (both sample pages have one) and only while it is exactly
+requests from a model running in the page, for a model with a
+`<name>.compiled.js` (both sample pages have one) and only while it is exactly
 that model. Sliders run as they are dragged (37–140 ms a run, drawn), and a
 starting value needs no rebuild. 3 run the generator in SWI-Prolog
 WebAssembly, with the Tcl calls stubbed (**DONE 2026-10-15**: Simile's own
@@ -114,28 +119,33 @@ the page — **clang spike DONE 2026-10-15** (`tools/engine/clang/`): npm
 results to emcc's for predator-prey and Trees; ~1 s a compile once clang is
 up, also from file:// (repacked as a 100 MB classic script, ~4 s to load);
 download 22.6 MB gzipped. **Steps 3 + 4 in the app and the pages DONE
-2026-10-15**: a model with no engine file (edited, or any of the app's) is
-generated and compiled in the page (`src/engine-build.js`, tools in
+2026-10-15**: a model with no compiled file (edited, or any of the app's) is
+generated and compiled in the page (`src/model-compiler.js`, tools in
 `vendor/` from `tools/engine/build-browser-tools.sh`) and runs there; SimiLive
 only if that fails. First build ~9 s, later ~3 s, undo at once; checked
 identical to a slider run (README, "Steps 3 and 4 in the app"). Found and
-patched a second engine bug on the way ("model values" crashed it: a
+patched a second run-time library bug on the way ("model values" crashed it: a
 non-virtual destructor, `patches/fileparam-virtual-destructor.patch`).
-Not yet: a worker so the page is not frozen while building, keeping engines
-between visits, a smaller clang. The vendor/ tools are committed
-(Robert, 2026-10-16, option 1); clang-data.js ships gzipped, 30 MB.
+The vendor/ tools are committed (Robert, 2026-10-16, option 1);
+clang-data.js ships gzipped, 30 MB. **2026-10-16 (Robert):** embedded-widget
+pages keep shipping their compiled model (`<name>.compiled.js`); the app
+ships none and keeps what it compiles in IndexedDB between visits (first
+visit ~7 s, then instant); names changed to the terms above (README, top).
+Not yet: a worker so the page is not frozen while compiling, a smaller clang
+(prospects in README, "Compiled models kept between visits").
 
 Recipe, measurements and findings: **`tools/engine/README.md`**. Emscripten is
 in `~/emsdk` (`source ~/emsdk/emsdk_env.sh`); Simile's source, built with
 SWI-Prolog, is in `~/Projects/simile-src` (a separate clone; both build
 scripts take it as their first argument; README step 1 rebuilds it). GPL v3 is acceptable for simile (Robert, 2026-10-15); no
 LICENSE file added yet. Open: when to involve the developer — there are now
-two engine bugs to report (README, "Slider values lost at a reset" and
-"Model values crashed the engine", each with a one-line patch
+two run-time library bugs to report (README, "Slider values lost at a reset"
+and "Model values crashed the run", each with a one-line patch
 in `tools/engine/patches/`).
 
-**After an edit to a sample model, rebuild its engine file**
-(`tools/engine/build-model.sh`), or the page quietly goes back to SimiLive.
+**After an edit to a sample model, rebuild its compiled file**
+(`tools/engine/build-model.sh`), or every reader's page compiles it (~10 s,
+38 MB of tools) instead of running it at once.
 
 **Parked, to come back to** (the queue on 2026-10-15, in no settled order):
 release Pangolin; infer `units=boolean`; warn when a value is outside

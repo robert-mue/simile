@@ -1,7 +1,19 @@
-# The Simile engine in the browser: spikes
+# Simile's simulation engine in the browser
 
-Work towards running models locally (RESTART.md, "Now"). Simile's source is
-https://github.com/jal-frezie/simile (GPL v3). This folder keeps what the spikes
+Work towards running models locally (RESTART.md, "Now").
+
+**Terms** (Robert, 2026-10-16). The ENGINE is what makes a runnable model:
+Simile's generator and a C++ compiler. What it makes for one model is the
+COMPILED MODEL (a WebAssembly side module), never "the engine". A compiled
+model runs linked to Simile's RUN-TIME LIBRARY, `Run/shank.cpp` compiled once
+(`vendor/simile-runtime/simile-runtime.js`). Names in this file before
+2026-10-16 were changed to match: `simile-engine.js` is `simile-runtime.js`,
+`build-engine.sh` is `build-runtime.sh`, `<name>.engine.js` is
+`<name>.compiled.js` (calling `Simile.compiledModel`), `engine-file.js` is
+`compiled-file.js`, `src/engine-build.js` is `src/model-compiler.js` (the
+step 2 spike, `page.html` with its own `engine-web.js`, kept its names).
+
+Simile's source is https://github.com/jal-frezie/simile (GPL v3). This folder keeps what the spikes
 need, because the scratch directory does not survive a reboot.
 
 **The Simile checkout lives at `~/Projects/simile-src`**, built as below: a
@@ -48,9 +60,9 @@ system node; use emsdk's, `source ~/emsdk/emsdk_env.sh`):
 `predator-prey.cpp.sample` and `trees.cpp.sample` are what Simile made of the
 two sample pages' models.
 
-## Step 2: the engine in WebAssembly (done 2026-10-15)
+## Step 2: the run-time library in WebAssembly (done 2026-10-15)
 
-`driver.cpp` drives a model through the engine's C API, single-threaded, as a
+`driver.cpp` drives a model through the run-time library's C API, single-threaded, as a
 display would: `load_model`, `fetch_top_instance`, `setstep` for phases 1–7,
 then per run `reset(…, -2)` and `execute` one log interval at a time, reading
 each named node with `get_raw_values` after each interval.
@@ -59,7 +71,7 @@ each named node with `get_raw_values` after each interval.
     # native, for comparison
     g++ -O2 -c -fPIC -I$R -o m.o model.cpp && g++ -shared -fPIC -o model.so m.o support.o -L<simile>/System/lib -l5d
     g++ -O2 -std=c++11 -Istubs -I$R -o driver driver.cpp -L<simile>/System/lib -l5d
-    # WebAssembly: the model is a side module, the engine the main module
+    # WebAssembly: the model is a side module, the run-time library the main module
     emcc -O2 -fPIC -Istubs -I$R -sSIDE_MODULE=1 -o model.wasm model.cpp $R/support.cpp
     em++ -O2 -std=c++11 -Istubs -I$R -sMAIN_MODULE=1 -sALLOW_MEMORY_GROWTH=1 \
          -sNODERAWFS=1 -o engine.js driver.cpp $R/shank.cpp        # for node
@@ -70,7 +82,7 @@ each named node with `get_raw_values` after each interval.
 
 `page.html` loads `engine-web.js` and `model-<name>.js` (the side module as
 base64, `window.SIMILE_MODELS[name]`) by `<script>`, so it works over
-`file://`, writes the bytes into the engine's file system and dlopens them.
+`file://`, writes the bytes into the run-time library's file system and dlopens them.
 
 **What it took:** nothing in Simile's source changed. `stubs/portaudio.h`
 stands in for PortAudio (only the wave commands use sound). Link with `em++`,
@@ -86,7 +98,7 @@ not `emcc`, or the C++ runtime is missing from the main module.
 | Trees, 60 × dt 0.1, log 1, ~57 trees, every size read | 1.43 ms | 1.45 ms | 1.12 ms | ~5–9 ms |
 
 SimiLive for the same: Run again ~1.2 s, a rate slider ~1.5 s, initial_trees
-(rebuild) 5–11 s. The engine was ready 75–135 ms after the page opened;
+(rebuild) 5–11 s. The run-time library was ready 75–135 ms after the page opened;
 `engine-web.js` is 2.1 MB because `MAIN_MODULE=1` exports all of libc
 (`MAIN_MODULE=2` with an export list should shrink it a lot).
 
@@ -96,74 +108,74 @@ SimiLive for the same: Run again ~1.2 s, a rate slider ~1.5 s, initial_trees
   `GetRawValues` withholds a population while `userStop.completed` is 0, which
   only the threaded path changes. The driver calls
   `((ExecutingModel*)inst)->set_completion(2)` after each `execute`.
-- **Two models in one engine collide.** Whichever is dlopened first works;
+- **Two models in one run-time instance collide.** Whichever is dlopened first works;
   the second reads nothing (each model carries its own copies of support2's
   globals, and the first binding wins). Avoided, not solved: the page starts
-  one engine instance per model (`Sienna.LocalEngine.open`).
+  one run-time instance per model (`Sienna.LocalEngine.open`).
 - Value blocks: `dimSpecs[0]` is the TYPE for a single value (`REAL` = -1;
   types are zero or negative), `SPARSEARRAY` (-5) for a population, whose
   contents are a `sizeAndPtr` {count, pointer to doubles}.
 - `go_reset`/`go_execute` start threads; WebAssembly threads need
   SharedArrayBuffer and so COOP/COEP headers, which neither `file://` nor
   GitHub Pages can give. `reset`/`execute` ("single-threaded versions for
-  external clients") avoid them. The engine still calls `pthread_create` for
+  external clients") avoid them. The run-time code still calls `pthread_create` for
   group members (1467, 1537); not exercised yet.
 
 ## In the app and the pages (done 2026-10-15)
 
-A model with a compiled engine runs in the page; any other runs on SimiLive,
-as before. Nothing is compiled in the page yet (that is step 3).
+A model with a compiled model file runs in the page; any other runs on
+SimiLive, as before. Nothing is compiled in the page yet (that is step 3).
 
-- **`bridge.cpp`** — the engine's C API as a few calls for JavaScript
+- **`bridge.cpp`** — the run-time library's C API as a few calls for JavaScript
   (`sx_load`, `sx_describe`, `sx_reset`, `sx_execute`, `sx_value`,
   `sx_param`, …), answering in SimiLive's shapes.
-- **`build-engine.sh <simile source>`** → `vendor/simile-engine/simile-engine.js`
+- **`build-runtime.sh <simile source>`** → `vendor/simile-runtime/simile-runtime.js`
   (2.1 MB, one script, so `file://` works). Applies `patches/*.patch` to a copy
   of `shank.cpp` first.
-- **`build-model.sh <simile source> <model script> <out .engine.js>`** — model
+- **`build-model.sh <simile source> <model script> <out .compiled.js>`** — model
   script → `.pl` (the app's exporter) → C++ (Simile from source, ~10 s, opens
-  its window briefly) → side module → `<name>.engine.js`, which calls
-  `Simile.engine(name, {prolog, wasm})`. `prolog` is a fingerprint of the
-  exported Prolog (`Sienna.LocalEngine.fingerprint`), so the engine is used
+  its window briefly) → side module → `<name>.compiled.js`, which calls
+  `Simile.compiledModel(name, {prolog, wasm})`. `prolog` is a fingerprint of the
+  exported Prolog (`Sienna.LocalEngine.fingerprint`), so the compiled model is used
   only for exactly that model: edit it and it runs on SimiLive, undo the edit
   and it runs here again.
-- **`src/engine-local.js`** — `Sienna.LocalEngine`: holds the engine files,
-  starts an engine instance per model, and answers SimiLive's requests
+- **`src/engine-local.js`** — `Sienna.LocalEngine`: holds the compiled models,
+  starts a run-time instance per model, and answers SimiLive's requests
   (`web_embed.tcl`'s `ResponseTo`, ported). Checked against a recorded
   SimiLive session: predator-prey's Describe, Reset and ExecuteMulti identical
   to the last digit; Trees' Describe identical in structure (populations as
   `{member: value}`, member numbers kept for life).
-- **`src/simulation.js`** — `loadOwn` uses the engine in the page when one is
-  registered for the model; `_post` goes to it instead of the network. A run
+- **`src/simulation.js`** — `loadOwn` runs the model in the page when a compiled
+  model is registered for the model; `_post` goes to it instead of the network. A run
   is one request rather than `updateEach` chunks.
 - **Sliders** — in the page, the run follows the slider as it is dragged
   (`previewParameter`; runs are coalesced, only the latest is made), and the
   value let go at is the setting (`setParameter`, one action). Starting values
   need no rebuild: the slider values are sent BEFORE the reset, as the whole
-  set, and the reset keeps them (the engine's "slider rollover", `how_int` -1).
-- Pages: `pages/<name>/<name>.engine.js` beside `<name>.js`, loaded by a
-  script tag; `embed.js` queues `Simile.engine` like `Simile.model`.
+  set, and the reset keeps them (the run-time library's "slider rollover", `how_int` -1).
+- Pages: `pages/<name>/<name>.compiled.js` beside `<name>.js`, loaded by a
+  script tag; `embed.js` queues `Simile.compiledModel` like `Simile.model`.
 
 Measured in Chrome over `file://` (a slider let go, to the run drawn):
 predator-prey 37–47 ms; Trees 60–140 ms. SimiLive: ~1.5 s, and 3–11 s for a
 starting value. A drag of 40 mouse moves made ~40 runs.
 
-**Two faults found on the way, both in how the engine is driven:**
+**Faults found on the way, in Simile's run-time code and in how it is driven:**
 
-- **Slider values lost at a reset** — a bug in Simile's engine:
+- **Slider values lost at a reset** — a bug in Simile's run-time library:
   `VarParamData`'s constructor never sets `inheritSeries` (6d.h:110), and
   `InitTimeSeries` frees a parameter's value at every reset when it is true
   (shank.cpp ~1190). Whether it is depends on what the heap held: it worked
   until `Describe` had run. `patches/varparam-inheritseries.patch` sets it.
   **For the Simile developer.** It could misfire on SimiLive too.
-- **"Model values" crashed the engine** (memory access out of bounds) — a
-  second bug in Simile's engine: `~FileParamData()` is not virtual (6d.h:64),
+- **"Model values" crashed the run** (memory access out of bounds) — a
+  second bug in Simile's run-time library: `~FileParamData()` is not virtual (6d.h:64),
   so `forget_param_array`, deleting a slider's `VarParamData` through a
   `FileParamData*`, never runs `~VarParamData`, which takes it off the
   instance's `varParamArrayBase`. The next reset that keeps sliders walks
   the freed block. Node survived it (the memory not yet reused); the page
   did not. `patches/fileparam-virtual-destructor.patch` makes it virtual
-  (only the engine includes 6d.h, not a model). **For the Simile developer**:
+  (only shank.cpp includes 6d.h, not a model). **For the Simile developer**:
   `clearparamarray` in `ame_cmx.c` does the same.
 - **Every run drew the same random numbers** — `setup_randoms` raises
   `rand_inits_updated`, and every reset and execute that sees it starts the
@@ -176,7 +188,8 @@ starting value. A drag of 40 mouse moves made ~40 runs.
 
 **Not yet:** grid renderings (`{format: 'binary'}` notes answer null), values
 that are arrays or records, integration methods other than Euler's fixed step,
-models in the app (only pages register engines), and the engine's size.
+models in the app (only pages register compiled models), and the run-time
+library's size.
 
 ## Step 3: Simile's generator with no Tcl, then in WebAssembly (done 2026-10-15)
 
@@ -232,7 +245,7 @@ and compiling the C++ in the page (step 4).
 
 ## Step 4 spike: compiling the C++ in the page (done 2026-10-15)
 
-`clang/` — a model's `model.cpp` made into the engine's side module by clang
+`clang/` — a model's `model.cpp` made into a compiled model (side module) by clang
 running as WebAssembly: npm `@yowasp/clang` 22.0.0-git20542-10 (LLVM 22
 with lld, built for WASI, ISC/Apache 2), not installed in the repo.
 
@@ -250,7 +263,7 @@ A model needs ~170 of emsdk's headers (620 KB, 126 KB gzipped) and 17 of
 clang's own. `support.cpp` never changes, so a page would ship its object.
 
 **Checked.** predator-prey and Trees (populations, random numbers), compiled
-and linked wholly by YoWASP and run in the page's engine: every variable for
+and linked wholly by YoWASP and run in the page's run-time library: every variable for
 100 steps byte-identical to the emcc build (Trees: 713 KB of values).
 
 **Sizes.** `llvm.core.wasm` 75.5 MB (22.6 MB gzipped, 14.1 MB xz): 66 MB of
@@ -269,7 +282,7 @@ cut to the 17 headers (60 KB) the output is byte-identical.
 | first model compile (clang starting) | 3.5–3.8 s | 3.9 s (1.8 s on reload, code cached) | 1.4–3.6 s |
 | a model compile after that, -O2 | 1.1–1.4 s | 0.9–1.4 s | 0.9–1.4 s |
 | link | 70–90 ms | 25–60 ms | 25–55 ms |
-| engine load + 100 steps | | 60–130 ms | 70–130 ms |
+| load into the run-time library + 100 steps | | 60–130 ms | 70–130 ms |
 
 `-O0` compiles in 0.7 s instead of 1.2 (output speed not compared).
 
@@ -280,7 +293,7 @@ WebAssembly as base64, 100 MB. It works: same output, same compile times,
 ~4 s to load. It now ships gzipped before the base64 (30 MB), unpacked by
 the browser's own `DecompressionStream` while clang's WebAssembly compiles:
 the same results, a first build about 1 s slower. A page would load it only when a model is edited, as
-`engine-local.js` loads the engine.
+`engine-local.js` loads the run-time library.
 
 **What it means for an edit in the page:** generating the C++ (step 3, ~1–2 s
 for these models) + compiling (~1 s) + load ≈ 2–3 s, all local — about
@@ -289,10 +302,10 @@ for getting SWI-Prolog and clang (~5 s from file://).
 
 ## Steps 3 and 4 in the app and the pages (done 2026-10-15)
 
-A model with no `<name>.engine.js` — an edited one, or any of the app's —
-now gets its engine made in the page, and runs there; SimiLive only if that
+A model with no `<name>.compiled.js` — an edited one, or any of the app's —
+is now compiled in the page, and runs there; SimiLive only if that
 fails. `src/simulation.js` (`loadOwn`) asks `Sienna.LocalEngine.build`, which
-loads `src/engine-build.js`, which loads the tools on first use:
+loads `src/model-compiler.js`, which loads the tools on first use:
 
     tools/engine/build-browser-tools.sh ~/Projects/simile-src
 
@@ -301,16 +314,16 @@ loads `src/engine-build.js`, which loads the tools on first use:
 | `vendor/swipl/swipl-bundle.js` | 6.3 MB | SWI-Prolog 10.1.18 (npm swipl-wasm 8.2.3) |
 | `vendor/simile-generator/simile-generator.js` | 1.5 MB | Simile's Prolog and function library, `generator/headless.pl`, `struct_db.pl` |
 | `vendor/clang/clang.js`, `clang-data.js` | 0.25 + 30 MB | clang and wasm-ld (npm @yowasp/clang), as classic scripts, gzipped |
-| `vendor/simile-engine/model-kit.js` | 0.9 MB | the headers a model needs, support.cpp compiled (`clang/model-kit.mjs`) |
+| `vendor/simile-runtime/model-kit.js` | 0.9 MB | the headers a model needs, support.cpp compiled (`clang/model-kit.mjs`) |
 
-Each engine made is kept for the visit under the model's fingerprint, so an
+Each model compiled is kept for the visit under the model's fingerprint, so an
 undo finds it made. Each generation has a Prolog of its own (below).
 
 **Checked**, Chrome headless, `file://`:
-- predator-prey page: the slider at 0.6 on the shipped engine, and the model
+- predator-prey page: the slider at 0.6 on the shipped compiled model, and the model
   edited to 0.6 and built in the page, give all 14 variables identical.
 - Trees page: an edited model builds and runs (populations, random numbers).
-- the app: growth, landuse, pangolin, none with an engine file, load and run
+- the app: growth, landuse, pangolin, none with a compiled model file, load and run
   in the page.
 
 **Times** from an edit (after the page's 1.2 s pause): first edit of a visit
@@ -331,22 +344,49 @@ pile up (Molusc 67 s, against 30 s fresh). A fresh Prolog writes exactly what
 desktop Simile writes, so that is what the page does.
 
 **Not yet:** a worker (so the page is not frozen), preparing the next Prolog
-ahead of time, keeping engines made between visits, a smaller clang.
+ahead of time, a smaller clang. (Keeping compiled models between visits:
+below.)
+
+## Compiled models kept between visits; pages ship theirs (2026-10-16)
+
+Robert's choice: an embedded-widget page may ship its model compiled
+(`<name>.compiled.js`, so a reader sees it run at once, with no tools to
+load); the app ships none, compiling each model from the model itself, and
+keeps what it compiles in the browser's own storage (IndexedDB database
+`simile-compiled-models`, by fingerprint, the 50 used last), so only the
+first visit waits. Pages (`SIENNA_EPHEMERAL`) keep nothing. A kept model is
+keyed with `KIT` in `src/engine-local.js` as well: change it whenever the
+run-time library, the model kit or clang's flags change, so models compiled
+against the old ones are not used.
+
+**Checked**, Chrome headless, `file://`, a fresh profile: the app's growth
+6.5 s and landuse 3.3 s on the first visit, 0.17 s and 0.43 s on the next;
+the predator-prey page creates no database; the slider/edit comparison
+still 14 of 14.
+
+**clang's size.** `clang-data.js` now holds gzip before the base64: 30 MB
+rather than 100. What else could make it smaller, measured on
+`llvm.core.wasm` (75.5 MB): it is already WebAssembly-only; `wasm-opt -Oz`
+→ 55.9 MB (20.2 MB gzipped; not yet checked that it compiles the same);
+xz → 14.1 MB but needs a decoder in JavaScript (the browser has gzip only);
+an LLVM built by us (no assertions, clang and lld alone, no Objective-C,
+OpenMP, CUDA or static analyser) perhaps 10–15 MB gzipped — a guess, and an
+LLVM build for WASI to set up and keep.
 
 ## What the source shows
 
 - **Generated per model:** only `model.cpp`. It holds a class with a field per
   variable, `evalmodel` (equations, with phase <= -2 for constants and 0 for
   initial values), `updatemodel` (stocks, via `stage_incr`), and `nodedata`, the
-  table that describes each variable to the engine.
+  table that describes each variable to the run-time library.
 - **Fixed:** `Run/support1.cpp`, `support2.cpp` (included by the model),
   `support.cpp` (pipes, threads), `Functions/procs.cpp` (the function library),
-  and `lib5d` = `Run/shank.cpp` (the engine, 3.3k lines). They are compiled once,
+  and `lib5d` = `Run/shank.cpp` (the run-time library, 3.3k lines). They are compiled once,
   so a WebAssembly build of them is made once, by us.
-- **The engine's API** is what the R package calls
+- **The run-time library's API** is what the R package calls
   (`Extensions/Simile/R/clientmmii.R`): `loadmodel`, `CreateModel` (many
   instances of one model), `c_setstepmodel`, `DoResetModel`, `DoExecuteModel`,
-  `GetPairedValues`, parameter setting. A browser engine should offer the same.
+  `GetPairedValues`, parameter setting. A browser version should offer the same.
 - **The generator is parameterised by language.** C++ and Tcl (`model.tcl`,
   evaluated by `Run/exec.tcl` with no compiler) both exist, so a JavaScript
   target would be a third (`render.pl`, `language.pl`, `compile.pl`).

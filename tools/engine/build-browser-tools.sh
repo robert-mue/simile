@@ -1,12 +1,12 @@
 #!/bin/bash
 # What a page needs to make a model's engine itself, when it has no
-# <name>.engine.js for it (src/engine-build.js), all classic scripts that a
+# <name>.compiled.js for it (src/model-compiler.js), all classic scripts that a
 # page opened from file:// can load:
 #
 #   vendor/swipl/swipl-bundle.js                SWI-Prolog (npm swipl-wasm, BSD-2)
 #   vendor/simile-generator/simile-generator.js Simile's Prolog + generator/headless.pl
 #   vendor/clang/clang.js, clang-data.js        clang + wasm-ld (npm @yowasp/clang)
-#   vendor/simile-engine/model-kit.js           headers, support.cpp compiled
+#   vendor/simile-runtime/model-kit.js           headers, support.cpp compiled
 #
 #   tools/engine/build-browser-tools.sh <simile source>
 #
@@ -31,5 +31,5 @@ mkdir -p "$ROOT/vendor/swipl" "$ROOT/vendor/simile-generator" "$ROOT/vendor/clan
 cp "$WORK/swipl/package/dist/swipl/swipl-bundle.js" "$ROOT/vendor/swipl/"
 node "$HERE/generator/pack.js" "$SRC" "$ROOT/vendor/simile-generator/simile-generator.js"
 python3 -I "$HERE/clang/repack-classic.py" "$WORK/clang/package/gen" "$ROOT/vendor/clang"
-node "$HERE/clang/model-kit.mjs" "$WORK/clang/package/gen/bundle.js" "$SRC" "$ROOT/vendor/simile-engine/model-kit.js"
-ls -la "$ROOT/vendor/swipl" "$ROOT/vendor/simile-generator" "$ROOT/vendor/clang" "$ROOT/vendor/simile-engine"
+node "$HERE/clang/model-kit.mjs" "$WORK/clang/package/gen/bundle.js" "$SRC" "$ROOT/vendor/simile-runtime/model-kit.js"
+ls -la "$ROOT/vendor/swipl" "$ROOT/vendor/simile-generator" "$ROOT/vendor/clang" "$ROOT/vendor/simile-runtime"

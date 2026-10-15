@@ -1,16 +1,16 @@
 #!/bin/bash
-# Compile one model for the engine in the page:
+# Compile one model for an embedded-widget page:
 #   model script (File > Export model as script) -> Simile Prolog (the app's
 #   exporter) -> C++ (Simile itself, built from source) -> WebAssembly side
-#   module -> <out>.engine.js, a script calling Simile.engine(name, …).
+#   module -> <out>.compiled.js, a script calling Simile.compiledModel(name, …).
 #
-#   tools/engine/build-model.sh <simile source> <model script .js> <out .engine.js>
+#   tools/engine/build-model.sh <simile source> <model script .js> <out .compiled.js>
 #
 # Opens Simile's window briefly (it needs a display). Needs emsdk (~/emsdk).
 set -e
-SRC=$(cd "${1:?usage: build-model.sh <simile source> <model .js> <out .engine.js>}" && pwd)
+SRC=$(cd "${1:?usage: build-model.sh <simile source> <model .js> <out .compiled.js>}" && pwd)
 MODEL=$(realpath "${2:?model script}")
-OUT=$(realpath -m "${3:?out .engine.js}")
+OUT=$(realpath -m "${3:?out .compiled.js}")
 HERE=$(cd "$(dirname "$0")" && pwd)
 source ~/emsdk/emsdk_env.sh > /dev/null 2>&1
 WORK=$(mktemp -d)
@@ -32,4 +32,4 @@ fi
 
 emcc -O2 -fPIC -I"$HERE/stubs" -I"$SRC/Run" -sSIDE_MODULE=1 \
   -o "$WORK/model.wasm" "$WORK/model.cpp" "$SRC/Run/support.cpp"
-node "$HERE/engine-file.js" "$MODEL" "$WORK/model.wasm" "$OUT"
+node "$HERE/compiled-file.js" "$MODEL" "$WORK/model.wasm" "$OUT"

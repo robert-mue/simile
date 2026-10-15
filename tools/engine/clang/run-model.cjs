@@ -1,14 +1,14 @@
-// Run a model's side module in the page's engine (vendor/simile-engine) and
+// Run a compiled model (side module) in the page's run-time library (vendor/simile-runtime) and
 // print every variable's value at each of T whole time units, so two builds of
 // one model can be compared with `cmp`.
 //
 //   node run-model.cjs <model.wasm> [T=100] > values.txt
 'use strict';
 const fs = require('fs'), path = require('path');
-const SimileEngine = require(path.resolve(__dirname, '../../../vendor/simile-engine/simile-engine.js'));
+const SimileRuntime = require(path.resolve(__dirname, '../../../vendor/simile-runtime/simile-runtime.js'));
 
 (async () => {
-  const E = await SimileEngine();
+  const E = await SimileRuntime();
   const c = (fn, ret, types, args) => E.ccall(fn, ret, types, args);
   E.FS.writeFile('/model.wasm', fs.readFileSync(process.argv[2]));
   const problem = c('sx_load', 'string', ['string'], ['/model.wasm']);

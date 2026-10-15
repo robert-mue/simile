@@ -7,7 +7,7 @@
 // globals, and two dlopened into one instance collide (README, step 2). The
 // page makes a fresh instance per model instead, so the state here is global.
 //
-// Built into the engine's main module by build-engine.sh.
+// Built into the run-time library's main module by build-runtime.sh.
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -64,26 +64,31 @@ footing (`src/widgets/grid.js` is the first).
   panels bound to a model (`ref`) see it through `Simulation.viewFor(ref)`,
   which shows it only while it is that model's (`loadedFor` / `modelPath`), so
   another model's run control and displays read "no model loaded".
-- `src/engine-local.js` — **Simile's engine in the page** (`Sienna.LocalEngine`):
-  Simile's own `shank.cpp` (github.com/jal-frezie/simile, GPL v3) compiled to
-  WebAssembly once (`vendor/simile-engine/simile-engine.js`), and a model
-  compiled by Simile into a `<name>.engine.js` that calls `Simile.engine(…)`.
-  It answers SimiLive's requests in SimiLive's shapes, so `simulation.js`
-  sends them there instead of over the network (`Simulation.local`), but only
-  while the model is exactly the one its engine was built from (a fingerprint
-  of the exported Prolog). Any other model — edited, or one of the app's —
-  gets its engine made in the page (`build`, below) and runs there too; only
-  if that fails does it go to SimiLive. A run takes milliseconds, a slider
-  runs as it is dragged, and a starting value needs no rebuild. Build tools,
-  findings and patches to Simile's engine: `tools/engine/README.md`.
-- `src/engine-build.js` — **a model's engine made in the page**
-  (`Sienna.EngineBuild`, loaded by `engine-local.js` when first needed):
+- `src/engine-local.js` — **Simile's simulation engine in the page**
+  (`Sienna.LocalEngine`). Terms: the ENGINE is what makes a runnable model;
+  the COMPILED MODEL is one model's WebAssembly (a side module), never "the
+  engine"; it runs linked to Simile's **run-time library**, its own
+  `shank.cpp` (github.com/jal-frezie/simile, GPL v3) compiled once
+  (`vendor/simile-runtime/simile-runtime.js`). It answers SimiLive's requests
+  in SimiLive's shapes, so `simulation.js` sends them there instead of over
+  the network (`Simulation.local`). A compiled model is used only while the
+  model is exactly the one it was compiled from (a fingerprint of the
+  exported Prolog). An embedded-widget page may ship one, `<name>.compiled.js`
+  calling `Simile.compiledModel(…)`; any other model — edited, or any of the
+  app's — is compiled in the page (`build`, below), kept for the visit, and
+  in the app also between visits (IndexedDB, the 50 used last; pages keep
+  nothing); only if compiling fails does it go to SimiLive. A run takes
+  milliseconds, a slider runs as it is dragged, and a starting value needs
+  no recompile. Build tools, findings and patches to Simile's run-time
+  code: `tools/engine/README.md`.
+- `src/model-compiler.js` — **a model compiled in the page**
+  (`Sienna.ModelCompiler`, loaded by `engine-local.js` when first needed):
   Simile's own generator in SWI-Prolog (WebAssembly) writes the C++, clang
   (WebAssembly) compiles it. Loads its large tools on first use, from
-  `vendor/swipl/`, `vendor/simile-generator/`, `vendor/clang/` (30 MB) and
-  `vendor/simile-engine/model-kit.js`, all **generated** by
-  `tools/engine/build-browser-tools.sh`. First build of a visit ~9 s, later
-  ones ~3 s; the page is frozen while each stage runs.
+  `vendor/swipl/`, `vendor/simile-generator/`, `vendor/clang/` (30 MB,
+  gzipped) and `vendor/simile-runtime/model-kit.js`, all **generated** by
+  `tools/engine/build-browser-tools.sh`. First compile of a visit ~7–9 s,
+  later ones ~3 s; the page is frozen while each stage runs.
 - `src/widgets/sliders.js` — a slider per **parameter**: a variable with a
   numeric value, a Minimum and a Maximum (dialog fields `min`/`max`), and no
   influence into it (`exportSimile.isParameter`, `Simulation.parametersOf`).
@@ -102,7 +107,8 @@ footing (`src/widgets/grid.js` is the first).
   settings chosen for the model, `Simulation.settingsFor`); elements say
   `data-simile="diagram|plotter|lollipop|…|controls"` and `data-model`
   (`data-show` = a plot's variables, `data-options` = JSON); `Simile.page({ base })`
-  fills them, loads the first model on SimiLive and runs it, and re-runs after
+  fills them, loads the first model and runs it (in the page, see
+  `engine-local.js`), and re-runs after
   an edit. A diagram there shows the view commands only (its `tools: 'view'`
   option). Pages set `SIENNA_EPHEMERAL`, so a reader's edits are not kept.
   ONE model runs per page (one session). A page loads everything with ONE
@@ -117,16 +123,15 @@ footing (`src/widgets/grid.js` is the first).
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
   statement of the Simile expression language; there is no generated parser.
-- `vendor/simile-engine/simile-engine.js` — **generated**, by
-  `tools/engine/build-engine.sh` from a Simile source checkout; do not edit.
+- `vendor/simile-runtime/simile-runtime.js` — **generated**, by
+  `tools/engine/build-runtime.sh` from a Simile source checkout; do not edit.
   Loaded on first use by `src/engine-local.js`, not by `index.html`. So are
-  the files `src/engine-build.js` loads (above).
-- `tools/engine/` — building the engine, a model's `<name>.engine.js`
-  (`build-model.sh`) and the in-page tools (`build-browser-tools.sh`); they
-  need Simile built from source in `~/Projects/simile-src` and emsdk in
-  `~/emsdk`;
-  the patches to Simile's engine, and the record of what was found
-  (`README.md`).
+  the files `src/model-compiler.js` loads (above).
+- `tools/engine/` — building the run-time library (`build-runtime.sh`), a
+  page's `<name>.compiled.js` (`build-model.sh`) and the in-page tools
+  (`build-browser-tools.sh`); they need Simile built from source in
+  `~/Projects/simile-src` and emsdk in `~/emsdk`; the patches to Simile's
+  run-time code, and the record of what was found (`README.md`).
 - `reference/` — **data, not code.** `catalogue/` is the 72-model Simile
   catalogue (all format 9.0 or older) that `test/roundtrip.html` and
   `test/corpus.js` are built from; `catalogue-2026/` is six of them re-saved by

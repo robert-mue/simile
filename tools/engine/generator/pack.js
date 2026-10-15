@@ -3,7 +3,7 @@
 //
 //   window.SIMILE_GENERATOR = { files: {path: base64} }
 //
-// laid out as src/engine-build.js writes them into SWI-Prolog's file system:
+// laid out as src/model-compiler.js writes them into SWI-Prolog's file system:
 // /simile/Prolog, /simile/Functions, /simile/Makefile, /gen.
 //
 //   node pack.js <simile src> <out .js>

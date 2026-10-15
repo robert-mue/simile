@@ -117,7 +117,7 @@
   }
 
   /**
-   * Run again once the reader stops editing. Only an edit the engine would see
+   * Run again once the reader stops editing. Only an edit the simulation would see
    * counts (`isStale`): moving a symbol about changes nothing it runs.
    */
   function rerunOnEdit(name) {
@@ -186,14 +186,14 @@
     },
 
     /**
-     * A model compiled for the engine in the page — what its `<name>.engine.js`
-     * calls (tools/engine/build-model.sh). The model then runs here, in
-     * milliseconds, for as long as it is the model the engine was made from;
-     * an edited one runs on SimiLive.
+     * A compiled model — what its `<name>.compiled.js` calls
+     * (tools/engine/build-model.sh). The page then runs the model at once,
+     * for as long as it is the model that was compiled; an edited one the
+     * page compiles itself (`Sienna.LocalEngine.build`).
      * @param {string} name
      * @param {{prolog: string, wasm: string}} spec
      */
-    engine: function (name, spec) {
+    compiledModel: function (name, spec) {
       Sienna.LocalEngine.register(name, spec);
     },
 

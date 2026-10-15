@@ -5,12 +5,12 @@
  * A PARAMETER is a variable with a number for its value, a Minimum and a
  * Maximum (its dialog), and nothing influencing it — what Simile calls a
  * "variable parameter" (`Simulation.parametersOf`). The list comes from the
- * model, not the engine, so it is there before anything is loaded.
+ * model, not the running simulation, so it is there before anything is loaded.
  *
  * Moving a slider does NOT change the model. Its value is a setting for running
  * the model (`Simulation.setParameter`), kept for this visit, and the model is
  * run again from the start with it once the slider is let go: in about a second
- * for a rate, which the engine changes in place, and in a few for a starting
+ * for a rate, which the running model changes in place, and in a few for a starting
  * value, which means building the model again. The number box beside each
  * slider takes a value typed exactly (Enter); "model values" puts every slider
  * back where the model has it.

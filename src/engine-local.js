@@ -1,31 +1,33 @@
 /**
- * `Sienna.LocalEngine` — Simile's engine running in the page, as WebAssembly,
- * standing in for SimiLive.
+ * `Sienna.LocalEngine` — Simile's simulation engine in the page: a model
+ * compiled and run here, as WebAssembly, standing in for SimiLive.
  *
- * Simile's own engine (`Run/shank.cpp` of github.com/jal-frezie/simile) is
- * compiled once into `vendor/simile-engine/simile-engine.js`; a model is
- * compiled by Simile into C++ and then into a small WebAssembly module of its
- * own, shipped as `<name>.engine.js` (tools/engine/build-model.sh), which
- * calls `Simile.engine(name, {prolog, wasm})`. That engine is used only while
- * the model is EXACTLY the one it was made from (`prolog` is a fingerprint of
- * the Simile Prolog the exporter writes for it). For any other model — an
- * edited one, or one with no engine file — `build` makes one in the page
- * (`src/engine-build.js`: Simile's generator and clang, both in WebAssembly),
- * kept for the visit under its fingerprint, so undoing an edit finds the
- * engine already made. Should that fail (the tools missing, or a model Simile
- * cannot generate), the model runs on SimiLive as before.
+ * A model is compiled by Simile into C++ and then into a small WebAssembly
+ * module of its own, the COMPILED MODEL, which runs linked to Simile's
+ * run-time library (`Run/shank.cpp` of github.com/jal-frezie/simile,
+ * compiled once into `vendor/simile-runtime/simile-runtime.js`). A compiled
+ * model is used only while the model is EXACTLY the one it was compiled from
+ * (`prolog` is a fingerprint of the Simile Prolog the exporter writes for
+ * it). An embedded-widget page may ship one, as `<name>.compiled.js`
+ * (tools/engine/build-model.sh), calling `Simile.compiledModel(name, {prolog,
+ * wasm})`. Any other model — an edited one, or any of the app's — `build`
+ * compiles in the page (`src/model-compiler.js`: Simile's generator and clang,
+ * both in WebAssembly), kept for the visit under its fingerprint, so undoing
+ * an edit finds it compiled. The app also keeps them between visits, in the
+ * browser's own storage (`kept`, below). Should compiling fail (the tools
+ * missing, or a model Simile cannot generate), the model runs on SimiLive.
  *
  * A session answers the requests `Sienna.Simulation` sends to SimiLive, in
  * the shapes SimiLive answers them — the server side is
  * `Extensions/www/web_embed.tcl` (`ResponseTo`), and this is that, in
- * JavaScript, over the engine's C API (`tools/engine/bridge.cpp`). So the
- * session layer and every widget are the same for both; what differs is that
+ * JavaScript, over the run-time library's C API (`tools/engine/bridge.cpp`).
+ * So the session layer and every widget are the same for both; what differs is that
  * no request leaves the page. A run takes milliseconds rather than seconds.
  *
  * Two differences from SimiLive, both to the good:
  * - `Parameterize` REPLACES the set of slider values (one not named goes back
  *   to the model's), and is sent BEFORE a reset rather than after;
- * - a reset keeps them (the engine's "slider rollover"), so a parameter a
+ * - a reset keeps them (the run-time library's "slider rollover"), so a parameter a
  *   starting value depends on works like any other, with no rebuild.
  *
  * Not yet: grid renderings (`{format: 'binary'…}` specs answer null), values
@@ -36,11 +38,11 @@
 (function (Sienna) {
   'use strict';
 
-  // Where the engine is, worked out from where this script came from.
+  // Where the run-time library is, worked out from where this script came from.
   var me = typeof document !== 'undefined' ? document.currentScript : null;
   var HERE = me && me.src ? me.src.replace(/[^/]*$/, '') : 'src/';
-  var ENGINE_SRC = HERE + '../vendor/simile-engine/simile-engine.js';
-  var BUILD_SRC = HERE + 'engine-build.js';
+  var RUNTIME_SRC = HERE + '../vendor/simile-runtime/simile-runtime.js';
+  var BUILD_SRC = HERE + 'model-compiler.js';
 
   /** The run settings SimiLive reports for a model with none of its own. */
   var DEFAULTS = {
@@ -48,10 +50,10 @@
     displayInt: '1', resetTo: '0', timeUnit: 'unit',
   };
 
-  var registered = {};   // fingerprint -> {name, wasm (base64, or bytes if made here)}
-  var engineScript = null;
+  var registered = {};   // fingerprint -> {name, wasm (base64, or bytes if compiled here)}
+  var runtimeScript = null;
   var buildScript = null;
-  var cannotBuild = null;  // why the page cannot make engines, once found out
+  var cannotBuild = null;  // why the page cannot compile models, once found out
 
   /**
    * A short fingerprint of a model's Simile Prolog, without its `source(…)`
@@ -70,31 +72,101 @@
     return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
   }
 
-  /** The engine script, loaded once, on first use. */
-  function loadEngine() {
-    if (engineScript) return engineScript;
-    engineScript = new Promise(function (resolve, reject) {
-      if (window.SimileEngine) { resolve(window.SimileEngine); return; }
+  /** The run-time library, loaded once, on first use. */
+  function loadRuntime() {
+    if (runtimeScript) return runtimeScript;
+    runtimeScript = new Promise(function (resolve, reject) {
+      if (window.SimileRuntime) { resolve(window.SimileRuntime); return; }
       var s = document.createElement('script');
-      s.src = ENGINE_SRC;
-      s.onload = function () { resolve(window.SimileEngine); };
+      s.src = RUNTIME_SRC;
+      s.onload = function () { resolve(window.SimileRuntime); };
       s.onerror = function () {
-        engineScript = null;
-        reject(new Error('the Simile engine could not be loaded from ' + ENGINE_SRC));
+        runtimeScript = null;
+        reject(new Error('Simile\'s run-time library could not be loaded from ' + RUNTIME_SRC));
       };
       (document.head || document.documentElement).appendChild(s);
     });
-    return engineScript;
+    return runtimeScript;
   }
 
-  /** The builder (src/engine-build.js), loaded once, on first use. */
+  // ---- compiled models kept between visits (the app only) ----------------
+  //
+  // In IndexedDB, by fingerprint, the most recently used KEEP of them. Not on
+  // an embedded-widget page, which keeps nothing (SIENNA_EPHEMERAL). Every
+  // step may fail (private window, storage blocked): then it is as if
+  // nothing were kept, and the model is compiled again.
+  //
+  // KIT names what a compiled model is made against — Simile's headers and
+  // run-time library, clang's flags. Change it when any of those changes
+  // (tools/engine/build-runtime.sh, build-browser-tools.sh), so models
+  // compiled before are not used.
+  var KIT = '2026-10-16';
+  var KEEP = 50;
+  var db = null;
+
+  function store() {
+    if (db) return db;
+    db = new Promise(function (resolve) {
+      try {
+        if (window.SIENNA_EPHEMERAL || !window.indexedDB) { resolve(null); return; }
+        var req = indexedDB.open('simile-compiled-models', 1);
+        req.onupgradeneeded = function () {
+          req.result.createObjectStore('models', { keyPath: 'key' }).createIndex('used', 'used');
+        };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = req.onblocked = function () { resolve(null); };
+      } catch (e) { resolve(null); }
+    });
+    return db;
+  }
+
+  /** A Promise of the compiled model kept for this fingerprint, or null. */
+  function kept(print) {
+    return store().then(function (d) {
+      if (!d) return null;
+      return new Promise(function (resolve) {
+        try {
+          var os = d.transaction('models', 'readwrite').objectStore('models');
+          var get = os.get(KIT + ':' + print);
+          get.onsuccess = function () {
+            var row = get.result;
+            if (row) { row.used = Date.now(); os.put(row); }
+            resolve(row ? { name: row.name, wasm: row.wasm } : null);
+          };
+          get.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+
+  /** Keep a compiled model, and forget all but the KEEP used last. */
+  function keep(print, entry) {
+    store().then(function (d) {
+      if (!d) return;
+      try {
+        var os = d.transaction('models', 'readwrite').objectStore('models');
+        os.put({ key: KIT + ':' + print, name: entry.name, wasm: entry.wasm, used: Date.now() });
+        var count = os.count();
+        count.onsuccess = function () {
+          var extra = count.result - KEEP;
+          if (extra <= 0) return;
+          os.index('used').openCursor().onsuccess = function (ev) {
+            var c = ev.target.result;
+            if (c && extra-- > 0) { c.delete(); c.continue(); }
+          };
+        };
+      } catch (e) { /* not kept */ }
+    });
+  }
+
+  /** The compiler (src/model-compiler.js), loaded once, on first use. */
   function loadBuilder() {
     if (buildScript) return buildScript;
     buildScript = new Promise(function (resolve, reject) {
-      if (Sienna.EngineBuild) { resolve(Sienna.EngineBuild); return; }
+      if (Sienna.ModelCompiler) { resolve(Sienna.ModelCompiler); return; }
       var s = document.createElement('script');
       s.src = BUILD_SRC;
-      s.onload = function () { resolve(Sienna.EngineBuild); };
+      s.onload = function () { resolve(Sienna.ModelCompiler); };
       s.onerror = function () {
         buildScript = null;
         reject(new Error('could not load ' + BUILD_SRC));
@@ -113,8 +185,9 @@
   }
 
   /**
-   * One model, loaded in an engine instance of its own (two models in one
-   * instance collide: each brings its own copy of the support globals).
+   * One compiled model, loaded in an instance of the run-time library of its
+   * own (two models in one instance collide: each brings its own copy of the
+   * support globals).
    */
   function Session(E, name) {
     this.E = E;
@@ -158,7 +231,7 @@
     _act: function (act, p) {
       switch (act) {
         case 'BuildShareLib':
-          return 'Simile engine in the page: ' + this.name + '\n' + JSON.stringify(DEFAULTS);
+          return 'Simile in the page: ' + this.name + '\n' + JSON.stringify(DEFAULTS);
         case 'CreateSocket':
           return 'Direct SIMILE Connection';
         case 'WaitSocket':
@@ -232,7 +305,7 @@
           this.exit();
           return '';
         default:
-          throw new Error('the engine in the page does not do ' + act);
+          throw new Error('Simile in the page does not do ' + act);
       }
     },
 
@@ -246,47 +319,52 @@
   Sienna.LocalEngine = {
     fingerprint: fingerprint,
 
-    /** A model's compiled engine, from its `<name>.engine.js`. */
+    /** A compiled model, from its `<name>.compiled.js`. */
     register: function (name, spec) {
       if (!spec || !spec.prolog || !spec.wasm) return;
       registered[spec.prolog] = { name: name, wasm: spec.wasm };
     },
 
-    /** The engine made from exactly this Prolog, or null. */
+    /** The model compiled from exactly this Prolog, or null. */
     find: function (prolog) {
       return registered[fingerprint(prolog)] || null;
     },
 
     /**
-     * Make the engine for this Prolog in the page, and keep it as if it had
-     * come from an engine file. `say(text)` hears each stage.
+     * Compile the model for this Prolog in the page — or find it kept from
+     * an earlier visit — and keep it as if it had come from a
+     * `<name>.compiled.js`. `say(text)` hears each stage.
      * @returns {Promise} of the entry, as `find` would give it
      */
     build: function (name, prolog, say) {
-      if (cannotBuild) return Promise.reject(cannotBuild);
       var print = fingerprint(prolog);
       if (registered[print]) return Promise.resolve(registered[print]);
-      return loadBuilder().then(function (B) {
-        return B.build(prolog, say);
-      }).then(function (wasm) {
-        registered[print] = { name: name, wasm: wasm };
-        return registered[print];
-      }, function (err) {
+      return kept(print).then(function (entry) {
+        if (entry) return (registered[print] = { name: name, wasm: entry.wasm });
+        if (cannotBuild) throw cannotBuild;
+        return loadBuilder().then(function (B) {
+          return B.build(prolog, say);
+        }).then(function (wasm) {
+          registered[print] = { name: name, wasm: wasm };
+          keep(print, registered[print]);
+          return registered[print];
+        });
+      }).catch(function (err) {
         // The tools missing is for good; a model that fails is that model's.
         if (/could not load/.test(err.message)) cannotBuild = err;
         throw err;
       });
     },
 
-    /** Start an engine for one model: resolves to a Session. */
+    /** Start a compiled model: resolves to a Session. */
     open: function (entry) {
-      return loadEngine().then(function (factory) {
+      return loadRuntime().then(function (factory) {
         return factory();
       }).then(function (E) {
         var file = '/model.wasm';
         E.FS.writeFile(file, bytesOf(entry.wasm));
         var problem = E.ccall('sx_load', 'string', ['string'], [file]);
-        if (problem) throw new Error('the engine could not load the model: ' + problem);
+        if (problem) throw new Error('the run-time library could not load the compiled model: ' + problem);
         return new Session(E, entry.name);
       });
     },

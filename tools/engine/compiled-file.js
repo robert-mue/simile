@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Wrap a model's compiled engine (WebAssembly side module) as a script a
-// page can load with <script>:  Simile.engine(name, {prolog, wasm})
+// Wrap a compiled model (a WebAssembly side module) as a script a page can
+// load with <script>:  Simile.compiledModel(name, {prolog, wasm})
 // where `prolog` is the fingerprint of the Simile Prolog it was made from,
 // computed by the app's own exporter and Sienna.LocalEngine.fingerprint, so
 // the page uses it only for exactly that model.
 //
-//   node engine-file.js <model script .js> <model .wasm> <out .engine.js>
+//   node compiled-file.js <model script .js> <model .wasm> <out .compiled.js>
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.resolve(__dirname, '../..');
 const [modelScript, wasmFile, outFile] = process.argv.slice(2);
-if (!outFile) { console.error('usage: engine-file.js <model .js> <model .wasm> <out .engine.js>'); process.exit(2); }
+if (!outFile) { console.error('usage: compiled-file.js <model .js> <model .wasm> <out .compiled.js>'); process.exit(2); }
 const ctx = { console, TextEncoder, btoa };
 ctx.window = ctx;
 ctx.Sienna = {};
@@ -24,10 +24,10 @@ vm.runInContext(fs.readFileSync(modelScript, 'utf8'), ctx, { filename: modelScri
 const print = ctx.Sienna.LocalEngine.fingerprint(ctx.Sienna.exportSimile.prolog(captured.model));
 const wasm = fs.readFileSync(wasmFile).toString('base64');
 fs.writeFileSync(outFile,
-  '// ' + captured.name + ': the model compiled for the Simile engine in the page\n'
-  + '// (tools/engine/build-model.sh). Used only while the model is exactly the\n'
-  + '// one it was made from; otherwise the model runs on SimiLive.\n'
-  + 'Simile.engine(' + JSON.stringify(captured.name) + ', {\n'
+  '// ' + captured.name + ': the model compiled for the page (tools/engine/build-model.sh).\n'
+  + '// Used only while the model is exactly the one it was compiled from;\n'
+  + '// otherwise the page compiles the model itself.\n'
+  + 'Simile.compiledModel(' + JSON.stringify(captured.name) + ', {\n'
   + '  prolog: ' + JSON.stringify(print) + ',\n'
   + '  wasm: "' + wasm + '"\n});\n');
 console.log(captured.name + ' -> ' + outFile + ' (' + print + ', ' + fs.statSync(wasmFile).size + ' bytes of model)');
