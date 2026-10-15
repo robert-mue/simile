@@ -135,3 +135,34 @@ Running models
   straight away; it is plotted from the next run.
 - Lengthening a run no longer makes it slower to fetch: the results
   come back in the same number of pieces whatever the run length.
+
+
+------------------------------------------------------------------------
+Release 2026-10-16
+------------------------------------------------------------------------
+
+Models run in your browser
+- Models now run in the browser itself, with no server: Simile's own
+  tools turn the model into a program in the page, and it runs there.
+  SimiLive is used only if that fails.
+- The first run of a model in a visit takes several seconds while the
+  tools load (about 39 MB the first time; the browser usually keeps
+  them). After that a model is ready in about 3 seconds, and going
+  back to a version already run is immediate. The page stays usable
+  meanwhile; the status line says what it is doing.
+- The app remembers the models it has prepared, so on your next visit
+  an unchanged model runs at once.
+- A run takes milliseconds rather than seconds. Sliders now re-run the
+  model as you drag them, starting values included.
+
+Live models in your own web pages
+- The example pages come with their models ready to run, so they run
+  as soon as the page opens, in the reader's browser. A page without
+  that runs too, after preparing the model itself.
+- Help > Live models in your own web pages says how this works.
+
+Models
+- File > Models has a new model: Pangolin harvest, converted from a
+  published R model (Almeida et al., 2023).
+- A number written with an exponent, such as 1.0e12, is now exported
+  as written; before, the model would not run.
