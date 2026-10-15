@@ -88,7 +88,10 @@ footing (`src/widgets/grid.js` is the first).
   `vendor/swipl/`, `vendor/simile-generator/`, `vendor/clang/` (30 MB,
   gzipped) and `vendor/simile-runtime/model-kit.js`, all **generated** by
   `tools/engine/build-browser-tools.sh`. First compile of a visit ~7–9 s,
-  later ones ~3 s; the page is frozen while each stage runs.
+  later ones ~3 s. The work runs in a Web Worker, so the page stays live;
+  from file:// a worker can be made only from text, so each tool script
+  defines ONE function (`SIMILE_TOOL_SWIPL`, `SIMILE_TOOL_CLANG`) whose text
+  the page sends it. No worker to be had: the same code runs in the page.
 - `src/widgets/sliders.js` — a slider per **parameter**: a variable with a
   numeric value, a Minimum and a Maximum (dialog fields `min`/`max`), and no
   influence into it (`exportSimile.isParameter`, `Simulation.parametersOf`).

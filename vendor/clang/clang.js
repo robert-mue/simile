@@ -1,4 +1,5 @@
 // npm @yowasp/clang as a classic script (tools/engine/clang/repack-classic.py)
+window.SIMILE_TOOL_CLANG = function (window) {
 // Each file's gzip, once: clang-data.js holds them as base64.
 window.YOWASP_BYTES = function (name) {
   const s = window.YOWASP_DATA[name];
@@ -8077,3 +8078,4 @@ var version = "22.0.0-git20542-10";
 window.YoWASPClang = { Exit, commands, runClang, runLLVM, version };
 
 })();
+};

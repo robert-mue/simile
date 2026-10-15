@@ -131,8 +131,9 @@ clang-data.js ships gzipped, 30 MB. **2026-10-16 (Robert):** embedded-widget
 pages keep shipping their compiled model (`<name>.compiled.js`); the app
 ships none and keeps what it compiles in IndexedDB between visits (first
 visit ~7 s, then instant); names changed to the terms above (README, top).
-Not yet: a worker so the page is not frozen while compiling, a smaller clang
-(prospects in README, "Compiled models kept between visits").
+Compiling now runs in a Web Worker, so the page stays live (README,
+"Compiling in a worker"). Not yet: a smaller clang (prospects in README,
+"Compiled models kept between visits").
 
 Recipe, measurements and findings: **`tools/engine/README.md`**. Emscripten is
 in `~/emsdk` (`source ~/emsdk/emsdk_env.sh`); Simile's source, built with

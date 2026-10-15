@@ -28,7 +28,18 @@ tar xzf "$WORK"/swipl-wasm-*.tgz -C "$WORK/swipl"
 tar xzf "$WORK"/yowasp-clang-*.tgz -C "$WORK/clang"
 
 mkdir -p "$ROOT/vendor/swipl" "$ROOT/vendor/simile-generator" "$ROOT/vendor/clang"
-cp "$WORK/swipl/package/dist/swipl/swipl-bundle.js" "$ROOT/vendor/swipl/"
+# As ONE function, so that its text can be sent to a worker (model-compiler.js).
+wrap_swipl() {
+  echo '// SWI-Prolog in WebAssembly (npm swipl-wasm, BSD-2), as one function:'
+  echo '// SIMILE_TOOL_SWIPL() returns the SWIPL factory. Made by'
+  echo '// tools/engine/build-browser-tools.sh; do not edit.'
+  echo 'window.SIMILE_TOOL_SWIPL = function () {'
+  cat "$1"
+  echo
+  echo 'return SWIPL;'
+  echo '};'
+}
+wrap_swipl "$WORK/swipl/package/dist/swipl/swipl-bundle.js" > "$ROOT/vendor/swipl/swipl-bundle.js"
 node "$HERE/generator/pack.js" "$SRC" "$ROOT/vendor/simile-generator/simile-generator.js"
 python3 -I "$HERE/clang/repack-classic.py" "$WORK/clang/package/gen" "$ROOT/vendor/clang"
 node "$HERE/clang/model-kit.mjs" "$WORK/clang/package/gen/bundle.js" "$SRC" "$ROOT/vendor/simile-runtime/model-kit.js"

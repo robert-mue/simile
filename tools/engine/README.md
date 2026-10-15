@@ -329,8 +329,8 @@ undo finds it made. Each generation has a Prolog of its own (below).
 **Times** from an edit (after the page's 1.2 s pause): first edit of a visit
 ~9 s (C++ 1.3 s, loading clang ~6 s, compile 1.4 s, start 0.25 s); later
 edits ~3 s; undo to a model built before, at once. In the app, a model's
-first load ~9 s, later ones ~3 s. Both run on the page's thread, so the
-page is frozen while each runs; the status line says which stage it is in.
+first load ~9 s, later ones ~3 s. Both ran on the page's thread, so the
+page was frozen while each ran (now in a worker: below).
 
 **One Prolog for many models: no.** Loading Simile's Prolog once (~1 s
 saved a model) works only by opening each model in a new desktop, as the GUI
@@ -343,9 +343,8 @@ which random number each variable draws — and generation slows as models
 pile up (Molusc 67 s, against 30 s fresh). A fresh Prolog writes exactly what
 desktop Simile writes, so that is what the page does.
 
-**Not yet:** a worker (so the page is not frozen), preparing the next Prolog
-ahead of time, a smaller clang. (Keeping compiled models between visits:
-below.)
+**Not yet:** preparing the next Prolog ahead of time, a smaller clang.
+(Keeping compiled models between visits, and the worker: below.)
 
 ## Compiled models kept between visits; pages ship theirs (2026-10-16)
 
@@ -394,3 +393,38 @@ LLVM build for WASI to set up and keep.
   included), and calls into Tcl (`safe_tcl_eval`) during generation. The model
   database is a C extension to it (`Prolog/struct_db.c`), which a SWI-Prolog
   WebAssembly build would have to include.
+
+## Compiling in a worker (2026-10-16)
+
+`src/model-compiler.js` generates and compiles in a Web Worker, so the page
+goes on drawing and answering while a model compiles. What a page opened
+from `file://` allows, found in Chrome: `new Worker('file.js')` is refused
+(SecurityError); a worker made from a Blob of text starts; inside it,
+`importScripts` of a `file://` URL fails, and so does a blob: URL the PAGE
+made (origin null), but one the worker made itself loads. So:
+
+- the page loads the tools with `<script>` as before (the only way to read
+  a file from `file://`);
+- each tool script defines ONE function — `SIMILE_TOOL_SWIPL()` returning
+  the SWIPL factory (`build-browser-tools.sh` wraps the bundle),
+  `SIMILE_TOOL_CLANG(scope)` (`clang/repack-classic.py`) — which the page
+  only parses, never runs, and sends as text (`Function.prototype.toString`
+  gives back the source exactly);
+- the worker is made from the text of `core` and `workerMain`, makes its own
+  blob: script of each tool's text, and gets the data by `postMessage`
+  (the generator's files, clang's base64 and sizes, the model kit);
+- clang loads in the page while the worker makes the C++.
+
+If no worker can be made, or it fails before its first answer, the same
+`core` runs in the page as before; a worker that dies later is replaced at
+the next build.
+
+**Checked**, Chrome headless, `file://` and http (`tools/serve.py`), a fresh
+profile: the app's growth, landuse, pangolin compile in the worker in 6.3,
+3.3 and 2.9 s (the same as in the page). The longest the page went without
+running a 16 ms timer, while compiling: 87 ms for growth (in the page:
+3.2 s, then 1.7 s), and under 60 ms for pangolin; landuse's one 389 ms is
+starting and drawing the model, which the page did in the page too.
+predator-prey, edited in the page: still 14 of 14 against the slider. With
+`Worker` made to throw, the app compiles in the page, frozen as before.
+

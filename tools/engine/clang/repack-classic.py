@@ -5,15 +5,19 @@ file://, where Chrome refuses ES modules and fetch (README, step 4).
     python3 -I repack-classic.py <@yowasp/clang gen/> <out dir>
 
 writes
-  clang.js       the package's bundle.js as a classic script: its fetch reads
-                 window.YOWASP_DATA, and it sets window.YoWASPClang when ready
+  clang.js       the package's bundle.js as a classic script defining ONE
+                 function, window.SIMILE_TOOL_CLANG(scope): called, it sets
+                 scope.YoWASPClang when ready, its fetch reading
+                 scope.YOWASP_DATA. A function, so that its text can be sent
+                 to a worker (src/model-compiler.js) and run there.
   clang-data.js  the WebAssembly and the resource archive, gzipped and then
                  base64 (30 MB; 100 MB without the gzip). The page unpacks it
                  with the browser's own DecompressionStream, while clang's
                  WebAssembly compiles.
 
 A page loads `<script>window.YOWASP_DATA={}</script>`, clang-data.js, then
-clang.js. The resource archive (30 MB in the package: a WASI C/C++ library
+clang.js, and calls SIMILE_TOOL_CLANG(window) — or a worker's scope, given
+YOWASP_DATA and YOWASP_SIZES. The resource archive (30 MB in the package: a WASI C/C++ library
 Simile never uses) is cut to the 17 clang headers Simile's models include;
 compiled output is byte-identical with either.
 """
@@ -57,6 +61,7 @@ def main(gen, out):
     assert n == 1 and 'export {' not in src, 'bundle.js is not shaped as expected'
     with open(out + '/clang.js', 'w') as f:
         f.write('''// npm @yowasp/clang as a classic script (tools/engine/clang/repack-classic.py)
+window.SIMILE_TOOL_CLANG = function (window) {
 // Each file's gzip, once: clang-data.js holds them as base64.
 window.YOWASP_BYTES = function (name) {
   const s = window.YOWASP_DATA[name];
@@ -66,7 +71,7 @@ window.YOWASP_BYTES = function (name) {
   return b;
 };
 (async function () {
-''' + src + '\n})();\n')
+''' + src + '\n})();\n};\n')
     with open(out + '/clang-data.js', 'w') as f:
         f.write('window.YOWASP_SIZES = {};\n')
         for name in ('llvm.core.wasm', 'llvm.core2.wasm', 'llvm.core3.wasm', 'llvm.core4.wasm', 'llvm-resources.tar'):
