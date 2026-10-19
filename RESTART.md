@@ -2,7 +2,9 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. If you are picking this up cold — a new session, a new
+embedded-widget pages. Brought up to date 2026-10-19: the engine in the
+browser is done and released (2026-10-16), and the developer has answered the
+population-symbols email. If you are picking this up cold — a new session, a new
 machine, or a week later — read this first. `STATUS.md` is the full record
 (items 46–47 are the last two days); this is the part you need to get moving.*
 
@@ -139,17 +141,17 @@ Recipe, measurements and findings: **`tools/engine/README.md`**. Emscripten is
 in `~/emsdk` (`source ~/emsdk/emsdk_env.sh`); Simile's source, built with
 SWI-Prolog, is in `~/Projects/simile-src` (a separate clone; both build
 scripts take it as their first argument; README step 1 rebuilds it). GPL v3 is acceptable for simile (Robert, 2026-10-15); no
-LICENSE file added yet. Open: when to involve the developer — there are now
-two run-time library bugs to report (README, "Slider values lost at a reset"
-and "Model values crashed the run", each with a one-line patch
-in `tools/engine/patches/`).
+LICENSE file added yet. The two run-time library bugs (README, "Slider values
+lost at a reset" and "Model values crashed the run", each a one-line patch in
+`tools/engine/patches/`) were reported 2026-10-19; the developer is taking
+both patches.
 
 **After an edit to a sample model, rebuild its compiled file**
 (`tools/engine/build-model.sh`), or every reader's page compiles it (~10 s,
 38 MB of tools) instead of running it at once.
 
-**Parked, to come back to** (the queue on 2026-10-15, in no settled order):
-release Pangolin; infer `units=boolean`; warn when a value is outside
+**Parked, to come back to** (the queue on 2026-10-15, in no settled order;
+Pangolin went out in release 2026-10-16): infer `units=boolean`; warn when a value is outside
 min/max; submodel background colour; the model file reference (job 6); the
 editor regression net (job 1); the arc dialog.
 
@@ -466,7 +468,7 @@ DESIGN-diagram.md §23 is the record; the short version:
 
 ## Jobs queued
 
-**Embedded-widget pages come first** (above). These are the older queue, still true:
+The older queue, still true (embedded-widget pages and the engine, which went ahead of it, are done):
 
 ### 1. A regression net for the EDITOR — still the first job, and now overdue
 
@@ -514,7 +516,11 @@ an arc currently falls through to an empty field list.
 
 ### 3. Event-based modelling
 
-Deliberately set aside at the start; Robert has never used it. `alarm` is
+Deliberately set aside at the start; Robert has never used it. **Learned
+2026-10-19 from the developer:** immigration, reproduction and loss can each
+be a discrete EVENT instead of a rate, signified by an incoming event
+influence, adding or removing members at once when the event occurs — so event
+modelling needs at least an event influence besides `alarm`. `alarm` is
 declared, drawn as a bell, read and written faithfully, and **disabled in the
 palette** (greyed, dashed, titled "Not yet implemented", from a
 `notImplemented` flag in the schema). One symbol is not enough to do event
@@ -578,7 +584,9 @@ is in `NOTE-model-file-reference.md`. Settled:
 - Do not target `.pl`: harder to get right, and errors would come back through
   the importer instead of our own checks.
 
-### 7. Longer term: the Simile engine in the browser (Robert, 2026-10-14)
+### 7. The Simile engine in the browser (Robert, 2026-10-14) — DONE, released 2026-10-16
+
+See "Now" above; kept for why it was wanted.
 
 Run models on the client instead of SimiLive — the whole chain, Prolog
 interpreter and C++ compiler included (WebAssembly, presumably) — for far
@@ -589,18 +597,28 @@ another day; a discussion first, not a job to start.
 
 ## Waiting on the developer
 
-`NOTE-email-population-symbols.md` is **drafted and NOT sent**. The Trees
-tutorial has since answered most of it (`NOTE-questions-for-developer.md` A2):
-`immigration` IS a rate (our label is fixed), and the symbols now export. What
-is left:
+**The population-symbols email was sent and answered 2026-10-19**: creation is
+the starting count (a fraction ignored); immigration a rate overall,
+reproduction a rate per member; loss a probability per time unit, or a boolean
+as 1/0. Recorded under A2 in `NOTE-questions-for-developer.md`; the dialog
+labels follow it.
 
-1. Is `loss` below 1 (`0.6`) a chance per time unit? Booleans work as 1/0.
-2. Can SimiLive take the load of public embedded-widget pages? (new)
-3. *(Question 0b in `NOTE-questions-for-developer.md`.)* **What does N mean
-   in `use(N,in_assoc,…)`?** `feeding1`'s association joins two different bases
-   and writes index 0 for BOTH consumers. Our reading says the second should be
-   1; we tried it and Simile rejected the model outright. We refuse to export
-   `feeding1` rather than guess — one model, and no wrong answers.
+**Sent next: `NOTE-email-followup-questions.md`** (2026-10-19), the questions
+of `NOTE-questions-for-developer.md` still worth asking, numbered as there:
+
+1. *(0b, the only blocking one)* **What does N mean in `use(N,in_assoc,…)`?**
+   `feeding1`'s association joins two different bases and writes index 0 for
+   BOTH consumers. Our reading says the second should be 1; we tried it and
+   Simile rejected the model outright. We refuse to export `feeding1` rather
+   than guess — one model, and no wrong answers.
+2. *(4)* the dimensional rule for references across a boundary; *(5)* the
+   submodel kinds `type=records` and `count=[size(…)]`; *(7)* whether arc
+   `course` points are visual only; *(1)* `usr(…)`; *(2)* `use_sofar`,
+   `enabled_roles`, `in_8_nbrs`.
+
+Dropped: whether SimiLive can take the load of public embedded-widget pages —
+pages now run their model in the reader's browser, and SimiLive is only the
+fallback.
 
 Six re-saves in Simile 7.4 already answered the population-symbol spellings, the
 association-alias convention (there isn't one), `border` vs the legacy plain

@@ -167,7 +167,9 @@ starting value. A drag of 40 mouse moves made ~40 runs.
   `InitTimeSeries` frees a parameter's value at every reset when it is true
   (shank.cpp ~1190). Whether it is depends on what the heap held: it worked
   until `Describe` had run. `patches/varparam-inheritseries.patch` sets it.
-  **For the Simile developer.** It could misfire on SimiLive too.
+  Reported 2026-10-19; the developer is taking the patch ("not sure they
+  represent real problems, but look like good style"). It could misfire on
+  SimiLive too.
 - **"Model values" crashed the run** (memory access out of bounds) — a
   second bug in Simile's run-time library: `~FileParamData()` is not virtual (6d.h:64),
   so `forget_param_array`, deleting a slider's `VarParamData` through a
@@ -175,8 +177,10 @@ starting value. A drag of 40 mouse moves made ~40 runs.
   instance's `varParamArrayBase`. The next reset that keeps sliders walks
   the freed block. Node survived it (the memory not yet reused); the page
   did not. `patches/fileparam-virtual-destructor.patch` makes it virtual
-  (only shank.cpp includes 6d.h, not a model). **For the Simile developer**:
-  `clearparamarray` in `ame_cmx.c` does the same.
+  (only shank.cpp includes 6d.h, not a model). Reported 2026-10-19 and being
+  taken, as the one above. Simile's own Tcl command `clearparamarray`
+  (`ame_cmx.c:552`) calls `forget_param_array` too, so Simile reaches it as
+  well; `NOTE-email-followup-questions.md` tells him so.
 - **Every run drew the same random numbers** — `setup_randoms` raises
   `rand_inits_updated`, and every reset and execute that sees it starts the
   stream again from the seed. The threaded path lowers it after its first job

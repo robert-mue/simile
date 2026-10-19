@@ -1,6 +1,9 @@
 # Email to the Simile developer — two questions about meaning
 
-*Drafted 2026-08-12, **cut down 2026-08-13 and not yet sent.** The first draft
+***Sent 2026-10-19** (forwarded by Robert) **and answered the same day** — the
+answer is recorded under A2 in `NOTE-questions-for-developer.md`.*
+
+*Drafted 2026-08-12, cut down 2026-08-13. The first draft
 had four questions. Re-saving six catalogue models in Simile 7.4 answered two of
 them by observation — the spellings, and what `alarm` is — so those are gone.
 What is left is the half a file cannot answer: what two of the symbols MEAN.*

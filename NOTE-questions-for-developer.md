@@ -71,7 +71,25 @@ are the `obsolete` and `ancestor(0)` entries we see in some `references` lists �
 must we ever emit them? (c) Anything different about a self-association (both
 relation arcs from the same base, as in `ranking1`) that we would not see there?
 
-## A2 — The population symbols *(spellings ANSWERED 2026-08-13; meanings largely answered 2026-10-13)*
+## A2 — The population symbols *(spellings ANSWERED 2026-08-13; meanings ANSWERED by the developer 2026-10-19)*
+
+**Answer from the developer, 2026-10-19** (to `NOTE-email-population-symbols.md`,
+forwarded by Robert), verbatim: "Creation, immigration and reproduction are
+reals. Creation is dimensionless and is initial population (perhaps should be
+integer as fractional part is ignored). Immigration and reproduction have
+dimensions 1/time and are new individuals added per unit time, either overall
+or for each existing instance. Loss can be real and dimensionless (probability
+of dying per unit time) or boolean (equivalent to 1 or 0). All except creation
+can be dimensionless discrete events, signified by presence of incoming event
+influences, causing instantaneous addition/removal of members on event
+occurrence."
+
+So (b) is confirmed, (c) is a probability per time unit with the boolean as
+1/0, and reproduction — which we had labelled "Number of offspring" — is a rate
+per member. The dialog now says "Number created", "Arrivals per time unit",
+"Chance of loss per time unit" and "Offspring per member per time unit", each
+with a line of help (`src/schema/simile-v1.js`). The event-influence form is
+new to us and belongs to event-based modelling (`RESTART.md`, job 3).
 
 **Update 2026-10-13: the Trees tutorial answers most of this.** It uses three
 of the symbols by name, so their meanings no longer need asking: a `creation`
@@ -158,6 +176,13 @@ not checking it was high.
 ---
 
 # Still open
+
+*2026-10-19: rather than this whole note, Robert is sending
+`NOTE-email-followup-questions.md` — 0b, 4, 5, 7, 1 and 2, in that order,
+numbered as here. 0 went with the population-symbols email; 3 matters only for
+the SimiLive fallback now; 6 is half done (`spec`, `min_val`, `max_val` are
+written for parameters); 8 we answered ourselves (the generator runs in the
+browser, `tools/engine/README.md`).*
 
 ## 0 — A robustness report, not a question
 

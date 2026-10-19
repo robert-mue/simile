@@ -145,13 +145,22 @@
       // the type's own name. These three are named for Simile's words —
       // creation, immigration, loss: the tutorials and every Simile modeller
       // use them, and the type names are only ours.
-      initialiser:  { has_label: true,  label: 'creation', fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true }] },
-      // Immigration is a RATE (new members per time unit: Trees has 2 a year,
-      // AntsWorld 0.1), and loss a chance per time unit or a condition, which
-      // is 1 when true (Trees: `size>17`; animal1: 0.6).
-      migrator:     { has_label: true,  label: 'immigration', fields: [{ name: 'expr', label: 'Arrivals per time unit', type: 'expression', required: true }] },
-      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Removal rate or condition', type: 'expression', required: true }] },
-      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Number of offspring', type: 'expression', required: true }] },
+      //
+      // Meanings from the developer (2026-10-19): creation is a count, the
+      // members at the start (a fraction is ignored); immigration a RATE (new
+      // members per time unit: Trees has 2 a year, AntsWorld 0.1); reproduction
+      // a rate PER MEMBER (offspring of each member per time unit); loss a
+      // probability per time unit, or a boolean, which is 1 or 0 (Trees:
+      // `size>17`; animal1: 0.6). All but creation can instead be discrete
+      // events, driven by incoming event influences — not yet ours to draw.
+      initialiser:  { has_label: true,  label: 'creation', fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true,
+        help: 'Members at the start of the run. A fractional part is ignored.' }] },
+      migrator:     { has_label: true,  label: 'immigration', fields: [{ name: 'expr', label: 'Arrivals per time unit', type: 'expression', required: true,
+        help: 'New members arriving in a time unit, for the population as a whole.' }] },
+      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Chance of loss per time unit', type: 'expression', required: true,
+        help: 'Probability that a member is removed in a time unit, or a condition: removed when true.' }] },
+      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Offspring per member per time unit', type: 'expression', required: true,
+        help: 'New members each existing member produces in a time unit.' }] },
 
       // ---- event-based modelling: DECLARED, NOT IMPLEMENTED ----
       //
