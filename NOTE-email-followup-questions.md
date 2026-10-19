@@ -10,7 +10,6 @@ an answer can be filed against it; the longer write-ups and evidence are there.*
 
 **Subject: Simile — six questions left, one of them blocking**
 
-Hi Jasper,
 
 Thanks for the answers on the population symbols — that settles loss
 (probability per unit time), and it turned up a label of ours that was wrong
@@ -105,5 +104,3 @@ prepare a model, milliseconds to run one, and sliders re-run the model as they
 are dragged. SimiLive is now only the fallback for when that fails. On the
 catalogue, the generated C++ is identical to what native Simile writes.
 
-Best,
-Robert

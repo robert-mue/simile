@@ -3,8 +3,9 @@
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-10-19: the engine in the
-browser is done and released (2026-10-16), and the developer has answered the
-population-symbols email. If you are picking this up cold — a new session, a new
+browser is done and released (2026-10-16), the developer has answered the
+population-symbols email and been sent the follow-up questions, and automatic
+layout is next ("Next", below). If you are picking this up cold — a new session, a new
 machine, or a week later — read this first. `STATUS.md` is the full record
 (items 46–47 are the last two days); this is the part you need to get moving.*
 
@@ -154,6 +155,35 @@ both patches.
 Pangolin went out in release 2026-10-16): infer `units=boolean`; warn when a value is outside
 min/max; submodel background colour; the model file reference (job 6); the
 editor regression net (job 1); the arc dialog.
+
+## Next: automatic layout (Robert, 2026-10-19) — discussed, not started
+
+Pick up here. Pangolin was laid out by hand (by Claude, on a grid of round
+numbers); nothing in the repo computes a layout. Robert wants a layout tool
+users can run, for: tidying a messy model; re-laying out after a big
+deletion; laying out a model written as text (job 6: no coordinates to
+write); and shrinking submodels whose contents are hidden, closing up the
+diagram.
+
+Proposed: **ELK** (`elkjs`, ~1.5 MB, EPL-2.0), loaded on first use like the
+model compiler — the one library that does nested graphs (submodels, arcs
+crossing their boundary). Its layered layout gives the same result for the
+same model (no random repositioning), and can start from the current order.
+Robert's question was **pinning**: per submodel, yes (ELK's `fixed`
+setting leaves its contents alone); per element, only relative (layer /
+position-in-layer constraints) in the layered layout, exact only in the
+"stress" layout; and a cheap stand-in: shift the result so one chosen key
+stock lands where it was. All from memory of ELK, NOT yet tried.
+
+Constraints: a stock's flow chain (clouds, valves) stays straight and moves
+as one; influences left to our own curve drawing; a layout changes `layout`
+only, one undoable step. **Hiding a submodel's contents does not exist yet**
+(only planned: `collapsed` in `DESIGN-diagram.md`) — it comes before the
+layout can shrink one.
+
+Suggested order: 1 a spike of ELK on Pangolin, the three reference models and
+one with submodels, trying relative pinning and fixed submodels; 2 hiding a
+submodel's contents; 3 a "Tidy layout" command combining them.
 
 ## Done: embedded-widget pages (Robert, 2026-10-13)
 
@@ -603,7 +633,7 @@ reproduction a rate per member; loss a probability per time unit, or a boolean
 as 1/0. Recorded under A2 in `NOTE-questions-for-developer.md`; the dialog
 labels follow it.
 
-**Sent next: `NOTE-email-followup-questions.md`** (2026-10-19), the questions
+**Sent 2026-10-20, awaiting an answer: `NOTE-email-followup-questions.md`**, the questions
 of `NOTE-questions-for-developer.md` still worth asking, numbered as there:
 
 1. *(0b, the only blocking one)* **What does N mean in `use(N,in_assoc,…)`?**
