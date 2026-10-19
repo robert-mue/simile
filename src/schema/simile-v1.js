@@ -157,7 +157,7 @@
         help: 'Members at the start of the run. A fractional part is ignored.' }] },
       migrator:     { has_label: true,  label: 'immigration', fields: [{ name: 'expr', label: 'Arrivals per time unit', type: 'expression', required: true,
         help: 'New members arriving in a time unit, for the population as a whole.' }] },
-      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Chance of loss per time unit', type: 'expression', required: true,
+      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Probability of loss in one time unit', type: 'expression', required: true,
         help: 'Probability that a member is removed in a time unit, or a condition: removed when true.' }] },
       reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Offspring per member per time unit', type: 'expression', required: true,
         help: 'New members each existing member produces in a time unit.' }] },

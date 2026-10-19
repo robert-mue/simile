@@ -87,7 +87,7 @@ occurrence."
 So (b) is confirmed, (c) is a probability per time unit with the boolean as
 1/0, and reproduction — which we had labelled "Number of offspring" — is a rate
 per member. The dialog now says "Number created", "Arrivals per time unit",
-"Chance of loss per time unit" and "Offspring per member per time unit", each
+"Probability of loss in one time unit" and "Offspring per member per time unit", each
 with a line of help (`src/schema/simile-v1.js`). The event-influence form is
 new to us and belongs to event-based modelling (`RESTART.md`, job 3).
 
