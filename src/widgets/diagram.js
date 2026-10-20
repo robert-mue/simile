@@ -57,6 +57,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   // Layers, painted in this order (SVG has no z-index).
   _LAYERS: ['bodies', 'arcs', 'nodes', 'labels', 'overlay'],
 
+  // How close a moved or resized element may come to a submodel's edge, or a
+  // growing submodel to anything outside it, in world units (Robert,
+  // 2026-10-20). Never enforced against a gap that is already smaller.
+  _MARGIN: 10,
+
   // Arrowhead length per arc type, in world units — must match the marker
   // paths built in _buildCanvas, since the line is shortened by exactly this.
   _ARROW_LEN: { flow: 6.3, influence: 4.725, role: 4.725 },
@@ -489,7 +494,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const d = this._diagram();
     if (!d) return;
     const origin = this._toWorld(e.clientX, e.clientY);
-    const ghost = this._el('rect', { class: 'slx-ghost-box', rx: 4 });
+    const ghost = this._el('rect', { class: 'slx-ghost-box', rx: 8 });
     this._layer.overlay.appendChild(ghost);
 
     let cur = origin;
@@ -640,7 +645,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._decorateKind(g, b, ((d.schema().style || {}).submodel || {}).byKind, sub.kind);
 
     g.appendChild(this._el('rect', {
-      x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 4,
+      x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 8,
     }));
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     g.addEventListener('dblclick', () => this._editLabel(d, id));
@@ -712,7 +717,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     e.stopPropagation();
 
     const MIN_W = 40, MIN_H = 30, PAD = 4;
-    const MARGIN = 10;   // how close a growing edge may come to something else
+    const MARGIN = this._MARGIN;
     const rect = (bx) => ({ l: bx.cx - bx.w / 2, r: bx.cx + bx.w / 2, t: bx.cy - bx.h / 2, b: bx.cy + bx.h / 2 });
     const hits = (a, c) => a.l < c.r && a.r > c.l && a.t < c.b && a.b > c.t;
     const geom = d.appearanceOf(id) || {};
@@ -931,7 +936,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       for (let i = (spec.layers || 3) - 1; i >= 1; i--) {
         g.appendChild(this._el('rect', {
           class: 'slx-kind-stack',
-          x: x1 + i * step, y: y1 + i * step, width: b.w, height: b.h, rx: 4,
+          x: x1 + i * step, y: y1 + i * step, width: b.w, height: b.h, rx: 8,
         }));
       }
       return;
@@ -1585,8 +1590,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * against, instead of freezing whenever a diagonal move is partly illegal.
    *
    * Two constraints, and the second is deliberately forgiving:
-   *   - an element must stay within its parent's box;
-   *   - it must not move INTO a submodel it does not belong to — but only if it
+   *   - an element must stay within its parent's box, _MARGIN inside it;
+   *   - it must not move INTO a submodel it does not belong to, nor within
+   *     _MARGIN of one — but only if it
    *     was clear of that submodel to begin with. An element already overlapping
    *     one (a valve stranded by a boundary-crossing flow, a model built before
    *     this rule) must stay draggable, or it could never be tidied up.
@@ -1606,9 +1612,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (!start[id]) return;
       // (a) stay inside the parent — an exact interval, so clamp rather than veto.
       const parent = d.parentOf(id);
+      // _MARGIN inside it, or the gap there already is, if less.
       if (parent && !start[parent]) {
-        const p = rect(d.box(parent));
         const b = rect(boxAt(id, 0, 0));
+        const p0 = rect(d.box(parent));
+        const m = (gap) => Math.min(this._MARGIN, Math.max(gap, 0));
+        const p = { l: p0.l + m(b.l - p0.l), r: p0.r - m(p0.r - b.r),
+          t: p0.t + m(b.t - p0.t), bo: p0.bo - m(p0.bo - b.bo) };
         dx = Math.min(Math.max(dx, p.l - b.l), p.r - b.r);
         dy = Math.min(Math.max(dy, p.t - b.t), p.bo - b.bo);
         if (p.r - b.r < p.l - b.l) dx = 0;   // wider than its parent: do not fight
@@ -1622,9 +1632,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         return !hits(rect(boxAt(id, 0, 0)), rect(d.box(sid)));      // already inside: leave alone
       });
       if (!strangers.length) return;
+      // Each kept _MARGIN away, or the gap there already is, if less.
+      const b0 = rect(boxAt(id, 0, 0));
+      const walls = strangers.map((sid) => {
+        const k = rect(d.box(sid));
+        const gap = Math.max(k.l - b0.r, b0.l - k.r, k.t - b0.bo, b0.t - k.bo);
+        const m = Math.min(this._MARGIN, Math.max(gap, 0));
+        return { l: k.l - m, r: k.r + m, t: k.t - m, bo: k.bo + m };
+      });
       const blocked = (ddx, ddy) => {
         const b = rect(boxAt(id, ddx, ddy));
-        return strangers.some((sid) => hits(b, rect(d.box(sid))));
+        return walls.some((w) => hits(b, w));
       };
       // Fall back to the last offset known to be legal, NOT to zero. Two
       // reasons. Zero would snap the element back to where the drag started
