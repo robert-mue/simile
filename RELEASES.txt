@@ -188,3 +188,24 @@ Population symbols
   immigration the arrivals per time unit; reproduction the offspring
   per member per time unit; loss the probability of loss in one time
   unit (or a condition: removed when true).
+
+
+------------------------------------------------------------------------
+Release 2026-10-20b
+------------------------------------------------------------------------
+
+Associations
+- An association joining two different submodels (eater and food, say)
+  now exports and runs. Before, such a model was refused; the catalogue
+  model feeding1 was the one example. Simile's developer explained how
+  Simile numbers the roles, and the editor now does the same.
+
+Time bases
+- A submodel can now run on its own time base, with its own time step:
+  the submodel's dialog has a "Time base" field (blank is the model's
+  own). In an equation, dt(2) is the time step of time base 2.
+- Simile models that use this (lamos1a, for example) are now imported
+  with it, so they compile and run; before, they would not compile.
+- A model with more than one time base has one time step per base in
+  the run settings, for example "1 0.1". A base without one takes the
+  last value given.

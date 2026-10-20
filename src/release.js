@@ -5,4 +5,4 @@
  * A constant rather than read from RELEASES.txt because a page opened from
  * disk (file://) may not read files.
  */
-window.SIMILE_RELEASE = '2026-10-20';
+window.SIMILE_RELEASE = '2026-10-20b';
