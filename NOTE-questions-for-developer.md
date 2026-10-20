@@ -200,7 +200,21 @@ Our bug, and fixed. But **a warning on a property that failed to parse would
 have saved an afternoon**, and would presumably help anyone else generating
 `.pl` files.
 
-## 0b — What does the index in `use(N,in_assoc,…)` mean? *(new, 2026-08-13)*
+## 0b — What does the index in `use(N,in_assoc,…)` mean? *(ANSWERED 2026-10-20)*
+
+**The developer, verbatim:** "N is the position of the role in the reference
+list of the submodel containing the destination node of the link. feeding1
+obeys this rule."
+
+So for `in_base` (into the association) N indexes the association's list,
+and for `in_assoc` (out into a base) the BASE's own list — `feeding1`'s bases
+list one role each, hence 0 and 0. For a submodel nested inside a base, its
+list is `ancestor(k)` entries pointing into its parent's (`lamos1a`). All 166
+association uses in the catalogue agree with the rule once those are
+resolved. The exporter (`refsOf`, `assocRole`) and importer (`resolvedRefs`,
+`roleAliasesFor`) now follow it; `feeding1` is no longer refused, round-trips
+identically, and compiles and runs in the page. The question as asked:
+
 
 We had this down as "the position in the association's `references` list", and
 that reads every model whose association has both roles from ONE base. It does

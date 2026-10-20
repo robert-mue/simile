@@ -74,16 +74,16 @@ What the tutorials made us build, in one line each (STATUS 46–47 for detail):
   filled in when ▶ next loads the model.
 
 **Standing numbers.** Quote these only after re-running the checks below, since
-they are exactly what a regression would change. All three re-run 2026-10-13:
+they are exactly what a regression would change. All three re-run 2026-10-20:
 
 | | |
 |---|---|
-| catalogue round trip | **60 of 72 identical, 0 differ, 12 refused, 1 lossy import** |
+| catalogue round trip | **61 of 72 identical, 0 differ, 11 refused, 1 lossy import** |
 | fixtures | 6 of 6 reach a fixed point and audit clean |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
 
-Every remaining refusal is an element left unfinished in its source file,
-except `feeding1` (an association question for the developer).
+Every remaining refusal is an element left unfinished in its source file.
+(`feeding1` was the exception until 2026-10-20 — see 0b below.)
 
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
@@ -94,9 +94,9 @@ model on SimiLive.
 Robert is checking associations and role arrows, and is building two minimal
 demo models **himself** (deliberately, so as not to get lazy), in the release
 app: one association joining two separate submodels, one with a single
-submodel in both roles. The first is the `feeding1` case — it can be built
-and edited but will not export or run until the developer answers question
-0b ("Waiting on the developer", below); the second should run.
+submodel in both roles. The first is the `feeding1` case, which exports and
+runs since the developer answered question 0b (2026-10-20, below); both
+should run.
 
 **When he hands them over** (File ▸ Export model as script → a `.js` with the
 model spec and run settings): make each a `src/demo-<name>.js` like
@@ -681,15 +681,19 @@ reproduction a rate per member; loss a probability per time unit, or a boolean
 as 1/0. Recorded under A2 in `NOTE-questions-for-developer.md`; the dialog
 labels follow it.
 
-**Sent 2026-10-20, awaiting an answer: `NOTE-email-followup-questions.md`**, the questions
+**Sent 2026-10-20: `NOTE-email-followup-questions.md`**, the questions
 of `NOTE-questions-for-developer.md` still worth asking, numbered as there:
 
-1. *(0b, the only blocking one)* **What does N mean in `use(N,in_assoc,…)`?**
-   `feeding1`'s association joins two different bases and writes index 0 for
-   BOTH consumers. Our reading says the second should be 1; we tried it and
-   Simile rejected the model outright. We refuse to export `feeding1` rather
-   than guess — one model, and no wrong answers.
-2. *(4)* the dimensional rule for references across a boundary; *(5)* the
+1. *(0b)* **ANSWERED 2026-10-20**: "N is the position of the role in the
+   reference list of the submodel containing the destination node of the
+   link." So `in_base` indexes the association's list (as we did) and
+   `in_assoc` the BASE's own list (we used the association's) — the two
+   differ only when an association joins two different bases. Both the
+   exporter and importer now follow it, including the `ancestor(k)` lists of
+   a submodel nested in a base. `feeding1` round-trips identically, its
+   `use(…)` terms match Simile's own file, and it compiles and runs in the
+   page. Recorded under 0b in `NOTE-questions-for-developer.md`.
+2. Still awaited: *(4)* the dimensional rule for references across a boundary; *(5)* the
    submodel kinds `type=records` and `count=[size(…)]`; *(7)* whether arc
    `course` points are visual only; *(1)* `usr(…)`; *(2)* `use_sofar`,
    `enabled_roles`, `in_8_nbrs`.
@@ -720,6 +724,8 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   still produce Prolog that Simile refuses to build — the comparison is our
   model against itself and never asks Simile anything. Sampled 14 of the 54: 12
   build; `lamos1a` and `embryo1` do not, *though their originals do*. Item 44.
+  (2026-10-20: `lamos1a` still does not compile in the page either, with or
+  without the 0b fix — something else; not chased.)
   `Sienna.Simulation.loadOwn('models/growth')` from the console is the short way
   to ask the engine; `unload()` afterwards, it is a shared public host.
 - **The scratch directory is `/tmp` and does not survive a reboot.** It has been

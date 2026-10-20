@@ -935,8 +935,13 @@
      * reconstructing them from a single stem was always going to lose. Now the
      * file's own names are stored and written back untouched.
      *
-     * Each `use(N,…)`'s N is a position in the ASSOCIATION's `references` list,
-     * so the walk is index → that list → a Simile relation arc → our role arc.
+     * Each `use(N,…)`'s N is a position in the `references` list of the
+     * submodel holding the link's DESTINATION (the developer, 2026-10-20): the
+     * association's for `in_base`, the base's own for `in_assoc`, and for a
+     * submodel nested inside a base its `ancestor(k)` list, which points up
+     * (`resolvedRefs`). So the walk is index → that list → a Simile relation
+     * arc → our role arc. `feeding1` is the model that tells them apart: its
+     * two bases list one role each, so both its consumers say 0.
      * The association is found through the shared model-layer rule rather than
      * by guessing, which is possible here only because `makeRelations` has
      * already run: the role arcs are in the model before any influence is.
@@ -972,7 +977,9 @@
         this._sim = {};
         Object.keys(this.ours).forEach(function (k) { self._sim[self.ours[k]] = k; });
       }
-      var refs = this.refs[this._sim[pair.assoc]] || null;
+      var simTo = this._sim[ourTo];
+      var refs = simTo != null && this.parent[simTo] != null
+        ? this.resolvedRefs(this.parent[simTo]) : null;
 
       // Candidate names per role. Usually one each — but Simile SHARES a final
       // segment between several consumers, and the role term then accumulates
@@ -999,13 +1006,9 @@
         //
         // But where the index WAS followed and landed outside `mine`, do not
         // invent a placement: that is the file telling us our role model
-        // disagrees with it, and guessing was measured to produce a model
-        // Simile rejects outright ("the equation for eaten refers to an input
-        // parameter called {eaten}. This is not a valid parameter in the
-        // context of that component"). `feeding1`'s association joins two
-        // different bases and writes index 0 for BOTH consumers, which we have
-        // no account of. Leaving the name unplaced makes the exporter refuse,
-        // which is the honest outcome — see the questions note.
+        // disagrees with it. Leaving the name unplaced makes the exporter
+        // refuse, which is the honest outcome. (It is how `feeding1` was
+        // refused while we read every index in the association's list.)
         if (ourRole && mine.indexOf(ourRole) < 0) return;
         if (!ourRole) ourRole = mine[i];
         if (!ourRole || !u.name) return;
@@ -1057,6 +1060,22 @@
       // `remaining_surplus_4_link` is `remaining_surplus_4` under role `link`,
       // and stripping the `_4` as well renamed a variable that exists.
       return bare.replace(/_\d+$/, '');
+    },
+
+    /**
+     * A submodel's `references` list with each `ancestor(k)` replaced by
+     * entry k of its parent's list, resolved in turn. Simile writes these for
+     * a submodel nested inside a base (`lamos1a`: soil_water inside patch has
+     * `[ancestor(0),ancestor(1)]`), so an index read against it lands on the
+     * base's roles.
+     */
+    resolvedRefs: function (simSub) {
+      var self = this;
+      return (this.refs[simSub] || []).map(function (r) {
+        var m = /^ancestor\((\d+)\)$/.exec(r);
+        if (!m || self.parent[simSub] == null) return r;
+        return self.resolvedRefs(self.parent[simSub])[+m[1]] || r;
+      });
     },
 
     /**

@@ -100,9 +100,15 @@
  * is not a stored kind in either system — it is a submodel that relation arcs
  * point AT, inferred (our §4, and Simile's too). `references(S,[local(arc),…])`
  * lists the relation arcs a submodel takes part in: all of them on the
- * association, its own on each base. The index in `use(N,in_base|in_assoc,…)`
- * is the position in the ASSOCIATION's list — `landuse1b` proves it by starting
- * its list with two `obsolete` placeholders and using indices 2 and 3.
+ * association, its own on each base, and `ancestor(k)` (entry k of its
+ * parent's list) on a submodel nested inside either. The index in
+ * `use(N,in_base|in_assoc,…)` is a position in the list of the submodel
+ * holding the link's DESTINATION (the developer, 2026-10-20): the
+ * association's for `in_base`, the base's for `in_assoc`. They differ only
+ * when an association joins two different bases — `feeding1`, where each base
+ * lists its one role and both consumers say 0 — and `landuse1b` shows an index
+ * is not simply 0,1 (its association's list starts with two `obsolete`
+ * placeholders, and its roles use 2 and 3).
  *
  * The segment machinery above needs no change for an association: base and
  * association are ordinary scopes, so the walk already produces the right
@@ -603,10 +609,11 @@
      * One `use(…)` per relation arc joining this base to this association — so
      * a self-association, where the base is related twice, contributes two, and
      * the consumer's equation gets a name for each end. The INDEX is the
-     * position of that relation arc in the ASSOCIATION's `references` list;
-     * `landuse1b` shows it is not simply 0,1 (its list starts with two
-     * `obsolete` placeholders and its roles use 2 and 3), and `feeding1` shows
-     * each base lists only its own arcs while the association lists them all.
+     * position of that relation arc in the `references` list of the submodel
+     * holding the destination (the header, "Associations"): the association's
+     * going in (`in_base`), the base's coming out (`in_assoc`). A consumer
+     * nested deeper inside the base reads the same position through its
+     * `ancestor(k)` list, which `refsOf` makes mirror the base's.
      *
      * The per-role ALIAS is derived — `<alias>_<role>` — because our model
      * holds one alias per arc and Simile needs one per role. That is Simile's
@@ -617,6 +624,7 @@
       var self = this;
       var refs = this.rolesOf(pair.assoc);
       var mine = refs.filter(function (r) { return self.m.arcs[r].from === pair.base; });
+      var listed = pair.dir === 'in_assoc' ? this.refsOf(pair.base) : refs;
 
       // The association hop is the LAST boundary left; anything left before it
       // is ordinary containment, and each multi-instance one makes the value a
@@ -626,7 +634,7 @@
       var extra = cross.out.slice(0, -1).filter(function (s) { return self.isMulti(s); }).length;
 
       return mine.map(function (r) {
-        var idx = refs.indexOf(r);
+        var idx = listed.indexOf(r);
         // The stored name where the model has one, the derived `<alias>_<role>`
         // where it does not. Simile imposes no convention, so a name read from
         // a file must be written back unchanged — see `Diagram.roleAliasFor`.
@@ -640,6 +648,25 @@
         for (i = 0; i < extra; i++) dim = 'list(' + dim + ')';
         return 'use(' + idx + ',in_base,' + atom(name) + ',' + dim + ')';
       }).join(',');
+    },
+
+    /**
+     * What a submodel's `references(…)` lists, as our ids: every role for an
+     * association (in `rolesOf` order), its own roles for a base, and for a
+     * submodel inside either, `ancestor(k)` for each entry of its parent's list
+     * — as Simile writes them (`lamos1a`). An index is a position in one of
+     * these, so they are made in one place.
+     */
+    refsOf: function (subId) {
+      var m = this.m;
+      if (this.isAssoc(subId)) return this.rolesOf(subId);
+      var own = Object.keys(m.arcs).filter(function (r) {
+        return m.arcs[r].type === 'role' && m.arcs[r].from === subId;
+      });
+      if (own.length) return own;
+      var parent = (m.submodels[subId] || {}).parent;
+      if (parent == null) return [];
+      return this.refsOf(parent).map(function (r, k) { return { ancestor: k }; });
     },
 
     /** `<alias>_<role label>`, made safe to be a Prolog atom and an identifier. */
@@ -1003,18 +1030,12 @@
         // `links` sits with the submodel whose boundary the segments cross.
         if (self.links[id]) out.push('links(' + self.vis[id] + ',' + list(self.links[id]) + ').');
 
-        // `references` lists the relation arcs this submodel takes part in: all
-        // of them for an association, and its own for a base. The ORDER on the
-        // association is what the role indices point into, so it is written
-        // once, from `rolesOf`, and read back by `assocRole`.
-        var refs = self.isAssoc(id)
-          ? self.rolesOf(id)
-          : Object.keys(m.arcs).filter(function (r) {
-            return m.arcs[r].type === 'role' && m.arcs[r].from === id;
-          });
+        // `references`: what `refsOf` says, the lists the role indices point
+        // into — so written from the same place `assocRole` reads.
+        var refs = self.refsOf(id);
         if (refs.length) {
           out.push('references(' + self.vis[id] + ',' + list(refs.map(function (r) {
-            return 'local(' + self.relArc[r] + ')';
+            return typeof r === 'object' ? 'ancestor(' + r.ancestor + ')' : 'local(' + self.relArc[r] + ')';
           })) + ').');
         }
       });
