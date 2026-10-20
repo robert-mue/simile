@@ -728,8 +728,11 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   its submodels, so the `dt(2)` its equations use named a time base the
   model no longer had: `bad_index_number(2,dt,1)`. Now the submodel's "Time
   base"; it compiles and runs in the page. `lamos1b` compiles in the page
-  too, original and ours, though Robert's Simile 7.x reports an error
-  compiling it — what error, not yet known.)
+  too, original and ours. Robert's Simile reports a GCC warning compiling it,
+  "iteration 225 invokes undefined behavior": the FILE is wrong — enlarging
+  lamos1a's grid to 1600 changed `patch` and `fire_patch` but left
+  `patch_results` at 225, so a loop over 1600 reads past its end. Our export
+  copies it faithfully; clang does not warn. Not run.)
   `Sienna.Simulation.loadOwn('models/growth')` from the console is the short way
   to ask the engine; `unload()` afterwards, it is a shared public host.
 - **The scratch directory is `/tmp` and does not survive a reboot.** It has been
