@@ -162,7 +162,10 @@ text.slx-incomplete {
   stroke-linecap: butt;
 }
 
+/* Starts at the box's left edge. Said here, not as an attribute: a
+   stylesheet's `text-anchor` (the `middle` of .slx-label) beats one. */
 .slx-submodel-label {
+  text-anchor: start;
   font-weight: 600;
   fill: #444;
   letter-spacing: 0.04em;

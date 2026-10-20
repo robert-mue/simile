@@ -656,9 +656,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // 2026-10-20): inside, it took room from the contents and sat in the way
     // of the top edge's resize zone.
     if (sub.label) {
-      const t = this._placeLabel(d, id, sub.label, b.cx - b.w / 2, b.cy - b.h / 2 - 4,
-        'slx-label slx-submodel-label');
-      t.setAttribute('text-anchor', 'start');
+      this._placeLabel(d, id, sub.label, b.cx - b.w / 2, b.cy - b.h / 2 - 4,
+        'slx-label slx-submodel-label');            // anchored at its start: styles.css
     }
   },
 
