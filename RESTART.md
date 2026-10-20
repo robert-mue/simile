@@ -5,7 +5,10 @@ all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-10-19: the engine in the
 browser is done and released (2026-10-16), the developer has answered the
 population-symbols email and been sent the follow-up questions, and automatic
-layout is next ("Next", below). If you are picking this up cold — a new session, a new
+layout is discussed and parked (below). Now: association submodels and role
+arrows — Robert is building two minimal demos, one association joining two
+submodels (the `feeding1` case: will not export until question 0b is
+answered), one with a single submodel in both roles. If you are picking this up cold — a new session, a new
 machine, or a week later — read this first. `STATUS.md` is the full record
 (items 46–47 are the last two days); this is the part you need to get moving.*
 
@@ -156,9 +159,10 @@ Pangolin went out in release 2026-10-16): infer `units=boolean`; warn when a val
 min/max; submodel background colour; the model file reference (job 6); the
 editor regression net (job 1); the arc dialog.
 
-## Next: automatic layout (Robert, 2026-10-19) — discussed, not started
+## Parked: automatic layout (Robert, 2026-10-19) — discussed, not started
 
-Pick up here. Pangolin was laid out by hand (by Claude, on a grid of round
+Parked by Robert 2026-10-20 in favour of association submodels and role
+arrows (he is building two demo models himself). Pangolin was laid out by hand (by Claude, on a grid of round
 numbers); nothing in the repo computes a layout. Robert wants a layout tool
 users can run, for: tidying a messy model; re-laying out after a big
 deletion; laying out a model written as text (job 6: no coordinates to
