@@ -2,15 +2,13 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-10-19: the engine in the
-browser is done and released (2026-10-16), the developer has answered the
-population-symbols email and been sent the follow-up questions, and automatic
-layout is discussed and parked (below). Now: association submodels and role
-arrows — Robert is building two minimal demos, one association joining two
-submodels (the `feeding1` case: will not export until question 0b is
-answered), one with a single submodel in both roles. If you are picking this up cold — a new session, a new
-machine, or a week later — read this first. `STATUS.md` is the full record
-(items 46–47 are the last two days); this is the part you need to get moving.*
+embedded-widget pages. Brought up to date 2026-10-20, at the end of a day that
+answered the population-symbols questions, sent the rest to the developer,
+parked automatic layout, built submodel resizing and released it
+(**2026-10-20**). Now: association submodels and role arrows ("Now", below).
+If you are picking this up cold — a new session, a new machine, or a week
+later — read this first. `STATUS.md` is the full record (items 46–47 are the
+last two days it covers); this is the part you need to get moving.*
 
 **When to rewrite this note.** By event, not by the calendar — a note that
 restates the diff goes stale faster and gets trusted less. Rewrite it when:
@@ -91,9 +89,54 @@ except `feeding1` (an association question for the developer).
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive.
 
-## Now: the Simile engine in the browser (Robert, 2026-10-15)
+## Now: association submodels and role arrows (Robert, 2026-10-20)
 
-Priorities changed: job 7 below is now THE job. Its purpose: responsiveness
+Robert is checking associations and role arrows, and is building two minimal
+demo models **himself** (deliberately, so as not to get lazy), in the release
+app: one association joining two separate submodels, one with a single
+submodel in both roles. The first is the `feeding1` case — it can be built
+and edited but will not export or run until the developer answers question
+0b ("Waiting on the developer", below); the second should run.
+
+**When he hands them over** (File ▸ Export model as script → a `.js` with the
+model spec and run settings): make each a `src/demo-<name>.js` like
+`src/demo-pangolin.js` (header saying what it shows, the model spec, its run
+settings via `Simulation.presetSettings`), add its `<script>` to `index.html`
+and a seed line to `src/main.js` (~line 681). A seed runs only when no model
+of that id exists, so existing users get it and an edited copy is never
+overwritten — the id must not clash. The release site and a local copy keep
+separate model stores.
+
+**Term (Robert, 2026-10-20): the model JSON is the MODEL SPEC**, never "model
+data" — "data" is kept for numeric data (parameter values, data files such as
+soil parameters over a grid), which the app will handle one day.
+
+## Done: resizing a submodel (2026-10-20, released)
+
+Robert found he could not resize a submodel: it had never been built (the
+schema's `resizable` was read by nothing). Now `_resizeZones` /
+`_beginResize` in `src/widgets/diagram.js`: invisible bands ~6 screen px wide
+just inside every submodel's edges and corners, present without selecting
+(dragging an edge is what people try first), resize cursors in
+`src/styles.css`. One drag is one undo step (`commitDrag`), layout only. It
+stops at the contents (+4), at 40×30, and — Robert's choices — **10 units**
+(`_MARGIN`) inside the outer submodel and short of anything outside it; a
+MOVE keeps the same margin (`_clampDrag`). A margin is never forced where the
+gap is already smaller. Ports on the boundary stay on their side. Also: a
+submodel's name sits just ABOVE its top-left corner; corner radius 8.
+
+**Only submodels are resizable** (Robert): stocks are `resizable: false` like
+every node. Node size belongs with node STYLING, to come — as model-level
+settings and/or a styling tab in the node dialog. A stock size already stored
+is still drawn.
+
+Known: a corner drag meeting something diagonally stops both sides; two
+presses on one submodel within 450 ms are a double-click (opens its dialog),
+as for a move.
+
+## Done: the Simile engine in the browser (Robert, 2026-10-15; released 2026-10-16)
+
+Priorities changed then: job 7 below became THE job. Its purpose: responsiveness
 first (sliders re-plotting at once, multi-run experiments); everything local
 second. Stages of a run as Robert names them: A to Prolog (ours), B send,
 C Prolog → C++ → binary, D execute, E results to client (the bottleneck),
@@ -157,7 +200,8 @@ both patches.
 **Parked, to come back to** (the queue on 2026-10-15, in no settled order;
 Pangolin went out in release 2026-10-16): infer `units=boolean`; warn when a value is outside
 min/max; submodel background colour; the model file reference (job 6); the
-editor regression net (job 1); the arc dialog.
+editor regression net (job 1); the arc dialog; automatic layout (below);
+node sizing and styling (2026-10-20, with model-level settings).
 
 ## Parked: automatic layout (Robert, 2026-10-19) — discussed, not started
 
@@ -660,6 +704,18 @@ association-alias convention (there isn't one), `border` vs the legacy plain
 
 ## Things that will bite you
 
+- **A stylesheet beats an SVG presentation attribute.** `text-anchor`,
+  `fill`, `stroke` set by the renderer as ATTRIBUTES lose to any CSS rule
+  that names them: `.slx-label`'s `text-anchor: middle` silently centred
+  every submodel name for months, despite `setAttribute('text-anchor',
+  'start')`. Say it in `src/styles.css` with a more specific class.
+- **Headless scripts and the diagram's timings and bands.** Two presses on
+  the same element within 450 ms are a double-click (`_isDoubleClick`) — a
+  script that drags twice in a row opens a dialog instead: pause 0.6 s. A
+  press within ~6 px of a submodel's edge now RESIZES it rather than moving
+  it, and a port sits on the edge where an arc crosses it.
+- **`pkill -f <pattern>` kills its own shell** when the pattern appears in
+  the command line running it. Anchor it: `pkill -f "^/opt/google/chrome/chrome --headless"`.
 - **Round-tripping is not running.** A model can reach a perfect fixed point and
   still produce Prolog that Simile refuses to build — the comparison is our
   model against itself and never asks Simile anything. Sampled 14 of the 54: 12
