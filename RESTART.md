@@ -724,8 +724,12 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   still produce Prolog that Simile refuses to build — the comparison is our
   model against itself and never asks Simile anything. Sampled 14 of the 54: 12
   build; `lamos1a` and `embryo1` do not, *though their originals do*. Item 44.
-  (2026-10-20: `lamos1a` still does not compile in the page either, with or
-  without the 0b fix — something else; not chased.)
+  (2026-10-20: `lamos1a`'s failure FOUND — we dropped Simile's `step=2` on
+  its submodels, so the `dt(2)` its equations use named a time base the
+  model no longer had: `bad_index_number(2,dt,1)`. Now the submodel's "Time
+  base"; it compiles and runs in the page. `lamos1b` compiles in the page
+  too, original and ours, though Robert's Simile 7.x reports an error
+  compiling it — what error, not yet known.)
   `Sienna.Simulation.loadOwn('models/growth')` from the console is the short way
   to ask the engine; `unload()` afterwards, it is a shared public host.
 - **The scratch directory is `/tmp` and does not survive a reboot.** It has been

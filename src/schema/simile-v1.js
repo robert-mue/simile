@@ -222,6 +222,14 @@
           requiredWhen: { kind: 'fixed-membership' },
           help: 'Fixed-membership submodels only. One size per dimension, '
               + 'separated by commas — "4,44" is a 4 × 44 grid.' },
+        // Simile's `step=N` on a submodel: which time base it runs on. Each
+        // base has its own time step (`dt(N)` in an equation; the run's time
+        // step is then one value per base, "0.1 0.01"). Blank is base 1, the
+        // model's own. Dropped on import until 2026-10-20, which made
+        // `lamos1a` (two submodels on base 2, using `dt(2)`) fail to build.
+        { name: 'timeBase', label: 'Time base', type: 'number',
+          help: 'Leave blank to run with the model\'s time step. 2, 3… run '
+              + 'on a further time base, with its own time step, dt(2)…' },
       ],
     },
 

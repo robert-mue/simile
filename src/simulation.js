@@ -91,6 +91,34 @@
    */
   var UPDATES_PER_RUN = 20;
 
+  /**
+   * How many time bases one of our models runs on: 1, or the highest "Time
+   * base" (`timeBase`, Simile's `step=N`) of any of its submodels. Each has
+   * its own time step, `dt(N)`.
+   */
+  function timeBasesOf(path) {
+    var model = path ? Sienna.userData.get(path) : null;
+    var subs = (model && model.submodels) || {};
+    return Object.keys(subs).reduce(function (n, id) {
+      var b = parseInt(String((subs[id].props || {}).timeBase || ''), 10);
+      return b > n ? b : n;
+    }, 1);
+  }
+
+  /**
+   * A time-step setting with at least one value per time base. Neither the
+   * page's engine nor a model file says what a further base's step is, and
+   * one never set is not a step at all, so a missing value repeats the last
+   * one given ("0.1" for two bases → "0.1 0.1"). The modeller changes it in
+   * the run settings, one value per base.
+   */
+  function padSteps(step, bases) {
+    var parts = String(step).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return String(step);
+    while (parts.length < bases) parts.push(parts[parts.length - 1]);
+    return parts.join(' ');
+  }
+
   function chunkFor(runLength, logEach) {
     var log = logEach > 0 ? logEach : 1;
     var run = runLength > 0 ? runLength : log;
@@ -395,6 +423,7 @@
             self.settings.updateEach = chunkFor(Number(self.settings.runLength), Number(self.settings.logEach));
           }
         }
+        self.settings.timeStep = padSteps(self.settings.timeStep, timeBasesOf(self.modelPath));
         if (self.params.errLimit == null) self.params.errLimit = 0;
         self._emit({ type: 'settings' });
 

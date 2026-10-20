@@ -639,6 +639,9 @@
         var w = Math.max(40, (bb[2] || 0) - (bb[0] || 0));
         var h = Math.max(30, (bb[3] || 0) - (bb[1] || 0));
         var kind = self.kindOf(id);
+        // The time base it runs on (`step=2`); 1, or none, is the model's own.
+        var step = parseInt(String(self.N[id].p.step || ''), 10);
+        if (step > 1) kind.props.timeBase = String(step);
         self.ours[id] = self.put('submodel', {
           kind: kind.kind,
           parent: null,                    // filled in once every id exists

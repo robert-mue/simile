@@ -959,11 +959,20 @@
           'multiplication_spec=' + this.spec(id),
           'name=' + atom(s.label || id),
           'separate=0',
-        ]) + ',' + list([
+        ].concat(this.timeBase(id))) + ',' + list([
           'bounding_box=[' + x + ',' + y + ',' + (x + w) + ',' + (y + h) + ']',
           'caption_offset=[0,-8]',
           'internal_extent=[0,0,' + w + ',' + h + ']',
         ]) + ').');
+    },
+
+    /**
+     * `step=N`, the time base a submodel runs on, where it is not the model's
+     * own (the schema's `timeBase`, "Time base"). Absent means base 1.
+     */
+    timeBase: function (id) {
+      var n = parseInt(String(((this.m.submodels[id] || {}).props || {}).timeBase || ''), 10);
+      return n > 1 ? ['step=' + n] : [];
     },
 
     /**
