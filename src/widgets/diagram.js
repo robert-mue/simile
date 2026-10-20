@@ -697,7 +697,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    *
    * The same preventive geometry as a move (§12.3), per side:
    *   - never smaller than what it contains, nor than a usable minimum;
-   *   - never outside its parent;
+   *   - never outside its parent, nor within MARGIN of its edge;
    *   - never over an element it does not contain, nor within MARGIN of one —
    *     growing must not swallow a node or crowd a sibling submodel. Anything
    *     ALREADY overlapping it
@@ -748,11 +748,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (key === 'r') v = Math.max(v, s.l + MIN_W, inner ? inner.r : -Infinity);
       if (key === 't') v = Math.min(v, s.b - MIN_H, inner ? inner.t : Infinity);
       if (key === 'b') v = Math.max(v, s.t + MIN_H, inner ? inner.b : -Infinity);
+      // MARGIN inside the outer submodel too — or the gap there already is,
+      // if less, so a side already closer is not pushed inwards.
       if (outer) {
-        if (key === 'l') v = Math.max(v, outer.l);
-        if (key === 'r') v = Math.min(v, outer.r);
-        if (key === 't') v = Math.max(v, outer.t);
-        if (key === 'b') v = Math.min(v, outer.b);
+        const m = (gap) => Math.min(MARGIN, Math.max(gap, 0));
+        if (key === 'l') v = Math.max(v, outer.l + m(s.l - outer.l));
+        if (key === 'r') v = Math.min(v, outer.r - m(outer.r - s.r));
+        if (key === 't') v = Math.max(v, outer.t + m(s.t - outer.t));
+        if (key === 'b') v = Math.min(v, outer.b - m(outer.b - s.b));
       }
       return v;
     };
