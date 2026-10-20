@@ -203,6 +203,16 @@ text.slx-incomplete {
   cursor: default;
 }
 
+/* Resize zones along a submodel's edges and corners: invisible, but they
+   take the press (a transparent fill does; `none` would not) and say what a
+   drag there does. */
+.slx-submodel .slx-resize { fill: transparent; stroke: none; }
+.slx-submodel .slx-resize-n, .slx-submodel .slx-resize-s { cursor: ns-resize; }
+.slx-submodel .slx-resize-e, .slx-submodel .slx-resize-w { cursor: ew-resize; }
+.slx-submodel .slx-resize-nw, .slx-submodel .slx-resize-se { cursor: nwse-resize; }
+.slx-submodel .slx-resize-ne, .slx-submodel .slx-resize-sw { cursor: nesw-resize; }
+.slx-diagram.slx-placing .slx-submodel .slx-resize { cursor: crosshair; }
+
 /* --- palette -------------------------------------------------------- */
 
 /* Generated from the schema's vocabulary — see the widget. */

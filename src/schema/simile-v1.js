@@ -699,8 +699,11 @@
     // Then 70% of THAT (2026-10-13, format 3): a new or small model, fitted at
     // the zoom cap, still drew glyphs too large beside text of the right size.
     // Text is not scaled with them; stored stock sizes are (Diagram.migrate).
+    // Only a submodel is resizable for now (Robert, 2026-10-20): sizing nodes
+    // belongs with styling them, a model-level setting or a dialog tab, later.
+    // A size already stored for a stock is still drawn; it just cannot change.
     style: {
-      stock:        { shape: 'rect',    resizable: true,  w: 25, h: 17 },
+      stock:        { shape: 'rect',    resizable: false, w: 25, h: 17 },
       variable:     { shape: 'circle',  resizable: false, w: 12.6, h: 12.6 },
       cloud:        { shape: 'cloud',   resizable: false, w: 16.8, h: 11.2 },
       valve:        { shape: 'valve',   resizable: false, w: 8.4, h: 8.4 },

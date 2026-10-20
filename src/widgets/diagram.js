@@ -644,13 +644,197 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     }));
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     g.addEventListener('dblclick', () => this._editLabel(d, id));
+    this._resizeZones(d, id, g, b);
     this._layer.bodies.appendChild(g);
 
+    // The name sits just ABOVE the box, flush with its left edge (Robert,
+    // 2026-10-20): inside, it took room from the contents and sat in the way
+    // of the top edge's resize zone.
     if (sub.label) {
-      const t = this._placeLabel(d, id, sub.label, b.cx - b.w / 2 + 8, b.cy - b.h / 2 + 15,
+      const t = this._placeLabel(d, id, sub.label, b.cx - b.w / 2, b.cy - b.h / 2 - 4,
         'slx-label slx-submodel-label');
       t.setAttribute('text-anchor', 'start');
     }
+  },
+
+  /**
+   * Resize zones along a submodel's edges and corners: invisible bands that
+   * show a resize cursor and start `_beginResize`. Always there, not only on a
+   * selected submodel, because dragging an edge is the gesture people try
+   * first. They sit inside the box, so the interior still moves it, and in
+   * the bodies layer, so a node or port near the edge still wins the press.
+   * None while a placing tool is armed: a press there is a placement.
+   */
+  _resizeZones(d, id, g, b) {
+    if (this._tool) return;
+    const style = (d.schema().style || {}).submodel || {};
+    if (!style.resizable) return;
+    // ~6 screen pixels wide at any zoom, but never more than a quarter of the box.
+    const t = Math.min(6 / this._view.k, b.w / 4, b.h / 4);
+    const l = b.cx - b.w / 2, r = b.cx + b.w / 2;
+    const top = b.cy - b.h / 2, bo = b.cy + b.h / 2;
+    const zones = {
+      n: [l + t, top, b.w - 2 * t, t], s: [l + t, bo - t, b.w - 2 * t, t],
+      w: [l, top + t, t, b.h - 2 * t], e: [r - t, top + t, t, b.h - 2 * t],
+      nw: [l, top, t, t], ne: [r - t, top, t, t],
+      sw: [l, bo - t, t, t], se: [r - t, bo - t, t, t],
+    };
+    Object.keys(zones).forEach((edge) => {
+      const z = zones[edge];
+      const rect = this._el('rect', {
+        class: 'slx-resize slx-resize-' + edge,
+        x: z[0], y: z[1], width: z[2], height: z[3],
+      });
+      rect.addEventListener('pointerdown', (e) => this._beginResize(e, d, id, edge));
+      g.appendChild(rect);
+    });
+  },
+
+  /**
+   * Resize a submodel by dragging an edge or corner (`edge` is n, s, e, w or
+   * a corner, nw … se). Like a move, nothing is written until the drop, so
+   * the gesture is one undo step, and it changes layout only.
+   *
+   * The same preventive geometry as a move (§12.3), per side:
+   *   - never smaller than what it contains, nor than a usable minimum;
+   *   - never outside its parent;
+   *   - never over an element it does not contain, nor within MARGIN of one —
+   *     growing must not swallow a node or crowd a sibling submodel. Anything
+   *     ALREADY overlapping it
+   *     is left out of that, as `_clampDrag` does, or it could never be fixed.
+   * The ports on its boundary stay on the side they were on.
+   */
+  _beginResize(e, d, id, edge) {
+    if (this._tool || this._drag || this._portDrag || this._isDoubleClick(id)) {
+      return this._beginElementDrag(e, d, id);
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const MIN_W = 40, MIN_H = 30, PAD = 4;
+    const MARGIN = 10;   // how close a growing edge may come to something else
+    const rect = (bx) => ({ l: bx.cx - bx.w / 2, r: bx.cx + bx.w / 2, t: bx.cy - bx.h / 2, b: bx.cy + bx.h / 2 });
+    const hits = (a, c) => a.l < c.r && a.r > c.l && a.t < c.b && a.b > c.t;
+    const geom = d.appearanceOf(id) || {};
+    const s = rect(d.box(id));
+    const start = { x: geom.x, y: geom.y, w: s.r - s.l, h: s.b - s.t };
+
+    // What it holds: its own children's boxes (theirs hold theirs) and the
+    // positions of its children's ports, which sit on those children's edges.
+    const kids = d.childrenOf(id).map((k) => rect(d.box(k)));
+    const inner = kids.length ? {
+      l: Math.min(...kids.map((k) => k.l)) - PAD, r: Math.max(...kids.map((k) => k.r)) + PAD,
+      t: Math.min(...kids.map((k) => k.t)) - PAD, b: Math.max(...kids.map((k) => k.b)) + PAD,
+    } : null;
+    const parent = d.parentOf(id);
+    const outer = parent ? rect(d.box(parent)) : null;
+    const inside = d.descendantsOf(id).concat(d.ancestorsOf(id), [id]);
+    // Each one grown by MARGIN, so an edge stops that far short of it — or by
+    // the gap there already is, if that is less, so a box that starts close
+    // to something can still grow on its other sides.
+    const strangers = d.ids('nodes').concat(d.ids('submodels'))
+      .filter((k) => inside.indexOf(k) < 0)
+      .map((k) => rect(d.box(k)))
+      .filter((k) => !hits(s, k))
+      .map((k) => {
+        const gap = Math.max(k.l - s.r, s.l - k.r, k.t - s.b, s.t - k.b);
+        const m = Math.min(MARGIN, Math.max(gap, 0));
+        return { l: k.l - m, r: k.r + m, t: k.t - m, b: k.b + m };
+      });
+
+    // A side's new value, limited by contents, minimum size and parent.
+    const side = (key, v) => {
+      if (key === 'l') v = Math.min(v, s.r - MIN_W, inner ? inner.l : Infinity);
+      if (key === 'r') v = Math.max(v, s.l + MIN_W, inner ? inner.r : -Infinity);
+      if (key === 't') v = Math.min(v, s.b - MIN_H, inner ? inner.t : Infinity);
+      if (key === 'b') v = Math.max(v, s.t + MIN_H, inner ? inner.b : -Infinity);
+      if (outer) {
+        if (key === 'l') v = Math.max(v, outer.l);
+        if (key === 'r') v = Math.min(v, outer.r);
+        if (key === 't') v = Math.max(v, outer.t);
+        if (key === 'b') v = Math.min(v, outer.b);
+      }
+      return v;
+    };
+    const moves = edge.split('').map((c) => ({ n: 't', s: 'b', w: 'l', e: 'r' })[c]);
+
+    const ports = d.portsOn(id).map((key) => {
+      const p = d.layout(key);
+      if (!p) return null;
+      const dist = { l: Math.abs(p.x - s.l), r: Math.abs(p.x - s.r), t: Math.abs(p.y - s.t), b: Math.abs(p.y - s.b) };
+      const on = Object.keys(dist).reduce((a, k) => (dist[k] < dist[a] ? k : a), 'l');
+      return { key, x: p.x, y: p.y, on };
+    }).filter(Boolean);
+
+    const origin = this._toWorld(e.clientX, e.clientY);
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+    const handle = e.currentTarget;
+    if (handle.setPointerCapture) {
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* not captured */ }
+    }
+
+    let legal = Object.assign({}, s);   // the starting box is legal by definition
+    let changed = false;
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      const delta = { l: w.x - origin.x, r: w.x - origin.x, t: w.y - origin.y, b: w.y - origin.y };
+      const want = Object.assign({}, legal);
+      moves.forEach((k) => { want[k] = side(k, s[k] + delta[k]); });
+      // Growing over a stranger: a moving side stops at the near edge of
+      // anything it would reach, so the box comes to rest against it.
+      strangers.forEach((k) => {
+        if (!hits(want, k)) return;
+        moves.forEach((m) => {
+          if (m === 'r' && k.l >= s.r) want.r = Math.min(want.r, k.l);
+          if (m === 'l' && k.r <= s.l) want.l = Math.max(want.l, k.r);
+          if (m === 'b' && k.t >= s.b) want.b = Math.min(want.b, k.t);
+          if (m === 't' && k.b <= s.t) want.t = Math.max(want.t, k.b);
+        });
+      });
+      // Anything still hit (a corner drag meeting something diagonally): keep
+      // each side's last legal value where the new one would hit.
+      const blocked = (bx) => strangers.some((k) => hits(bx, k));
+      let next = want;
+      if (blocked(next)) {
+        moves.forEach((k) => {
+          const trial = Object.assign({}, next, { [k]: legal[k] });
+          if (!blocked(trial)) next = trial;
+        });
+        if (blocked(next)) next = legal;
+      }
+      legal = next;
+      changed = ['l', 'r', 't', 'b'].some((k) => legal[k] !== s[k]);
+
+      const preview = {};
+      preview[id] = Object.assign({}, start, {
+        x: (legal.l + legal.r) / 2, y: (legal.t + legal.b) / 2,
+        w: legal.r - legal.l, h: legal.b - legal.t,
+      });
+      ports.forEach((p) => {
+        const q = { x: p.x, y: p.y };
+        if (p.on === 'l' || p.on === 'r') { q.x = legal[p.on]; q.y = Math.min(legal.b, Math.max(legal.t, p.y)); }
+        else { q.y = legal[p.on]; q.x = Math.min(legal.r, Math.max(legal.l, p.x)); }
+        if (q.x !== p.x || q.y !== p.y) preview[p.key] = q;
+      });
+      this._drag = { id, moves: preview };
+      this._render();
+    };
+    const end = (ev) => {
+      $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      const drag = this._drag;
+      this._drag = null;
+      if (ev && ev.type === 'pointercancel') { this._render(); return; }
+      // A press that never changed the size is a selection, as on the body.
+      if (!changed || !drag) {
+        this._select(id, additive);
+        this._render();
+        return;
+      }
+      d.commitDrag(drag.moves, null);
+      this._render();
+    };
+    $(document).on('pointermove', move).on('pointerup pointercancel', end);
   },
 
   /**
