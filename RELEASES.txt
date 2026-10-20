@@ -166,3 +166,25 @@ Models
   published R model (Almeida et al., 2023).
 - A number written with an exponent, such as 1.0e12, is now exported
   as written; before, the model would not run.
+
+
+------------------------------------------------------------------------
+Release 2026-10-20
+------------------------------------------------------------------------
+
+Submodels
+- A submodel can now be resized: drag any edge or corner (the pointer
+  changes as you reach one). It will not shrink smaller than what it
+  contains, nor grow outside the submodel around it or over anything
+  else. One drag is one undo.
+- Moving or resizing keeps a 10-unit gap from the edge of the submodel
+  around it and from other submodels.
+- A submodel's name now sits just above its top-left corner, rather
+  than inside the box, and its corners are more rounded.
+
+Population symbols
+- Their property dialogs now say what each value means, following
+  Simile's developer: creation is the number of members at the start;
+  immigration the arrivals per time unit; reproduction the offspring
+  per member per time unit; loss the probability of loss in one time
+  unit (or a condition: removed when true).
