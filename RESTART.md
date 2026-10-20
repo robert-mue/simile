@@ -2,10 +2,11 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-10-20, at the end of a day that
-answered the population-symbols questions, sent the rest to the developer,
-parked automatic layout, built submodel resizing and released it
-(**2026-10-20**). Now: association submodels and role arrows ("Now", below).
+embedded-widget pages. Brought up to date 2026-10-20 (evening): that day
+answered the population-symbols questions and question 0b, built submodel
+resizing, fixed two-party associations and kept submodels' time bases, and
+released twice (**2026-10-20**, **2026-10-20b**, the latest). Now: Robert
+hand-building the farmers & fields model ("Now", below).
 If you are picking this up cold — a new session, a new machine, or a week
 later — read this first. `STATUS.md` is the full record (items 46–47 are the
 last two days it covers); this is the part you need to get moving.*
@@ -91,7 +92,20 @@ model on SimiLive.
 
 ## Now: association submodels and role arrows (Robert, 2026-10-20)
 
-Robert is checking associations and role arrows, and is building two minimal
+**Latest (2026-10-20, evening): Robert is hand-building the farmers & fields
+model** (`src/demo-farmers.js` is our reference copy, §9: FARMER a population,
+FIELD fixed membership, OWNERSHIP an association between the two — the
+two-party shape that question 0b was about). The seeded copy builds and runs
+in the page as of 2026-10-20b, but it has NO influence across its association,
+so it never exercised the role index; his, with values passing between farmer
+and field through the association, will be the first real test of the 0b fix
+in a model built in the editor. Expect `in_assoc` indices taken from each
+base's own `references` list (each base lists one role, so 0 for both). If it
+fails to build, trace the generator (scratch copy of
+`tools/engine/generator/headless.pl` with `hl_setting(trace, true)` forced —
+its `Query {…}` line names the fault, as it did for lamos1a).
+
+Before that, he was building two minimal
 demo models **himself** (deliberately, so as not to get lazy), in the release
 app: one association joining two separate submodels, one with a single
 submodel in both roles. The first is the `feeding1` case, which exports and
@@ -110,6 +124,21 @@ separate model stores.
 **Term (Robert, 2026-10-20): the model JSON is the MODEL SPEC**, never "model
 data" — "data" is kept for numeric data (parameter values, data files such as
 soil parameters over a grid), which the app will handle one day.
+
+## Done: two-party associations and time bases (2026-10-20, released 2026-10-20b)
+
+- **Question 0b answered** ("Waiting on the developer", below): an
+  association role's index counts in the list of the submodel holding the
+  link's destination. Exporter `refsOf` / `assocRole`, importer
+  `resolvedRefs` / `roleAliasesFor`; `ancestor(k)` lists for submodels nested
+  in a base. `feeding1` exports, round-trips and runs.
+- **Time bases.** Simile's `step=N` on a submodel (it runs on time base N,
+  `dt(N)`) was dropped on import, so `lamos1a` would not build. Now the
+  submodel's "Time base" field (`timeBase`), read and written. The run's time
+  step is padded to one value per base by repeating the last ("0.1 0.1") —
+  `padSteps` in `src/simulation.js` — because nothing says what a further
+  base's step should be. If Simile has a default for it, match it.
+- **`lamos1b`'s GCC warning is the model's own error** (see the traps).
 
 ## Done: resizing a submodel (2026-10-20, released)
 
