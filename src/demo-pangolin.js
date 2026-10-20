@@ -29,7 +29,7 @@
  * does not build), and the guards say `else 0.0` (an int branch does not
  * match a real one).
  *
- * Model data, not built step by step like the other demos: it was generated,
+ * A model spec, not built step by step like the other demos: it was generated,
  * and laid out, as a whole. Classic script; no imports/exports.
  */
 (function (Sienna) {

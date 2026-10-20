@@ -19,7 +19,7 @@ badly framed.*
 The limitations in question, from `STATUS.md` item 20 and the known-gaps list:
 
 1. the action log does not survive a reload — it lives in memory only;
-2. it grows without bound, and `localStorage` is ~5 MB *shared with the model data*;
+2. it grows without bound, and `localStorage` is ~5 MB *shared with the model specs*;
 3. persisting it drags undo semantics along with it;
 4. replay must start from a clean slate, so it destroys the current one;
 5. panel ids must line up with the recorded ones;
@@ -48,7 +48,7 @@ guard that names the models a log cannot rebuild (`STATUS.md` item 20) exists *o
 log and the models have different lifetimes.
 
 **The quota interaction** — largely gone. Not because a server has infinite room, but because the
-log would stop competing with the model data for one 5 MB allowance. The nasty failure mode —
+log would stop competing with the model specs for one 5 MB allowance. The nasty failure mode —
 *models stop saving because history filled the disk, silently* — is specific to sharing a small
 quota with the thing you cannot afford to lose.
 
