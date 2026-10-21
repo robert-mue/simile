@@ -649,6 +649,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     g.appendChild(this._el('rect', {
       x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 8,
+      // A pastel that deepens with nesting, so an inner submodel stands out
+      // from the one it is in (Robert, 2026-10-21). Inline: a stylesheet's
+      // `fill` would beat an attribute.
+      style: 'fill:' + this._submodelFill(d.ancestorsOf(id).length),
     }));
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     g.addEventListener('dblclick', () => this._editLabel(d, id));
@@ -662,6 +666,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._placeLabel(d, id, sub.label, b.cx - b.w / 2, b.cy - b.h / 2 - 4,
         'slx-label slx-submodel-label');            // anchored at its start: styles.css
     }
+  },
+
+  /**
+   * A submodel's background at a nesting depth (0 = top level): a pale blue,
+   * a step darker for each level in, stopping well short of dark so the
+   * contents stay easy to read however deep the nesting goes.
+   */
+  _submodelFill(depth) {
+    const light = Math.max(80, 96 - depth * 5);
+    return `hsl(205, 70%, ${light}%)`;
   },
 
   /**
