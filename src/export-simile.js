@@ -354,6 +354,18 @@
         var field = self.exprField(n.type);
         if (field && !String((n.props || {})[field] || '').trim()) {
           problems.push('"' + name + '" has no ' + field);
+          return;
+        }
+        // One number required, a list given: Simile's generator would write
+        // C++ that does not compile (see the schema's `scalar`).
+        var spec = (((Sienna.schemas.get(m.schema || 'simile-v1').nodes || {})[n.type] || {}).fields || [])
+          .filter(function (f) { return f.name === field; })[0];
+        var text = field ? String((n.props || {})[field] || '') : '';
+        var parsed = spec && spec.scalar ? Sienna.equation.parse(text) : null;
+        if (parsed && parsed.ok && Sienna.equation.isCollection(parsed.ast)) {
+          problems.push('"' + name + '": its ' + (spec.label || field).toLowerCase() + ' "' + text.trim()
+            + '" is a list of values, but it needs one — reduce it with a list function, e.g. sum('
+            + text.trim() + ')');
         }
       });
 

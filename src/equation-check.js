@@ -195,6 +195,16 @@
           return;                                // no tree, so nothing further to say
         }
 
+        // A field that must hold ONE number, holding a list or array as a
+        // whole: Simile's generator lets it through and the C++ fails.
+        if (f.scalar && Sienna.equation.isCollection(parsed.ast)) {
+          out.push({
+            id: id, label: label, kind: 'form', field: f.name, at: part.at, len: part.text.length,
+            message: f.label + ': "' + part.text.trim() + '" is a list of values, but this needs one'
+              + ' — reduce it with a list function, e.g. sum(' + part.text.trim() + ')',
+          });
+        }
+
         calls(parsed.ast).forEach(function (c) {
           if (!Object.prototype.hasOwnProperty.call(table, c.name)) {
             out.push({

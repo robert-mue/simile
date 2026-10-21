@@ -102,7 +102,7 @@
     // leave every single-instance one permanently red.
     nodes: {
       stock:        { has_label: true,  fields: [
-        { name: 'initial', label: 'Initial value', type: 'expression', required: true,
+        { name: 'initial', label: 'Initial value', type: 'expression', required: true, scalar: true,
           help: 'Value at the start of the run.' },
         { name: 'units',   label: 'Units', type: 'text' },
       ] },
@@ -132,13 +132,13 @@
       // invented here. Every other type takes its own name as the stem.
       valve:        { has_label: true,  labelStem: 'flow', autoCreated: true,
                       positionedBy: 'arc', fields: [
-        { name: 'rate',  label: 'Rate', type: 'expression', required: true,
+        { name: 'rate',  label: 'Rate', type: 'expression', required: true, scalar: true,
           help: 'Rate of flow.' },
         { name: 'units', label: 'Units', type: 'text' },
         SKETCH,
       ] },
       condition:    { has_label: true,  fields: [
-        { name: 'expr', label: 'Condition', type: 'expression', required: true,
+        { name: 'expr', label: 'Condition', type: 'expression', required: true, scalar: true,
           help: 'The submodel exists for a member when this is true.' },
       ] },
       // `label` is what the palette and the dialog call a type when it is not
@@ -153,13 +153,13 @@
       // probability per time unit, or a boolean, which is 1 or 0 (Trees:
       // `size>17`; animal1: 0.6). All but creation can instead be discrete
       // events, driven by incoming event influences — not yet ours to draw.
-      initialiser:  { has_label: true,  label: 'creation', fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true,
+      initialiser:  { has_label: true,  label: 'creation', fields: [{ name: 'expr', label: 'Number created', type: 'expression', required: true, scalar: true,
         help: 'Members at the start of the run. A fractional part is ignored.' }] },
-      migrator:     { has_label: true,  label: 'immigration', fields: [{ name: 'expr', label: 'Arrivals per time unit', type: 'expression', required: true,
+      migrator:     { has_label: true,  label: 'immigration', fields: [{ name: 'expr', label: 'Arrivals per time unit', type: 'expression', required: true, scalar: true,
         help: 'New members arriving in a time unit, for the population as a whole.' }] },
-      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Probability of loss in one time unit', type: 'expression', required: true,
+      exterminator: { has_label: true,  label: 'loss', fields: [{ name: 'expr', label: 'Probability of loss in one time unit', type: 'expression', required: true, scalar: true,
         help: 'Probability that a member is removed in a time unit, or a condition: removed when true.' }] },
-      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Offspring per member per time unit', type: 'expression', required: true,
+      reproduction: { has_label: true,  fields: [{ name: 'expr', label: 'Offspring per member per time unit', type: 'expression', required: true, scalar: true,
         help: 'New members each existing member produces in a time unit.' }] },
 
       // ---- event-based modelling: DECLARED, NOT IMPLEMENTED ----
@@ -194,6 +194,11 @@
       },
     },
 
+    // `scalar: true` on a field: its value must be ONE number. A list or array
+    // there — `{x_farmer}` as a flow's whole rate — is refused, since Simile's
+    // generator does not refuse it but writes C++ that will not compile
+    // (Robert's farmers & fields, 2026-10-21). A variable may hold an array,
+    // so its value is not marked.
     // A submodel is one object whose KIND is a property (§2), so its dialog is
     // where that gets chosen. `target: 'kind'` says the value is stored on the
     // element itself rather than in its props.

@@ -163,6 +163,16 @@ built but would not compile: `bad_parameter flow1 variable1_`. Fixed:
   is now named after its base (`farmer`; `farmer2` for a second role from the
   same base), and an unnamed one is drawn red and reported.
 
+**His second build** (`farmers_and_fields_rm2.json`, a remake of a model he
+made in the old Simile) was right except that `flow1`'s rate was the list
+alone, `{variable1_submodel1}`: Simile's generator does not refuse a list
+where one number is needed — it writes C++ that fails (`use of undeclared
+identifier 'variable1'`). Now a field marked `scalar: true` in the schema
+(stock initial, flow rate, condition, the population symbols — NOT a
+variable, which may hold an array) refuses a whole-list value, red and at
+export, suggesting `sum(…)`. With `sum({variable1_submodel1})` it runs.
+Full type checking (a list used inside arithmetic, say) is not attempted.
+
 His model, with roles named and `sum({variable1_farmer})`, passes every check,
 gets C++ from Simile's generator and runs. Generator on our exports: AntsWorld
 now builds (it did not before); feeding1, lamos1a, life_input build.

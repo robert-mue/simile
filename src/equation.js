@@ -117,6 +117,14 @@
    * @param {string|object} input  equation text, or an AST from parse()
    * @returns {Array<{name: string, form: 'scalar'|'list'|'array', at: number}>}
    */
+  /**
+   * Is the whole expression a list or array — `{x}`, `[x]`, `{a, b}` — rather
+   * than one value? For a field that must hold a single number.
+   */
+  function isCollection(ast) {
+    return !!ast && (ast.t === 'list' || ast.t === 'array');
+  }
+
   function references(input) {
     var ast = input;
     if (typeof input === 'string') {
@@ -177,5 +185,5 @@
     return out.filter(function (ref) { return !bound[ref.name]; });
   }
 
-  Sienna.equation = { parse: parse, references: references };
+  Sienna.equation = { parse: parse, references: references, isCollection: isCollection };
 }(window.Sienna));
