@@ -182,8 +182,12 @@ dimension (`dims [n,0]`, `Simulation.isPerInstance`) is plotted as a line per
 instance, like a population; association variables are left out. That needed
 `sx_value` in `tools/engine/bridge.cpp` to send a 1-D array (it sent null),
 so `vendor/simile-runtime/simile-runtime.js` was REBUILT (2026-10-21; the
-sample pages' compiled models still run). Not yet: 2-D grids on a plot, and
-an association's farmer × field table (`dims [0,10,30,0,0]`) on anything.
+sample pages' compiled models still run). Then (same day) an ASSOCIATION's
+variables too: `sx_value` reads a sparse block with any number of indices
+(a population has one, an association one per role) and keys it "i,j" —
+farmer i with field j — so the plot draws a line per pairing for as long as
+it exists, as for a tree; library rebuilt again. Not yet: 2-D grids on a
+plot.
 
 His model, with roles named and `sum({variable1_farmer})`, passes every check,
 gets C++ from Simile's generator and runs. Generator on our exports: AntsWorld

@@ -219,7 +219,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     if (was && list.concat(members).some((c) => c.id === was)) this._pick.val(was);
   },
 
-  /** Is this component a value per instance (population member or fixed instance)? */
+  /** Is this component a value per instance (member, fixed instance or pairing)? */
   _isMembers(id) {
     const c = (this._sim.components || {})[id] || {};
     return Sienna.Simulation.isPerInstance(c.dims);

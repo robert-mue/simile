@@ -1066,24 +1066,31 @@
    * ▶ does by itself after an edit (Robert, 2026-10-13).
    *
    * `many` marks one with a value per instance of ONE multi-instance
-   * submodel — a population's members, or a fixed membership of one
-   * dimension (`isPerInstance`). Left out, since no display here draws them:
-   * anything deeper (two such submodels, a 2-D grid) and anything in an
-   * ASSOCIATION, whose kind is stored as `single` but which has an instance
-   * per pairing — offered as a single value it was listed "(from the next
-   * run)" for ever (Robert, 2026-10-21).
+   * submodel — a population's members, a fixed membership of one dimension,
+   * or an ASSOCIATION's pairings (`isPerInstance`); an association's kind is
+   * stored as `single`, but it has an instance per pairing, and taken for one
+   * instance its variables were listed "(from the next run)" for ever
+   * (Robert, 2026-10-21). Left out, since no display here draws them:
+   * anything deeper (two such levels, a 2-D grid).
    */
   /**
-   * One number per instance of ONE multi-instance submodel: a population's
-   * members (`dims` `['MEMBERS', 0]`, sent as `{member: value}`) or a fixed
-   * membership's instances (`[n, 0]`, sent as an array) — what a plot draws
-   * as a line each. Anything deeper (a 4×44 grid, an association's
-   * farmer × field table, a population inside another multi-instance
+   * One number per instance of ONE multi-instance submodel — what a plot
+   * draws as a line each:
+   *   - a population's members, `dims` `['MEMBERS', 0]`, sent as
+   *     `{member: value}`;
+   *   - a fixed membership's instances, `[n, 0]`, sent as an array;
+   *   - an association's pairings, `[0, n1, n2, 0, 0]` (one size per role),
+   *     sent as `{"i,j": value}` for the pairings that exist — farmer i with
+   *     field j (`sx_value` in tools/engine/bridge.cpp).
+   * Anything deeper (a 4×44 grid, a population inside another multi-instance
    * submodel) is not this.
    */
   Simulation.isPerInstance = function (dims) {
-    dims = dims || [];
-    return dims.length === 2 && (dims[0] === 'MEMBERS' || /^\d+$/.test(String(dims[0])));
+    dims = (dims || []).map(String);
+    var whole = function (x) { return /^\d+$/.test(x) && x !== '0'; };
+    if (dims.length === 2) return dims[0] === 'MEMBERS' || whole(dims[0]);
+    return dims.length >= 4 && dims[0] === '0' && dims[dims.length - 1] === '0'
+      && dims[dims.length - 2] === '0' && dims.slice(1, -2).every(whole);
   };
 
   Simulation.variablesOf = function (ref) {
@@ -1097,17 +1104,16 @@
       if (!KINDS[n.type] || !n.label) return;
       var path = [];
       var multi = [];
-      var assoc = false;
       for (var p = n.parent; p && subs[p]; p = subs[p].parent) {
         path.unshift(subs[p].label || p);
-        if (Sienna.Diagram && Sienna.Diagram.isAssociation(m, p)) assoc = true;
+        if (Sienna.Diagram && Sienna.Diagram.isAssociation(m, p)) multi.push('association');
         else if (subs[p].kind === 'population') multi.push('population');
         else if (subs[p].kind === 'fixed-membership') {
           // One dimension only: "10", not "4,44".
           multi.push(String((subs[p].props || {}).dimensions || '').indexOf(',') < 0 ? 'fixed' : 'grid');
         }
       }
-      if (assoc || multi.length > 1 || multi[0] === 'grid') return;
+      if (multi.length > 1 || multi[0] === 'grid') return;
       out.push({ label: path.concat([n.label]).join('/'), many: multi.length === 1 });
     });
     return out.sort(function (a, b) { return a.label.localeCompare(b.label); });

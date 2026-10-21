@@ -199,9 +199,9 @@ EMSCRIPTEN_KEEPALIVE
 double sx_stopped_at() { return stoppedAt; }
 
 // One component's current value as JSON: a number, [v1, v2, …] for a fixed
-// membership of one dimension, {member: value} for a
-// population (keys are the members' own numbers, kept for their lives), or
-// null for a shape not read here yet.
+// membership of one dimension, {key: value} for a population (keys the
+// members' own numbers, kept for their lives) or an association (keys
+// "i,j", one index per role), or null for a shape not read here yet.
 EMSCRIPTEN_KEEPALIVE
 const char* sx_value(const char* nodeId) {
   nodeValues* v = get_raw_values((char*)nodeId, instance);
@@ -225,18 +225,27 @@ const char* sx_value(const char* nodeId) {
         addNumber(reply, numberAt(v->contents + i * size, t));
       }
       reply += "]";
-    } else if (kind == SPARSEARRAY && v->dimSpecs[1] == 1) {
+    } else if (kind == SPARSEARRAY && v->dimSpecs[1] >= 1 && v->dimSpecs[1] <= 8) {
+      // Variable membership: a population (one index, the member's number)
+      // or an association (one index per role — a farmer and a field), each
+      // entry its indices then its value (shank.cpp translate_dims). Keys are
+      // the indices joined by commas: "3" for a member, "3,17" for a pairing.
+      int d = v->dimSpecs[1];
       int t = v->dimSpecs[2];
       if (t == REAL || t == INTEGER || t == FLAG || t <= ENUM_BASE) {
         sizeAndPtr* sp = (sizeAndPtr*)v->contents;
-        int stride = sizeof(int) + sizeOfType(t);
+        int stride = d * sizeof(int) + sizeOfType(t);
         reply = "{";
         for (int i = 0; i < sp->size; ++i) {
           const char* at = sp->ptr + i * stride;
-          int member; memcpy(&member, at, sizeof member);
-          char key[24]; snprintf(key, sizeof key, "%s\"%d\": ", i ? ", " : "", member);
-          reply += key;
-          addNumber(reply, numberAt(at + sizeof(int), t));
+          reply += i ? ", \"" : "\"";
+          for (int k = 0; k < d; ++k) {
+            int idx; memcpy(&idx, at + k * sizeof(int), sizeof idx);
+            char num[16]; snprintf(num, sizeof num, "%s%d", k ? "," : "", idx);
+            reply += num;
+          }
+          reply += "\": ";
+          addNumber(reply, numberAt(at + d * sizeof(int), t));
         }
         reply += "}";
       }
