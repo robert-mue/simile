@@ -195,13 +195,15 @@
           return;                                // no tree, so nothing further to say
         }
 
-        // A field that must hold ONE number, holding a list or array as a
-        // whole: Simile's generator lets it through and the C++ fails.
-        if (f.scalar && Sienna.equation.isCollection(parsed.ast)) {
+        // A whole equation that is a list: no model variable can hold one
+        // (Simile's words, below); nor can a field that must be ONE number
+        // hold an array. Simile's generator lets both through and the C++
+        // fails, so say it here.
+        var whole = Sienna.equation.wholeForm(parsed.ast);
+        if (whole === 'list' || (whole === 'array' && f.scalar)) {
           out.push({
             id: id, label: label, kind: 'form', field: f.name, at: part.at, len: part.text.length,
-            message: f.label + ': "' + part.text.trim() + '" is a list of values, but this needs one'
-              + ' — reduce it with a list function, e.g. sum(' + part.text.trim() + ')',
+            message: f.label + ': ' + Sienna.equation.collectionMessage(whole, part.text),
           });
         }
 

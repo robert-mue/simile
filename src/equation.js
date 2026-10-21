@@ -118,11 +118,24 @@
    * @returns {Array<{name: string, form: 'scalar'|'list'|'array', at: number}>}
    */
   /**
-   * Is the whole expression a list or array — `{x}`, `[x]`, `{a, b}` — rather
-   * than one value? For a field that must hold a single number.
+   * What the whole expression is, where it is a collection: `'list'` for
+   * `{…}`, `'array'` for `[…]`, else null. Simile: "A model variable cannot
+   * represent a list" — so a whole-list equation is wrong anywhere, and a
+   * whole array is wrong where one number is needed (a field marked
+   * `scalar`); a variable may hold an array.
    */
-  function isCollection(ast) {
-    return !!ast && (ast.t === 'list' || ast.t === 'array');
+  function wholeForm(ast) {
+    return ast && (ast.t === 'list' || ast.t === 'array') ? ast.t : null;
+  }
+
+  /** The message for one, in Simile's own words where it has them. */
+  function collectionMessage(form, text) {
+    var t = String(text).trim();
+    return form === 'list'
+      ? 'the expression evaluates to a list. A model variable cannot represent a list'
+        + ' — reduce it with a list function, e.g. sum(' + t + ')'
+      : 'the expression evaluates to an array, but this needs a single value'
+        + ' — reduce it, e.g. sum(' + t + ')';
   }
 
   function references(input) {
@@ -185,5 +198,8 @@
     return out.filter(function (ref) { return !bound[ref.name]; });
   }
 
-  Sienna.equation = { parse: parse, references: references, isCollection: isCollection };
+  Sienna.equation = {
+    parse: parse, references: references,
+    wholeForm: wholeForm, collectionMessage: collectionMessage,
+  };
 }(window.Sienna));

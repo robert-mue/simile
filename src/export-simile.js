@@ -356,16 +356,16 @@
           problems.push('"' + name + '" has no ' + field);
           return;
         }
-        // One number required, a list given: Simile's generator would write
-        // C++ that does not compile (see the schema's `scalar`).
+        // A whole list (never allowed) or a whole array where one number is
+        // needed: Simile's generator would write C++ that does not compile
+        // (see `Sienna.equation.wholeForm` and the schema's `scalar`).
         var spec = (((Sienna.schemas.get(m.schema || 'simile-v1').nodes || {})[n.type] || {}).fields || [])
-          .filter(function (f) { return f.name === field; })[0];
+          .filter(function (f) { return f.name === field; })[0] || {};
         var text = field ? String((n.props || {})[field] || '') : '';
-        var parsed = spec && spec.scalar ? Sienna.equation.parse(text) : null;
-        if (parsed && parsed.ok && Sienna.equation.isCollection(parsed.ast)) {
-          problems.push('"' + name + '": its ' + (spec.label || field).toLowerCase() + ' "' + text.trim()
-            + '" is a list of values, but it needs one — reduce it with a list function, e.g. sum('
-            + text.trim() + ')');
+        var parsed = text ? Sienna.equation.parse(text) : null;
+        var whole = parsed && parsed.ok ? Sienna.equation.wholeForm(parsed.ast) : null;
+        if (whole === 'list' || (whole === 'array' && spec.scalar)) {
+          problems.push('"' + name + '": ' + Sienna.equation.collectionMessage(whole, text));
         }
       });
 
