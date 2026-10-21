@@ -652,7 +652,24 @@ DESIGN-diagram.md §23 is the record; the short version:
 
 The older queue, still true (embedded-widget pages and the engine, which went ahead of it, are done):
 
-### 1. A regression net for the EDITOR — still the first job, and now overdue
+### 1. A regression net for the EDITOR — STARTED 2026-10-21
+
+**`test/editor.html`** + `test/editor-tests.js`: 14 tests, all green, ~0.4 s.
+Real diagram widget (through `embed.js`, so real store/actions/history and
+nothing kept), real PointerEvents dispatched at `elementFromPoint`, positions
+in diagram units at a fixed view `{0,0,1}`. Covers placing, drawing
+submodels, Robert's items 33/34/37, resize + its margins and undo, move +
+undo, the submodel label. Proved by breaking three fixes on purpose (item 33,
+`_MARGIN`, the label's `text-anchor`): each turned exactly its test red.
+**Next for it:** the property dialog (open by double-click, edit, OK — the
+equation names offered, item 35's `{…}` insert), influences and their
+bending, ports (drag along the boundary), delete + undo, band select,
+copy/ungroup, and the panel-level things this page cannot reach (titles,
+thumbnails — those need the whole app). Each gesture bug Robert finds:
+add its test here first.
+
+(The original case for it, kept:)
+
 
 Everything above argues for it. What is missing is a page that drives the
 *widget*: arm a tool, click, and assert where the element landed and what the

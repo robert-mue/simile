@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>simile — editor regression</title>
+    <style>
+      body { font: 13px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 64rem; }
+      h1 { font-size: 1.2rem; }
+      #summary { font-size: 1.1rem; padding: 0.6rem 0.9rem; border-radius: 4px; margin: 1rem 0; }
+      .pass { background: #e8f5e9; border: 1px solid #a5d6a7; }
+      .fail { background: #ffebee; border: 1px solid #ef9a9a; }
+      table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+      th, td { border-top: 1px solid #eee; padding: 5px 9px; text-align: left; vertical-align: top; }
+      th { color: #666; font-weight: 600; border-top: none; }
+      td.name { font-family: ui-monospace, monospace; white-space: nowrap; }
+      td.ok { color: #1b5e20; }
+      td.bad { color: #b71c1c; font-family: ui-monospace, monospace; font-size: 12px; }
+      td.shot svg { width: 220px; height: 150px; border: 1px solid #eee; background: #fff; }
+      p.note { color: #666; }
+      /* The stage the tests run on. FIXED and on screen, because a gesture
+         finds its target with elementFromPoint, as a real press does, and that
+         sees only what is in the viewport. */
+      #stage { position: fixed; top: 12px; right: 12px; width: 560px; height: 380px;
+               border: 1px solid #ccc; background: #fff; display: flex; flex-direction: column;
+               box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; }
+      #stage.done { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>Editor regression — gestures on the real diagram widget</h1>
+    <p class="note">
+      Each test builds a model the way a person does — arms a palette tool,
+      presses, drags, types a name — on the real diagram widget, with real
+      pointer and keyboard events dispatched where the press would land (found
+      with <code>elementFromPoint</code>, so what is on top wins, as it does
+      for a hand). Then it checks the model and the drawing. The other pages
+      test the model, the converters and the grammar; this one tests the
+      <em>editor</em>, which they cannot see.
+    </p>
+    <p class="note">
+      Loaded through <code>embed.js</code>, so the shell's store, actions and
+      undo history are the real ones, and nothing is kept: the page sets
+      <code>SIENNA_EPHEMERAL</code>, and no saved model can be touched.
+      Leave the tab in front while it runs — a hidden tab may not lay out.
+    </p>
+    <p class="note">
+      Positions are in diagram units at 100% zoom: the stage's view is set to
+      <code>{x: 0, y: 0, k: 1}</code> before each test. Each row shows the
+      diagram as the test left it.
+    </p>
+
+    <div id="summary">loading…</div>
+    <table id="results">
+      <thead><tr><th>test</th><th>guards</th><th>result</th><th>diagram afterwards</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="stage"></div>
+
+    <script src="../embed.js"></script>
+    <script src="editor-tests.js"></script>
+  </body>
+</html>

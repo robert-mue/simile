@@ -36,6 +36,8 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
   all four stages, and takes its screenshots (`tr/…`).
 - `scripts/predator-prey-P1…P5.py` — the Predator-prey stages, run in order.
 - `scripts/test-pages.py` — opens `test/index.html` and `test/fixtures.html`.
+- `scripts/editor.py` — runs `test/editor.html` (over http, via `tools/serve.py`)
+  and prints its bar and any failing tests.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.

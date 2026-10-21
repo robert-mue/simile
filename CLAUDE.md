@@ -148,6 +148,12 @@ footing (`src/widgets/grid.js` is the first).
   - `roundtrip.html` — takes `.pl` files (select the whole model catalogue) and
     checks that `.pl` → our model → `.pl` reaches a fixed point, reporting what
     each import LOST as well, since a fixed point cannot show that.
+  - `editor.html` — the EDITOR regression net: gestures (arm a tool, press,
+    drag, type) on the real diagram widget, with real pointer events landing
+    where a hand's would (`elementFromPoint`), then checks on the model and
+    the drawing. Tests in `editor-tests.js`; each gesture bug found should
+    leave one. Loads through `embed.js`, so nothing is kept. Keep the tab in
+    front while it runs. Headless: `tools/headless/scripts/editor.py`.
 
   The last two stub `userData`/`actions` rather than loading the shell: the real
   store autosaves to localStorage, and a test page must not be able to touch
