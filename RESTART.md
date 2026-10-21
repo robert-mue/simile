@@ -7,8 +7,7 @@ Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
 pairings between them. "What could have been show-stoppers weren't."
-Everything since release **2026-10-20b** is on `main`, tested, and NOT
-released (Robert decides when). The editor regression net exists
+All of it is RELEASED as **2026-10-21** (the latest). The editor regression net exists
 (`test/editor.html`). Item 38 (what the Simulation window is for) is parked
 to think through.
 If you are picking this up cold — a new session, a new machine, or a week
@@ -101,8 +100,8 @@ model on SimiLive.
 (`~/Projects/simile_models/farmers_and_fields_rm2.json`) compiled once its
 rate summed the list, and now plots everything; see "Done" below for what it
 took (a list where one number is needed; plotting fixed instances and
-association pairings, with the run-time library rebuilt twice). Unreleased
-on `main`: offer a release when he next asks what is pending.
+association pairings, with the run-time library rebuilt twice). Released
+as 2026-10-21.
 
 **Earlier (2026-10-21): Robert REPEATED the farmers & fields build in his
 local copy** (not the release site), to try items 33–37 end to end before a
@@ -144,7 +143,7 @@ separate model stores.
 data" — "data" is kept for numeric data (parameter values, data files such as
 soil parameters over a grid), which the app will handle one day.
 
-## Done: Robert's farmers & fields, items 33–37 (2026-10-21, on `main`, not yet released)
+## Done: Robert's farmers & fields, items 33–37 (2026-10-21, released 2026-10-21)
 
 His hand-built model (`~/Projects/simile_models/farmers_and_fields_rm1.json`)
 built but would not compile: `bad_parameter flow1 variable1_`. Fixed:

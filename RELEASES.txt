@@ -209,3 +209,42 @@ Time bases
 - A model with more than one time base has one time step per base in
   the run settings, for example "1 0.1". A base without one takes the
   last value given.
+
+
+------------------------------------------------------------------------
+Release 2026-10-21
+------------------------------------------------------------------------
+
+Associations
+- A new role arrow is named after its submodel (farmer, and farmer2 for
+  a second role from the same submodel), so the names an influence
+  across the association brings read id_farmer rather than id_. A role
+  arrow with no name is drawn red.
+- A value coming out of an association into a submodel is a list, one
+  value per pairing, and the property dialog now offers it that way:
+  {variable1_farmer}. Writing it without the braces turns the equation
+  red, with a message saying what to write.
+- Roles that Simile marks as exclusive (each instance takes part at
+  most once, as an ant is at one location) are kept on import, and a
+  value through one is a single value. Some catalogue models that would
+  not build from our copy before now do.
+- Role arrows are thicker, with a bigger arrowhead, and curved; drag
+  one to change its curve. Two between the same pair bend apart, each
+  with its own label.
+
+Drawing
+- A flow can be drawn from empty space inside a submodel to a stock in
+  it (or the other way): the cloud is made inside the submodel.
+- A role arrow drawn from inside a submodel starts where you pressed.
+
+Checks
+- An equation that is a list as a whole is refused, as Simile refuses
+  it: "The expression evaluates to a list. A model variable cannot
+  represent a list" - with a suggestion such as sum({...}). Before, the
+  model was accepted and then failed to compile.
+
+Plots
+- A submodel with a fixed number of instances (10 farmers, say) can be
+  plotted: a line for each instance.
+- A variable inside an association can be plotted: a line for each
+  pairing, for as long as the pairing exists.
