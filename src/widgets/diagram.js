@@ -64,7 +64,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   // Arrowhead length per arc type, in world units — must match the marker
   // paths built in _buildCanvas, since the line is shortened by exactly this.
-  _ARROW_LEN: { flow: 6.3, influence: 4.725, role: 4.725 },
+  _ARROW_LEN: { flow: 6.3, influence: 4.725, role: 7.5 },
 
   // Sagitta as a fraction of the chord may not reach 0.5: at 0.5 the arc is a
   // semicircle, and beyond it the drawn arc is no longer the one intended.
@@ -390,6 +390,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const defs = this._el('defs');
     defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L6.3,2.625 L0,5.25 z', 6.3, 2.625));
     defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.525 L4.725,2.625 L0,4.725 z', 4.725, 2.625));
+    // A role's head is the largest: it is drawn thick and dashed, and a small
+    // head was lost in the dashes (Robert's item 36).
+    defs.appendChild(this._marker('slx-arrow-role', 'M0,0 L7.5,3.15 L0,6.3 z', 7.5, 3.15));
     svg.appendChild(defs);
 
     // THE root transform — pan/zoom lives here and nowhere else.
@@ -1116,7 +1119,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     if (pts.length < 2) return;
 
     const crossings = d.portsFor(id).length;
-    const marker = arc.type === 'flow' ? 'slx-arrow-flow' : 'slx-arrow-influence';
+    const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
     const bow = this._bowFor(d, id, arc);
     const curved = Math.abs(bow) > 0.001;
     const head = this._ARROW_LEN[arc.type] || 4.5;
@@ -1182,10 +1185,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const a = pts[mid];
       const z = pts[mid + 1] || pts[mid];
       const len = Math.hypot(z.x - a.x, z.y - a.y) || 1;
+      // Just outside the curve's furthest point (its sagitta, len × bow), so
+      // the labels of a fanned pair sit apart, each by its own arrow.
+      const out = len * bow + Math.sign(bow) * 5;
       this._placeLabel(
         d, id, arc.label,
-        (a.x + z.x) / 2 - ((z.y - a.y) / len) * (len * bow) / 2,
-        (a.y + z.y) / 2 + ((z.x - a.x) / len) * (len * bow) / 2 - 3,
+        (a.x + z.x) / 2 - ((z.y - a.y) / len) * out,
+        (a.y + z.y) / 2 + ((z.x - a.x) / len) * out - 3 + (bow > 0 ? 6 : 0),
         'slx-label slx-arc-label'
       );
     }
@@ -1224,10 +1230,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const stored = d.arcBow(id);
     if (stored != null) return stored;
 
-    const base = arc.type === 'influence' ? this.options.bowFraction : 0;
+    // Influences and roles are drawn curved, so they can be bent (a curved
+    // arrow's strip takes the drag); a flow is straight.
+    const base = arc.type === 'influence' || arc.type === 'role' ? this.options.bowFraction : 0;
     const fan = this._fanOf(d, id, arc);
     if (fan.n < 2) return base;
-    return base + (fan.i - (fan.n - 1) / 2) * this.options.fanBow;
+    const spread = (fan.i - (fan.n - 1) / 2) * this.options.fanBow;
+    // Role arrows sharing both ends (a submodel associated with itself) bend
+    // evenly either way, so neither is straight and their labels part; added
+    // to the default curve, one of a pair came out flat.
+    return arc.type === 'role' ? spread : base + spread;
   },
 
   /**
