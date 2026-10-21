@@ -270,6 +270,30 @@ min/max; submodel background colour; the model file reference (job 6); the
 editor regression net (job 1); the arc dialog; automatic layout (below);
 node sizing and styling (2026-10-20, with model-level settings).
 
+## Parked: what the Simulation window is FOR (Robert's item 38, 2026-10-21) — think first, then build once
+
+Robert: decide this definitively rather than rush in and change it again.
+What is settled and what is open:
+
+- **Settled (his view):** anyone who opens or starts a model expects its
+  Simulation window to apply to it, with no explicit "load". Inside a model's
+  Simulation collection the run control already belongs to that model
+  (`_ref()`, `Simulation.viewFor`); its model menu, path box and load/unload
+  are left over from when it was a general SimiLive client. Proposed then:
+  ▶ loads (or reloads) and runs; reset loads and goes to the start.
+- **Where SimiLive's own demos go** (fire spread, Game of Life, diffusion,
+  three-body, branching plant — reachable today only through that menu): NOT a
+  specific top-level menu (he dislikes it). Under File ▸ Models instead — but
+  File ▸ Models should first become a rich, grouped collection (sub-menus),
+  which we are not ready for.
+- **Open: more than one model at once.** Today there is ONE session: ▶ on B
+  ends A's run. Robert can see a user wanting several models loaded together
+  and SHARING ONE Simulation window — the same variable in two
+  similar-but-different models, plotted together. That changes the model:
+  sessions per model (the in-page engine makes several cheap), and displays
+  whose series name a model as well as a variable. Settle this before
+  touching the run control, since it decides what the window is.
+
 ## Parked: automatic layout (Robert, 2026-10-19) — discussed, not started
 
 Parked by Robert 2026-10-20 in favour of association submodels and role
