@@ -72,7 +72,8 @@
    are not yet runnable. Derived at every render, never stored. */
 .slx-incomplete rect,
 .slx-incomplete circle,
-.slx-incomplete path {
+.slx-incomplete path,
+path.slx-arc.slx-incomplete {
   stroke: #c62828;
 }
 text.slx-incomplete {

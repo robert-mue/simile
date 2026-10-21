@@ -797,16 +797,36 @@
 
     makeRelations: function () {
       var self = this;
-      this.arcIds.forEach(function (id) {
+      // In the order the ASSOCIATION lists them (its `references`), not the
+      // file's arc order: our association's list is made in role order
+      // (`Diagram.rolesOf`), and Simile minds it — `oom2` lists `lower`, the
+      // role with `can_lookup=0`, first, and the other way round its
+      // generator refuses the model (`lookup_not_allowed hierarchy lower`).
+      var order = function (id) {
+        var i = (self.refs[self.A[id].to] || []).indexOf(id);
+        return i < 0 ? Infinity : i;
+      };
+      var rel = this.arcIds.filter(function (id) { return self.A[id].type === 'relation'; });
+      rel.map(function (id, k) { return { id: id, k: k }; })
+        .sort(function (x, y) { return (order(x.id) - order(y.id)) || (x.k - y.k); })
+        .forEach(function (x) {
+        var id = x.id;
         var a = self.A[id];
-        if (a.type !== 'relation') return;
         var from = self.ours[a.from];
         var to = self.ours[a.to];
         if (!from || !to) { self.note('dropped', 'a relation arc with a missing end'); return; }
+        // `exclusive=1`: each base instance is in at most one pairing in this
+        // role, so a name coming back out through it is a single value, not a
+        // list (`Diagram.roleNameIsList`). `can_lookup` is kept as read: what
+        // it does is not known (asked of the developer), only that it does not
+        // follow from `exclusive` (`life_input` has both 0).
+        var props = {};
+        if (String(a.p.exclusive) === '1') props.exclusive = true;
+        if (a.p.can_lookup != null) props.canLookup = String(a.p.can_lookup);
         self.ours[id] = self.put('arc', {
-          type: 'role', from: from, to: to, label: self.name(a.p.name || 'role'), props: {},
+          type: 'role', from: from, to: to, label: self.name(a.p.name || 'role'), props: props,
         }, null);
-      });
+        });
     },
 
     /**

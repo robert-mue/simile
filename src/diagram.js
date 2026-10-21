@@ -409,6 +409,31 @@
     return name;
   };
 
+  /**
+   * Does the name this influence supplies for one role arrive as a LIST? It
+   * does when it comes OUT of an association into a base (`in_assoc`) through
+   * a role that is not EXCLUSIVE: each base instance then gets one value per
+   * pairing it takes part in — a farmer, one per field owned — and the
+   * equation must write it `{id_farmer}` (Simile's `use(N,in_assoc,{…},list(1))`,
+   * `feeding1`'s `sum({eaten})`). An exclusive role (Simile's `exclusive=1`)
+   * says each base instance is in at most one pairing in that role — an ant
+   * is `at` one location, a node in `oom2`'s hierarchy is `lower` once — so
+   * the name is a single value there (`use(0,in_assoc,x_at,1)`). Going INTO
+   * an association (`in_base`) each pairing has one of each: a single value.
+   */
+  Diagram.roleNameIsList = function (model, arcId, roleArcId) {
+    var arc = (model.arcs || {})[arcId];
+    if (!arc || arc.type !== 'influence') return false;
+    var pair = Diagram.associationCrossing(model, Diagram.crossings(model, arc.from, arc.to));
+    if (!pair || pair.dir !== 'in_assoc') return false;
+    return !(((model.arcs || {})[roleArcId] || {}).props || {}).exclusive;
+  };
+
+  /** A role name as an equation must write it: `{name}` where it is a list. */
+  Diagram.roleAsWritten = function (model, arcId, roleArcId, name) {
+    return Diagram.roleNameIsList(model, arcId, roleArcId) ? '{' + name + '}' : name;
+  };
+
   Diagram.namesSuppliedBy = function (model, arcId) {
     var arc = (model.arcs || {})[arcId];
     if (!arc || arc.type !== 'influence') return [];

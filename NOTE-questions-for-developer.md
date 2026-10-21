@@ -331,6 +331,21 @@ see how far it gets. Dialect distance is usually obvious within an hour.
 
 ---
 
+## 9 — What does `can_lookup` on a relation arc do? *(new, 2026-10-21)*
+
+Three catalogue models carry `can_lookup=0|1` and `exclusive=0|1` on their
+relation arcs (`AntsWorld`, `oom2`, `life_input`). `exclusive` we now read as
+"each base instance is in at most one pairing in this role", which makes a
+value coming back out through it a single value rather than a list — every
+`in_assoc` use in the catalogue agrees. `can_lookup` we do not understand: it
+does not follow from `exclusive` (`life_input` has both 0), yet it matters —
+written as read, `oom2`'s generator says `lookup_not_allowed hierarchy lower`
+unless the association's `references` list puts `lower` (the role with
+`can_lookup=0`) first, as Simile's own file does; and with neither property
+written, `AntsWorld` fails with `lookup_not_allowed location has`. **What is
+a lookup, and what decides whether a role allows one?** We now carry both
+properties through unchanged and keep the association's role order.
+
 ## What we can offer back
 
 Not a one-way ask:

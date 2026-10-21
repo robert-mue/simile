@@ -125,6 +125,44 @@ separate model stores.
 data" — "data" is kept for numeric data (parameter values, data files such as
 soil parameters over a grid), which the app will handle one day.
 
+## Done: Robert's farmers & fields, items 33–37 (2026-10-21, not yet released)
+
+His hand-built model (`~/Projects/simile_models/farmers_and_fields_rm1.json`)
+built but would not compile: `bad_parameter flow1 variable1_`. Fixed:
+
+- **33** a flow drawn from a submodel's empty interior started at the
+  submodel and failed: now a press or release there (any arrow but a role)
+  is blank space INSIDE the submodel, and a flow grows a cloud there.
+- **34** a role arrow's rubber band started at the submodel's centre: now at
+  the press.
+- **35** a name coming OUT of an association into a base is a LIST (one value
+  per pairing) unless its role is EXCLUSIVE — Simile's `exclusive=1` on the
+  relation arc (an ant is `at` one location; oom2's `lower`). Found because
+  the first, stricter rule refused AntsWorld and oom2. `Diagram.roleNameIsList`
+  / `roleAsWritten`: the dialog inserts `{name}`, the completeness check
+  reports a bare use (red, kind `form`), the exporter refuses it with the fix
+  in the message, and `assocRole` writes `list(…)` or not per role.
+  `exclusive` and `can_lookup` are read and written (role `props`), and roles
+  are imported in the association's `references` order — oom2 needs it
+  (question 9 in the questions note). **No UI sets `exclusive` yet**: there is
+  still no arc dialog (job 2). A new role is non-exclusive, so a list.
+- **37** names ending in `_`: his role arrows had no names. A new role arrow
+  is now named after its base (`farmer`; `farmer2` for a second role from the
+  same base), and an unnamed one is drawn red and reported.
+
+His model, with roles named and `sum({variable1_farmer})`, passes every check,
+gets C++ from Simile's generator and runs. Generator on our exports: AntsWorld
+now builds (it did not before); feeding1, lamos1a, life_input build.
+
+**Still failing, both ALREADY before 2026-10-21, to chase:** `landuse1b` (the
+landuse demo's source; Simile's own file builds, ours fails converting the
+association condition `! (column==column_0 and row==row_0) and …`:
+`no_such_function !`), and `oom2` (now past the lookup error, at
+`circular_evaluation [my_level,hi_level]`). Also: an ARRAY-valued name out of
+an association (AntsWorld's `[neighbours_at]`, `array(int,6)`) is written
+bare, `1`. Trace with a scratch copy of `tools/engine/generator/headless.pl`,
+`hl_setting(trace, true)` forced; the `Query {…}` line names the fault.
+
 ## Done: two-party associations and time bases (2026-10-20, released 2026-10-20b)
 
 - **Question 0b answered** ("Waiting on the developer", below): an

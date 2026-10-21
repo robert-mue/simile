@@ -272,17 +272,29 @@
       var arc = d.get(a);
       if (!arc || arc.type !== 'influence' || arc.to !== id) return;
       var from = d.get(arc.from) || {};
-      d.namesSuppliedBy(a).forEach(function (name) {
-        if (!name || seen[name]) return;
-        seen[name] = true;
+      var model = d.model();
+      var roles = Sienna.Diagram.rolesCrossedBy(model, a);
+      // What to type. Across an association, one name per role, written as a
+      // list or not by its role — `{id_farmer}` out through one that is not
+      // exclusive (item 35); otherwise the one alias, bracketed where it comes
+      // out of a submodel with many instances (`{size}`).
+      var names = roles.length
+        ? roles.map(function (r) {
+          var n = Sienna.Diagram.roleAliasFor(model, a, r);
+          return { name: n, insert: Sienna.Diagram.roleAsWritten(model, a, r, n) };
+        })
+        : d.namesSuppliedBy(a).map(function (n) {
+          return { name: n, insert: Sienna.Diagram.asWritten(model, arc, n) };
+        });
+      names.forEach(function (x) {
+        if (!x.name || seen[x.name]) return;
+        seen[x.name] = true;
         // Where it comes from, named as seen from here: `S1/a` when it lives in
         // another submodel, plain `a` when it is a neighbour.
         out.push({
-          name: name,
+          name: x.name,
           from: d.relativeName(arc.from, id) || from.label || arc.from,
-          // What to type: `{size}` for one that comes out of a population.
-          insert: Sienna.Diagram.rolesCrossedBy(d.model(), a).length
-            ? name : Sienna.Diagram.asWritten(d.model(), arc, name),
+          insert: x.insert,
         });
       });
     });

@@ -385,11 +385,26 @@
           var names = self.assocNames(a, pr, id);
           var eq = String((m.nodes[a.to] || {}).props
             ? (m.nodes[a.to].props[self.exprField(m.nodes[a.to].type)] || '') : '');
-          if (names.length && !names.some(function (n) { return eq.indexOf(n) >= 0; })) {
+          // Out of an association, through a role that is not exclusive, the
+          // name is a list, and must be written so.
+          var listNames = Sienna.Diagram.rolesCrossedBy(m, id).filter(function (r) {
+            return Sienna.Diagram.roleNameIsList(m, id, r);
+          }).map(function (r) { return Sienna.Diagram.roleAliasFor(m, id, r); });
+          var bareUse = listNames.length && Sienna.equation.references(eq).some(function (r) {
+            return r.form === 'scalar' && listNames.indexOf(r.name) >= 0;
+          });
+          if (bareUse) {
+            problems.push('across the association "'
+              + ((m.submodels || {})[pr.assoc] || {}).label + '", "' + alias
+              + '" arrives in "' + ((m.nodes[a.to] || {}).label || a.to)
+              + '" as a LIST (one value per pairing): write ' + listNames.map(function (n) {
+                return '{' + n + '}';
+              }).join(' or ') + ', e.g. sum({' + listNames[0] + '})');
+          } else if (names.length && !names.some(function (n) { return eq.indexOf(n) >= 0; })) {
             problems.push('across the association "'
               + ((m.submodels || {})[pr.assoc] || {}).label + '", "' + alias
               + '" arrives once per role, under ' + names.map(function (n) {
-                return pr.dir === 'in_assoc' ? '{' + n + '}' : n;
+                return listNames.indexOf(n) >= 0 ? '{' + n + '}' : n;
               }).join(' and ') + ' — but the equation for "'
               + ((m.nodes[a.to] || {}).label || a.to) + '" uses none of those');
           }
@@ -642,8 +657,10 @@
         var dim = '1';
         var i;
         if (pair.dir === 'in_assoc') {
-          for (i = 0; i < extra + 1; i++) dim = 'list(' + dim + ')';
-          return 'use(' + idx + ',in_assoc,{' + atom(name) + '},' + dim + ')';
+          // A list, one value per pairing — unless the role is exclusive.
+          var many = Sienna.Diagram.roleNameIsList(self.m, arcId, r);
+          for (i = 0; i < extra + (many ? 1 : 0); i++) dim = 'list(' + dim + ')';
+          return 'use(' + idx + ',in_assoc,' + (many ? '{' + atom(name) + '}' : atom(name)) + ',' + dim + ')';
         }
         for (i = 0; i < extra; i++) dim = 'list(' + dim + ')';
         return 'use(' + idx + ',in_base,' + atom(name) + ',' + dim + ')';
@@ -667,6 +684,20 @@
       var parent = (m.submodels[subId] || {}).parent;
       if (parent == null) return [];
       return this.refsOf(parent).map(function (r, k) { return { ancestor: k }; });
+    },
+
+    /**
+     * A relation arc's properties, in Simile's (alphabetical) order:
+     * `can_lookup` only as read from a file, `exclusive` where the role is.
+     */
+    relationProps: function (a) {
+      var p = a.props || {};
+      var out = [];
+      if (p.canLookup != null) out.push('can_lookup=' + p.canLookup);
+      out.push('complete=true');
+      if (p.exclusive || p.canLookup != null) out.push('exclusive=' + (p.exclusive ? 1 : 0));
+      out.push('name=' + atom(a.label || 'role'));
+      return out;
     },
 
     /** `<alias>_<role label>`, made safe to be a Prolog atom and an identifier. */
@@ -855,7 +886,7 @@
         var rid = simId('arc', ++this.arcN);
         this.relArc[id] = rid;
         this.arcLines.push('arc(' + rid + ',' + this.vis[a.from] + ',' + this.vis[a.to]
-          + ',relation,' + list(['complete=true', 'name=' + atom(a.label || 'role')])
+          + ',relation,' + list(this.relationProps(a))
           + ',' + list(['caption_offset=[0,0]']) + ').');
         return;
       }

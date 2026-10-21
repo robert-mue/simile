@@ -142,8 +142,18 @@
     d.arcsAt(id).forEach(function (a) {
       var arc = d.get(a);
       if (!arc || arc.type !== 'influence' || arc.to !== id) return;
+      var model = d.model();
+      var roles = Sienna.Diagram.rolesCrossedBy(model, a);
+      if (roles.length) {
+        // One name per role, each a list or not by its own role (exclusive).
+        roles.forEach(function (r) {
+          var name = Sienna.Diagram.roleAliasFor(model, a, r);
+          if (name !== '') out.push({ name: name, arc: a, list: Sienna.Diagram.roleNameIsList(model, a, r) });
+        });
+        return;
+      }
       d.namesSuppliedBy(a).forEach(function (name) {
-        out.push({ name: name, arc: a });
+        out.push({ name: name, arc: a, list: false });
       });
     });
     return out;
@@ -222,6 +232,10 @@
           if (!usedNames[ref.name]) {
             usedNames[ref.name] = { field: f.name, at: part.at + ref.at, len: ref.name.length };
           }
+          // Where a SINGLE-value use was written, for the list check below.
+          if (ref.form === 'scalar' && !usedNames[ref.name].scalarAt) {
+            usedNames[ref.name].scalarAt = { field: f.name, at: part.at + ref.at };
+          }
         });
       });
     });
@@ -245,6 +259,20 @@
           message: '"' + name + '" is used but no influence supplies it',
         });
       }
+    });
+
+    // A name that comes out of an association is a list (one value per
+    // pairing), and written bare it is a single value: Simile refuses the
+    // model (`bad_parameter`). Robert's item 35.
+    supplied.forEach(function (s) {
+      var u = usedNames[s.name];
+      if (!s.list || !u || !u.scalarAt) return;
+      out.push({
+        id: id, label: label, kind: 'form', name: s.name,
+        field: u.scalarAt.field, at: u.scalarAt.at, len: s.name.length,
+        message: '"' + s.name + '" comes out of an association, one value for each pairing, '
+          + 'so it is a list: write {' + s.name + '}, e.g. sum({' + s.name + '})',
+      });
     });
 
     // `unused` is a question about the ARROW, not about each name — and across
@@ -308,6 +336,14 @@
 
     var reasons = [];
     var props = el.props || {};
+    // A role arrow's name is part of every name an influence across the
+    // association supplies (`id_farmer`): with none, they end in a bare `_`.
+    if (el.type === 'role' && String(id).indexOf('arc') === 0 && !String(el.label || '').trim()) {
+      reasons.push({
+        id: id, label: id, kind: 'missing', field: 'label',
+        message: 'this role arrow has no name — every name an influence across the association supplies is made from it',
+      });
+    }
     expressionFields(d, id, el).forEach(function (f) {
       if (!isRequired(el, f)) return;
       var text = props[f.name];
@@ -339,7 +375,7 @@
    */
   function audit(d) {
     var out = [];
-    ['nodes', 'submodels'].forEach(function (fam) {
+    ['nodes', 'submodels', 'arcs'].forEach(function (fam) {
       d.ids(fam).forEach(function (id) { out = out.concat(completeness(d, id).reasons); });
     });
     return out;

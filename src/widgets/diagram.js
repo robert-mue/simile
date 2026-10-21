@@ -1121,6 +1121,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const curved = Math.abs(bow) > 0.001;
     const head = this._ARROW_LEN[arc.type] || 4.5;
     const ov = this._overrides();
+    // Only a role arrow can be incomplete (unnamed); asking for every arc
+    // would parse nothing, but costs a lookup per segment.
+    const red = arc.type === 'role' && this._incomplete(d, id);
 
     for (let i = 0; i < pts.length - 1; i++) {
       const last = i === pts.length - 2;
@@ -1159,7 +1162,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
       const path = this._el('path', {
         class: 'slx-arc slx-arc-' + arc.type + (crossings ? ' slx-arc-split' : '')
-          + (this._sel.indexOf(id) >= 0 ? ' slx-arc-selected' : ''),
+          + (this._sel.indexOf(id) >= 0 ? ' slx-arc-selected' : '')
+          + (red ? ' slx-incomplete' : ''),
         'data-id': id,
         'data-segment': i,
         d: dAttr,
@@ -1409,10 +1413,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const type = this._tool.split(':')[1];
     // A null source means the gesture began on blank canvas: the anchor is the
     // press point, and a flow will grow a cloud there (the schema's blankEnd).
-    const start = fromId ? d.box(fromId) : (() => {
-      const w = this._toWorld(e.clientX, e.clientY);
-      return { cx: w.x, cy: w.y };
-    })();
+    // From a submodel (a role arrow) the line starts where the press was, not
+    // at the box's centre, which may be far off under the contents (item 34).
+    const press = this._toWorld(e.clientX, e.clientY);
+    const start = fromId && fromId.indexOf('submodel') !== 0 ? d.box(fromId) : { cx: press.x, cy: press.y };
     const rubber = this._el('path', { class: 'slx-rubber' });
     this._layer.overlay.appendChild(rubber);
 
@@ -1432,7 +1436,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // event's position is not where the finger was, and an arc made there
       // lands somewhere nobody pointed. The tool stays armed.
       if (ev.type === 'pointercancel') { this._render(); return; }
-      const toId = this._elementAt(ev);
+      let toId = this._elementAt(ev);
+      // Released on a submodel's interior: blank space inside it, unless this
+      // is an arrow that can end on a submodel (a role).
+      if (toId && toId.indexOf('submodel') === 0 && type !== 'role') toId = null;
       const w = this._toWorld(ev.clientX, ev.clientY);
       this._tool = null;
       this._syncPalette();
@@ -1440,6 +1447,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._render();
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  /**
+   * A new role arrow's name: the base submodel's own, so an influence across
+   * the association supplies `id_farmer` rather than `id_` (Robert's item 37).
+   * Numbered where the association already has a role of that name — a
+   * submodel associated with itself gets `patch` and `patch2`. The modeller
+   * renames it like any label.
+   */
+  _roleName(d, baseId, assocId) {
+    const stem = String((d.get(baseId) || {}).label || 'role').replace(/[^A-Za-z0-9_]/g, '_') || 'role';
+    const taken = Sienna.Diagram.rolesOf(d.model(), assocId).map((r) => (d.get(r) || {}).label);
+    if (taken.indexOf(stem) < 0) return stem;
+    for (let n = 2; ; n++) if (taken.indexOf(stem + n) < 0) return stem + n;
   },
 
   _createArc(d, type, fromId, toId, dropPoint, anchor) {
@@ -1467,7 +1488,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // An influence or role needs two real ends.
     if (!fromId || !toId || toId === fromId) return;
     if (type === 'influence') d.addInfluence(fromId, toId);
-    else if (type === 'role') d.addRole(fromId, toId, { label: '' });
+    else if (type === 'role') d.addRole(fromId, toId, { label: this._roleName(d, fromId, toId) });
   },
 
   /** The topmost model element under a pointer event, or null for blank canvas. */
@@ -1478,7 +1499,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   _beginElementDrag(e, d, id) {
-    if (this._tool && this._tool.indexOf('arc:') === 0) return this._beginArcDraw(e, d, id);
+    // A press on a submodel's empty interior with an arrow tool armed: the
+    // submodel is the source only for an arrow that can start there (a role).
+    // For any other — a flow, above all — it is blank space INSIDE it, so a
+    // flow can be drawn from there to a stock in it (Robert's item 33).
+    if (this._tool && this._tool.indexOf('arc:') === 0) {
+      const fromSubmodel = id.indexOf('submodel') === 0 && this._tool !== 'arc:role';
+      return this._beginArcDraw(e, d, fromSubmodel ? null : id);
+    }
     if (!this._tool && this._isDoubleClick(id)) {
       e.preventDefault();
       e.stopPropagation();
