@@ -2,14 +2,15 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-10-21: 2026-10-20 answered
-the population-symbols questions and question 0b, built submodel resizing,
-fixed two-party associations and kept submodels' time bases, and released
-twice (**2026-10-20b** is the latest). 2026-10-21 fixed what Robert's
-hand-built farmers & fields turned up (his items 33–37) — **on `main`, NOT
-released**: Robert said not yet. Now: he is repeating the whole build with
-his LOCAL copy before any release ("Now", below); item 38 (what the
-Simulation window is for) is parked to think through.
+embedded-widget pages. Brought up to date at the end of 2026-10-21, which
+Robert called **a milestone**: a two-party association model (farmers &
+fields), built by hand in the editor as he built it in the old Simile, now
+checks, compiles in the page, runs and plots — farmers, fields and the
+pairings between them. "What could have been show-stoppers weren't."
+Everything since release **2026-10-20b** is on `main`, tested, and NOT
+released (Robert decides when). The editor regression net exists
+(`test/editor.html`). Item 38 (what the Simulation window is for) is parked
+to think through.
 If you are picking this up cold — a new session, a new machine, or a week
 later — read this first. `STATUS.md` is the full record (items 46–47 are the
 last two days it covers); this is the part you need to get moving.*
@@ -78,13 +79,14 @@ What the tutorials made us build, in one line each (STATUS 46–47 for detail):
   filled in when ▶ next loads the model.
 
 **Standing numbers.** Quote these only after re-running the checks below, since
-they are exactly what a regression would change. All three re-run 2026-10-20:
+they are exactly what a regression would change. All re-run 2026-10-21:
 
 | | |
 |---|---|
 | catalogue round trip | **61 of 72 identical, 0 differ, 11 refused, 1 lossy import** |
 | fixtures | 6 of 6 reach a fixed point and audit clean |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
+| editor (`test/editor.html`) | 14 of 14 gesture tests pass |
 
 Every remaining refusal is an element left unfinished in its source file.
 (`feeding1` was the exception until 2026-10-20 — see 0b below.)
@@ -95,9 +97,16 @@ model on SimiLive.
 
 ## Now: association submodels and role arrows (Robert, 2026-10-20)
 
-**Latest (2026-10-21): Robert is REPEATING the farmers & fields build in his
+**Latest (2026-10-21, end of day): DONE.** His local rebuild
+(`~/Projects/simile_models/farmers_and_fields_rm2.json`) compiled once its
+rate summed the list, and now plots everything; see "Done" below for what it
+took (a list where one number is needed; plotting fixed instances and
+association pairings, with the run-time library rebuilt twice). Unreleased
+on `main`: offer a release when he next asks what is pending.
+
+**Earlier (2026-10-21): Robert REPEATED the farmers & fields build in his
 local copy** (not the release site), to try items 33–37 end to end before a
-release — wait for his results; do not release until he says. His first
+release. His first
 attempt is `~/Projects/simile_models/farmers_and_fields_rm1.json` (roles
 unnamed, `flow1` using a list as a value — see "Done" below). What follows
 is the background as it was when he started it.
