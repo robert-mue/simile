@@ -173,6 +173,18 @@ variable, which may hold an array) refuses a whole-list value, red and at
 export, suggesting `sum(…)`. With `sum({variable1_submodel1})` it runs.
 Full type checking (a list used inside arithmetic, say) is not attempted.
 
+**Then: nothing to plot.** Every variable in rm2 is in a fixed membership
+(10 farmers, 30 fields) or the association, and the plotter offered only
+single values and population members; `submodel3/variable1` was listed
+"(from the next run)" because `variablesOf` took the association (kind
+stored as `single`) for one instance. Now a fixed membership of ONE
+dimension (`dims [n,0]`, `Simulation.isPerInstance`) is plotted as a line per
+instance, like a population; association variables are left out. That needed
+`sx_value` in `tools/engine/bridge.cpp` to send a 1-D array (it sent null),
+so `vendor/simile-runtime/simile-runtime.js` was REBUILT (2026-10-21; the
+sample pages' compiled models still run). Not yet: 2-D grids on a plot, and
+an association's farmer × field table (`dims [0,10,30,0,0]`) on anything.
+
 His model, with roles named and `sum({variable1_farmer})`, passes every check,
 gets C++ from Simile's generator and runs. Generator on our exports: AntsWorld
 now builds (it did not before); feeding1, lamos1a, life_input build.

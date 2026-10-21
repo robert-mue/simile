@@ -198,7 +198,8 @@ int sx_execute(double from, double to) {
 EMSCRIPTEN_KEEPALIVE
 double sx_stopped_at() { return stoppedAt; }
 
-// One component's current value as JSON: a number, {member: value} for a
+// One component's current value as JSON: a number, [v1, v2, …] for a fixed
+// membership of one dimension, {member: value} for a
 // population (keys are the members' own numbers, kept for their lives), or
 // null for a shape not read here yet.
 EMSCRIPTEN_KEEPALIVE
@@ -211,6 +212,19 @@ const char* sx_value(const char* nodeId) {
     if (kind == REAL || kind == INTEGER || kind == FLAG || kind <= ENUM_BASE) {
       reply.clear();
       addNumber(reply, numberAt(v->contents, kind));
+    } else if (kind > 0 && (v->dimSpecs[1] == REAL || v->dimSpecs[1] == INTEGER
+                            || v->dimSpecs[1] == FLAG || v->dimSpecs[1] <= ENUM_BASE)) {
+      // A fixed membership's instances, one dimension: `kind` of them, packed
+      // one after another (shank.cpp's space_used). Sent as an array, numbered
+      // from 1 by whoever draws it, as Simile's index(1) does.
+      int t = v->dimSpecs[1];
+      int size = sizeOfType(t);
+      reply = "[";
+      for (int i = 0; i < kind; ++i) {
+        if (i) reply += ", ";
+        addNumber(reply, numberAt(v->contents + i * size, t));
+      }
+      reply += "]";
     } else if (kind == SPARSEARRAY && v->dimSpecs[1] == 1) {
       int t = v->dimSpecs[2];
       if (t == REAL || t == INTEGER || t == FLAG || t <= ENUM_BASE) {

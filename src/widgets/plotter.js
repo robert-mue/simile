@@ -215,15 +215,14 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
         .text(c.label + (c.next ? '  (from the next run)' : '')).appendTo(into));
     };
     group('Single values', list);
-    group('A line for each member', members);
+    group('A line for each instance', members);
     if (was && list.concat(members).some((c) => c.id === was)) this._pick.val(was);
   },
 
-  /** Is this component a value per member of a population? */
+  /** Is this component a value per instance (population member or fixed instance)? */
   _isMembers(id) {
     const c = (this._sim.components || {})[id] || {};
-    const dims = c.dims || [];
-    return dims.length === 2 && dims[0] === 'MEMBERS';
+    return Sienna.Simulation.isPerInstance(c.dims);
   },
 
   /** Every run of points a series draws: one, or one per member. */
@@ -241,6 +240,13 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     s.now = 0;
     s.at = t;
     if (!v || typeof v !== 'object') return;          // an empty population
+    // A fixed membership's instances arrive as an array: number them from 1,
+    // as Simile's index(1) does, like a population's member keys.
+    if (Array.isArray(v)) {
+      const o = {};
+      v.forEach((x, i) => { o[i + 1] = x; });
+      v = o;
+    }
     Object.keys(v).forEach((k) => {
       const n = Number(v[k]);
       if (!isFinite(n)) return;
