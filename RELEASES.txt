@@ -248,3 +248,12 @@ Plots
   plotted: a line for each instance.
 - A variable inside an association can be plotted: a line for each
   pairing, for as long as the pairing exists.
+
+
+------------------------------------------------------------------------
+Release 2026-10-21b
+------------------------------------------------------------------------
+
+Submodels
+- A submodel now has a pale blue background, a shade darker for each
+  level of nesting, so a submodel stands out from the one it is in.

@@ -7,8 +7,8 @@ Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
 pairings between them. "What could have been show-stoppers weren't."
-All of it is RELEASED as **2026-10-21** (the latest). After the release, on
-`main` only: submodels have a pastel background that deepens with nesting
+All of it is RELEASED as **2026-10-21**; then **2026-10-21b** (the latest)
+added: submodels have a pastel background that deepens with nesting
 (`_submodelFill` in `src/widgets/diagram.js`: hsl(205, 70%, 96% − 5% per
 level, not below 80%), Robert's one exception to "styling later", for the
 impression it makes. The editor regression net exists
