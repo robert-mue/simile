@@ -111,19 +111,19 @@
    * what a panel is about — it is what makes the titlebar colour, the numbering
    * and File's idea of the current model all agree without a second concept.
    */
-  var widgetItems = Sienna.widgetRegistry.list().map(function (w) {
-    return {
-      label: w.label,
-      onSelect: function () {
-        var subject = Sienna.documents.current(app) || '';
-        app.addPanel({
-          title: panelTitle(subject, w.name),
-          widget: w.name,
-          ref: subject,
-          options: w.options,
-        });
-      },
-    };
+  function openWidget(w) {
+    var subject = Sienna.documents.current(app) || '';
+    app.addPanel({
+      title: panelTitle(subject, w.name),
+      widget: w.name,
+      ref: subject,
+      options: w.options,
+    });
+  }
+  // The app's own; the ones the user added come after, from the shell
+  // (sienna's added-widgets.js), opened the same way.
+  var widgetItems = Sienna.widgetRegistry.list().filter(function (w) { return !w.external; }).map(function (w) {
+    return { label: w.label, onSelect: function () { openWidget(w); } };
   });
 
   /**
@@ -565,7 +565,7 @@
     },
     {
       label: 'Widgets',
-      items: widgetItems.length ? widgetItems : [{ label: '(none yet)' }],
+      items: function () { return widgetItems.concat(Sienna.addedWidgets.menuItems(app, openWidget)); },
     },
     {
       label: 'View',

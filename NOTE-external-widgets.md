@@ -129,3 +129,32 @@ browser. Mitigations, all cheap:
 - Optional pinning: an `integrity` hash (Subresource Integrity) on a
   toolkit's entries, so a changed file is refused.
 - Embedded-widget pages: only the page's author adds widgets.
+
+## Built (2026-10-22)
+
+Decided: the declaration is a call, `Sienna.widget({...})` (and
+`Sienna.toolkit({...})`). Built in sienna (559756d) and wired into simile:
+
+- `sienna/src/core/widget-registry.js`: `Sienna.widget`, `Sienna.toolkit`,
+  `Sienna.widgetContract` (1), `loadScript(url)`, `unregister`; name clashes
+  and too-new contracts refused with a message.
+- `sienna/src/core/added-widgets.js`: remembered list (own localStorage slot;
+  a chosen file's text is kept), registered at startup without loading; the
+  dialogs (Add a widget…, Add a toolkit… — URL or choose files — and Manage
+  added widgets…), each with the warning; a toolkit's list shown before any
+  of it loads; `menuItems(app, open)` for the end of the Widgets menu.
+- `sienna/src/core/workspace.js`: a widget that cannot be loaded leaves a
+  placeholder panel, kept and saved.
+- Examples: `sienna/examples/added/` (`dice.js`, `stopwatch.js`,
+  `toolkit.js`).
+
+Checked headless in the sienna demo and in simile: by URL, by toolkit, from
+chosen files (kept across a reload), clashes refused, placeholder after a
+removal; simile's editor tests, grammar and fixture pages and both sample
+pages unchanged.
+
+Not done yet: an `integrity` pin is supported in a toolkit's entries but
+untested (it needs a server sending CORS headers; file:// cannot); a session
+or layout from ANOTHER machine names a widget by name only, so it shows the
+placeholder rather than offering to add it — offering that (with consent)
+would need the URL saved with the panel.

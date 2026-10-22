@@ -30,6 +30,12 @@ footing (`src/widgets/grid.js` is the first).
   geometry a model opens at), builds the Edit /
   Widgets / View / Session menus, registers the replay handlers for this app's
   layout actions, and seeds the demo models.
+- **Widgets the user adds** (sienna's `added-widgets.js`, loaded by
+  `index.html`, not by `embed.js`): Widgets ▸ Add a widget… / Add a toolkit…
+  / Manage added widgets…, appended by `main.js` after the app's own
+  (`openWidget`, so they bind to the current model as built-ins do). A widget
+  file is one `Sienna.widget({…})` call. Design and trust: `NOTE-external-widgets.md`;
+  the API: `sienna/CLAUDE.md`; examples: `sienna/examples/added/`.
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it
