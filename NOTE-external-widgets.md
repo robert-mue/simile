@@ -81,3 +81,51 @@ around that:
 Suggested order, if built: the self-describing `_loaded`/`define` and loading
 by URL in sienna; remembering URLs (userData) and the placeholder; toolkits;
 then the file-picker route for the public site.
+
+## Robert's answers (2026-10-22), and the two questions he asked
+
+- **#1 Metadata: agreed, and extended.** A widget file carries an OBJECT:
+  name, label, title, role, default options, plus notes describing it,
+  author, etc. A **toolkit is an object too**, with similar metadata (name,
+  notes, author…) and its list of widget URLs.
+- **#2** (remember URLs, placeholder), **#3** (relative URLs resolve against
+  the toolkit's URL), **#6** (contract version), **#7** (no replacing a
+  built-in), **#8** (own section of the Widgets menu): agreed.
+- Form of the object: Robert's is a single assignment; #3 suggested a call.
+  Same object either way; a call (`Sienna.widget({...})`,
+  `Sienna.toolkit({...})`) avoids two files writing one global. To settle
+  when building.
+
+**#4, "isn't that restriction only for files like .json, not scripts?"**
+Partly. The file:// rule that stops `fetch` of a .json does NOT apply to
+`<script>` tags, and scripts are exempt from CORS: that's why the app can load
+a script from anywhere when it runs from file://, and why the public site can
+load a widget from any https server. Two other rules DO apply to scripts:
+- a page served over http(s) may not load anything from `file://`
+  ("Not allowed to load local resource"), scripts included;
+- an https page may not load a script over plain http (mixed content;
+  scripts are the strictest case).
+So: app from file:// → local and online widgets both work. Public site →
+online https widgets work; a widget on the user's own disk needs the "choose
+a file" route.
+
+**#5, "are there security issues, and doesn't that kill the idea?"**
+Real issues, but they don't kill it: it is the trust model of browser
+extensions, a script from a CDN, or a spreadsheet with macros, and it is
+what Robert's other app already does. What an added widget CAN do: read,
+change or delete the user's saved models and settings in that browser
+(on the public site, storage is shared by everything on
+`robert-mue.github.io`, i.e. all of Robert's GitHub pages); send data out;
+behave differently tomorrow, since the file at the URL can change. What it
+CANNOT do: read the user's files, or other sites' data, cookies or
+passwords. The risk falls on the user who chose to add it, in their own
+browser. Mitigations, all cheap:
+- Load an external widget ONLY on the user's explicit say-so, with the URL
+  (and, for a toolkit, every URL in it) shown. The real danger is a silent
+  load: a model, layout or session someone sends you that names an external
+  widget must ASK before loading it, never load it on opening.
+- Added widgets listed and removable (#8); the author and notes from the
+  metadata shown in the consent dialog.
+- Optional pinning: an `integrity` hash (Subresource Integrity) on a
+  toolkit's entries, so a changed file is refused.
+- Embedded-widget pages: only the page's author adds widgets.
