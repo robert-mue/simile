@@ -2,8 +2,10 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date on 2026-10-22 (nothing new since 2026-10-21b; the
-release is confirmed live). 2026-10-21 was the day
+embedded-widget pages. Brought up to date on 2026-10-22, when **widgets the
+user adds** (by URL, file or toolkit) were built in sienna and wired into
+simile — committed and pushed, NOT yet released (see "Done: widgets the user
+adds" below); next is how to help a user CREATE a widget. 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
@@ -99,6 +101,38 @@ Every remaining refusal is an element left unfinished in its source file.
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive.
+
+## Done: widgets the user adds (Robert, 2026-10-22; NOT yet released)
+
+A generic SIENNA feature, built in sienna (559756d, 85e3b3a, 3435cb7 —
+pushed; simile's submodule follows, last d8d4a01). Design, trust reasoning
+and Robert's answers: `NOTE-external-widgets.md`; API: `sienna/CLAUDE.md`
+("Widgets the user adds"); examples: `sienna/examples/added/` (dice,
+stopwatch, toolkit).
+
+- A widget file is ONE call, `Sienna.widget({ name, label, …, notes,
+  author, version, contract, widget: {…} })` (Robert chose a call over an
+  assignment); a toolkit is `Sienna.toolkit({ …, widgets: [urls] })`,
+  relative URLs against the toolkit's own file.
+- Widgets ▸ Add a widget… / Add a toolkit… (URL, or select files) /
+  Manage added widgets…, each warning before anything runs; a toolkit's list
+  is shown before it loads. Remembered per app (own localStorage slot; a
+  selected file's text is kept), registered at startup, loaded only on use.
+  A name already taken is refused. A widget that cannot load leaves a
+  placeholder panel (`workspace.addPanel`).
+- **Robert's test found:** a toolkit SELECTED AS A FILE cannot find its
+  widgets — a browser never says which folder a selected file came from. He
+  expected full URLs, not realising file:// paths only work for the app run
+  from disk. Fixed: the toolkit dialog names the missing files ("not
+  selected yet") with a "Select the files you want…" button. **His wording
+  rule:** "select" (each one), not "choose" (implies all at once).
+- Not done: `integrity` pins untested (need a CORS server); a session from
+  another machine shows the placeholder rather than offering to add the
+  widget (would need the URL saved with the panel).
+- Checked headless in the sienna demo and simile; simile's editor tests,
+  grammar/fixture pages and both sample pages unchanged.
+
+**Next (Robert, 2026-10-22): how to help a user CREATE a widget** — discussion first.
 
 ## Now: association submodels and role arrows (Robert, 2026-10-20)
 
