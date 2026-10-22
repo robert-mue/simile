@@ -2,7 +2,8 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date at the end of 2026-10-21, which
+embedded-widget pages. Brought up to date on 2026-10-22 (nothing new since 2026-10-21b; the
+release is confirmed live). 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
@@ -317,8 +318,11 @@ both patches.
 
 **Parked, to come back to** (the queue on 2026-10-15, in no settled order;
 Pangolin went out in release 2026-10-16): infer `units=boolean`; warn when a value is outside
-min/max; submodel background colour; the model file reference (job 6); the
-editor regression net (job 1); the arc dialog; automatic layout (below);
+min/max; a submodel's OWN background colour (Simile's `fill_colour`, still
+dropped by the importer; the pastel nesting shade, done 2026-10-21b, is only
+the default); the model file reference (job 6); MORE tests for the editor
+regression net (job 1, started 2026-10-21); the arc dialog (a role's
+"exclusive" needs it); automatic layout (below);
 node sizing and styling (2026-10-20, with model-level settings).
 
 ## Parked: what the Simulation window is FOR (Robert's item 38, 2026-10-21) — think first, then build once
@@ -505,8 +509,8 @@ catalogue could be built this way.
   round trip is unchanged: 60 of 72 identical, 0 differ, 12 refused.
 - Ask the Simile developer whether SimiLive can bear public pages' load.
 
-**After that:** submodel background colour (`fill_colour`, also currently
-dropped by the importer), and the model's own **time units** (displays say
+**After that:** a submodel's own background colour (`fill_colour`, still
+dropped by the importer; the default nesting shade is done, 2026-10-21b), and the model's own **time units** (displays say
 "unit") — **PARKED 2026-10-14 (Robert):** more than naming the unit; e.g.
 different submodels can have different time units. Found trying "year" on
 Trees (reverted, nothing committed):
