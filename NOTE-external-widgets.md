@@ -158,3 +158,46 @@ untested (it needs a server sending CORS headers; file:// cannot); a session
 or layout from ANOTHER machine names a widget by name only, so it shows the
 placeholder rather than offering to add it — offering that (with consent)
 would need the URL saved with the panel.
+
+## Next: helping a user CREATE a widget (Claude's thoughts, 2026-10-22, for discussion)
+
+Who writes one decides most of this: a modeller who knows a little
+JavaScript, one who knows none, or a programmer. Ideas, cheapest first:
+
+1. **An author's guide** (`help/widgets.html`, like `help/pages.html`): the
+   one-call shape, a minimal working example, the methods a widget gets
+   (`_ref`, `_get`, `_set`, `_action`, `_watchModel`, `state()`,
+   `slx-chrome`), how to share one (a folder with a toolkit, put online).
+2. **Templates: Widgets ▸ New widget…** asks for a name and a kind
+   (blank / a display of the running model) and saves a ready-to-edit file
+   with the name filled in; Add a widget… then loads it.
+3. **The edit–reload loop.** Today an added widget cannot be re-added
+   without removing it, and jQuery keeps the old definition until the page
+   reloads. Wanted: a **Reload** on each added widget (Manage…) that re-runs
+   its script and re-creates its open panels. For a selected file, a
+   Chromium file handle can re-read it after an edit; elsewhere, select it
+   again.
+4. **Errors shown where the author is looking.** A widget that throws in
+   `_create` (or a script with a syntax error) today shows only in the
+   devtools console, which a modeller never opens. Catch it and show it in
+   the panel: message, file, line.
+5. **A documented simile data API for displays.** What a display needs —
+   the variables, values over time, "a run has moved on" — is reached today
+   through `Sienna.Simulation` internals (`viewFor(ref)`, `subscribe`). Write
+   down a small stable surface (that, plus how series are shaped), and
+   version it with the widget contract. Without this, display widgets break
+   whenever simulation.js changes.
+6. **A brief for an AI assistant.** Many modellers would ask Claude or
+   similar to write the widget. One page holding the whole contract and the
+   data API, written to be pasted into a chat ("Copy instructions for an AI
+   assistant" in the guide), makes that reliable. Cheap, given 1 and 5.
+7. **No-code widgets.** A lot of what people want — a big number, a gauge,
+   a traffic light on a threshold, a table of chosen variables — is one
+   configurable widget plus options, not new code. A "custom display"
+   dialog that saves a configured instance reaches the users who will never
+   write JavaScript.
+8. **An in-app editor** (a code panel with live preview, kept in settings):
+   the most self-contained, the most work. Later, if at all.
+
+Suggested order: 4 and 3 (they make every other route bearable), then 5
+and 1 with 2, then 6; 7 when it is clear which displays people ask for.
