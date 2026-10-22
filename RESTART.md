@@ -328,6 +328,7 @@ node sizing and styling (2026-10-20, with model-level settings).
 ## Parked: what the Simulation window is FOR (Robert's item 38, 2026-10-21) — think first, then build once
 
 Robert: decide this definitively rather than rush in and change it again.
+The discussion itself, near verbatim: `NOTE-run-control-loading-model.md`.
 What is settled and what is open:
 
 - **Settled (his view):** anyone who opens or starts a model expects its
