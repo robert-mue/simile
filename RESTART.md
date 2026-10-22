@@ -14,7 +14,8 @@ added: submodels have a pastel background that deepens with nesting
 level, not below 80%), Robert's one exception to "styling later", for the
 impression it makes. The editor regression net exists
 (`test/editor.html`). Item 38 (what the Simulation window is for) is parked
-to think through.
+to think through; the discussion is kept near verbatim in
+`NOTE-run-control-loading-model.md` (written 2026-10-22).
 If you are picking this up cold — a new session, a new machine, or a week
 later — read this first. `STATUS.md` is the full record (items 46–47 are the
 last two days it covers); this is the part you need to get moving.*
