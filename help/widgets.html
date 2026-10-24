@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Writing a widget</title>
   <link rel="stylesheet" href="help.css">
-  <style>/* Long code in a description may wrap at phone width. */ table.ref td + td code { white-space: normal; }</style>
+  <style>/* Long code in a description may wrap at phone width. */ table.ref td + td code { white-space: normal; } blockquote { margin: 12px 0; padding: 2px 16px; border-left: 3px solid var(--rule); font-style: italic; }</style>
 </head>
 <body>
 <main>
@@ -17,7 +17,13 @@
 
 <p>A widget is one JavaScript file. You do not need to install anything or build anything. If you would rather not write it yourself, <strong>Widgets ▸ Instructions for an AI assistant…</strong> gives you text to paste into a chat with an AI assistant; describe the widget you want, and it gives you the file to download. Everything below is in those instructions too.</p>
 
-<p>Two examples, both in <code>examples/widgets/</code>: <a href="../examples/widgets/big-number.js">big-number.js</a>, a display of one variable of the running model, and <a href="../examples/widgets/submodel-contents.js">submodel-contents.js</a>, which lists each submodel's stocks, flows and variables with their equations, written by Claude from those instructions.</p>
+<p><strong>What to ask for.</strong> One or two plain sentences saying what the widget should show is enough. This request, pasted after the instructions, produced a working widget first time:</p>
+
+<blockquote><p>I would like a widget that displays, for each submodel, the stocks, flows and variables in the submodel, grouped, listing their name and equation.</p></blockquote>
+
+<p>Say what it should show, and whether that comes from the model as drawn (names, equations) or from the model as it runs (values over time). If you want controls, such as a choice of variable or a filter, say so; the assistant may add sensible ones of its own, as it did here (a filter box, and expand and collapse buttons). If the first version is not quite right, say what to change in the same chat, save the new file in place of the old one, and press Reload (see <a href="#try">Trying it out</a>).</p>
+
+<p>Two examples, both in <code>examples/widgets/</code>: <a href="../examples/widgets/big-number.js">big-number.js</a>, a display of one variable of the running model, and <a href="../examples/widgets/submodel-contents.js">submodel-contents.js</a>, which lists each submodel's stocks, flows and variables with their equations, written by Claude from those instructions and the request above.</p>
 
 <nav class="contents">
   <strong>Contents</strong>

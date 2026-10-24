@@ -4,8 +4,14 @@
  * name and equation; read only, following edits as they happen.
  *
  * Written (2026-10-25) by Claude, in a chat, from the instructions for an AI
- * assistant (Widgets ▸ Instructions for an AI assistant…) and Robert's
- * request — it worked first time. Unchanged from what Claude gave, apart
+ * assistant (Widgets ▸ Instructions for an AI assistant…) and this request,
+ * Robert's, word for word:
+ *
+ *   "I would like a widget that displays, for each submodel, the stocks,
+ *    flows and variables in the submodel, grouped, listing their name and
+ *    equation."
+ *
+ * It worked first time. Unchanged from what Claude gave, apart
  * from this comment. Unlike big-number.js it reads the MODEL SPEC
  * (`this._model()`, `this._watchModel`), not the running model.
  */
