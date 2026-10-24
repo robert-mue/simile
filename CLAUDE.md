@@ -36,6 +36,13 @@ footing (`src/widgets/grid.js` is the first).
   (`openWidget`, so they bind to the current model as built-ins do). A widget
   file is one `Sienna.widget({…})` call. Design and trust: `NOTE-external-widgets.md`;
   the API: `sienna/CLAUDE.md`; examples: `sienna/examples/added/`.
+  **Instructions for an AI assistant** (Widgets ▸ …, and a link in Add a
+  widget…): sienna's `widget-brief.js` is the generic contract;
+  `src/widget-brief-simile.js` adds simile's part — roles, the model spec,
+  and how a display gets a running model's values (`Simulation.viewFor`:
+  `scalarComponents`, `addTarget`, the `data`/`describe`/`status` events).
+  `examples/widgets/big-number.js` was written from the brief alone: keep
+  the two in step.
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it
