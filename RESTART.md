@@ -2,10 +2,13 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date on 2026-10-22, when **widgets the
-user adds** (by URL, file or toolkit) were built in sienna and wired into
-simile — committed and pushed, NOT yet released (see "Done: widgets the user
-adds" below); next is how to help a user CREATE a widget. 2026-10-21 was the day
+embedded-widget pages. Brought up to date on 2026-10-25: **widgets the user
+adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
+(2026-10-24/25: instructions for an AI assistant, errors on the panel,
+Reload, a data interface for displays, the author's guide) are built in
+sienna and simile — committed and pushed, NOT yet released (see "Done:
+widgets the user adds" below). Nothing is waiting on Claude; Robert is to try
+the AI instructions with a real assistant. 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
@@ -132,7 +135,35 @@ stopwatch, toolkit).
 - Checked headless in the sienna demo and simile; simile's editor tests,
   grammar/fixture pages and both sample pages unchanged.
 
-**Next (Robert, 2026-10-22): how to help a user CREATE a widget** — discussion first.
+**Then: helping a user CREATE a widget (2026-10-24/25, NOT yet released).**
+Robert: "I was thinking in terms of just 6. However, we might as well work on
+supporting coders who are happy to build one themselves." He dropped
+templates, no-code widgets and an in-app editor; his order was 6, then 4 and
+3, then 5 and 1 (numbers from `NOTE-external-widgets.md`, which records it
+all). Sienna eaf44e0 … 5ead855; simile fecc412 … b79c727.
+
+- **6, instructions for an AI assistant:** Widgets ▸ Instructions for an AI
+  assistant… (Copy / Save as file; linked from Add a widget…). Generic text
+  `sienna/src/core/widget-brief.js` (`Sienna.widgetBrief`, `addSection`) +
+  simile's `src/widget-brief-simile.js`. `examples/widgets/big-number.js`
+  was written from it ALONE and works — keep them in step.
+- **4, errors on the panel:** red bar (file, line, ×n, Reload) while running;
+  placeholder with line and Reload if it fails at start. **Found:** Chrome
+  hides details of errors from file:// or cross-site scripts ("Script
+  error."), so they are caught in sienna's own code (wrapped widget methods,
+  `$.event.dispatch`, userData listeners, and simile's simulation listeners
+  via `addedWidgets.reportError`). A syntax error in a file added by PATH
+  still has no line — said plainly; selecting the file gives it.
+- **3, Reload:** Manage…, the bar, the placeholder; re-runs the file and
+  re-makes open panels with their `state()` (`workspace.rebuildWidget`). A
+  selected file must be selected again. Same URL added again = reload.
+- **5, data interface:** `Simulation.forWidget(ref)`, `WIDGET_API` 1 — read
+  the run, never drive it. Change only together with the brief, the guide and
+  the example.
+- **1, the guide:** `help/widgets.html` (Help ▸ Writing a widget), for coders.
+- **Checks:** `tools/headless/scripts/added-widget.py` (6 PASS);
+  `help-pages.py` now includes the guide. Editor 14/14, grammar, fixtures,
+  sample pages unchanged.
 
 ## Now: association submodels and role arrows (Robert, 2026-10-20)
 
