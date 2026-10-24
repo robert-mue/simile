@@ -7,9 +7,14 @@ adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
 (2026-10-24/25: instructions for an AI assistant, errors on the panel,
 Reload, a data interface for displays, the author's guide) are built in
 sienna and simile, RELEASED as **2026-10-25** (the latest; see "Done:
-widgets the user adds" below). Robert tried the AI instructions with Claude:
-his widget (`submodelContents.js`, a list of each submodel's contents,
-untracked in the repo root — his, not committed) "worked first time". 2026-10-21 was the day
+widgets the user adds" below). Robert tried the AI instructions with Claude
+and his widget "worked first time"; it is now the second example,
+`examples/widgets/submodel-contents.js`, with his one-sentence request quoted
+in its header and in the guide ("What to ask for"). Since the release,
+committed and pushed but NOT released: that example and the request in the
+guide (simile d3b1be8, 313d7aa), and the AI instructions now ask for a FILE
+TO DOWNLOAD rather than a code block to copy (sienna 7e8f674, Robert's
+request). Nothing is pending; Robert knocked off 2026-10-25. 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
@@ -162,6 +167,14 @@ all). Sienna eaf44e0 … 5ead855; simile fecc412 … b79c727.
   the run, never drive it. Change only together with the brief, the guide and
   the example.
 - **1, the guide:** `help/widgets.html` (Help ▸ Writing a widget), for coders.
+- **After the release (unreleased):** Robert's Claude-written widget kept as
+  `examples/widgets/submodel-contents.js` (reads the model spec, not the
+  run; unchanged but for a header quoting his request: "I would like a
+  widget that displays, for each submodel, the stocks, flows and variables
+  in the submodel, grouped, listing their name and equation."). The guide
+  quotes it under "What to ask for" and links both examples. The
+  instructions ask the assistant for a downloadable file named after the
+  widget, a code block only if it cannot make files.
 - **Checks:** `tools/headless/scripts/added-widget.py` (6 PASS);
   `help-pages.py` now includes the guide. Editor 14/14, grammar, fixtures,
   sample pages unchanged.
