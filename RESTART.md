@@ -6,9 +6,10 @@ embedded-widget pages. Brought up to date on 2026-10-25: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
 (2026-10-24/25: instructions for an AI assistant, errors on the panel,
 Reload, a data interface for displays, the author's guide) are built in
-sienna and simile — committed and pushed, NOT yet released (see "Done:
-widgets the user adds" below). Nothing is waiting on Claude; Robert is to try
-the AI instructions with a real assistant. 2026-10-21 was the day
+sienna and simile, RELEASED as **2026-10-25** (the latest; see "Done:
+widgets the user adds" below). Robert tried the AI instructions with Claude:
+his widget (`submodelContents.js`, a list of each submodel's contents,
+untracked in the repo root — his, not committed) "worked first time". 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
@@ -105,7 +106,7 @@ Every remaining refusal is an element left unfinished in its source file.
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive.
 
-## Done: widgets the user adds (Robert, 2026-10-22; NOT yet released)
+## Done: widgets the user adds (Robert, 2026-10-22; released 2026-10-25)
 
 A generic SIENNA feature, built in sienna (559756d, 85e3b3a, 3435cb7 —
 pushed; simile's submodule follows, last d8d4a01). Design, trust reasoning
@@ -135,7 +136,7 @@ stopwatch, toolkit).
 - Checked headless in the sienna demo and simile; simile's editor tests,
   grammar/fixture pages and both sample pages unchanged.
 
-**Then: helping a user CREATE a widget (2026-10-24/25, NOT yet released).**
+**Then: helping a user CREATE a widget (2026-10-24/25, released 2026-10-25).**
 Robert: "I was thinking in terms of just 6. However, we might as well work on
 supporting coders who are happy to build one themselves." He dropped
 templates, no-code widgets and an in-app editor; his order was 6, then 4 and
