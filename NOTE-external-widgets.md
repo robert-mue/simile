@@ -201,3 +201,30 @@ JavaScript, one who knows none, or a programmer. Ideas, cheapest first:
 
 Suggested order: 4 and 3 (they make every other route bearable), then 5
 and 1 with 2, then 6; 7 when it is clear which displays people ask for.
+
+## Built (2026-10-24/25): Robert's order — 6, then 4 and 3 (then 5 and 1)
+
+Robert (2026-10-24): "I was thinking in terms of just 6. However, we might
+as well work on supporting coders who are happy to build one themselves."
+Dropped: 2 (templates), 7 (no-code), 8 (in-app editor). Order: 6; 4 and 3;
+5 and 1.
+
+- **6, instructions for an AI assistant** (sienna eaf44e0; simile fecc412):
+  `sienna/src/core/widget-brief.js` (generic) + `src/widget-brief-simile.js`
+  (roles, model spec, a running model's values). Widgets ▸ Instructions for
+  an AI assistant… (Copy / Save as file), and a link in Add a widget….
+  Checked by writing `examples/widgets/big-number.js` from the brief alone:
+  it lists the model's variables once loaded, shows a value at once
+  (`query`) and follows the run.
+- **4, errors on the panel** and **3, Reload** (sienna b3aefeb + the
+  count-once fix): a red bar on the widget's panels for an error while it
+  runs (with Reload, ×n for repeats); the placeholder, with line and a
+  Reload button, if it fails as it starts. FOUND: Chrome hides the details
+  of errors from a script on file:// or another site ("Script error."), so
+  they are caught in the shell's own code — wrapped widget methods, jQuery's
+  event dispatch, userData's and simile's simulation listeners. A syntax
+  error in a file added by PATH still cannot be described: said so plainly;
+  a selected file gives its line. Reload keeps panels open and their
+  `state()`; adding the same URL again reloads.
+
+Next: 5 (a documented data interface for displays) and 1 (the author's guide).

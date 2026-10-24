@@ -232,6 +232,8 @@
           fn(event);
         } catch (e) {
           if (window.console) console.error('simulation listener failed', e);
+          // An added widget's (a display a user wrote): on its panel too.
+          if (Sienna.addedWidgets) Sienna.addedWidgets.reportError(e);
         }
       });
     },
