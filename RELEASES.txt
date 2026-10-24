@@ -257,3 +257,28 @@ Release 2026-10-21b
 Submodels
 - A submodel now has a pale blue background, a shade darker for each
   level of nesting, so a submodel stands out from the one it is in.
+
+
+------------------------------------------------------------------------
+Release 2026-10-25
+------------------------------------------------------------------------
+
+Widgets you add
+- Widgets > Add a widget... adds a widget that is not built in: one you
+  wrote, or someone else's, given by its address or by selecting the
+  file. It joins the Widgets menu and opens for the current model as
+  the built-in ones do. It is remembered next time.
+- Widgets > Add a toolkit... adds several at once. Its list is shown
+  first, and its widgets are loaded only if you agree.
+- Widgets > Manage added widgets... lists them, with who wrote them, and
+  reloads or removes them.
+- Before anything is added you are told what an added widget can do:
+  it runs inside the app, so add only widgets from people you trust.
+
+Writing a widget
+- Widgets > Instructions for an AI assistant... gives text to paste into
+  a chat with an AI assistant, which then writes the widget for you.
+- Help > Writing a widget is the guide for those who write their own.
+- An error in an added widget is shown on its panel, with the file and
+  line, and Reload runs the changed file again without closing the
+  panel.
