@@ -1270,6 +1270,46 @@
     };
   };
 
+  /**
+   * The DATA INTERFACE FOR ADDED WIDGETS (version `WIDGET_API`): what a
+   * display a user wrote may rely on, and nothing else. A plain object of
+   * the members that the brief for an AI assistant (src/widget-brief-simile.js)
+   * and the author's guide (help/widgets.html) describe — read the run, never
+   * drive it — so that this file's insides can change without breaking
+   * widgets written against it. Changing what is here means changing those
+   * two documents, `examples/widgets/big-number.js`, and the version.
+   *
+   *   base               null when no model is loaded (for this panel's model)
+   *   status             'idle' | 'loading' | 'ready' | 'running' | 'error'
+   *   time()             the model time now
+   *   runLength()        the run's length
+   *   unitName           the time unit's name
+   *   scalarComponents() [{ id, label, units }]  one number each
+   *   memberComponents() the same, a value per instance
+   *   addTarget(owner, id) / removeTarget(owner)  values wanted on each step
+   *   query([id])        Promise<{ id: value }>, the values now
+   *   subscribe(fn)      events 'data' | 'describe' | 'status' | 'progress' |
+   *                      'settings'; returns an unsubscribe
+   */
+  Simulation.WIDGET_API = 1;
+  Simulation.forWidget = function (ref) {
+    var view = Simulation.viewFor(ref);
+    return {
+      version: Simulation.WIDGET_API,
+      get base() { return view.base; },
+      get status() { return view.status; },
+      get unitName() { return view.unitName; },
+      time: function () { return Number(view.settings.current); },
+      runLength: function () { return Number(view.settings.runLength); },
+      scalarComponents: function () { return view.scalarComponents(); },
+      memberComponents: function () { return view.memberComponents(); },
+      addTarget: function (owner, id) { return view.addTarget(owner, id); },
+      removeTarget: function (owner) { return view.removeTarget(owner); },
+      query: function (ids) { return view.query(ids); },
+      subscribe: function (fn) { return view.subscribe(fn); },
+    };
+  };
+
   Sienna.Simulation = Simulation;
 
   // The session is a process on someone else's server; leaving without saying

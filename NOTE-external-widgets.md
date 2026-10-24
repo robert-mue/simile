@@ -227,4 +227,15 @@ Dropped: 2 (templates), 7 (no-code), 8 (in-app editor). Order: 6; 4 and 3;
   a selected file gives its line. Reload keeps panels open and their
   `state()`; adding the same URL again reloads.
 
-Next: 5 (a documented data interface for displays) and 1 (the author's guide).
+- **5, the data interface** (2026-10-25): `Simulation.forWidget(ref)`,
+  `WIDGET_API` 1 — base, status, time(), runLength(), unitName, the two
+  component lists, add/removeTarget, query, subscribe; nothing that drives
+  the run. The brief and the example use it.
+- **1, the author's guide**: `help/widgets.html` (Help ▸ Writing a widget),
+  for coders: the file, inside a widget, showing a running model (the
+  interface and events, value shapes), reading the model, trying it out
+  (path vs select, errors, Reload), sharing (toolkits), the rules.
+- Regression: `tools/headless/scripts/added-widget.py` (6 PASS);
+  `help-pages.py` now includes the guide (fits a phone).
+
+All of Robert's list (6, 4, 3, 5, 1) is done; not released.

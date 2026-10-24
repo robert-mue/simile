@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing a widget</title>
+  <link rel="stylesheet" href="help.css">
+  <style>/* Long code in a description may wrap at phone width. */ table.ref td + td code { white-space: normal; }</style>
+</head>
+<body>
+<main>
+
+<h1>Writing a widget</h1>
+<p class="byline">For anyone who knows some JavaScript and wants a display, or a tool, that Simile on the web does not have.</p>
+
+<p>A widget is a panel in the app: the diagram, the plotter and the sliders are all widgets. You can write your own, add it with <strong>Widgets ▸ Add a widget…</strong>, and it appears in the Widgets menu beside the built-in ones, opening for the current model as they do. You can share it with others by putting it online.</p>
+
+<p>A widget is one JavaScript file. You do not need to install anything or build anything. If you would rather not write it yourself, <strong>Widgets ▸ Instructions for an AI assistant…</strong> gives you text to paste into a chat with an AI assistant, which then writes the file for you. Everything below is in those instructions too.</p>
+
+<nav class="contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#file">The file</a></li>
+    <li><a href="#inside">Inside the widget</a></li>
+    <li><a href="#run">Showing a running model</a></li>
+    <li><a href="#model">Reading the model itself</a></li>
+    <li><a href="#try">Trying it out</a></li>
+    <li><a href="#share">Sharing it</a></li>
+    <li><a href="#rules">What a widget must not do</a></li>
+  </ol>
+</nav>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="file">1. The file</h2>
+
+<p>The whole file is one call to <code>Sienna.widget</code>. Here is a complete widget that rolls a die:</p>
+
+<pre><code>Sienna.widget({
+  name: 'dice',                     // letters, digits and _, starting with a letter
+  label: 'Dice',                    // its entry in the Widgets menu
+  notes: 'Rolls a die.',            // shown to whoever adds it
+  author: 'Your name', version: '1.0',
+  contract: 1,                      // the version of these rules it follows
+  widget: {
+    options: { sides: 6 },
+    _create: function () {
+      var face = $('&lt;div&gt;').css({ fontSize: '48px', textAlign: 'center' }).text('–');
+      var roll = $('&lt;button type="button" class="slx-chrome"&gt;').text('Roll');
+      roll.on('click', () =&gt; face.text(1 + Math.floor(Math.random() * this.options.sides)));
+      this.element.append(face, roll);
+    },
+  },
+});</code></pre>
+
+<p>It is loaded as an ordinary script, so there are no modules: no <code>import</code> or <code>export</code>. The page already has jQuery (<code>$</code>) and the global <code>Sienna</code>. Plain JavaScript that a current browser runs as it is, with no build step.</p>
+
+<table class="ref">
+  <tr><th>Field</th><th>What it is</th></tr>
+  <tr><td><code>name</code></td><td>Required, and unique. A name the app already uses, or any jQuery method name (<code>show</code>, <code>data</code>…), is refused, so pick a distinctive one.</td></tr>
+  <tr><td><code>label</code>, <code>title</code></td><td>The menu entry, and the panel's title (default: the label).</td></tr>
+  <tr><td><code>role</code></td><td><code>'display'</code> opens it among the model's displays in its Simulation window, as a plot is. Leave it out for a window of its own.</td></tr>
+  <tr><td><code>options</code></td><td>Default options.</td></tr>
+  <tr><td><code>notes</code>, <code>author</code>, <code>version</code></td><td>Shown before and after it is added, and in Manage added widgets.</td></tr>
+  <tr><td><code>contract</code></td><td>The version of these rules (now 1). A widget needing a newer one than the app has is refused with a message.</td></tr>
+  <tr><td><code>widget</code></td><td>The widget itself: a <a href="https://api.jqueryui.com/jQuery.widget/">jQuery UI widget</a> prototype. The app defines and registers it for you; do not call <code>$.widget</code> yourself.</td></tr>
+</table>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="inside">2. Inside the widget</h2>
+
+<ul>
+  <li><code>this.element</code> is the panel's content (a jQuery object): build everything inside it. <code>this.options</code> holds the options.</li>
+  <li>Give toolbars and controls the class <code>slx-chrome</code>. When the user shrinks a panel to a thumbnail, those are hidden and the rest stays.</li>
+  <li>The panel can be resized at any time. To redraw to fit, call <code>this._watchPanelResize(fn)</code> once in <code>_create</code>.</li>
+  <li>To keep a choice across a reload of the app, return it from a method <code>state()</code>, as an object whose keys are option names. It is saved with the panel and given back as options next time.</li>
+  <li><code>_destroy</code> must undo whatever <code>_create</code> did outside <code>this.element</code>: timers, subscriptions, listeners on the document.</li>
+  <li>Style with inline styles, or one <code>&lt;style&gt;</code> element of your own whose classes all start with your widget's name. Never style bare elements (<code>button { … }</code>) or the app's own <code>slx-</code> classes: that changes the whole app.</li>
+</ul>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="run">3. Showing a running model</h2>
+
+<p>Most widgets people want are displays: something the plotter does not show, or not the way you want. A display listens to the run; the run control loads and runs the model. In <code>_create</code>:</p>
+
+<pre><code>this._sim = Sienna.Simulation.forWidget(this._ref());
+this._off = this._sim.subscribe((e) =&gt; this._onEvent(e));</code></pre>
+
+<p>and in <code>_destroy</code>, <code>this._off()</code> and a <code>removeTarget</code> for each target you added. That object is the whole interface, and the only part of the simulation a widget should use:</p>
+
+<table class="ref">
+  <tr><th>Member</th><th>What it is</th></tr>
+  <tr><td><code>base</code></td><td>Null while no model is loaded for this panel's model. Show that ("Run the model to see values").</td></tr>
+  <tr><td><code>scalarComponents()</code></td><td><code>[{ id, label, units }]</code>: the variables that are one number. <code>label</code> is the path, such as <code>Trees/biomass</code>.</td></tr>
+  <tr><td><code>memberComponents()</code></td><td>The same for variables with a value per instance: in a population, a fixed-membership submodel, or an association.</td></tr>
+  <tr><td><code>addTarget(</code><wbr><code>owner, id)</code></td><td>Ask for a variable's values as the model runs. <code>owner</code> is any string of yours, one per thing you show; adding again with it replaces the variable. <code>removeTarget(owner)</code> stops it.</td></tr>
+  <tr><td><code>query([id])</code></td><td>The values now, without running: a promise of <code>{ id: value }</code>. Rejects when no model is loaded.</td></tr>
+  <tr><td><code>subscribe(fn)</code></td><td>Hear events (below). Returns the function that stops it.</td></tr>
+  <tr><td><code>time()</code></td><td>The model time now.</td></tr>
+  <tr><td><code>runLength()</code></td><td>The length of the run.</td></tr>
+  <tr><td><code>unitName</code></td><td>The time unit's name (often just "unit").</td></tr>
+  <tr><td><code>status</code></td><td><code>'idle'</code>, <code>'loading'</code>, <code>'ready'</code>, <code>'running'</code> or <code>'error'</code>.</td></tr>
+</table>
+
+<p>The events:</p>
+
+<table class="ref">
+  <tr><th>Event</th><th>When, and what it carries</th></tr>
+  <tr><td><code>data</code></td><td>Once per logged time step: <code>{ time, values, reset }</code>, with <code>values[id]</code> for each target. <code>reset: true</code> means the run went back to its start, so clear any history you keep.</td></tr>
+  <tr><td><code>describe</code></td><td>A model has just been loaded. <strong>Ids change between loads</strong>: read the lists again, find the user's choice again by its <em>label</em>, and add the target again. Save a choice by label, never by id.</td></tr>
+  <tr><td><code>status</code></td><td><code>{ status }</code>, as above. When <code>base</code> is null, nothing is loaded.</td></tr>
+  <tr><td><code>progress</code>, <code>settings</code></td><td>How far through the run, and the run's settings changed. Usually ignored.</td></tr>
+</table>
+
+<p>A value is a number; an array for a fixed membership (element 0 is instance 1); an object for a population, <code>{ '3': v, '7': v }</code>, keyed by the members' own numbers, which they keep for life; an object for an association, <code>{ '3,17': v }</code>, one number per role; or null.</p>
+
+<p>A complete display, about sixty lines, is <a href="../examples/widgets/big-number.js">examples/widgets/big-number.js</a>: one chosen variable, shown large, updated as the model runs. It was written from the instructions for an AI assistant alone, and is the best place to start a display of your own.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="model">4. Reading the model itself</h2>
+
+<p>A panel belongs to one model. <code>this._ref()</code> is its path, and <code>this._model()</code> the model spec: <code>name</code>; <code>nodes</code>, <code>{ id: { type, label, parent, props } }</code>, where <code>type</code> is <code>'stock'</code>, <code>'variable'</code>, <code>'valve'</code> (a flow's rate), <code>'condition'</code> and so on, and <code>props</code> holds the fields (<code>initial</code>, <code>rate</code>, <code>value</code>, <code>units</code>…); <code>submodels</code>; and <code>arcs</code>. Call <code>this._watchModel(fn)</code> once in <code>_create</code> to hear every change, including undo.</p>
+
+<p>Read it; do not change it in place. A widget that is meant to edit the model writes with <code>this._set('sub/path', value)</code>, inside <code>this._action('what', payload, function () { … })</code>, so the edit is saved and undone as one step.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="try">5. Trying it out</h2>
+
+<p><strong>Widgets ▸ Add a widget…</strong> takes the file's address, or lets you select the file. When the app is opened from your own disk, its path works (<code>file:///home/you/widgets/dice.js</code>). On the web, the app cannot read a file on your computer by its path, so select the file instead; it is then kept with your settings.</p>
+
+<p><strong>Errors are shown on the panel</strong>, with the file and line: a red bar for an error while the widget runs, or a message in place of the widget if it failed as it started. Errors in a file added by its path are hidden by the browser, so a mistake that stops the file running at all (a missing bracket, say) is reported without its line. Select the file instead, or open the browser's console (F12), to see where it is.</p>
+
+<p>After you edit the file, press <strong>Reload</strong>: on the red bar, on the message, or in <strong>Widgets ▸ Manage added widgets…</strong>. It runs the file again and re-makes the widget's open panels, keeping what <code>state()</code> kept. A selected file has to be selected again, because a page cannot re-read a file by itself.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="share">6. Sharing it</h2>
+
+<p>Put the file anywhere on the web that serves it as it is, such as a GitHub repository published with GitHub Pages, and give people its address. To give several at once, put a <strong>toolkit</strong> beside them, a file such as <code>toolkit.js</code>:</p>
+
+<pre><code>Sienna.toolkit({
+  name: 'my-displays', label: 'My displays',
+  notes: 'Three displays for population models.', author: 'Your name', version: '1.0',
+  widgets: ['big-number.js', 'histogram.js', 'https://example.org/w/clock.js'],
+});</code></pre>
+
+<p>Relative addresses are relative to the toolkit's own file, so the folder can be moved, or put online, as a whole. People add it with <strong>Widgets ▸ Add a toolkit…</strong>, see its list, and load the widgets only if they agree.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2 id="rules">7. What a widget must not do</h2>
+
+<p>An added widget runs inside the app with everything the app has: it could read, change or delete the user's saved models. People are warned of that before they add one, and asked to add only widgets from people they trust. To deserve that trust:</p>
+
+<ul>
+  <li>No network access the user did not ask for: no sending data elsewhere, no analytics, no loading scripts from other sites.</li>
+  <li>Never touch <code>localStorage</code>, <code>sessionStorage</code> or IndexedDB, where the user's work is kept. Use <code>state()</code> and the model methods above.</li>
+  <li>Do not change <code>Sienna</code>, <code>$</code> or anything else global, or the page outside <code>this.element</code>.</li>
+  <li>No <code>alert</code>, <code>confirm</code> or <code>prompt</code>: show messages in the panel.</li>
+  <li>A display reads the run and never drives it.</li>
+</ul>
+
+</main>
+</body>
+</html>

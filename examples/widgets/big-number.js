@@ -5,7 +5,7 @@
  * Written (2026-10-24) from the brief for an AI assistant ALONE — Widgets ▸
  * Instructions for an AI assistant…, i.e. sienna's `widget-brief.js` plus
  * `src/widget-brief-simile.js` — as a check that the brief is enough. If a
- * change to `Simulation.viewFor` breaks this file, the brief is out of date
+ * change to `Simulation.forWidget` breaks this file, the brief is out of date
  * too: fix both.
  */
 Sienna.widget({
@@ -21,7 +21,7 @@ Sienna.widget({
     options: { variable: '', digits: 3 },
 
     _create: function () {
-      this._sim = Sienna.Simulation.viewFor(this._ref());
+      this._sim = Sienna.Simulation.forWidget(this._ref());
       this._owner = (this._panelId() || 'w' + Math.random().toString(36).slice(2)) + ':';
       this._id = null;
       this._bar = $('<div class="slx-chrome bigNumber-bar">').appendTo(this.element);

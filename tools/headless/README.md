@@ -38,6 +38,9 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
 - `scripts/test-pages.py` — opens `test/index.html` and `test/fixtures.html`.
 - `scripts/editor.py` — runs `test/editor.html` (over http, via `tools/serve.py`)
   and prints its bar and any failing tests.
+- `scripts/added-widget.py` — adds `examples/widgets/big-number.js` by URL,
+  runs it on Growth, breaks it on purpose; PASS/FAIL lines. Keeps the brief,
+  `Simulation.forWidget` and the example in step.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.

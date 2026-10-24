@@ -626,6 +626,7 @@
           ],
         },
         { label: 'Live models in your own web pages', onSelect: function () { window.open('help/pages.html', '_blank'); } },
+        { label: 'Writing a widget', onSelect: function () { window.open('help/widgets.html', '_blank'); } },
         // Plain text, oldest first.
         { label: 'Release notes', onSelect: function () { window.open('RELEASES.txt', '_blank'); } },
       ],

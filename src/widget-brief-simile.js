@@ -4,7 +4,7 @@
  * model spec, and above all how a display gets the values of a running model.
  *
  * Written from what the built-in displays actually do (`lollipop.js` is the
- * shortest worked example). Change this when `Simulation.viewFor` changes:
+ * shortest worked example). Change this when `Simulation.forWidget` changes:
  * an added widget written from an out-of-date brief breaks silently.
  *
  * Classic script; after the shell, before `main.js`.
@@ -52,7 +52,7 @@
     'session for this panel\'s model once, in `_create`:',
     '',
     '```js',
-    'this._sim = Sienna.Simulation.viewFor(this._ref());',
+    'this._sim = Sienna.Simulation.forWidget(this._ref());',
     'this._owner = (this._panelId() || \'w\' + Math.random().toString(36).slice(2)) + \':\';',
     'this._off = this._sim.subscribe((e) => this._onEvent(e));',
     '```',
@@ -90,16 +90,20 @@
     '  \'running\', \'error\'. When `this._sim.base` is null there is no model',
     '  loaded: show that (e.g. "Run the model to see values").',
     '- `\'progress\'` `{ fraction }` and `\'settings\'` (the run\'s settings',
-    '  changed; `this._sim.settings.current` is the time now, `runLength` the',
-    '  length) can usually be ignored.',
+    '  changed) can usually be ignored. `this._sim.time()` is the model time',
+    '  now and `this._sim.runLength()` the length of the run.',
     '',
     'To show a value at once (after the user picks one, or when the widget',
     'opens on a loaded model), ask without running:',
     '`this._sim.query([id]).then((values) => show(values[id]))`. It rejects when',
     'no model is loaded; catch it.',
     '',
-    '`this._sim.unitName` is the name of the time unit (often just \'unit\').',
-    'Do not call `load`, `start`, `reset` or `stop`: that is the run control\'s',
-    'job, unless the user explicitly asks for a widget that controls the run.',
+    '`this._sim.unitName` is the name of the time unit (often just \'unit\'),',
+    'and `this._sim.status` one of the statuses above.',
+    '',
+    'That is the whole interface (version 1, `this._sim.version`): use',
+    'nothing else of `Sienna.Simulation`, whose insides change. A display reads',
+    'the run and never drives it: loading, running and resetting the model are',
+    'the run control\'s job, and there is no way to do them from here.',
   ].join('\n'));
 })(window.Sienna);

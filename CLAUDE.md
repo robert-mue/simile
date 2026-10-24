@@ -42,7 +42,11 @@ footing (`src/widgets/grid.js` is the first).
   and how a display gets a running model's values (`Simulation.viewFor`:
   `scalarComponents`, `addTarget`, the `data`/`describe`/`status` events).
   `examples/widgets/big-number.js` was written from the brief alone: keep
-  the two in step.
+  the two in step. What an added display may use is **`Simulation.forWidget(ref)`**
+  (`WIDGET_API` 1: read the run, never drive it) — change it only with the
+  brief, the guide **`help/widgets.html`** (Help ▸ Writing a widget, for
+  coders) and the example; `tools/headless/scripts/added-widget.py` checks
+  all of it.
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it
