@@ -2,7 +2,18 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date on 2026-10-31: **widgets the user
+embedded-widget pages. Brought up to date at the end of 2026-10-31.
+
+**NOW: nkometou.pl** — Jasper's large old-Simile model (99 submodels, 5213
+influences), Robert's test of whether the app covers the whole model
+language (events apart). See "Now: nkometou.pl" below and
+`NOTE-nkometou.md`. Done 2026-10-31, committed and pushed, NOT released:
+SATELLITE submodels (8e77c38) and TABLES read from data files (df363fd).
+Next: FILE PARAMETERS — but Robert is reading up on them first ("so that I
+am better placed to point you in the right direction"); wait for him. Then
+the new crossing forms, then compiling nkometou.
+
+Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
 (2026-10-24/25: instructions for an AI assistant, errors on the panel,
 Reload, a data interface for displays, the author's guide) are built in
@@ -13,14 +24,13 @@ and his widget "worked first time"; it is now the second example,
 in its header and in the guide ("What to ask for"); and the AI instructions
 ask for a FILE TO DOWNLOAD rather than a code block to copy (sienna 7e8f674,
 Robert's request). Those three are RELEASED as **2026-10-31**, the latest
-release; the working tree is clean and nothing is pending or half-done. Next
-is Robert's choice — the parked items (item 38, the Simulation window;
-automatic layout; node styling) or whatever he brings. 2026-10-21 was the day
+release. Still parked: item 38 (the Simulation window), automatic layout,
+node styling. 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
 pairings between them. "What could have been show-stoppers weren't."
-All of it is RELEASED as **2026-10-21**; then **2026-10-21b** (the latest)
+All of it is RELEASED as **2026-10-21**; then **2026-10-21b**
 added: submodels have a pastel background that deepens with nesting
 (`_submodelFill` in `src/widgets/diagram.js`: hsl(205, 70%, 96% − 5% per
 level, not below 80%), Robert's one exception to "styling later", for the
@@ -111,6 +121,44 @@ Every remaining refusal is an element left unfinished in its source file.
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
 model on SimiLive.
+
+## Now: nkometou.pl — covering the whole language (Robert, 2026-10-31)
+
+`~/Projects/simile_models/nkometou.pl` (1.75 MB, Simile v7.5, plain Prolog;
+Jasper sent it at Robert's request; a second, larger one exists). Robert:
+not a good strategy to work through its whole error report; take one area
+at a time, with a small test model for each (he made
+`satellite_submodel.json` / `.pl` for the first). Full survey and order:
+`NOTE-nkometou.md`.
+
+- **Imports** in 0.3 s (1567 nodes, 2883 arcs, 99 submodels). Export is
+  refused; compile not reached.
+- **Done — satellites** (8e77c38): a submodel with ONE role arrow (Simile's
+  "satellite") has one instance per base instance, so a name leaving it is a
+  list (`use(none,in_hierarchy,{vol3},list(1))`). `Diagram.isMultiInstance`
+  is now the one rule (population/fixed, a condition, or an association
+  whose base is many-instanced) for the exporter AND the names the dialog
+  inserts. Robert's model compiles and runs (sum_vol3 = 21).
+- **Done — tables** (df363fd): `table_data` from a CSV kept as
+  `props.table`, written back beside the `table(…)` equation; read-only
+  **Table** tab in the property dialog. All 43 tables in use kept; the
+  other 3 tables and 10 graphs are on orphan function nodes Simile never
+  uses. A table model compiles and runs (v = [5,7,9], total 21).
+- **Next — file parameters** (`param_type=file`, value from a parameter
+  file at run time): 50 in nkometou, and the cause of ALL 11 refused
+  catalogue models (61/72 would go towards 72/72). Needs a design decision;
+  Robert is reading up first — WAIT for his direction.
+- **Then — crossing forms** never seen in the catalogue: an influence with
+  an association role AND a satellite role (`…_link_to_satellite`), lists of
+  arrays `{[x]}`, arrays of arrays `[[x]]`, an array along an influence
+  (needs `array(1,N)`, we write `list(1)`), two names on one arc,
+  `size('submodel')` as a dimension, and fixed-membership names Simile
+  writes as scalars.
+- **Checks added:** test-only fixtures `test/fixture-satellite.js` and
+  `test/fixture-table.js` on `test/fixtures.html` (8/8). Round trip
+  unchanged, 61/72 identical, 11 refused.
+- Probing tip: give the file parameters a placeholder `0` in the page to see
+  the next layer of export problems (scratch scripts, not committed).
 
 ## Done: widgets the user adds (Robert, 2026-10-22; released 2026-10-25)
 
