@@ -37,6 +37,19 @@ the decisions that are Robert's.
     `<single_value>` / `<byte_array label=… type="REAL|INTEGER|FLAG">` with
     `<value index=… val=…>` giving the dimensions and the values as base64
     binary.
+- **Typed vs saved (checked 2026-10-31, Simile source of 2026-10-09).**
+  What is TYPED in the dialogue's field is JSON for several values
+  (`[1,2,3]`, `{"a":1,…}`; a field starting `[` or `{` goes to a JSON
+  parser — `UglifyValList`, Run/hai2mmii.tcl), a plain number otherwise.
+  It is converted at once to Simile's internal Tcl index/value list. What
+  **Save** writes is still the XML `.spf` (`fileparams::Save`,
+  Run/params.tcl): `<single_value val=…>`; `<multi_value>` with nested
+  `<value index=… value=…>`; `<byte_array>` (base64) for values read from
+  data; and `<csv_columns>` / `<image>` / `<geotiff>` / `<csv_grid>` for a
+  parameter that REFERS to a data file. So Simile does use two formats.
+  Robert (2026-10-31): we should save JSON. Agreed: our parameter file is
+  JSON, in the same notation as the field; Simile's XML `.spf` at most
+  READ, as an import.
 - Five catalogue models also fail in Simile 7.5's own GUI
   (`type_error(atomic,[])`, tools/engine/README.md) — exactly the ones whose
   file parameters carry `spec=[]`. Probably that; to confirm, and maybe a
