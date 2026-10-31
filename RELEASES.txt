@@ -282,3 +282,18 @@ Writing a widget
 - An error in an added widget is shown on its panel, with the file and
   line, and Reload runs the changed file again without closing the
   panel.
+
+
+------------------------------------------------------------------------
+Release 2026-10-31
+------------------------------------------------------------------------
+
+Writing a widget
+- The instructions for an AI assistant now ask it to give you the
+  widget as a file to download, rather than code to copy out of the
+  chat.
+- Help > Writing a widget has a new section, "What to ask for", with a
+  one-sentence request that produced a working widget first time.
+- A second example widget, Submodel contents: for each submodel, its
+  stocks, flows and variables with their equations. It was written by
+  Claude from the instructions and that request.
