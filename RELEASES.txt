@@ -297,3 +297,22 @@ Writing a widget
 - A second example widget, Submodel contents: for each submodel, its
   stocks, flows and variables with their equations. It was written by
   Claude from the instructions and that request.
+
+
+------------------------------------------------------------------------
+Release 2026-10-31b
+------------------------------------------------------------------------
+
+Submodels
+- A satellite submodel (one with a single role arrow, so one instance
+  for each instance of the submodel the arrow comes from) now counts as
+  having many instances: a value leaving it is a list, written {name},
+  as in Simile. The property dialog offers it that way.
+
+Tables
+- A table read from a data file in Simile (an equation using table(...))
+  is now kept when a model is imported, and written back when it is
+  exported, so such models compile and run. The property dialog has a
+  Table tab showing where the values came from (file, column) and the
+  values themselves. Reading the file again, or editing the values, is
+  not possible yet.
