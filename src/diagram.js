@@ -402,11 +402,47 @@
   Diagram.asWritten = function (model, arc, name) {
     var out = Diagram.crossings(model, arc.from, arc.to).out || [];
     out.forEach(function (sub) {
+      if (!Diagram.isMultiInstance(model, sub)) return;
       var kind = ((model.submodels || {})[sub] || {}).kind;
-      if (kind === 'population') name = '{' + name + '}';
-      else if (kind === 'fixed-membership') name = '[' + name + ']';
+      name = kind === 'fixed-membership' ? '[' + name + ']' : '{' + name + '}';
     });
     return name;
+  };
+
+  /**
+   * Does this submodel have (or may it have) more than one instance — so that
+   * a name coming OUT of it, other than into one of its own bases, is a list?
+   *
+   *   - a population or a fixed membership: yes;
+   *   - one holding a condition: yes, since it may or may not exist for a
+   *     given instance (`landuse1b`'s `Forest`, `count=[]`, exports
+   *     `{volume}` as `list(1)`);
+   *   - an ASSOCIATION: one instance per pairing, so yes when any of its roles
+   *     comes from a submodel that has more than one. That includes Simile's
+   *     SATELLITE submodel, an association with ONE role: one instance per
+   *     instance of its base (a tree's Subtrees), and what leaves it for the
+   *     top level is a list — `use(none,in_hierarchy,{sum_volume},list(int))`
+   *     in Robert's `satellite_submodel.pl`, 2026-10-31.
+   *
+   * The one rule for the exporter (`isMulti`) and for the names the property
+   * dialog inserts (`asWritten`), so the two cannot disagree.
+   */
+  Diagram.isMultiInstance = function (model, subId, seen) {
+    var s = (model.submodels || {})[subId];
+    if (!s) return false;
+    if (s.kind && s.kind !== 'single') return true;
+    var nodes = model.nodes || {};
+    var hasCondition = Object.keys(nodes).some(function (id) {
+      return nodes[id].type === 'condition' && nodes[id].parent === subId;
+    });
+    if (hasCondition) return true;
+    seen = seen || {};
+    if (seen[subId]) return false;
+    seen[subId] = true;
+    return Diagram.rolesOf(model, subId).some(function (r) {
+      var base = ((model.arcs || {})[r] || {}).from;
+      return Diagram.isMultiInstance(model, base, seen);
+    });
   };
 
   /**

@@ -536,17 +536,12 @@
      * `condition` — a conditional submodel may or may not exist for a given
      * instance, so what leaves it is still a list. Read off `landuse1b.pl`,
      * where `Forest` is `count=[]` yet exports `{volume}` as `list(1)`, and it
-     * is the one submodel there containing a condition.
+     * is the one submodel there containing a condition. And when it is an
+     * association (a satellite included) with a many-instanced base.
      */
     isMulti: function (subId) {
-      var s = (this.m.submodels || {})[subId];
-      if (!s) return false;
-      if (s.kind && s.kind !== 'single') return true;
-      var m = this.m;
-      var self = this;
-      return Object.keys(m.nodes).some(function (id) {
-        return m.nodes[id].type === 'condition' && self.parentOf(id) === subId;
-      });
+      // The rule, with an association's (a satellite's) part: `Diagram`.
+      return Sienna.Diagram.isMultiInstance(this.m, subId);
     },
 
     /** How many list-making boundaries an influence leaves — 0 for a scalar. */
