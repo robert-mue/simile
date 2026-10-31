@@ -131,3 +131,73 @@ the decisions that are Robert's.
 - When and where the panel appears.
 - assoc_from_data1/2: the two roles' names (ID1, ID2) on one influence swap
   in the round trip — a crossing form, for that list (NOTE-nkometou.md).
+
+## Fixed and variable parameters (checked in Simile's source, 2026-10-31)
+
+Robert: Simile's equation dialogue offers "Fixed parameter" or "Variable
+parameter"; the latter changes at time points during the run (values from
+the parameter file / dialogue) or by a slider. What the source says:
+
+- The dialogue's "Data source" (Run/equation.tcl) is three radio buttons:
+  **Variable parameter** (with Minimum / Maximum), **Fixed parameter**,
+  **Derived** (an equation).
+- In the file (`paramness_setup`, Prolog/library.pl), for a variable:
+  - Derived: has a function node.
+  - Variable parameter: NO function node and NO `param_type`. Any value on
+    the node is its default.
+  - Fixed parameter: no function node, `param_type=file`.
+- Compiled (`get_assignment`, Prolog/compile.pl): a fixed parameter is
+  collected once, at reset; a variable parameter is collected EVERY time
+  step (`update(Dest)`, `on_step`), its equation, clamped to min/max, being
+  the value used when none is given (`apply_minmax`).
+- Run time (shank.cpp `UseArrayForParams`): eval `INPUT` (variable) gets a
+  `VarParamData` — a list of time points, each with values, plus a fill
+  method between them (`use_last`, `use_closest`, `interpolate`), a wrap
+  time and an interval. Others (`TABLE` eval: fixed) get a plain slot.
+  Simile's dialogue gives a variable parameter TIME as an extra outermost
+  dimension (`readMany`, `FirstIndexCheck`): JSON `[a, b, c]` is times 0,
+  1, 2 (× interval), `{"0": a, "10": b}` times 0 and 10. A slider sets the
+  current value (`NOW v`), not a time point.
+
+So what was built 2026-10-31 is **fixed parameters**. Our sliders are
+already Simile's variable parameters (the single-node form, `INPUT`), but
+only those with a value and a range; the rest of the kind is missing:
+
+1. A variable parameter with NO value (nkometou's 25, `spec=[]`) — we read
+   it as an unfinished variable.
+2. Values over time from the panel / a parameter file, with a fill method.
+3. The dialogue's choice. Ours infers a slider parameter (a number, a
+   range, nothing influencing it) and has a separate "File parameter" tick.
+   Simile's rule is simpler and explicit: no function node → a parameter.
+   (So in Simile, chao.pl's `gain`, a constant with no range, is a
+   variable parameter too.)
+
+### Proposal
+
+- **Dialog**: replace the tick box with Simile's choice, "Data source":
+  Derived / Variable parameter / Fixed parameter (`props.paramKind`). The
+  equation is optional for both parameter kinds (a default); Minimum /
+  Maximum go with Variable parameter (a slider needs them).
+- **Import / export**: by Simile's rule — no function node: variable
+  parameter (fixed with `param_type=file`); function node: derived. Both
+  parameter kinds written as one node.
+- **Panel**: both kinds, grouped by submodel, the kind shown. A fixed
+  parameter: a number or array, as now. A variable parameter: a number
+  (held through the run) or a series over time — `{"0": 5, "10": 7}`, or
+  an array per interval — with the fill method; a slider still moves one
+  live. A value-less one is "needed", like a fixed one.
+- **Engine**: bridge calls for time points (`create_time_point`,
+  `get_timepoint_ptr_and_dims`, fill method, wrap); first a check that the
+  page's single-threaded run applies them.
+- **File**: `{"time": {"0": 5, "10": 7}, "fill": "interpolate"}` for a
+  series, beside plain values.
+
+### Decisions for Robert
+
+- Make the kind EXPLICIT, as Simile does (so a constant with no function
+  node imported from Simile is a variable parameter, and our sliders list
+  those with a range), or keep inferring slider parameters as now and add
+  only "variable parameter with no value"? Explicit matches Simile and the
+  file; it changes what existing models show (their constants become
+  parameters on import).
+- Time series now, or variable parameters as single values first?
