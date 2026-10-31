@@ -7,8 +7,9 @@ embedded-widget pages. Brought up to date at the end of 2026-10-31.
 **NOW: nkometou.pl** — Jasper's large old-Simile model (99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
 language (events apart). See "Now: nkometou.pl" below and
-`NOTE-nkometou.md`. Done 2026-10-31, committed and pushed, NOT released:
-SATELLITE submodels (8e77c38) and TABLES read from data files (df363fd).
+`NOTE-nkometou.md`. Done 2026-10-31 and RELEASED as **2026-10-31b** (the
+latest): SATELLITE submodels (8e77c38) and TABLES read from data files
+(df363fd).
 Next: FILE PARAMETERS — but Robert is reading up on them first ("so that I
 am better placed to point you in the right direction"); wait for him. Then
 the new crossing forms, then compiling nkometou.
@@ -23,8 +24,7 @@ and his widget "worked first time"; it is now the second example,
 `examples/widgets/submodel-contents.js`, with his one-sentence request quoted
 in its header and in the guide ("What to ask for"); and the AI instructions
 ask for a FILE TO DOWNLOAD rather than a code block to copy (sienna 7e8f674,
-Robert's request). Those three are RELEASED as **2026-10-31**, the latest
-release. Still parked: item 38 (the Simulation window), automatic layout,
+Robert's request). Those three are RELEASED as **2026-10-31**. Still parked: item 38 (the Simulation window), automatic layout,
 node styling. 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
