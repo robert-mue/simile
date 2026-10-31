@@ -66,10 +66,27 @@ and writing it back.
 Already handled: `usr(name)` (173), names with spaces/newlines (renamed),
 `exclusive`.
 
+## Done 2026-10-31: tables (`table_data`)
+
+Kept as `props.table` = { file, column, indices, values, units, bounds,
+dims } (`readTable` in import-simile.js), written back on the node holding
+the `table(…)` equation (`tableFromFile` in export-simile.js), where the
+generator reads `dims`, `bounds`, `current`, `units` (inters.pl,
+`table_const`). Shown read-only in the property dialog's **Table** tab
+(source, then the values). nkometou: 43 tables kept — every one in use; the
+3 other file tables and all 10 sketched graphs are on ORPHAN function nodes
+(nothing points to them; Simile never uses them either). Checked by
+compiling and running a small table model in the page (v = [5,7,9] per
+field, total 21, whole array) — now the test-only fixture
+`test/fixture-table.js`. Re-reading the CSV, or editing values: not done.
+Found on the way: an array-valued influence (`[whole]` into
+`element([whole],2)`) needs `array(1,N)` as its role dimension, not
+`list(1)` — part of section 3's `[x]` forms.
+
 ## Suggested order
 
 1. File parameters (unblocks the 11 catalogue models too; needs the design
    decision above, and probably a question to Jasper).
-2. `table_data` tables.
+2. ~~`table_data` tables.~~ Done 2026-10-31.
 3. The crossing forms, each with a small test model as for satellites.
 4. Then compile nkometou in the page and see what the generator says.

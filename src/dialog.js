@@ -438,6 +438,25 @@
       + '</div>';
   }
 
+  /** A table from a data file, read only: its source, then its values. */
+  function tableHtml(t) {
+    var vals = Array.isArray(t.values) ? t.values : [t.values];
+    var src = '<p class="slx-table-src">From <code>' + esc(String(t.file || '').split(/[\\/]/).pop() || '?')
+      + '</code>, column <strong>' + esc(t.column || '?') + '</strong>'
+      + ((t.indices || []).length ? ', keyed by ' + esc((t.indices || []).join(', ')) : '')
+      + ' — ' + vals.length + ' value' + (vals.length === 1 ? '' : 's') + '.</p>'
+      + '<p class="slx-dlg-note">The values as Simile last read them from <code>' + esc(t.file || '') + '</code>.'
+      + ' The model runs on these; the equation uses them as <code>table(…)</code>.'
+      + ' Reading the file again, or changing the values, cannot be done here yet.</p>';
+    var rows = vals.map(function (v, i) {
+      var shown = Array.isArray(v) ? v.join(', ') : String(v);
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(shown) + '</td></tr>';
+    }).join('');
+    return src + '<div class="slx-table-scroll"><table class="slx-table-values">'
+      + '<thead><tr><th>#</th><th>' + esc(t.column || 'value') + '</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  }
+
   /**
    * Open the dialog for one element.
    * @param {object} d   a Sienna.Diagram
@@ -521,6 +540,14 @@
     if (sketchField && Sienna.sketch) {
       tabs.push({ key: 'graph', label: 'Graph', body: '<div class="slx-sketch-host"></div>' });
     }
+
+    // **Table** — a table read from a data file (`props.table`, imported from
+    // Simile's `table_data`; see `readTable` in import-simile.js), which the
+    // equation uses as `table(…)`. Shown, read only: the values as Simile last
+    // read them from the file are what the model runs on, and where they came
+    // from. Re-reading the file, or editing the values, is not done yet.
+    var table = (el.props || {}).table;
+    if (table && table.values != null) tabs.push({ key: 'table', label: 'Table', body: tableHtml(table) });
 
     var strip = tabs.map(function (t, i) {
       return '<button type="button" class="slx-dlg-tab' + (i === 0 ? ' slx-dlg-tab-on' : '')

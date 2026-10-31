@@ -1390,3 +1390,11 @@ button.slx-fn:hover { background: #eaf2fa; }
 .slx-page-controls button:disabled { opacity: 0.5; cursor: default; }
 .slx-page-status { color: #5f5e5a; }
 .slx-page-status.slx-page-error { color: #b3261e; }
+
+/* A table read from a data file, in the property dialog (dialog.js tableHtml). */
+.slx-table-src { margin: 4px 0 6px; }
+.slx-table-scroll { max-height: 260px; overflow: auto; border: 1px solid #d6d8de; border-radius: 4px; }
+.slx-table-values { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+.slx-table-values th, .slx-table-values td { padding: 2px 10px; text-align: right; border-bottom: 1px solid #eceef2; }
+.slx-table-values th { position: sticky; top: 0; background: #f4f5f8; }
+.slx-table-values td:first-child, .slx-table-values th:first-child { color: #888; width: 3em; }

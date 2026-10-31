@@ -777,7 +777,7 @@
         'units=' + units,
         'value=(' + prologExpr((n.props || {})[field]) + ')',
       ];
-      var td = tableData((n.props || {}).graph);
+      var td = tableData((n.props || {}).graph) || tableFromFile((n.props || {}).table);
       if (td) props.splice(3, 0, td);
       // A range on a variable that is not a parameter (it has an equation, or
       // something influences it) is only a range — but it is kept, as Simile
@@ -1153,6 +1153,29 @@
       'indices=[' + [plNum(g.xmin), plNum(g.xmax), 400, mode].join(',') + ']',
       'current=[' + rows.join(',') + ']',
       'units=1', 'bounds=1', 'dims=' + rows.length,
+    ].join(',') + ']';
+  }
+
+  /**
+   * A table read from a data file (`props.table`, see `readTable` in
+   * import-simile.js) as Simile's `table_data`, in Simile's order. It goes on
+   * the node holding the equation that says `table(…)`, which is where the
+   * generator looks for it.
+   */
+  function tableFromFile(t) {
+    if (!t || t.values == null) return null;
+    function values(v) {
+      return Array.isArray(v) ? '[' + v.map(values).join(',') + ']'
+        : (typeof v === 'number' ? plNum(v) : atom(String(v)));
+    }
+    return 'table_data=[' + [
+      'current=' + values(t.values),
+      'file=' + atom(String(t.file || '')),
+      'data=' + atom(String(t.column || '')),
+      'indices=[' + (t.indices || []).map(function (i) { return atom(String(i)); }).join(',') + ']',
+      'units=' + (t.units || '1'),
+      'bounds=' + (t.bounds || '[int]'),
+      'dims=' + (t.dims || '[' + (Array.isArray(t.values) ? t.values.length : 1) + ']'),
     ].join(',') + ']';
   }
 

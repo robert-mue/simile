@@ -162,6 +162,8 @@ footing (`src/widgets/grid.js` is the first).
     the catalogue **through the importer**, so it tests the pipeline too.
   - `fixtures.html` — every demo fixture built, round-tripped and audited.
     Needs no files, so this is the one that survives a wiped scratch directory.
+    Also test-only fixtures, `test/fixture-*.js` (satellite, table), which
+    are never seeded into a user's models.
   - `roundtrip.html` — takes `.pl` files (select the whole model catalogue) and
     checks that `.pl` → our model → `.pl` reaches a fixed point, reporting what
     each import LOST as well, since a fixed point cannot show that.

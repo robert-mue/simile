@@ -615,16 +615,19 @@
         if (u !== (BOOLEAN_TYPE[type] ? 'boolean' : '1')) out.units = u;
       }
 
-      // A sketched graph (`table_data` with `file='/graph/'`); the format is
-      // documented beside its writer, `tableData` in export-simile.js. A
-      // table read from a data FILE (`file='C:/…/x.csv'`) is not a sketch and
-      // has nowhere to go here, so it is reported rather than half-kept.
+      // `table_data` is one of two things. A sketched graph (`file='/graph/'`;
+      // the format is documented beside its writer, `tableData` in
+      // export-simile.js). Or a TABLE read from a data file
+      // (`file='C:/…/x.csv'`, a column of it, `table(…)` in the equation),
+      // whose values as last read are in the model — see `readTable`.
       var tdRaw = (f && f.p.table_data) || (own && own.p.table_data);
       if (tdRaw != null) {
         var g = readGraph(tdRaw);
+        var tab = g ? null : readTable(tdRaw);
         if (g) out.graph = g;
+        else if (tab) out.table = tab;
         else this.note('ignored', '`table_data` on ' + (own ? unquote(own.p.name || ownId) : fnId)
-          + ' — a table read from a data file, not a sketched graph');
+          + ' — in a form not understood');
       }
       return out;
     },
@@ -1213,6 +1216,42 @@
     var name = inner.replace(/[^A-Za-z0-9_]/g, '_');
     if (/^[0-9]/.test(name)) name = '_' + name;
     return { open: open, close: close, name: name };
+  }
+
+  /**
+   * `table_data=[…]` for a table read from a data file, as ours (`props.table`):
+   *
+   *   table_data=[current=[0,950,…], file='C:/…/nkmtouprices.csv',
+   *               data='PRICE', indices=['PD_ID'], units=const_int,
+   *               bounds=[int], dims=[20]]
+   *
+   * `current` is the column's values as last read — the data itself, which
+   * Simile's generator compiles into the model as a constant array (inters.pl,
+   * `table_const`), reading `dims`, `bounds` and `units` with it. `file`,
+   * `data` (the column) and `indices` (the key columns) say where Simile
+   * re-reads it from. The first three are kept readable; `units`, `bounds`
+   * and `dims` as the file has them, since only the generator reads them.
+   * Null if it is not one (a sketched graph is `readGraph`'s).
+   */
+  function readTable(raw) {
+    var p = pairs(raw, '=');
+    if (p.current == null || p.file == null) return null;
+    if (unquote(p.file) === '/graph/') return null;
+    function values(t) {
+      t = String(t).trim();
+      if (t.charAt(0) === '[') return items(t).map(values);
+      var n = Number(unquote(t));
+      return isFinite(n) ? n : unquote(t);
+    }
+    return {
+      file: unquote(p.file),
+      column: unquote(p.data || ''),
+      indices: items(p.indices).map(unquote),
+      values: values(p.current),
+      units: String(p.units || '1').trim(),
+      bounds: String(p.bounds || '[int]').trim(),
+      dims: String(p.dims || '[' + items(p.current).length + ']').trim(),
+    };
   }
 
   /** `'[203,54,455,260]'` → `[203,54,455,260]`. */
