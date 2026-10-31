@@ -2,18 +2,20 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date on 2026-10-25: **widgets the user
+embedded-widget pages. Brought up to date on 2026-10-31: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
 (2026-10-24/25: instructions for an AI assistant, errors on the panel,
 Reload, a data interface for displays, the author's guide) are built in
-sienna and simile, RELEASED as **2026-10-25** (the latest; see "Done:
-widgets the user adds" below). Robert tried the AI instructions with Claude
+sienna and simile, RELEASED as **2026-10-25** (see "Done: widgets the user
+adds" below). Robert tried the AI instructions with Claude
 and his widget "worked first time"; it is now the second example,
 `examples/widgets/submodel-contents.js`, with his one-sentence request quoted
 in its header and in the guide ("What to ask for"); and the AI instructions
 ask for a FILE TO DOWNLOAD rather than a code block to copy (sienna 7e8f674,
-Robert's request). Those three are RELEASED as **2026-10-31** (the latest).
-Nothing is pending. 2026-10-21 was the day
+Robert's request). Those three are RELEASED as **2026-10-31**, the latest
+release; the working tree is clean and nothing is pending or half-done. Next
+is Robert's choice — the parked items (item 38, the Simulation window;
+automatic layout; node styling) or whatever he brings. 2026-10-21 was the day
 Robert called **a milestone**: a two-party association model (farmers &
 fields), built by hand in the editor as he built it in the old Simile, now
 checks, compiles in the page, runs and plots — farmers, fields and the
