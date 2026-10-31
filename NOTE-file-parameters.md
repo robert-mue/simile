@@ -227,9 +227,9 @@ only those with a value and a range; the rest of the kind is missing:
   over time take over at their first time point (Simile's own rule:
   `update_from_points` copies a point's values only when the run passes
   it).
-- **Results**: every catalogue model with parameters now compiles and runs
-  in the page (19), except three refused for elements genuinely unfinished
-  in the file. Round trip 66/72 identical. nkometou: 31 variable and 15
+- **Results**: of the 20 catalogue models with parameters, 17 now compile
+  and run in the page; the other 3 are refused for elements genuinely
+  unfinished in the file. Round trip 66/72 identical. nkometou: 31 variable and 15
   fixed parameters; no "has no value" left — only the crossing forms.
 - Found on the way: `"false"` (a literal) exported bare, which Prolog reads
   as a string (life_input would not build). Written as Simile's atom
