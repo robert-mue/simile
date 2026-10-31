@@ -120,6 +120,20 @@ footing (`src/widgets/grid.js` is the first).
   single-node "variable parameter" (value, `spec`, `min_val`, `max_val` on the
   variable node, no function node) — the only form SimiLive describes as
   `INPUT`; see the comment on `isParameter`.
+- `src/widgets/parameters.js` — the **Parameters** panel: a model's **file
+  parameters** (Simile's `param_type=file`: a variable ticked "File
+  parameter" in its dialog, `props.fileParam`, needing no equation;
+  `exportSimile.isFileParameter`, `Simulation.fileParametersOf`), grouped by
+  submodel. A value is a number or JSON (`[1, 2, 3]`, one bracket level per
+  dimension: enclosing fixed memberships, then the variable's own array).
+  Values are NEVER in the model spec: the ones used last are kept beside it
+  (`simile.fileParameters.v1`, `Simulation.setFileParameters`), and Load /
+  Save write a JSON parameter file (`.spf`, nested by submodel; Simile's own
+  XML `.spf` is not read). Before each reset they go to the engine
+  (`FileParameters`, ours, in `engine-local.js` → `sx_param_fill` in
+  bridge.cpp); a missing one stops the run, naming it. In the page only, and
+  not for a population's members. Design: `NOTE-file-parameters.md`;
+  check: `tools/headless/scripts/file-params.py`.
 - `src/page.js` — **embedded-widget pages** (`window.Simile`): widgets placed
   straight into an ordinary web page, no workspace. A model ships as a script
   calling `Simile.model(name, model, runSettings)` — File ▸ Export model as

@@ -1350,6 +1350,46 @@ button.slx-fn:hover { background: #eaf2fa; }
 }
 .slx-slider-end:last-child { text-align: right; }
 
+/* ---- file parameters (src/widgets/parameters.js) ------------------------ */
+
+.slx-params {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  font: 12px/1.4 system-ui, sans-serif;
+}
+.slx-params-note { margin: 6px 12px 0; color: #52514e; }
+.slx-params-note-warn { color: #a3320b; }
+.slx-params-list { flex: 1 1 auto; overflow-y: auto; padding: 2px 12px 10px; }
+.slx-params-empty { color: #52514e; margin: 8px 0; }
+.slx-params-sub {
+  margin: 10px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #52514e;
+  border-bottom: 1px solid #d9d8d1;
+}
+.slx-param { padding: 5px 0; border-bottom: 1px solid #ecebe6; }
+.slx-params-group .slx-param:last-child { border-bottom: 0; }
+.slx-param-head { display: flex; align-items: baseline; gap: 6px; }
+.slx-param-name { font-weight: 600; color: #0b0b0b; overflow-wrap: anywhere; }
+.slx-param-units { color: #52514e; }
+.slx-param-shape { margin-left: auto; color: #898781; white-space: nowrap; }
+.slx-param-value {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 3px;
+  padding: 2px 5px;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.slx-param-missing .slx-param-name { color: #a3320b; }
+.slx-param-missing .slx-param-value { border-color: #d0805f; }
+.slx-param-error { margin: 2px 0 0; color: #a3320b; }
+.slx-param-error:empty { display: none; }
+
 /* ---- widgets embedded in an ordinary page (src/page.js, embed.js) -------- */
 
 /* A widget fills the box it is given, and on a page nothing else gives it

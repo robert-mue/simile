@@ -174,6 +174,35 @@
     Sienna.persistence.writeJSON(SETTINGS_KEY, all);
   }
 
+  /**
+   * The values given to a model's FILE PARAMETERS (`exportSimile.isFileParameter`),
+   * per model path and node id: a number, or an array of them (nested, one
+   * level per dimension). Kept beside the models, never in them — the model
+   * says only that a value is needed; which value is a choice made when it
+   * runs, and one model may have several sets (parameter files, saved and
+   * loaded in the Parameters panel). These are the values used last.
+   */
+  var FILE_PARAMS_KEY = 'simile.fileParameters.v1';
+  var fileParamsThisVisit = {};
+
+  function fileValuesFor(path) {
+    var all = (Sienna.persistence && Sienna.persistence.readJSON(FILE_PARAMS_KEY)) || {};
+    return $.extend({}, fileParamsThisVisit[path] || {}, all[path] || {});
+  }
+
+  function keepFileValues(path, values) {
+    fileParamsThisVisit[path] = values;
+    if (!Sienna.persistence) return;
+    var all = Sienna.persistence.readJSON(FILE_PARAMS_KEY) || {};
+    if (Object.keys(values).length) all[path] = values; else delete all[path];
+    Sienna.persistence.writeJSON(FILE_PARAMS_KEY, all);
+  }
+
+  /** Every number in a value, in order: outermost dimension first. */
+  function flatten(v) {
+    return Array.isArray(v) ? v.reduce(function (out, x) { return out.concat(flatten(x)); }, []) : [v];
+  }
+
   var Simulation = {
     SERVER: SERVER,
     keyOf: keyOf,
@@ -594,9 +623,30 @@
 
       // A model run in the page takes the slider values BEFORE the reset, and
       // all of them — the whole set, so one put back is cleared — and keeps
-      // them through it, starting values included.
+      // them through it, starting values included. File parameters likewise:
+      // a value missing stops the run here, saying which.
+      var files;
+      try {
+        files = this._fileParameterData();
+      } catch (err) {
+        this._setStatus('error', err.message);
+        return Promise.reject(err);
+      }
       var before = !this.local ? Promise.resolve()
-        : this._post('Parameterize', { data: JSON.stringify(this._liveParameters(true)) });
+        : this._post('Parameterize', { data: JSON.stringify(this._liveParameters(true)) })
+          .then(function () {
+            if (!Object.keys(files).length) return;
+            return self._post('FileParameters', { data: JSON.stringify(files) }).then(function (text) {
+              var answer = JSON.parse(text);
+              var bad = Object.keys(answer).filter(function (k) { return answer[k] !== 'ok'; });
+              if (!bad.length) return;
+              throw new Error('Parameter values that do not fit: ' + bad.map(function (k) {
+                var a = answer[k];
+                return k.replace(/^\//, '') + ' (' + (typeof a === 'number'
+                  ? a + ' value' + (a === 1 ? '' : 's') + ' needed, ' + files[k].length + ' given' : a) + ')';
+              }).join('; ') + '. Change them in Widgets ▸ Parameters.');
+            });
+          });
 
       return before.then(function () {
         return self._post('Reset', {
@@ -763,6 +813,57 @@
       delete this._preview[path];
       this._emit({ type: 'parameters', path: path });
       return this._rerun(path, reload);
+    },
+
+    // ---- file parameters ------------------------------------------------------
+
+    /** The values given to a model's file parameters: `{nodeId: value}`. */
+    fileParameterValues: function (path) {
+      return fileValuesFor(path);
+    },
+
+    /**
+     * Give file parameters their values — `{nodeId: value}`, a value of null
+     * taking one away — and, when that model is loaded, run it again from
+     * the start with them. `replace` starts from none (a parameter file
+     * loaded whole) rather than from those given already.
+     * @returns {Promise}
+     */
+    setFileParameters: function (path, values, replace) {
+      var now = replace ? {} : fileValuesFor(path);
+      Object.keys(values).forEach(function (id) {
+        if (values[id] == null) delete now[id]; else now[id] = values[id];
+      });
+      keepFileValues(path, now);
+      this._emit({ type: 'parameters', path: path });
+      return this._rerun(path, false);
+    },
+
+    /**
+     * What a reset sends the engine: `{captpath: [numbers]}` for each file
+     * parameter given a value. Throws, naming them, when any has none and no
+     * default in the model either. On SimiLive, values cannot be sent yet.
+     */
+    _fileParameterData: function () {
+      var path = this.modelPath;
+      var params = path ? Simulation.fileParametersOf(path) : [];
+      if (!params.length) return {};
+      var given = fileValuesFor(path);
+      var missing = params.filter(function (p) { return given[p.id] == null && !p.default; });
+      if (missing.length) {
+        throw new Error('Values needed before the model can run: '
+          + missing.map(function (p) { return p.label; }).join(', ')
+          + '. Give them in Widgets ▸ Parameters, or load a parameter file there.');
+      }
+      var out = {};
+      params.forEach(function (p) {
+        if (given[p.id] != null) out[p.captpath] = flatten(given[p.id]);
+      });
+      if (Object.keys(out).length && !this.local) {
+        throw new Error('This model runs on SimiLive, which cannot be given parameter values '
+          + 'from here yet (' + Object.keys(out).length + ' given).');
+      }
+      return out;
     },
 
     _rerun: function (path, reload) {
@@ -1162,6 +1263,65 @@
     return out.sort(function (a, b) { return a.label.localeCompare(b.label); });
   };
 
+  /**
+   * A model's FILE PARAMETERS (`exportSimile.isFileParameter`): each
+   * variable whose value is given when the model runs, with the submodels it
+   * is in (`path`, outermost first — the panel groups by them), and the
+   * values it holds: one per instance of each enclosing fixed membership,
+   * then its own array's (`array(1,5)` in its units). `shape` is those
+   * sizes, outermost first; `unsized` says why there is none to give (a
+   * population's instances come and go). `default` is its value in the
+   * model, if any — used when none is given.
+   * @returns {Array<{id, name, label, path, captpath, units, shape, unsized, default}>}
+   */
+  Simulation.fileParametersOf = function (ref) {
+    var m = ref && Sienna.userData ? Sienna.userData.get(ref) : null;
+    if (!m || !m.nodes || !Sienna.exportSimile) return [];
+    var subs = m.submodels || {};
+    var out = [];
+    Object.keys(m.nodes).forEach(function (id) {
+      if (!Sienna.exportSimile.isFileParameter(m, id)) return;
+      var n = m.nodes[id];
+      var path = [];
+      var shape = [];
+      var unsized = '';
+      for (var p = n.parent; p && subs[p]; p = subs[p].parent) {
+        path.unshift(subs[p].label || p);
+        var s = subs[p];
+        if (s.kind === 'fixed-membership') {
+          var dims = String((s.props || {}).dimensions || '').split(',').map(function (x) { return x.trim(); });
+          if (dims.every(function (x) { return /^\d+$/.test(x); })) shape = dims.map(Number).concat(shape);
+          else unsized = 'its submodel ' + (s.label || p) + ' has a number of instances that is not a plain number';
+        } else if (s.kind === 'population' || (Sienna.Diagram && Sienna.Diagram.isAssociation(m, p))) {
+          unsized = 'its submodel ' + (s.label || p) + ' has instances that come and go';
+        }
+      }
+      shape = shape.concat(arrayDims(String(n.props.units || '')));
+      var label = path.concat([n.label]).join('/');
+      out.push({
+        id: id,
+        name: n.label,
+        label: label,
+        path: path,
+        captpath: '/' + label,
+        units: n.props.units || '',
+        shape: shape,
+        unsized: unsized,
+        default: String(n.props.value || '').trim(),
+      });
+    });
+    return out.sort(function (a, b) { return a.label.localeCompare(b.label); });
+  };
+
+  /**
+   * The sizes in a Simile array unit, outermost first: `array(1,5)` → [5],
+   * `array(array(kg,3),5)` → [5, 3]; anything else → [].
+   */
+  function arrayDims(units) {
+    var m = /^\s*array\s*\((.*),\s*(\d+)\s*\)\s*$/.exec(units);
+    return m ? [Number(m[2])].concat(arrayDims(m[1])) : [];
+  }
+
   Simulation.parameterNeedsLoad = function (ref, id) {
     // The engine in the page takes a starting value at a reset (src/engine-local.js).
     if (Simulation.runsHere(ref)) return false;
@@ -1257,6 +1417,8 @@
       previewParameter: function (path, id, v) { return sim.previewParameter(path, id, v); },
       runsHere: function (path) { return sim.runsHere(path); },
       clearParameters: function (path) { return sim.clearParameters(path); },
+      fileParameterValues: function (path) { return sim.fileParameterValues(path); },
+      setFileParameters: function (path, values, replace) { return sim.setFileParameters(path, values, replace); },
       stepPending: function () { return mine() && sim.stepPending(); },
       atStart: function () { return sim.atStart(); },
       isStale: function () { return mine() && sim.isStale(); },

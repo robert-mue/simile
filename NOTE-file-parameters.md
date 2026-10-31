@@ -72,13 +72,62 @@ the decisions that are Robert's.
    value stops the run with a list of what is missing. On SimiLive, the
    values go as a `.spf`.
 
-## Decisions for Robert
+## Robert's decisions (2026-10-31)
 
-- **Where do the values live?** (a) with the model spec, so a model and its
-  values travel together (export, embedded-widget pages), one set per
-  model; or (b) apart from the model, as named parameter sets/files — one
-  model, several scenarios, as Simile does; or both: the model keeps the
-  values last used, and sets can be loaded and saved.
-- **Pop up at ▶ when values are missing (as Simile), or only report?**
-- **Do we need to READ Simile's `.spf` files now** (only if there are real
-  ones to use — Jasper may have nkometou's), or start with our own fields?
+- Values are NOT saved with the model, but in separate parameter files
+  (`.spf`), as JSON. Until there is a "project file" (a model, several
+  alternative `.spf`s and other parts, as Simile's `.sml` is now) the app
+  also keeps the values used last, beside the model: "both", for
+  convenience.
+- A **Parameters panel**, a widget like the others. When and where it
+  appears (Simile shows it only on Run, which Robert does not like) is for
+  later.
+- Parameters are grouped by submodel, as in Simile's documentation.
+
+## Built (2026-10-31)
+
+- **Model**: a variable's dialog has a "File parameter" tick box
+  (`props.fileParam`); its equation is then not required (schema
+  `exemptWhen`), and one given is a default. Imported from
+  `param_type=file` (not on a table read from a data file, which Simile
+  marks the same way: that keeps running on its `current` values).
+  Exported as Simile's one node: `param_type=file`, units, range, and
+  `value` only for a default — never `spec=[]`.
+- **Panel** (`src/widgets/parameters.js`, Widgets ▸ Parameters): grouped by
+  submodel; one field each, a number or JSON (`[1, 2, 3]`; brackets per
+  dimension, outermost first: enclosing fixed memberships, then the
+  variable's own array); the count is checked against the shape; a
+  missing value is shown. Load… / Save… / Clear. A change reruns from the
+  start, as a slider does.
+- **File**: JSON, `{simile: "parameters", version: 1, model, variables:
+  {name: value}, submodels: {name: {variables, submodels}}}`, saved as
+  `<model>.spf`. Loading one gives every value in it and takes away the
+  rest; names not in the model are reported. A Simile XML `.spf` is
+  recognised and said to be unreadable.
+- **Run**: the values used last are kept per model
+  (`simile.fileParameters.v1`). Before each reset they go to the engine
+  (`FileParameters` in engine-local.js → `sx_param_fill`, bridge.cpp, any
+  fixed shape, REAL/INTEGER/FLAG); a missing one (no value, no default)
+  stops the run, naming each. In the page only: SimiLive refuses, saying so.
+- **Results**: labour_by_priority1, ArcieroAggressiveTumorMode,
+  assoc_from_data1/2, drainage1, SolarRadiationDNDCP (a default), and
+  Thornthwaite (12 per-instance values; it fails in Simile 7.5's own
+  window) now compile and run in the page. Round trip: 64/72 identical
+  (was 61), 6 refused — every one for a genuinely unfinished element in
+  the file — and 2 differing (assoc_from_data1/2, below).
+- Found on the way: Simile writes `if'Ta'>0`; the importer took the quotes
+  off and made `ifTa`. Fixed (`plainNames`), which also mended broomgrass1.
+
+## Open
+
+- **A variable with NO value and no `param_type`** (nkometou: 25, e.g.
+  `establish oilpalm`, `spec=[]`, `units=boolean`). By `paramness_setup`
+  that is a *variable* parameter with no value: in Simile, presumably given
+  in the same dialogue. Should the Parameters panel take these too?
+  (Question for Robert.)
+- **File parameters in a population** (nkometou's `village`: 4) — per
+  member, so no fixed shape. Not given here yet.
+- **Simile's XML `.spf`** — read only if real ones need using.
+- When and where the panel appears.
+- assoc_from_data1/2: the two roles' names (ID1, ID2) on one influence swap
+  in the round trip — a crossing form, for that list (NOTE-nkometou.md).

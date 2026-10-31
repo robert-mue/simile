@@ -30,8 +30,11 @@
  * - a reset keeps them (the run-time library's "slider rollover"), so a parameter a
  *   starting value depends on works like any other, with no rebuild.
  *
+ * One request of our own: `FileParameters`, the values of a model's file
+ * parameters (arrays included), put in before a reset.
+ *
  * Not yet: grid renderings (`{format: 'binary'…}` specs answer null), values
- * that are arrays or records, and more than the fixed step of Euler.
+ * that are records, and more than the fixed step of Euler.
  *
  * Classic script; no imports/exports.
  */
@@ -266,6 +269,28 @@
           });
           this._set = keep;
           return '""';
+        }
+        case 'FileParameters': {
+          // Ours, not SimiLive's: the values of the model's file parameters,
+          // {captpath: [numbers, outermost dimension first]}, taken from the
+          // next reset on. The reply says, for each, how it went: 'ok', or
+          // the number of values it holds, or why it took none.
+          var given = JSON.parse(p.data || '{}');
+          var answer = {};
+          var self3 = this;
+          Object.keys(given).forEach(function (path) {
+            var id = self3._idOf[path];
+            if (!id) { answer[path] = 'not in the model'; return; }
+            var vals = given[path];
+            var bytes = new Uint8Array(new Float64Array(vals).buffer);
+            var r = self3._call('sx_param_fill', 'number', ['string', 'array', 'number'],
+              [id, bytes, vals.length]);
+            answer[path] = r === vals.length ? 'ok'
+              : r === 0 ? 'no parameter slot'
+                : r === -1 ? 'a shape not filled here (a population\'s)'
+                  : r;
+          });
+          return JSON.stringify(answer);
         }
         case 'Reset': {
           this._steps(p.step);

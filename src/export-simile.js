@@ -253,10 +253,25 @@
     var n = model.nodes[id];
     if (!n || n.type !== 'variable') return false;
     var p = n.props || {};
+    if (p.fileParam) return false;
     if (prologNumber(p.value) == null || prologNumber(p.min) == null || prologNumber(p.max) == null) return false;
     return !Object.keys(model.arcs || {}).some(function (a) {
       return model.arcs[a].type === 'influence' && model.arcs[a].to === id;
     });
+  }
+
+  /**
+   * Is this one of Simile's FILE PARAMETERS — a variable whose value is given
+   * when the model runs (`param_type=file`), not by an equation? Written as
+   * ONE node, as Simile writes it: `param_type=file`, its units (its shape:
+   * `array(1,5)`), and its value only if it has a default. The generator
+   * makes it a slot the run fills at each reset (NOTE-file-parameters.md).
+   * Never `spec=[]`: the five catalogue models carrying that fail in
+   * Simile's own window too.
+   */
+  function isFileParameter(model, id) {
+    var n = model.nodes[id];
+    return !!(n && n.type === 'variable' && (n.props || {}).fileParam);
   }
 
   // ---- the conversion ---------------------------------------------------
@@ -352,6 +367,10 @@
           return;
         }
         var field = self.exprField(n.type);
+        // A file parameter needs no equation. An influence into one is
+        // allowed — Simile has them (SolarRadiationDNDCP's `r`) — and lands
+        // on its one node.
+        if (isFileParameter(m, id) && !String((n.props || {})[field] || '').trim()) return;
         if (field && !String((n.props || {})[field] || '').trim()) {
           problems.push('"' + name + '" has no ' + field);
           return;
@@ -465,7 +484,7 @@
         // A valve has no visible node — it IS its equation, which the flow arc
         // will carry as `attached`.
         if (n.type !== 'valve') self.vis[id] = simId('node', ++self.nodeN);
-        if (self.exprField(n.type) && !isParameter(m, id)) self.fn[id] = simId('node', ++self.nodeN);
+        if (self.exprField(n.type) && !isParameter(m, id) && !isFileParameter(m, id)) self.fn[id] = simId('node', ++self.nodeN);
       });
 
       // Flow arc ids up front, because a valve can be the SOURCE of an
@@ -739,6 +758,14 @@
           'spec=' + atom(String(p.value).trim()),
           'units=' + (String(p.units || '').trim() || '1'),
           'value=' + prologNumber(p.value));
+      }
+      if (isFileParameter(this.m, id)) {
+        var fp = n.props || {};
+        var lo = prologNumber(fp.min), hi = prologNumber(fp.max);
+        if (hi != null) props.push('max_val=' + hi);
+        if (lo != null) props.push('min_val=' + lo);
+        props.push('param_type=file', 'units=' + (String(fp.units || '').trim() || '1'));
+        if (String(fp.value || '').trim()) props.push('value=(' + prologExpr(fp.value) + ')');
       }
 
       out.push('node(' + this.vis[id] + ',' + NODE_TYPE[n.type] + ',[],'
@@ -1231,6 +1258,7 @@
 
   Sienna.exportSimile = {
     isParameter: isParameter,
+    isFileParameter: isFileParameter,
     /** @returns {string} the model as Simile Prolog */
     prolog: function (model) {
       return new Emitter(model).run();

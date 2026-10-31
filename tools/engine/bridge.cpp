@@ -69,12 +69,22 @@ static void addNumber(std::string& out, double v) {
   if (!strchr(buf, 'n') && !strchr(buf, 'i')) out += buf; else out += "null";
 }
 
-// Size in bytes of one value of a data type, as the engine packs it.
-static int sizeOfType(int t) { return t == REAL ? sizeof(double) : sizeof(int); }
+// Size in bytes of one value of a data type, as the engine packs it
+// (shank.cpp's size_for_data_type: a FLAG is one byte).
+static int sizeOfType(int t) {
+  return t == REAL ? sizeof(double) : t == FLAG ? sizeof(BOOLEAN) : sizeof(int);
+}
 
 static double numberAt(const char* p, int t) {
   if (t == REAL) { double d; memcpy(&d, p, sizeof d); return d; }
+  if (t == FLAG) return *(const BOOLEAN*)p;
   int i; memcpy(&i, p, sizeof i); return i;
+}
+
+static void putNumber(char* p, int t, double v) {
+  if (t == REAL) memcpy(p, &v, sizeof v);
+  else if (t == FLAG) *(BOOLEAN*)p = v != 0;
+  else { int i = (int)v; memcpy(p, &i, sizeof i); }
 }
 
 extern "C" {
@@ -256,12 +266,44 @@ const char* sx_value(const char* nodeId) {
   return reply.c_str();
 }
 
+// The parameter slot for a node, made on first use.
+static void* paramSlot(const char* nodeId) {
+  void* h = params.count(nodeId) ? params[nodeId] : use_array_for_params(instance, (char*)nodeId);
+  if (h) params[nodeId] = h;
+  return h;
+}
+
+// A file parameter's values, taken from the next reset on: `n` numbers
+// (doubles, as bytes), outermost dimension first — the instances of an
+// enclosing fixed membership, then the parameter's own array, as the engine
+// packs them. Returns n when they were taken; otherwise how many the
+// parameter holds, or 0 for no slot and -1 for a shape not filled here (a
+// population's, whose size is not fixed).
+EMSCRIPTEN_KEEPALIVE
+int sx_param_fill(const char* nodeId, const unsigned char* bytes, int n) {
+  void* h = paramSlot(nodeId);
+  if (!h) return 0;
+  int* dims;
+  char* where = get_param_ptr_and_dims(h, &dims);
+  if (!where) return 0;
+  int count = 1, k = 0;
+  for (; dims[k] > 0; ++k) count *= dims[k];
+  if (!is_base_type(dims[k])) return -1;
+  if (count != n) return count;
+  int t = dims[k], size = sizeOfType(t);
+  for (int i = 0; i < n; ++i) {
+    double v;
+    memcpy(&v, bytes + i * sizeof v, sizeof v);
+    putNumber(where + i * size, t, v);
+  }
+  return n;
+}
+
 // A slider's value for a parameter, taken from the next reset on.
 EMSCRIPTEN_KEEPALIVE
 int sx_param(const char* nodeId, double value) {
-  void* h = params.count(nodeId) ? params[nodeId] : use_array_for_params(instance, (char*)nodeId);
+  void* h = paramSlot(nodeId);
   if (!h) return 0;
-  params[nodeId] = h;
   int* dims;
   char* where = get_param_ptr_and_dims(h, &dims);
   if (!where || dims[0] != REAL) return 0;

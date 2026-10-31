@@ -373,6 +373,11 @@
 
   /** A field is required outright, or required given another field's value. */
   function isRequired(el, f) {
+    // `exemptWhen`: not needed given another field's value — a file
+    // parameter's equation, whose value is given when the model runs.
+    if (f.exemptWhen && Object.keys(f.exemptWhen).every(function (k) {
+      return (el[k] !== undefined ? el[k] : (el.props || {})[k]) === f.exemptWhen[k];
+    })) return false;
     if (f.required) return true;
     if (!f.requiredWhen) return false;
     return Object.keys(f.requiredWhen).every(function (k) {

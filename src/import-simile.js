@@ -585,7 +585,9 @@
       var field = EXPR_FIELD[type];
       var f = this.N[fnId];
       var own = this.N[ownId];
-      var src = (f && f.p.value != null) ? f.p : (own && own.p.value != null ? own.p : (f || {}).p);
+      // No function node and no value — a file parameter — still has units, and
+      // they are its shape (`array(1,5)`).
+      var src = (f && f.p.value != null) ? f.p : (own && own.p.value != null ? own.p : (f || own || {}).p);
       if (!src) return out;
       if (field && src.value != null) out[field] = strip(src.value);
 
@@ -703,13 +705,20 @@
         }
 
         var props = self.fnProps(self.ownerOf2(id), type, id);
+        // A FILE PARAMETER (`param_type=file`): its value is given when the
+        // model runs; a value in the file is its default. Not a table read
+        // from a data file, which Simile marks the same way: that runs on
+        // the values last read (`props.table`), as a constant.
+        if (type === 'variable' && unquote(n.p.param_type || '') === 'file' && !props.table) {
+          props.fileParam = true;
+        }
         // `node(node00016,variable,[],[name=var5],[])` — no equation, no units,
         // no position, no `complete=true`. Simile lets an element sit unfinished
         // and so do we: it arrives, and our completeness colouring shows it red
         // (`src/equation-check.js`) rather than the import failing. What it will
         // NOT do is export, which is correct — it would not run either.
         var field = EXPR_FIELD[type];
-        if (field && !String(props[field] || '').trim()) {
+        if (field && !String(props[field] || '').trim() && !props.fileParam) {
           self.note('incomplete', '"' + unquote(n.p.name || id) + '" has no '
             + field + ' in the file — imported unfinished');
         }
@@ -1300,9 +1309,17 @@
    * file syntax, not part of the equation. Kept, they showed in the equation
    * box, and a round trip turned `A` into `'A'`. Only identifiers are touched;
    * `''` (in `time('')`) and anything with a space in it are left as written.
+   *
+   * Simile writes `if'Ta'>0`: the quotes alone part `if` from the name, so
+   * without them a space must, or the equation reads `ifTa>0` — a name the
+   * generator does not know (Thornthwaite, SolarRadiationDNDCP).
    */
   function plainNames(t) {
-    return t.replace(/'([A-Za-z_][A-Za-z0-9_]*)'/g, '$1');
+    return t.replace(/'([A-Za-z_][A-Za-z0-9_]*)'/g, function (all, name, at) {
+      var before = at > 0 && /[A-Za-z0-9_]/.test(t.charAt(at - 1)) ? ' ' : '';
+      var after = /[A-Za-z0-9_]/.test(t.charAt(at + all.length)) ? ' ' : '';
+      return before + name + after;
+    });
   }
 
   Sienna.importSimile = {

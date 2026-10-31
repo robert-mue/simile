@@ -83,10 +83,17 @@ Found on the way: an array-valued influence (`[whole]` into
 `element([whole],2)`) needs `array(1,N)` as its role dimension, not
 `list(1)` — part of section 3's `[x]` forms.
 
+## Done 2026-10-31: file parameters
+
+See NOTE-file-parameters.md. nkometou now has 15 file parameters (4 in the
+population `village`, not given here yet). Its remaining "has no value"
+list (25) is variables with no value and NO `param_type` — variable
+parameters with no value; question for Robert there. Also for the crossing
+list: assoc_from_data1/2, two roles' names on one influence swapping.
+
 ## Suggested order
 
-1. File parameters (unblocks the 11 catalogue models too; needs the design
-   decision above, and probably a question to Jasper).
+1. ~~File parameters.~~ Done 2026-10-31.
 2. ~~`table_data` tables.~~ Done 2026-10-31.
 3. The crossing forms, each with a small test model as for satellites.
 4. Then compile nkometou in the page and see what the generator says.

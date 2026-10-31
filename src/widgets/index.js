@@ -56,6 +56,18 @@
     role: 'display',
   });
 
+  // The values of a model's FILE PARAMETERS, grouped by submodel, with
+  // Load / Save of a parameter file (src/widgets/parameters.js). Not part
+  // of the model: values for running it, like a slider's.
+  reg.register('parameters', {
+    src: 'src/widgets/parameters.js',
+    label: 'Parameters',
+    title: 'Parameters',
+    thumbnail: false,
+    workingSize: { width: 420, height: 420 },
+    role: 'display',
+  });
+
   reg.register('plotter', {
     src: 'src/widgets/plotter.js',
     label: 'Plotter',

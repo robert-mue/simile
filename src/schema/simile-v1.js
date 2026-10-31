@@ -107,7 +107,15 @@
         { name: 'units',   label: 'Units', type: 'text' },
       ] },
       variable:     { has_label: true,  fields: [
-        { name: 'value', label: 'Value or expression', type: 'expression', required: true },
+        { name: 'value', label: 'Value or expression', type: 'expression', required: true,
+          exemptWhen: { fileParam: true } },
+        // Simile's FILE PARAMETER (`param_type=file`): its value is not in the
+        // model but given when it runs — the Parameters panel, or a parameter
+        // file loaded there (NOTE-file-parameters.md). It needs no equation;
+        // one given is its default, used when none is given there.
+        { name: 'fileParam', label: 'File parameter', type: 'boolean',
+          help: 'Its value is given when the model runs (Widgets ▸ Parameters, or a '
+              + 'parameter file), not here. A value given above is then only a default.' },
         { name: 'units', label: 'Units', type: 'text' },
         // The range a slider may move a PARAMETER over — a variable whose
         // value is a number and which nothing influences. Simile keeps the
