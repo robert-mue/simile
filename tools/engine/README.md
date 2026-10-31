@@ -128,8 +128,9 @@ SimiLive, as before. Nothing is compiled in the page yet (that is step 3).
 
 - **`bridge.cpp`** — the run-time library's C API as a few calls for JavaScript
   (`sx_load`, `sx_describe`, `sx_reset`, `sx_execute`, `sx_value`,
-  `sx_param`, `sx_param_fill` — a file parameter's values, any fixed shape —
-  …), answering in SimiLive's shapes.
+  `sx_param`, `sx_param_fill` — a parameter's values, any fixed shape —
+  `sx_param_series` / `sx_param_unseries` — a variable parameter's values
+  over time — …), answering in SimiLive's shapes.
 - **`build-runtime.sh <simile source>`** → `vendor/simile-runtime/simile-runtime.js`
   (2.1 MB, one script, so `file://` works). Applies `patches/*.patch` to a copy
   of `shank.cpp` first.

@@ -1377,6 +1377,19 @@ button.slx-fn:hover { background: #eaf2fa; }
 .slx-param-head { display: flex; align-items: baseline; gap: 6px; }
 .slx-param-name { font-weight: 600; color: #0b0b0b; overflow-wrap: anywhere; }
 .slx-param-units { color: #52514e; }
+.slx-param-kind,
+.slx-param-slider {
+  font-size: 10px;
+  color: #52514e;
+  border: 1px solid #d9d8d1;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.slx-param[data-kind="variable"] .slx-param-kind { color: #1f5fa8; border-color: #b9cfe9; }
+/* What the run sees between times matters only for values over time. */
+.slx-param-fill { display: none; align-items: center; gap: 6px; margin-top: 3px; color: #52514e; }
+.slx-param-over-time .slx-param-fill { display: flex; }
+.slx-param-fill select { font: inherit; }
 .slx-param-shape { margin-left: auto; color: #898781; white-space: nowrap; }
 .slx-param-value {
   box-sizing: border-box;

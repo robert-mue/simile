@@ -201,3 +201,44 @@ only those with a value and a range; the rest of the kind is missing:
   file; it changes what existing models show (their constants become
   parameters on import).
 - Time series now, or variable parameters as single values first?
+
+### Robert's decisions (2026-10-31): explicit kinds; values over time
+
+### Built (2026-10-31)
+
+- **Dialog**: "Data source" — Derived / Variable parameter / Fixed
+  parameter (`props.paramKind`, `parameterKind` in export-simile.js). The
+  "File parameter" tick box is gone (`fileParam` is still read, as fixed).
+  A variable with no kind stored shows what the older rule reads it as
+  (`inferWith` in the schema), so OK does not change it.
+- **Import** by Simile's rule: function node → derived; none (and
+  `complete=true`) → variable, or fixed with `param_type=file`; tables and
+  unfinished nodes stay derived. The kind is stored only where the older
+  rule would read it differently (`plainKinds`), so models round-trip as
+  before. **Export**: both kinds as one node.
+- **Panel**: both kinds, a badge for each ("variable", "fixed", "+ slider").
+  A variable parameter takes a number/array held through the run, or
+  values over time (`{"0": 5, "10": 7}`, or `[5, 7, 9]` for times 0, 1,
+  2), and "Between times: last value / closest value / interpolated". The
+  file keeps fill methods in a `fill` map beside `variables`, per submodel.
+- **Engine**: `sx_param_series` (time points, fill method, interval) and
+  `sx_param_unseries` in bridge.cpp; times are model time (interval = days
+  per unit). A slider moved last beats a number from the panel; values
+  over time take over at their first time point (Simile's own rule:
+  `update_from_points` copies a point's values only when the run passes
+  it).
+- **Results**: every catalogue model with parameters now compiles and runs
+  in the page (19), except three refused for elements genuinely unfinished
+  in the file. Round trip 66/72 identical. nkometou: 31 variable and 15
+  fixed parameters; no "has no value" left — only the crossing forms.
+- Found on the way: `"false"` (a literal) exported bare, which Prolog reads
+  as a string (life_input would not build). Written as Simile's atom
+  `'"false"'` now, and read back as `"false"`.
+
+### Still open
+
+- A population's parameters (per member).
+- Wrap time (a series repeating), and an interval other than 1 time unit.
+- Simile's XML `.spf`.
+- When and where the panel appears.
+- SimiLive: values cannot be sent there yet.

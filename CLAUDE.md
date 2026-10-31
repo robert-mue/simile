@@ -109,31 +109,40 @@ footing (`src/widgets/grid.js` is the first).
   from file:// a worker can be made only from text, so each tool script
   defines ONE function (`SIMILE_TOOL_SWIPL`, `SIMILE_TOOL_CLANG`) whose text
   the page sends it. No worker to be had: the same code runs in the page.
-- `src/widgets/sliders.js` — a slider per **parameter**: a variable with a
-  numeric value, a Minimum and a Maximum (dialog fields `min`/`max`), and no
-  influence into it (`exportSimile.isParameter`, `Simulation.parametersOf`).
-  A slider's value is a RUN setting (`Simulation.setParameter`), never an edit
-  to the model. A rate is changed in place (`Parameterize` with `NOW v`, sent
-  again after every reset, which restores defaults); a parameter with an
-  influence path to a stock (a starting value) is changed by loading the model
-  again with the value written in. The exporter writes a parameter as Simile's
-  single-node "variable parameter" (value, `spec`, `min_val`, `max_val` on the
-  variable node, no function node) — the only form SimiLive describes as
-  `INPUT`; see the comment on `isParameter`.
-- `src/widgets/parameters.js` — the **Parameters** panel: a model's **file
-  parameters** (Simile's `param_type=file`: a variable ticked "File
-  parameter" in its dialog, `props.fileParam`, needing no equation;
-  `exportSimile.isFileParameter`, `Simulation.fileParametersOf`), grouped by
-  submodel. A value is a number or JSON (`[1, 2, 3]`, one bracket level per
-  dimension: enclosing fixed memberships, then the variable's own array).
-  Values are NEVER in the model spec: the ones used last are kept beside it
-  (`simile.fileParameters.v1`, `Simulation.setFileParameters`), and Load /
-  Save write a JSON parameter file (`.spf`, nested by submodel; Simile's own
-  XML `.spf` is not read). Before each reset they go to the engine
-  (`FileParameters`, ours, in `engine-local.js` → `sx_param_fill` in
-  bridge.cpp); a missing one stops the run, naming it. In the page only, and
-  not for a population's members. Design: `NOTE-file-parameters.md`;
-  check: `tools/headless/scripts/file-params.py`.
+- **Parameters** — a variable's "Data source" (its dialog; Simile's own
+  choice), `exportSimile.parameterKind`: **Derived** (an equation, on a
+  function node), **Variable parameter** (read every time step: a slider,
+  or values over time), **Fixed parameter** (`param_type=file`, read once at
+  reset). Held as `props.paramKind`; a variable without one is read by the
+  older rule (a number, a range, nothing influencing it → variable). For
+  both parameter kinds the equation is optional, a default; both are
+  exported as Simile's ONE node (value, range, units on the variable, no
+  function node), and imported by Simile's rule (no function node → a
+  parameter). See `NOTE-file-parameters.md`.
+- `src/widgets/sliders.js` — a slider per variable parameter with a numeric
+  value, a Minimum and a Maximum (`exportSimile.isParameter`,
+  `Simulation.parametersOf`). A slider's value is a RUN setting
+  (`Simulation.setParameter`), never an edit to the model. On SimiLive a
+  rate is changed in place (`Parameterize` with `NOW v`, sent again after
+  every reset) and a starting value by loading the model again with the
+  value written in; in the page, both are a reset.
+- `src/widgets/parameters.js` — the **Parameters** panel: every fixed and
+  variable parameter (`Simulation.inputParametersOf`), grouped by submodel.
+  A value is a number or JSON (`[1, 2, 3]`, one bracket level per
+  dimension: enclosing fixed memberships, then the variable's own array);
+  a variable parameter may instead be given values OVER TIME — `{"0": 5,
+  "10": 7}`, or one bracket deeper, `[5, 7, 9]` for times 0, 1, 2 — with
+  what the run sees between times (last, closest, interpolated)
+  (`Simulation.readInputValue`). Values are NEVER in the model spec: the
+  ones used last are kept beside it (`simile.fileParameters.v1`,
+  `Simulation.setInputValues`), and Load / Save write a JSON parameter file
+  (`.spf`, nested by submodel; Simile's own XML `.spf` is not read). Before
+  each reset they go to the engine (`FileParameters`, ours, in
+  `engine-local.js` → `sx_param_fill` / `sx_param_series` in bridge.cpp); a
+  missing one stops the run, naming it. A slider moved last beats a value
+  through the run; values over time take over at their first time. In the
+  page only, and not for a population's members. Check:
+  `tools/headless/scripts/file-params.py`.
 - `src/page.js` — **embedded-widget pages** (`window.Simile`): widgets placed
   straight into an ordinary web page, no workspace. A model ships as a script
   calling `Simile.model(name, model, runSettings)` — File ▸ Export model as

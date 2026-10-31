@@ -468,6 +468,16 @@
     if (!el) return null;
     var spec = specFor(d, id);
     var fields = spec.fields || [];
+    // A field with nothing stored but a value to be read off the model
+    // (`inferWith`, an `exportSimile` function) shows that value — so OK
+    // writes what the element already was, not the first option.
+    fields.forEach(function (f) {
+      if (!f.inferWith || (el.props || {})[f.name] != null) return;
+      var infer = Sienna.exportSimile && Sienna.exportSimile[f.inferWith];
+      if (!infer) return;
+      el = $.extend({}, el, { props: $.extend({}, el.props) });
+      el.props[f.name] = infer(d.model(), id);
+    });
     var typeName = String(id).indexOf('submodel') === 0 ? 'submodel' : el.type;
 
     // The standard row for one field, by name — what a custom renderer reuses

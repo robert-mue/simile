@@ -271,25 +271,54 @@
           return '""';
         }
         case 'FileParameters': {
-          // Ours, not SimiLive's: the values of the model's file parameters,
-          // {captpath: [numbers, outermost dimension first]}, taken from the
-          // next reset on. The reply says, for each, how it went: 'ok', or
-          // the number of values it holds, or why it took none.
+          // Ours, not SimiLive's: the values the Parameters panel gives, by
+          // captpath — `{values}` (numbers, outermost dimension first) held
+          // through the run, or `{times, values, fill}` over time, a
+          // variable parameter's. Times are in the model's time unit;
+          // `interval` is days per unit, as the run counts time. The whole
+          // set: one given before and not now goes back to the model's
+          // value — unless a slider holds it. The reply says, for each, how
+          // it went: 'ok', or the number of values it holds, or why it took
+          // none.
           var given = JSON.parse(p.data || '{}');
+          var interval = parseFloat(p.interval) || 1;
           var answer = {};
+          var now = {};
           var self3 = this;
+          var bytes = function (nums) { return new Uint8Array(new Float64Array(nums).buffer); };
           Object.keys(given).forEach(function (path) {
             var id = self3._idOf[path];
             if (!id) { answer[path] = 'not in the model'; return; }
-            var vals = given[path];
-            var bytes = new Uint8Array(new Float64Array(vals).buffer);
-            var r = self3._call('sx_param_fill', 'number', ['string', 'array', 'number'],
-              [id, bytes, vals.length]);
-            answer[path] = r === vals.length ? 'ok'
+            var g = given[path];
+            var r, want;
+            // A series given before goes first: what is given now replaces it.
+            if ((self3._given || {})[id] === 'series') self3._call('sx_param_unseries', null, ['string'], [id]);
+            if (g.times) {
+              if (self3.describe && self3.describe[id] && self3.describe[id].eval !== 'INPUT') {
+                answer[path] = 'values over time, but it is not a variable parameter in the compiled model';
+                return;
+              }
+              want = g.values.length / g.times.length;
+              r = self3._call('sx_param_series', 'number',
+                ['string', 'array', 'number', 'array', 'number', 'number', 'number'],
+                [id, bytes(g.times), g.times.length, bytes(g.values), want, g.fill || 0, interval]);
+            } else {
+              want = g.values.length;
+              r = self3._call('sx_param_fill', 'number', ['string', 'array', 'number'],
+                [id, bytes(g.values), want]);
+            }
+            now[id] = g.times ? 'series' : 'values';
+            answer[path] = r === want ? 'ok'
               : r === 0 ? 'no parameter slot'
                 : r === -1 ? 'a shape not filled here (a population\'s)'
                   : r;
           });
+          Object.keys(this._given || {}).forEach(function (id) {
+            if (now[id]) return;
+            if (!(self3._set || {})[id]) self3._call('sx_param_clear', null, ['string'], [id]);
+            else if (self3._given[id] === 'series') self3._call('sx_param_unseries', null, ['string'], [id]);
+          });
+          this._given = now;
           return JSON.stringify(answer);
         }
         case 'Reset': {

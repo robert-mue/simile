@@ -236,42 +236,52 @@
   }
 
   /**
-   * Is this one of our elements a PARAMETER in Simile's sense — what its
-   * equation dialogue calls a "Variable parameter", which a slider can move
-   * while the model runs? A variable whose value is a plain number, with both
-   * ends of its range given, and which nothing influences.
+   * What kind of value a variable has — Simile's equation dialogue's "Data
+   * source" (Run/equation.tcl; `paramness_setup`, Prolog/library.pl):
    *
-   * Simile writes one as a SINGLE node: the variable carries its value, `spec`,
-   * `min_val` and `max_val` itself, with no function node. Measured against
-   * SimiLive (2026-10-14): that form is described as `eval: "INPUT"` with the
-   * range as `min`/`max`, and `Parameterize` then moves it. The same values on
-   * a function node are taken as the range of an ordinary `DERIVED` value, and
-   * `Parameterize` silently does nothing to it; adding `param_type=variable` or
-   * `fixed` to either form stops the model building at all.
+   *   ''          DERIVED: an equation, on a function node of its own;
+   *   'variable'  a VARIABLE PARAMETER: no function node, no `param_type`.
+   *               Its value is given while the model runs — a slider, or
+   *               values over time from the Parameters panel or a
+   *               parameter file — and read again every time step;
+   *   'fixed'     a FIXED PARAMETER: no function node, `param_type=file`.
+   *               Given when the model runs, read once, at reset.
+   *
+   * For both parameter kinds an equation is optional: it is the default,
+   * used when no value is given. Simile writes both as ONE node carrying
+   * value, range and units itself. Measured against SimiLive (2026-10-14):
+   * the variable form is described as `eval: "INPUT"`, and `Parameterize`
+   * moves it; a range on a function node is only a range.
+   *
+   * Held as `props.paramKind`. A variable made before that (2026-10-31) has
+   * none, and is read by the rule then in force: a number, a range, nothing
+   * influencing it — a slider's parameter — or `fileParam`.
    */
-  function isParameter(model, id) {
+  function parameterKind(model, id) {
     var n = model.nodes[id];
-    if (!n || n.type !== 'variable') return false;
+    if (!n || n.type !== 'variable') return '';
     var p = n.props || {};
-    if (p.fileParam) return false;
-    if (prologNumber(p.value) == null || prologNumber(p.min) == null || prologNumber(p.max) == null) return false;
-    return !Object.keys(model.arcs || {}).some(function (a) {
+    if (p.paramKind != null) return p.paramKind === 'variable' || p.paramKind === 'fixed' ? p.paramKind : '';
+    if (p.fileParam) return 'fixed';
+    if (prologNumber(p.value) == null || prologNumber(p.min) == null || prologNumber(p.max) == null) return '';
+    return Object.keys(model.arcs || {}).some(function (a) {
       return model.arcs[a].type === 'influence' && model.arcs[a].to === id;
-    });
+    }) ? '' : 'variable';
   }
 
   /**
-   * Is this one of Simile's FILE PARAMETERS — a variable whose value is given
-   * when the model runs (`param_type=file`), not by an equation? Written as
-   * ONE node, as Simile writes it: `param_type=file`, its units (its shape:
-   * `array(1,5)`), and its value only if it has a default. The generator
-   * makes it a slot the run fills at each reset (NOTE-file-parameters.md).
-   * Never `spec=[]`: the five catalogue models carrying that fail in
-   * Simile's own window too.
+   * Can a slider move it? A variable parameter whose value is a plain number,
+   * with both ends of its range given.
    */
+  function isParameter(model, id) {
+    if (parameterKind(model, id) !== 'variable') return false;
+    var p = model.nodes[id].props || {};
+    return prologNumber(p.value) != null && prologNumber(p.min) != null && prologNumber(p.max) != null;
+  }
+
+  /** A fixed parameter (`param_type=file`): see `parameterKind`. */
   function isFileParameter(model, id) {
-    var n = model.nodes[id];
-    return !!(n && n.type === 'variable' && (n.props || {}).fileParam);
+    return parameterKind(model, id) === 'fixed';
   }
 
   // ---- the conversion ---------------------------------------------------
@@ -370,7 +380,7 @@
         // A file parameter needs no equation. An influence into one is
         // allowed — Simile has them (SolarRadiationDNDCP's `r`) — and lands
         // on its one node.
-        if (isFileParameter(m, id) && !String((n.props || {})[field] || '').trim()) return;
+        if (parameterKind(m, id) && !String((n.props || {})[field] || '').trim()) return;
         if (field && !String((n.props || {})[field] || '').trim()) {
           problems.push('"' + name + '" has no ' + field);
           return;
@@ -484,7 +494,7 @@
         // A valve has no visible node — it IS its equation, which the flow arc
         // will carry as `attached`.
         if (n.type !== 'valve') self.vis[id] = simId('node', ++self.nodeN);
-        if (self.exprField(n.type) && !isParameter(m, id) && !isFileParameter(m, id)) self.fn[id] = simId('node', ++self.nodeN);
+        if (self.exprField(n.type) && !parameterKind(m, id)) self.fn[id] = simId('node', ++self.nodeN);
       });
 
       // Flow arc ids up front, because a valve can be the SOURCE of an
@@ -752,20 +762,21 @@
       props.push('name=' + atom(n.label || (n.type === 'cloud' ? 'cd' + (++this.cloudN) : id)));
       // A parameter is one node, holding what a function node would (see
       // `isParameter`). `spec` is the text as typed, as Simile keeps it.
-      if (isParameter(this.m, id)) {
+      // A parameter, of either kind, is one node holding what a function
+      // node would (see `parameterKind`): its range, units and default. A
+      // number keeps `spec`, the text as typed, as Simile keeps it. Never
+      // `spec=[]`: the catalogue models carrying that fail in Simile's own
+      // window too.
+      var kind = parameterKind(this.m, id);
+      if (kind) {
         var p = n.props || {};
-        props.push('max_val=' + prologNumber(p.max), 'min_val=' + prologNumber(p.min),
-          'spec=' + atom(String(p.value).trim()),
-          'units=' + (String(p.units || '').trim() || '1'),
-          'value=' + prologNumber(p.value));
-      }
-      if (isFileParameter(this.m, id)) {
-        var fp = n.props || {};
-        var lo = prologNumber(fp.min), hi = prologNumber(fp.max);
+        var lo = prologNumber(p.min), hi = prologNumber(p.max), num = prologNumber(p.value);
         if (hi != null) props.push('max_val=' + hi);
         if (lo != null) props.push('min_val=' + lo);
-        props.push('param_type=file', 'units=' + (String(fp.units || '').trim() || '1'));
-        if (String(fp.value || '').trim()) props.push('value=(' + prologExpr(fp.value) + ')');
+        if (kind === 'fixed') props.push('param_type=file');
+        props.push('units=' + (String(p.units || '').trim() || '1'));
+        if (num != null) props.push('spec=' + atom(String(p.value).trim()), 'value=' + num);
+        else if (String(p.value || '').trim()) props.push('value=(' + prologExpr(p.value) + ')');
       }
 
       out.push('node(' + this.vis[id] + ',' + NODE_TYPE[n.type] + ',[],'
@@ -1235,6 +1246,12 @@
         while (j < t.length && !(t.charAt(j) === "'" && t.charAt(j + 1) !== "'")) j += t.charAt(j) === "'" ? 2 : 1;
         out += t.slice(i, j + 1);
         i = j + 1;
+      } else if (c === '"' && (m = /^"[^"]*"/.exec(t.slice(i)))) {
+        // A literal such as `"false"` (a boolean or enumerated value), which
+        // Simile writes as the ATOM '"false"'; bare, Prolog reads a string,
+        // and the generator fails (life_input).
+        out += "'" + m[0] + "'";
+        i += m[0].length;
       } else if ((m = /^\d+(\.\d+)?([eE][+-]?\d+)?/.exec(t.slice(i)))) {
         out += m[0];                                     // a number, `1E5` included
         i += m[0].length;
@@ -1259,6 +1276,7 @@
   Sienna.exportSimile = {
     isParameter: isParameter,
     isFileParameter: isFileParameter,
+    parameterKind: parameterKind,
     /** @returns {string} the model as Simile Prolog */
     prolog: function (model) {
       return new Emitter(model).run();

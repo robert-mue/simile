@@ -445,9 +445,30 @@
       this.makeFlows();
       this.makeRelations();
       this.makeInfluences();
+      this.plainKinds();
       this.reportDropped();
 
       return m;
+    },
+
+    /**
+     * A variable's kind is kept only where it says something: where the rule
+     * for a variable that has none (`parameterKind` in export-simile.js — a
+     * number, a range, nothing influencing it) would read it otherwise. So
+     * a derived variable carries none, nor a slider's parameter, and a model
+     * written before kinds were held comes back as it went.
+     */
+    plainKinds: function () {
+      var m = this.m;
+      var kindOf = Sienna.exportSimile && Sienna.exportSimile.parameterKind;
+      if (!kindOf) return;
+      Object.keys(m.nodes).forEach(function (id) {
+        var props = m.nodes[id].props;
+        if (!props || props.paramKind == null) return;
+        var kind = props.paramKind;
+        delete props.paramKind;
+        if (kindOf(m, id) !== kind) props.paramKind = kind;
+      });
     },
 
     mint: function (fam) {
@@ -704,13 +725,19 @@
             + '" — a spelling we have not had confirmed (§A2)');
         }
 
-        var props = self.fnProps(self.ownerOf2(id), type, id);
-        // A FILE PARAMETER (`param_type=file`): its value is given when the
-        // model runs; a value in the file is its default. Not a table read
-        // from a data file, which Simile marks the same way: that runs on
-        // the values last read (`props.table`), as a constant.
-        if (type === 'variable' && unquote(n.p.param_type || '') === 'file' && !props.table) {
-          props.fileParam = true;
+        var fnOf = self.ownerOf2(id);
+        var props = self.fnProps(fnOf, type, id);
+        // A variable's kind, by Simile's own rule (`parameterKind` in
+        // export-simile.js): a function node makes it DERIVED; none makes it
+        // a parameter — FIXED with `param_type=file`, VARIABLE without — and
+        // a value on the node is only its default. Except: a table read from
+        // a data file, which Simile marks `param_type=file` too but which
+        // runs on the values last read (`props.table`), as a constant; and a
+        // node never finished (`[name=var3]`, no `complete=true`).
+        if (type === 'variable') {
+          var finished = String(n.p.complete || '') === 'true';
+          props.paramKind = fnOf || props.table || !finished ? ''
+            : unquote(n.p.param_type || '') === 'file' ? 'fixed' : 'variable';
         }
         // `node(node00016,variable,[],[name=var5],[])` — no equation, no units,
         // no position, no `complete=true`. Simile lets an element sit unfinished
@@ -718,7 +745,7 @@
         // (`src/equation-check.js`) rather than the import failing. What it will
         // NOT do is export, which is correct — it would not run either.
         var field = EXPR_FIELD[type];
-        if (field && !String(props[field] || '').trim() && !props.fileParam) {
+        if (field && !String(props[field] || '').trim() && !props.paramKind) {
           self.note('incomplete', '"' + unquote(n.p.name || id) + '" has no '
             + field + ' in the file — imported unfinished');
         }
@@ -1315,6 +1342,9 @@
    * generator does not know (Thornthwaite, SolarRadiationDNDCP).
    */
   function plainNames(t) {
+    // A literal, `'"false"'`, is `"false"` in an equation: the exporter puts
+    // the atom's quotes back (`prologExpr`).
+    t = t.replace(/'("[^"']*")'/g, '$1');
     return t.replace(/'([A-Za-z_][A-Za-z0-9_]*)'/g, function (all, name, at) {
       var before = at > 0 && /[A-Za-z0-9_]/.test(t.charAt(at - 1)) ? ' ' : '';
       var after = /[A-Za-z0-9_]/.test(t.charAt(at + all.length)) ? ' ' : '';

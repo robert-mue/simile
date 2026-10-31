@@ -299,6 +299,53 @@ int sx_param_fill(const char* nodeId, const unsigned char* bytes, int n) {
   return n;
 }
 
+// A VARIABLE parameter's values over time (eval INPUT only: its slot is a
+// VarParamData, shank.cpp): `nTimes` time points (doubles, in the run's own
+// time — days, as the session sends times — divided by `interval`), each
+// with `perPoint` values (doubles) packed as sx_param_fill's. Between points
+// `fill` says what the run sees: 0 the last point's values, 1 the closest
+// point's, 2 interpolated (USE_LAST, USE_CLOSEST, INTERPOLATE). Before the
+// first point, the parameter's own value (its equation, or a slider's).
+// Replaces any series it had. Returns perPoint when taken; otherwise how many
+// values a point holds, 0 for no slot, -1 for a shape not filled here.
+EMSCRIPTEN_KEEPALIVE
+int sx_param_series(const char* nodeId, const unsigned char* times, int nTimes,
+                    const unsigned char* values, int perPoint, int fill, double interval) {
+  void* h = paramSlot(nodeId);
+  if (!h) return 0;
+  int* dims;
+  if (!get_param_ptr_and_dims(h, &dims)) return 0;
+  int count = 1, k = 0;
+  for (; dims[k] > 0; ++k) count *= dims[k];
+  if (!is_base_type(dims[k])) return -1;
+  if (count != perPoint) return count;
+  int t = dims[k], size = sizeOfType(t);
+  clear_time_point_elts(h);
+  *get_fill_ptr(h) = fill;
+  *get_interval_ptr(h) = interval > 0 ? interval : 1.0;
+  for (int p = 0; p < nTimes; ++p) {
+    double when;
+    memcpy(&when, times + p * sizeof when, sizeof when);
+    create_time_point(h, when);
+    int* ptDims;
+    char** at = get_timepoint_ptr_and_dims(h, when, &ptDims);
+    if (!at || !*at) return 0;
+    for (int i = 0; i < perPoint; ++i) {
+      double v;
+      memcpy(&v, values + (p * perPoint + i) * sizeof v, sizeof v);
+      putNumber(*at + i * size, t, v);
+    }
+  }
+  return perPoint;
+}
+
+// A variable parameter's values over time taken away (sx_param_series's),
+// leaving its current value — a slider's, or one given for the whole run.
+EMSCRIPTEN_KEEPALIVE
+void sx_param_unseries(const char* nodeId) {
+  if (params.count(nodeId)) clear_time_point_elts(params[nodeId]);
+}
+
 // A slider's value for a parameter, taken from the next reset on.
 EMSCRIPTEN_KEEPALIVE
 int sx_param(const char* nodeId, double value) {

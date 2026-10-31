@@ -107,23 +107,31 @@
         { name: 'units',   label: 'Units', type: 'text' },
       ] },
       variable:     { has_label: true,  fields: [
+        // Simile's "Data source" (`parameterKind` in export-simile.js): an
+        // equation, or a PARAMETER whose value is given when the model runs —
+        // a variable one (a slider, or values over time), read every step,
+        // or a fixed one, read at reset. For a parameter the equation is
+        // optional, a default. `inferWith`: a variable made before the kind
+        // was held shows the kind it is read as.
+        { name: 'paramKind', label: 'Data source', type: 'choice', inferWith: 'parameterKind',
+          options: [
+            { value: '', label: 'Derived: from the equation' },
+            { value: 'variable', label: 'Variable parameter: a slider, or values over time' },
+            { value: 'fixed', label: 'Fixed parameter: one value for the run' },
+          ],
+          help: 'A parameter\'s value is given when the model runs, in Widgets ▸ Parameters '
+              + '(or a parameter file loaded there); a variable parameter with a Minimum and '
+              + 'Maximum also gets a slider. For a parameter, the equation is only a default.' },
         { name: 'value', label: 'Value or expression', type: 'expression', required: true,
-          exemptWhen: { fileParam: true } },
-        // Simile's FILE PARAMETER (`param_type=file`): its value is not in the
-        // model but given when it runs — the Parameters panel, or a parameter
-        // file loaded there (NOTE-file-parameters.md). It needs no equation;
-        // one given is its default, used when none is given there.
-        { name: 'fileParam', label: 'File parameter', type: 'boolean',
-          help: 'Its value is given when the model runs (Widgets ▸ Parameters, or a '
-              + 'parameter file), not here. A value given above is then only a default.' },
+          exemptWhen: [{ paramKind: ['variable', 'fixed'] }, { fileParam: true }] },
         { name: 'units', label: 'Units', type: 'text' },
         // The range a slider may move a PARAMETER over — a variable whose
         // value is a number and which nothing influences. Simile keeps the
         // same pair on the function node, as `min_val`/`max_val`.
         { name: 'min', label: 'Minimum', type: 'number',
-          help: 'For a parameter: the lowest value a slider offers.' },
+          help: 'For a variable parameter: the lowest value a slider offers.' },
         { name: 'max', label: 'Maximum', type: 'number',
-          help: 'For a parameter: the highest value a slider offers.' },
+          help: 'For a variable parameter: the highest value a slider offers.' },
         SKETCH,
       ] },
       cloud:        { has_label: 'optional', autoCreated: true, fields: [] },

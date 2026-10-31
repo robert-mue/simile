@@ -1,25 +1,33 @@
 /**
- * `sienna.parameters` — the values of a model's FILE PARAMETERS, grouped by
- * submodel, with Load and Save of a parameter file.
+ * `sienna.parameters` — the values of a model's PARAMETERS, fixed and
+ * variable, grouped by submodel, with Load and Save of a parameter file.
  *
- * A file parameter is a variable marked so in its dialog (Simile's
- * `param_type=file`): its value is not in the model but given when it runs
- * (`Simulation.fileParametersOf`). One model, several parameter files — a
- * scenario, a site, a country each. So the values here are NEVER written into
- * the model: they are kept beside it (the ones used last, `Simulation.
- * fileParameterValues`) and in parameter files.
+ * A parameter is a variable whose "Data source" (its dialog) is not an
+ * equation but a value given when the model runs (`exportSimile.
+ * parameterKind`, Simile's own distinction):
  *
- * A value is typed as Simile's file parameter dialogue takes it: a number, or
- * JSON for several — `[3, 1, 2]`, one level of brackets per dimension,
- * outermost first (the instances of an enclosing fixed membership, then the
- * variable's own array). A value given changes the run from its start, as a
- * slider does. A field left empty uses the model's value, if it has one.
+ * - a FIXED parameter is read once, at reset: a number, or an array;
+ * - a VARIABLE parameter is read every time step: a number or array held
+ *   through the run, or values OVER TIME — `{"0": 5, "10": 7}` (times in the
+ *   model's time unit), or one bracket deeper than a value, `[5, 7, 9]` for
+ *   times 0, 1, 2 — with what the run sees between times: the last value
+ *   given, the closest, or interpolated. One with a range also has a
+ *   slider (the Sliders panel), which moves the same value.
  *
- * A parameter file is JSON in the same notation, grouped by submodel as
- * Simile's are (`.spf`; Simile's own are XML, and are not read yet):
+ * Brackets go one level per dimension, outermost first: the instances of
+ * an enclosing fixed membership, then the variable's own array. A field
+ * left empty uses the model's value (the default), if it has one. A change
+ * runs the model again from the start, as a slider does.
+ *
+ * One model, several parameter files — a scenario, a site, a country each.
+ * So the values here are NEVER written into the model: they are kept beside
+ * it (the ones used last, `Simulation.inputValues`) and in parameter files,
+ * JSON in the same notation, grouped by submodel as Simile's are (`.spf`;
+ * Simile's own are XML, and are not read yet):
  *
  *   { "simile": "parameters", "version": 1, "model": "labour",
- *     "variables": { "time_available": 10 },
+ *     "variables": { "time_available": 10, "rain": { "0": 5, "10": 7 } },
+ *     "fill": { "rain": "interpolate" },
  *     "submodels": { "Activity": { "variables": { "priority": [3, 1, 2] },
  *                                  "submodels": {} } } }
  *
@@ -28,14 +36,20 @@
 $.widget('sienna.parameters', $.sienna.widgetBase, {
   options: {},
 
+  FILLS: [
+    { value: 'use_last', label: 'last value' },
+    { value: 'use_closest', label: 'closest value' },
+    { value: 'interpolate', label: 'interpolated' },
+  ],
+
   _create() {
     this.element.addClass('slx-params');
     this._sim = Sienna.Simulation.viewFor(this._ref());
 
     const bar = $('<div class="slx-palette slx-chrome slx-params-bar">').appendTo(this.element);
-    $('<span class="slx-palette-group">').text('file parameters').appendTo(bar);
+    $('<span class="slx-palette-group">').text('parameters').appendTo(bar);
     this._loadBtn = $('<button type="button">').text('Load…')
-      .attr('title', 'Give every file parameter its value from a parameter file (.spf)').appendTo(bar);
+      .attr('title', 'Give the parameters their values from a parameter file (.spf)').appendTo(bar);
     this._saveBtn = $('<button type="button">').text('Save…')
       .attr('title', 'Save the values given here as a parameter file (.spf)').appendTo(bar);
     this._clearBtn = $('<button type="button">').text('Clear')
@@ -63,10 +77,10 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
   },
 
   _params() {
-    return Sienna.Simulation.fileParametersOf(this._ref());
+    return Sienna.Simulation.inputParametersOf(this._ref());
   },
 
-  /** How many values a shape holds, and how to say it. */
+  /** How many values a parameter holds, and how to say it. */
   _shapeText(p) {
     if (p.unsized) return 'not given here: ' + p.unsized;
     if (!p.shape.length) return 'one number';
@@ -76,7 +90,7 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
 
   _build() {
     const params = this._params();
-    const sig = JSON.stringify(params.map((p) => [p.id, p.label, p.shape, p.unsized, p.default, p.units]));
+    const sig = JSON.stringify(params.map((p) => [p.id, p.kind, p.label, p.shape, p.unsized, p.default, p.units, p.slider]));
     if (sig === this._sig) return;
     this._sig = sig;
     this._list.empty();
@@ -88,8 +102,8 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     this._clearBtn.prop('disabled', none);
     if (none) {
       $('<p class="slx-params-empty">').text(this._bound()
-        ? 'No file parameters. A file parameter is a variable whose value is given '
-          + 'when the model runs, not in the model: tick “File parameter” in its dialog.'
+        ? 'No parameters. A parameter is a variable whose value is given when the model '
+          + 'runs, not by an equation: choose Variable or Fixed parameter as its Data source.'
         : 'Not bound to a model.').appendTo(this._list);
       this._note.text('');
       return;
@@ -111,27 +125,51 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
   },
 
   _row(p, sec) {
-    const row = $('<div class="slx-param">').appendTo(sec);
+    const row = $('<div class="slx-param">').attr('data-kind', p.kind).appendTo(sec);
     const id = 'slx-param-' + this.uuid + '-' + p.id;
     const head = $('<div class="slx-param-head">').appendTo(row);
     $('<label class="slx-param-name">').attr('for', id).text(p.name).appendTo(head);
+    $('<span class="slx-param-kind">').text(p.kind === 'variable' ? 'variable' : 'fixed')
+      .attr('title', p.kind === 'variable'
+        ? 'A variable parameter: read every time step, so it can be given values over time'
+        : 'A fixed parameter: read once, when the run starts')
+      .appendTo(head);
+    if (p.slider) {
+      $('<span class="slx-param-slider">').text('+ slider')
+        .attr('title', 'It has a Minimum and a Maximum, so the Sliders panel moves it too; '
+          + 'a slider moved last wins over a value given here, until values over time take over')
+        .appendTo(head);
+    }
     if (p.units && !/^array\s*\(/.test(p.units)) {
       $('<span class="slx-param-units">').text(p.units).appendTo(head);
     }
     $('<span class="slx-param-shape">').text(this._shapeText(p)).appendTo(head);
     const box = $('<input type="text" class="slx-param-value" spellcheck="false">')
-      .attr({ id, placeholder: p.default ? 'model value: ' + p.default : 'a value is needed' })
+      .attr({
+        id,
+        placeholder: p.default ? 'model value: ' + p.default
+          : p.kind === 'variable' ? 'a value is needed — over time: {"0": 5, "10": 7}'
+            : 'a value is needed',
+      })
       .prop('disabled', !!p.unsized)
       .appendTo(row);
+    let fill = null;
+    if (p.kind === 'variable') {
+      const line = $('<div class="slx-param-fill">').appendTo(row);
+      $('<label>').attr('for', id + '-fill').text('Between times:').appendTo(line);
+      fill = $('<select>').attr('id', id + '-fill').appendTo(line);
+      this.FILLS.forEach((f) => $('<option>').val(f.value).text(f.label).appendTo(fill));
+      this._on(fill, { change: () => this._commitFill(p) });
+    }
     const err = $('<p class="slx-param-error">').appendTo(row);
-    this._rows[p.id] = { p, row, box, err };
+    this._rows[p.id] = { p, row, box, err, fill };
     this._on(box, {
       keydown: (e) => { if (e.key === 'Enter') this._commit(p); },
       change: () => this._commit(p),
     });
   },
 
-  /** A value as typed, or a reason it is not one. */
+  /** A value as typed: `{value}`, or `{error}` saying what is wrong. */
   _parse(p, text) {
     const t = String(text).trim();
     if (!t) return { value: null };
@@ -139,42 +177,44 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     try {
       v = JSON.parse(t);
     } catch (e) {
-      return { error: 'Not a number, nor JSON: several values go in brackets, [1, 2, 3].' };
+      return { error: p.kind === 'variable'
+        ? 'Not a number, nor JSON: several values go in brackets, [1, 2, 3]; values over time as {"0": 5, "10": 7}.'
+        : 'Not a number, nor JSON: several values go in brackets, [1, 2, 3].' };
     }
-    const numbers = (x) => (Array.isArray(x) ? x.every(numbers) : typeof x === 'number' && isFinite(x));
-    if (!numbers(v)) return { error: 'Only numbers, or brackets of numbers, can be given.' };
-    const want = p.shape.reduce((a, b) => a * b, 1);
-    const have = Array.isArray(v) ? v.flat(Infinity).length : 1;
-    if (have !== want) {
-      return { error: want + ' value' + (want === 1 ? ' is' : 's are') + ' needed; '
-        + have + (have === 1 ? ' is' : ' are') + ' given.' };
-    }
-    return { value: v };
+    const r = Sienna.Simulation.readInputValue(p, v);
+    return r.error ? { error: r.error } : { value: v };
   },
 
   _fmt(v) {
-    return v == null ? '' : JSON.stringify(v).replace(/,/g, ', ');
+    return v == null ? '' : JSON.stringify(v).replace(/,"/g, ', "').replace(/,(?=[-\d[])/g, ', ').replace(/":/g, '": ');
   },
 
   /** Every row to the value given it, and the note to what is missing. */
   _sync() {
-    const given = this._sim.fileParameterValues(this._ref());
+    const given = this._sim.inputValues(this._ref());
     const missing = [];
     Object.keys(this._rows || {}).forEach((id) => {
       const r = this._rows[id];
       if (document.activeElement !== r.box[0] || !r.row.hasClass('slx-param-bad')) {
-        r.box.val(this._fmt(given[id]));
+        r.box.val(this._fmt(given.values[id]));
         r.err.text('');
         r.row.removeClass('slx-param-bad');
       }
-      const lacks = given[id] == null && !r.p.default;
+      if (r.fill) {
+        r.fill.val(given.fill[id] || 'use_last');
+        const v = given.values[id];
+        const over = v != null && !Sienna.Simulation.readInputValue(r.p, v).error
+          && !!Sienna.Simulation.readInputValue(r.p, v).times;
+        r.row.toggleClass('slx-param-over-time', over);
+      }
+      const lacks = given.values[id] == null && !r.p.default;
       r.row.toggleClass('slx-param-missing', lacks);
       if (lacks) missing.push(r.p.name);
     });
     this._note.toggleClass('slx-params-note-warn', missing.length > 0).text(missing.length
       ? missing.length + ' value' + (missing.length === 1 ? ' is' : 's are')
         + ' needed before the model can run.'
-      : 'Every file parameter has a value. A change runs the model again from the start.');
+      : 'Every parameter has a value. A change runs the model again from the start.');
   },
 
   _commit(p) {
@@ -187,16 +227,23 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     }
     r.err.text('');
     r.row.removeClass('slx-param-bad');
-    const was = this._sim.fileParameterValues(this._ref())[p.id];
+    const was = this._sim.inputValues(this._ref()).values[p.id];
     if (JSON.stringify(was) === JSON.stringify(got.value == null ? undefined : got.value)) return;
     this._action('set', { parameter: p.label, value: got.value }, () => {
-      this._sim.setFileParameters(this._ref(), { [p.id]: got.value });
+      this._sim.setInputValues(this._ref(), { [p.id]: got.value });
+    });
+  },
+
+  _commitFill(p) {
+    const m = this._rows[p.id].fill.val();
+    this._action('fill', { parameter: p.label, fill: m }, () => {
+      this._sim.setInputValues(this._ref(), {}, false, { [p.id]: m });
     });
   },
 
   _clear() {
-    if (!Object.keys(this._sim.fileParameterValues(this._ref())).length) return;
-    this._action('clear', {}, () => this._sim.setFileParameters(this._ref(), {}, true));
+    if (!Object.keys(this._sim.inputValues(this._ref()).values).length) return;
+    this._action('clear', {}, () => this._sim.setInputValues(this._ref(), {}, true));
   },
 
   _modelName() {
@@ -208,15 +255,16 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
 
   /** The values given, as a parameter file: nested by submodel. */
   _fileText() {
-    const given = this._sim.fileParameterValues(this._ref());
+    const given = this._sim.inputValues(this._ref());
     const top = { variables: {}, submodels: {} };
     this._params().forEach((p) => {
-      if (given[p.id] == null) return;
+      if (given.values[p.id] == null) return;
       let at = top;
       p.path.forEach((s) => {
         at = at.submodels[s] = at.submodels[s] || { variables: {}, submodels: {} };
       });
-      at.variables[p.name] = given[p.id];
+      at.variables[p.name] = given.values[p.id];
+      if (given.fill[p.id]) (at.fill = at.fill || {})[p.name] = given.fill[p.id];
     });
     return JSON.stringify($.extend({ simile: 'parameters', version: 1, model: this._modelName() }, top), null, 2) + '\n';
   },
@@ -259,6 +307,7 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     }
     const params = this._params();
     const values = {};
+    const fills = {};
     const unknown = [];
     const bad = [];
     const walk = (node, path) => {
@@ -267,13 +316,16 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
         const p = params.find((x) => x.label === label);
         if (!p) { unknown.push(label); return; }
         const got = this._parse(p, JSON.stringify(node.variables[name]));
-        if (got.error) bad.push(label + ': ' + got.error); else values[p.id] = got.value;
+        if (got.error) { bad.push(label + ': ' + got.error); return; }
+        values[p.id] = got.value;
+        const f = ((node && node.fill) || {})[name];
+        if (f && p.kind === 'variable') fills[p.id] = f;
       });
       Object.keys((node && node.submodels) || {}).forEach((s) => walk(node.submodels[s], path.concat([s])));
     };
     walk(doc, []);
-    this._action('load', { file: fileName, values: values }, () => {
-      this._sim.setFileParameters(this._ref(), values, true);
+    this._action('load', { file: fileName, values, fill: fills }, () => {
+      this._sim.setInputValues(this._ref(), values, true, fills);
     });
     const told = [];
     if (unknown.length) told.push('not in this model: ' + unknown.join(', '));

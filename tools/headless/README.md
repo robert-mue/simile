@@ -41,10 +41,12 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
 - `scripts/added-widget.py` — adds `examples/widgets/big-number.js` by URL,
   runs it on Growth, breaks it on purpose; PASS/FAIL lines. Keeps the brief,
   `Simulation.forWidget` and the example in step.
-- `scripts/file-params.py` — labour_by_priority1's file parameters: import,
-  export as `param_type=file`, a run refused while values are missing, values
-  given in the Parameters panel, the run, and a parameter file saved and
-  loaded; PASS/FAIL lines. Over http.
+- `scripts/file-params.py` — the Parameters panel. Fixed: labour_by_priority1
+  imported, exported as `param_type=file`, a run refused while values are
+  missing, values given, the run, a parameter file saved and loaded.
+  Variable: values over time (interpolated, last value, an array), a number,
+  a slider beating it, the fill method through a file. PASS/FAIL lines.
+  Over http.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.
