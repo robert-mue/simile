@@ -246,3 +246,19 @@ only those with a value and a range; the rest of the kind is missing:
   all 15 values taken.
 - When and where the panel appears.
 - SimiLive: values cannot be sent there yet.
+
+## AD HOC, TO BE REVISITED (Robert, 2026-11-02)
+
+Two defaults for a VARIABLE parameter with no value, so that models like
+nkometou run (`inputParametersOf` in src/simulation.js, `midpoint`):
+
+- with a Minimum and Maximum: the middle of the range (Robert's rule);
+- a boolean (`units=boolean`) with no range: **false** — nkometou's 15
+  innovation switches (`establish oilpalm`, …), which have `spec=[]` and
+  are in neither the model nor Jasper's `.spf`. Robert: "an ad hoc decision
+  that needs to be re-visited, presumably by making it a formal requirement
+  that a default value must be provided."
+
+Neither is written into the model; both are sent at reset and shown in the
+Parameters panel. Revisit: require a default for every parameter (the
+dialog and the importer saying so), and drop these.

@@ -1344,6 +1344,12 @@
       var midpoint = !own && kind === 'variable' && String(n.props.min || '').trim() !== ''
         && String(n.props.max || '').trim() !== '' && isFinite(lo) && isFinite(hi)
         ? (lo + hi) / 2 : null;
+      // AD HOC (Robert, 2026-11-02), TO BE REVISITED: a boolean variable
+      // parameter with no value runs as false. nkometou's 15 innovation
+      // switches have none. The likely proper answer is to REQUIRE a
+      // default for every parameter; see NOTE-file-parameters.md.
+      if (midpoint == null && !own && kind === 'variable'
+          && String(n.props.units || '').trim() === 'boolean') midpoint = 0;
       out.push({
         id: id,
         kind: kind,

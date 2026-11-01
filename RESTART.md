@@ -201,6 +201,10 @@ at a time, with a small test model for each (he made
   this format in the Parameters panel's Load… (single_value / multi_value
   at least; `byte_array` is base64 binary) is a small job, after nested
   values.
+- **AD HOC, TO REVISIT** (Robert, 2026-11-02): a value-less boolean
+  variable parameter runs as FALSE (nkometou's innovation switches); one
+  with a range runs at its midpoint. Probably to become a formal
+  requirement that every parameter has a default. NOTE-file-parameters.md.
 - Asked 2026-11-01: (1) reading
   nested values in the page — `sx_value` (bridge.cpp) reads few shapes, and
   most of nkometou's (`dims [1492,0,0,0]`, single submodels inside a fixed
