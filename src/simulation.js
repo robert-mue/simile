@@ -879,6 +879,12 @@
       var slid = $.extend({}, this._overrides[path] || {}, this._preview[path] || {});
       var out = {};
       params.forEach(function (p) {
+        if (given.values[p.id] == null && p.midpoint != null && !(p.id in slid)) {
+          // Not in the model, so the engine has no default to fall back on.
+          var n = p.shape.reduce(function (a, b) { return a * b; }, 1);
+          out[p.captpath] = { values: Array.apply(null, Array(n)).map(function () { return p.midpoint; }) };
+          return;
+        }
         if (given.values[p.id] == null) return;
         var r = Simulation.readInputValue(p, given.values[p.id]);
         if (r.error) throw new Error(p.label + ': ' + r.error + ' Change it in Widgets ▸ Parameters.');
@@ -1301,8 +1307,10 @@
    * array's (`array(1,5)` in its units). `shape` is those sizes, outermost
    * first; `unsized` says why there is none to give (a population's
    * instances come and go). `default` is its value in the model, if any —
-   * used when none is given. `slider`: a slider can move it too.
-   * @returns {Array<{id, kind, name, label, path, captpath, units, shape, unsized, default, slider}>}
+   * used when none is given; for a variable parameter with no value but a
+   * range, the middle of the range (`midpoint`). `slider`: a slider can
+   * move it too.
+   * @returns {Array<{id, kind, name, label, path, captpath, units, shape, unsized, default, midpoint, slider}>}
    */
   Simulation.inputParametersOf = function (ref) {
     var m = ref && Sienna.userData ? Sienna.userData.get(ref) : null;
@@ -1329,9 +1337,17 @@
       }
       shape = shape.concat(arrayDims(String(n.props.units || '')));
       var label = path.concat([n.label]).join('/');
+      // A variable parameter with no value but a range runs at the middle
+      // of it (Robert, 2026-11-02) — not written into the model.
+      var own = String(n.props.value || '').trim();
+      var lo = Number(n.props.min), hi = Number(n.props.max);
+      var midpoint = !own && kind === 'variable' && String(n.props.min || '').trim() !== ''
+        && String(n.props.max || '').trim() !== '' && isFinite(lo) && isFinite(hi)
+        ? (lo + hi) / 2 : null;
       out.push({
         id: id,
         kind: kind,
+        midpoint: midpoint,
         name: n.label,
         label: label,
         path: path,
@@ -1339,7 +1355,7 @@
         units: n.props.units || '',
         shape: shape,
         unsized: unsized,
-        default: String(n.props.value || '').trim(),
+        default: own || (midpoint != null ? String(midpoint) : ''),
         slider: Sienna.exportSimile.isParameter(m, id),
       });
     });

@@ -120,3 +120,15 @@ await ev("$('.slx-params').last().parameters('instance')._clear()"); await sleep
 await ev("$('.slx-params').last().parameters('instance')._read(%s, 'ser.spf')" % json.dumps(txt)); await sleep(0.8)
 back = await ev("JSON.stringify(Sienna.Simulation.inputValues('models/ser'))")
 await check('loaded back with its fill', '"interpolate"' in back and '"3":20' in back, back)
+# A variable parameter with no value but a range runs at the middle of it
+# (Robert, 2026-11-02): m in 2..8, r = 10m, so r = 50; not "needed".
+await ev("""(()=>{const d=Sienna.Diagram.create('models/mid',{name:'mid'});
+  const p=d.addNode('variable',{label:'m',props:{min:'2',max:'8',paramKind:'variable'},x:100,y:100});
+  const q=d.addNode('variable',{label:'r',props:{value:'m*10'},x:220,y:100}); d.addInfluence(p,q); return 1})()""")
+await ev("Sienna.documents.openOrShow(app, 'models/mid')"); await sleep(2)
+await ev("(()=>{ return Sienna.Simulation.viewFor('models/mid').loadOwn('models/mid').catch(e=>e.message)})()")
+for i in range(60):
+    if await ev("Sienna.Simulation.status") in ('ready', 'error') and i > 2: break
+    await sleep(0.5)
+r = await ev("(()=>{const cs=Sienna.Simulation.components; const id=Object.keys(cs).find(i=>cs[i].captpath==='/r'); return Sienna.Simulation.query([id]).then(v=>Sienna.Simulation.status+' '+JSON.stringify(Object.values(v)))})()")
+await check('no value, a range: runs at its middle', r == 'ready [50]', r + ' ' + str(await ev("Sienna.Simulation.message")))

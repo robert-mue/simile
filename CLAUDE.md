@@ -149,7 +149,8 @@ footing (`src/widgets/grid.js` is the first).
   (`.spf`, nested by submodel); Simile's own are READ too, XML and its first, text format (`_fromSimileXml`, `_fromSimileText`), not written. Before
   each reset they go to the engine (`FileParameters`, ours, in
   `engine-local.js` → `sx_param_fill` / `sx_param_series` in bridge.cpp); a
-  missing one stops the run, naming it. A slider moved last beats a value
+  missing one stops the run, naming it — except a variable parameter with no
+  value but a range, which runs at the middle of it (Robert). A slider moved last beats a value
   through the run; values over time take over at their first time. In the
   page only, and not for a population's members. Check:
   `tools/headless/scripts/file-params.py`.

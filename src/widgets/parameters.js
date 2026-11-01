@@ -148,7 +148,8 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     const box = $('<input type="text" class="slx-param-value" spellcheck="false">')
       .attr({
         id,
-        placeholder: p.default ? 'model value: ' + p.default
+        placeholder: p.midpoint != null ? 'middle of its range: ' + p.default
+          : p.default ? 'model value: ' + p.default
           : p.kind === 'variable' ? 'a value is needed — over time: {"0": 5, "10": 7}'
             : 'a value is needed',
       })
