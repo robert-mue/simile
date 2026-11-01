@@ -316,3 +316,36 @@ Tables
   Table tab showing where the values came from (file, column) and the
   values themselves. Reading the file again, or editing the values, is
   not possible yet.
+
+
+------------------------------------------------------------------------
+Release 2026-11-01
+------------------------------------------------------------------------
+
+Parameters
+- A variable's property dialog has a new choice, Data source, as in
+  Simile: Derived (from its equation), Variable parameter (a slider, or
+  values over time), or Fixed parameter (one value for the run). For a
+  parameter the equation is optional: it is only a default.
+- Widgets > Parameters opens a new panel listing every parameter of the
+  model, grouped by submodel. Type a number, or several in brackets,
+  [1, 2, 3]. A variable parameter can also be given values over time,
+  {"0": 5, "10": 7}, with the run taking the last value, the closest
+  value, or a value interpolated between the times. A change runs the
+  model again from the start.
+- The values are not part of the model. The panel remembers the ones
+  you used last, and Save... and Load... keep sets of them in parameter
+  files (.spf, in JSON), so one model can be run with several. Simile's
+  own (XML) parameter files cannot be read yet.
+- A model with a parameter that has no value will not run: the run
+  control says which values are needed.
+- Simile models with file parameters now import, export and run: 17 of
+  the 20 catalogue models with parameters run in the page, including
+  Thornthwaite. Parameters in a population, and values sent to a model
+  running on SimiLive, are not done yet.
+
+Import and export
+- An equation written in Simile as if'Ta'>0 was imported as ifTa>0;
+  fixed.
+- A value such as "false" was exported in a form Simile could not read;
+  fixed.
