@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="spf1.xsl"?>
+<spf simile_version="7.2">
+<submodel label="top">
+<variables>
+</variables>
+<submodels>
+<submodel label="innovations">
+ <variables>
+ </variables>
+ <submodels>
+ </submodels>
+</submodel>
+<submodel label="village">
+ <variables>
+ <single_value label="male&#10;depart" val="1"/>
+ <single_value label="birth&#10;rate" val="1"/>
+ <single_value label="Healthcare" val="1"/>
+ <single_value label="female&#10;depart" val="1"/>
+ </variables>
+ <submodels>
+ </submodels>
+</submodel>
+<submodel label="Human params">
+ <variables>
+ <single_value label="init cash&#10;new hh" val="200"/>
+ </variables>
+ <submodels>
+ </submodels>
+</submodel>
+<submodel label="crops data">
+ <variables>
+ </variables>
+ <submodels>
+ <submodel label="diseases">
+  <variables>
+  <single_value label="disease&#10;yam" val="0"/>
+  <single_value label="disease&#10;potato" val="0"/>
+  <single_value label="disease&#10;maize" val="0"/>
+  <single_value label="disease&#10;cassava 1" val="0"/>
+  <single_value label="disease&#10;cassava 2" val="0"/>
+  <single_value label="insect&#10;attack" val="0"/>
+  <single_value label="disease&#10;tonmato" val="0"/>
+  <single_value label="disease&#10;groundnut" val="0"/>
+  <single_value label="disease&#10;plantain" val="0"/>
+  </variables>
+  <submodels>
+  </submodels>
+ </submodel>
+ </submodels>
+</submodel>
+<submodel label="land">
+ <variables>
+ <single_value label="rainfall&#10;variation" val="0.5"/>
+ </variables>
+ <submodels>
+ </submodels>
+</submodel>
+</submodels>
+</submodel>
+</spf>
