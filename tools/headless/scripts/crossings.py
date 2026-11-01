@@ -5,7 +5,7 @@
 # size(x) counts as x's number of instances. Prints a summary and every
 # kind of mismatch with an example. Over http (tools/serve.py).
 import json, glob
-files = sorted(glob.glob('/home/user/Projects/simile/reference/catalogue/*.pl')) + ['/home/user/Projects/simile_models/nkometou.pl']
+files = sorted(glob.glob('/home/user/Projects/simile/reference/catalogue/*.pl')) + ['/home/user/Projects/simile/reference/large/nkometou.pl']
 await nav('http://localhost:8731/index.html?newuser=fresh'); await sleep(4)
 await ev(r"""window.__shape = function (term, model) {
   // 'list(array(1,4))' -> 'L A4'; base dropped; size(x) -> x's count
