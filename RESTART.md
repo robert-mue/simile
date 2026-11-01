@@ -188,7 +188,10 @@ at a time, with a small test model for each (he made
 - **nkometou now exports, compiles and RUNS in the page** (0f288b8): build
   ~470 s (once per edit, then kept), reset 0.3 s, 3 steps 0.6 s, 1354
   components, placeholder parameter values. Details: `NOTE-nkometou.md`.
-- **Next — waiting on Robert's choice** (asked 2026-11-01): (1) reading
+- **NEXT (Robert, 2026-11-01, end of day): READING NESTED VALUES FIRST.**
+  He called nkometou running "more of a milestone" than the farmers &
+  fields one. Then, in some order, the other two below.
+- Asked 2026-11-01: (1) reading
   nested values in the page — `sx_value` (bridge.cpp) reads few shapes, and
   most of nkometou's (`dims [1492,0,0,0]`, single submodels inside a fixed
   membership; per-member values deep in populations) answer null, which
