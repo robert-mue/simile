@@ -22,8 +22,9 @@
  * One model, several parameter files — a scenario, a site, a country each.
  * So the values here are NEVER written into the model: they are kept beside
  * it (the ones used last, `Simulation.inputValues`) and in parameter files,
- * JSON in the same notation, grouped by submodel as Simile's are (`.spf`;
- * Simile's own are XML, and are not read yet):
+ * JSON in the same notation, grouped by submodel as Simile's are (`.spf`).
+ * Simile's own are read too, not written — XML (`_fromSimileXml`) and its
+ * first, text format (`_fromSimileText`):
  *
  *   { "simile": "parameters", "version": 1, "model": "labour",
  *     "variables": { "time_available": 10, "rain": { "0": 5, "10": 7 } },
@@ -293,17 +294,28 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
   /** A parameter file's text: every value in it given, the rest taken away. */
   _read(text, fileName) {
     const say = (msg) => this._note.addClass('slx-params-note-warn').text(msg);
-    const t = text.replace(/^﻿/, '').trim();
-    if (t.charAt(0) === '<') {
-      say(fileName + ' is one of Simile’s own (XML) parameter files, which cannot be read here yet.');
-      return;
-    }
+    const t = text.replace(/^\uFEFF/, '').trim();
+    const skipped = [];
     let doc;
-    try {
-      doc = JSON.parse(t);
-    } catch (e) {
-      say(fileName + ' is not a parameter file this panel can read (it is not JSON).');
-      return;
+    if (/^MIME-Version:/i.test(t)) {
+      doc = this._fromSimileText(t, skipped);
+      if (!doc) {
+        say(fileName + ' is not a parameter file this panel can read.');
+        return;
+      }
+    } else if (t.charAt(0) === '<') {
+      doc = this._fromSimileXml(t, skipped);
+      if (!doc) {
+        say(fileName + ' is not a parameter file this panel can read (not Simile’s XML).');
+        return;
+      }
+    } else {
+      try {
+        doc = JSON.parse(t);
+      } catch (e) {
+        say(fileName + ' is not a parameter file this panel can read (it is not JSON).');
+        return;
+      }
     }
     const params = this._params();
     const values = {};
@@ -329,9 +341,180 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     });
     const told = [];
     if (unknown.length) told.push('not in this model: ' + unknown.join(', '));
+    if (skipped.length) told.push('not read: ' + skipped.join('; '));
     if (bad.length) told.push('not taken: ' + bad.join('; '));
     if (told.length) say('Loaded ' + fileName + ' — ' + told.join('. ') + '.');
   },
 });
+
+/**
+ * One of Simile's own parameter files (XML, `.spf`; Run/params.tcl writes
+ * and reads them) as the JSON this panel reads: `<submodel label>` nesting
+ * (the outermost, "top", is the model), and in each `<variables>`:
+ *
+ *   <single_value label val>     a number;
+ *   <multi_value label>          values by index, `<values index>` per level
+ *                                and `<value index value>` at the bottom —
+ *                                an array (indices 1…N), else values keyed by
+ *                                index: for a variable parameter, by TIME;
+ *   <byte_array label type>      values as binary (base64), REAL / INTEGER /
+ *                                FLAG, shaped by its `<value val>` children;
+ *                                `TIME` first: one point after another, each
+ *                                its time then its values; `fill_method`;
+ *   csv_columns, csv_grid,       a reference to a data file: not read here,
+ *   image, geotiff               and said so (`skipped`).
+ *
+ * Labels are Simile's captions, newlines and spaces included; they are
+ * renamed as the importer renames them ("birth\nrate" → birth_rate).
+ */
+$.sienna.parameters.prototype._fromSimileXml = function (text, skipped) {
+  let xml;
+  try {
+    xml = new DOMParser().parseFromString(text, 'application/xml');
+  } catch (e) {
+    return null;
+  }
+  const root = xml.documentElement;
+  if (!root || root.nodeName !== 'spf') return null;
+  const ours = (label) => {
+    const safe = String(label || '').trim().replace(/[^A-Za-z0-9_]/g, '_');
+    return /^[0-9]/.test(safe) ? '_' + safe : safe;
+  };
+  const kids = (el, name) => Array.from(el.children).filter((c) => !name || c.nodeName === name);
+  const num = (v) => Number(String(v).replace(/^\s*NOW\s+/i, '').trim());
+
+  // `<values index>` / `<value index value>` → {index: …}; then an array
+  // where the indices are 1…N, else an object keyed by index (a time).
+  const literal = (el) => {
+    const out = {};
+    kids(el).forEach((c) => {
+      const idx = c.getAttribute('index');
+      if (c.nodeName === 'value') {
+        out[idx] = num(c.getAttribute('value') != null ? c.getAttribute('value') : c.getAttribute('val'));
+      } else if (c.nodeName === 'values') out[idx] = literal(c);
+    });
+    return out;
+  };
+  const shaped = (obj) => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    const keys = Object.keys(obj).sort((a, b) => Number(a) - Number(b));
+    if (keys.every((k, i) => Number(k) === i + 1)) return keys.map((k) => shaped(obj[k]));
+    const o = {};
+    keys.forEach((k) => { o[k] = shaped(obj[k]); });
+    return o;
+  };
+
+  const view = (b64) => {
+    const bin = atob(String(b64).replace(/\s+/g, ''));
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new DataView(u8.buffer);
+  };
+  const nest = (flat, dims) => {
+    if (!dims.length) return flat.shift();
+    return Array.from({ length: dims[0] }, () => nest(flat, dims.slice(1)));
+  };
+  const byteArray = (el, shown) => {
+    const type = el.getAttribute('type');
+    const size = type === 'REAL' ? 8 : type === 'FLAG' ? 1 : 4;
+    const read = (dv, at) => (type === 'REAL' ? dv.getFloat64(at, true)
+      : type === 'FLAG' ? dv.getUint8(at) : dv.getInt32(at, true));
+    const dimVals = kids(el, 'value').map((v) => v.getAttribute('val'));
+    const timed = dimVals[0] === 'TIME';
+    const dims = (timed ? dimVals.slice(1) : dimVals).map(Number);
+    if (dims.some((d) => !(d > 0))) { skipped.push(shown + ' (a shape not read here)'); return undefined; }
+    const per = dims.reduce((a, b) => a * b, 1);
+    const data = Array.from(el.childNodes).filter((n) => n.nodeType === 4 || n.nodeType === 3)
+      .map((n) => n.nodeValue).join('');
+    const dv = view(data);
+    const point = (at) => {
+      const flat = [];
+      for (let i = 0; i < per; i++) flat.push(read(dv, at + i * size));
+      return dims.length ? nest(flat, dims) : flat[0];
+    };
+    if (!timed) return point(0);
+    const out = {};
+    for (let at = 0; at + 8 <= dv.byteLength; at += 8 + per * size) {
+      out[String(dv.getFloat64(at, true))] = point(at + 8);
+    }
+    return out;
+  };
+
+  const walk = (sub) => {
+    const node = { variables: {}, submodels: {}, fill: {} };
+    kids(sub, 'variables').forEach((vars) => kids(vars).forEach((v) => {
+      const label = v.getAttribute('label');
+      const name = ours(label);
+      const shown = String(label).replace(/\s+/g, ' ');
+      if (v.nodeName === 'single_value') node.variables[name] = num(v.getAttribute('val'));
+      else if (v.nodeName === 'multi_value') node.variables[name] = shaped(literal(v));
+      else if (v.nodeName === 'byte_array') {
+        const val = byteArray(v, shown);
+        if (val !== undefined) node.variables[name] = val;
+        const f = v.getAttribute('fill_method');
+        if (f) node.fill[name] = String(f).toLowerCase();
+        if (Number(v.getAttribute('wrap_time') || 0)) skipped.push(shown + ': its repeat (wrap time) is ignored');
+      } else {
+        skipped.push(shown + ' (refers to the data file ' + (v.getAttribute('filename') || '?') + ')');
+      }
+    }));
+    kids(sub, 'submodels').forEach((subs) => kids(subs, 'submodel').forEach((c) => {
+      node.submodels[ours(c.getAttribute('label'))] = walk(c);
+    }));
+    return node;
+  };
+  const top = kids(root, 'submodel')[0];
+  return top ? walk(top) : null;
+};
+
+/**
+ * Simile's FIRST parameter-file format (before 6; still read by Simile):
+ * MIME headers, then — base64 if the headers say so — one line per value,
+ * `path/to/name=literal=value`, the value often `NOW v`, `true`/`false` a
+ * flag, or time-value pairs `0 13.4 10 15`. A `=reference=` line names a
+ * data file: not read here, and said so; anything else unreadable likewise.
+ */
+$.sienna.parameters.prototype._fromSimileText = function (text, skipped) {
+  const cut = text.search(/\r?\n\r?\n/);
+  if (cut < 0) return null;
+  const head = text.slice(0, cut);
+  let body = text.slice(cut).trim();
+  if (/Content-Transfer-Encoding:\s*base64/i.test(head)) {
+    try { body = atob(body.replace(/\s+/g, '')); } catch (e) { return null; }
+  }
+  const ours = (label) => {
+    const safe = String(label || '').trim().replace(/[^A-Za-z0-9_]/g, '_');
+    return /^[0-9]/.test(safe) ? '_' + safe : safe;
+  };
+  const doc = { variables: {}, submodels: {}, fill: {} };
+  body.split(/\r?\n/).forEach((line) => {
+    const m = /^(.*?)=(literal|reference)=(.*)$/.exec(line.trim());
+    if (!m) return;
+    const parts = m[1].replace(/^\/+/, '').split('/');
+    const shown = parts.join('/');
+    if (m[2] === 'reference') { skipped.push(shown + ' (refers to a data file)'); return; }
+    const raw = m[3].replace(/^\s*NOW\s+/i, '').trim();
+    const word = (w) => (/^true$/i.test(w) ? 1 : /^false$/i.test(w) ? 0 : Number(w));
+    let v = word(raw);
+    // `0 13.4`: time-value pairs — a variable parameter's values over time;
+    // one pair at time 0 is its value through the run.
+    const pairs = raw.split(/\s+/);
+    if (!isFinite(v) && pairs.length % 2 === 0 && pairs.every((w) => isFinite(word(w)))) {
+      if (pairs.length === 2 && Number(pairs[0]) === 0) v = word(pairs[1]);
+      else {
+        v = {};
+        for (let i = 0; i < pairs.length; i += 2) v[String(Number(pairs[i]))] = word(pairs[i + 1]);
+      }
+    }
+    if (raw === '' || (typeof v === 'number' && !isFinite(v))) { skipped.push(shown + ' (not read)'); return; }
+    let at = doc;
+    parts.slice(0, -1).forEach((sub) => {
+      const k = ours(sub);
+      at = at.submodels[k] = at.submodels[k] || { variables: {}, submodels: {}, fill: {} };
+    });
+    at.variables[ours(parts[parts.length - 1])] = v;
+  });
+  return doc;
+};
 
 window.Sienna.widgetRegistry._loaded('parameters', 'parameters');

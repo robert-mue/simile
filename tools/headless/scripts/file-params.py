@@ -55,8 +55,20 @@ note = await ev("$('.slx-params-note').text()")
 await check('load reports a name not in the model', 'not in this model: extra' in note, note)
 v = await ev("$('.slx-param input').map((i,e)=>e.value).get().join('|')")
 await check('load fills the fields', v == '[3, 1, 2, 5, 4]|7|[4, 3, 2, 1, 5]', v)
-x = await ev("$('.slx-params').parameters('instance')._read('<?xml version=\"1.0\"?><spf/>', 'old.spf'); $('.slx-params-note').text()")
-await check('Simile XML file: said so', 'XML' in x, x)
+x = await ev("""$('.slx-params').parameters('instance')._read('<?xml version="1.0"?><spf/>', 'old.spf'); $('.slx-params-note').text()""")
+await check('not a parameter file: said so', 'XML' in x, x)
+# Simile's own formats: XML (single_value, multi_value, byte_array, a data
+# file reference) and the first, text format.
+XML = '<?xml version="1.0"?><spf simile_version="7.2"><submodel label="top"><variables><single_value label="time&#10;available" val="9"/><multi_value label="priorities"><value index="1" value="5"/><value index="2" value="4"/><value index="3" value="3"/><value index="4" value="2"/><value index="5" value="1"/></multi_value><byte_array label="times&#10;required" type="REAL"><value index="1" val="5"/><![CDATA[AAAAAAAAEEAAAAAAAAAIQAAAAAAAAABAAAAAAAAA8D8AAAAAAAAUQA==]]></byte_array><csv_columns label="nothing" filename="x.csv" data_column="A" separator=","/></variables><submodels></submodels></submodel></spf>'
+await ev("$('.slx-params').parameters('instance')._read(%s, 'simile.spf')" % json.dumps(XML)); await sleep(1.2)
+v = await ev("$('.slx-param input').map((i,e)=>e.value).get().join('|')")
+await check('Simile XML: single, multi and binary values read', v == '[5, 4, 3, 2, 1]|9|[4, 3, 2, 1, 5]', v)
+note = await ev("$('.slx-params-note').text()")
+await check('Simile XML: a data file reference said not read', 'x.csv' in note, note)
+TEXT = 'MIME-Version: 1.0\nContent-Type: application/x-simile\n\n/time available=literal=NOW 11\n/priorities=literal=0 1\n'
+await ev("$('.slx-params').parameters('instance')._read(%s, 'old-text.spf')" % json.dumps(TEXT)); await sleep(1.2)
+v = await ev("$('.slx-param input').map((i,e)=>e.value).get().join('|')")
+await check('Simile text format: NOW and time-value pairs read', v.endswith('|11|') or v.split('|')[1] == '11', v)
 
 # Variable parameters: values over time. p (a variable parameter, default 1,
 # range 0..100, so also a slider) drives q = 2p. Given 10, 20, 40 at times

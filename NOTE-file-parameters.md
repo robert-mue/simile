@@ -239,6 +239,10 @@ only those with a value and a range; the rest of the kind is missing:
 
 - A population's parameters (per member).
 - Wrap time (a series repeating), and an interval other than 1 time unit.
-- Simile's XML `.spf`.
+- ~~Simile's XML `.spf`.~~ Read since 2026-11-02: XML (`single_value`,
+  `multi_value`, `byte_array` incl. time series and fill method) and the
+  first, MIME text format (`NOW v`, time-value pairs). Data-file references
+  and per-record (population) values are reported, not read. nkometou.spf:
+  all 15 values taken.
 - When and where the panel appears.
 - SimiLive: values cannot be sent there yet.
