@@ -349,3 +349,38 @@ Import and export
   fixed.
 - A value such as "false" was exported in a form Simile could not read;
   fixed.
+
+
+------------------------------------------------------------------------
+Release 2026-11-01b
+------------------------------------------------------------------------
+
+Values crossing submodel boundaries
+- What an influence delivers when it comes out of submodels - a list,
+  an array, a list of arrays, and so on to any depth - is now worked
+  out by Simile's own rule, and the name is written in the matching
+  brackets ({x}, [x], {[x]}, [[x]] ...). The property dialog inserts
+  names that way, an equation that writes one differently is shown red
+  with the exact form to use, and export writes what Simile writes.
+  Checked against every such link in the catalogue and in a large
+  model from Jasper: 4763 of 4783 agree, the rest being out of date in
+  the files themselves.
+- A role arrow may start at a submodel inside another one (a field
+  inside a farm, say); such models now import and export correctly.
+- One influence may cross two associations at once, giving a name for
+  each role of each.
+- An equation may use the same name in two forms, x and [x], when two
+  influences supply them.
+
+Import
+- Very old Simile files (format 9.0) whose variables hold several
+  values are read as arrays. Their equations sometimes use such a
+  variable as if it were one value; those models now say so instead of
+  exporting something that means something else.
+- A submodel size given as size('name') follows the submodel when its
+  name is changed on import.
+
+Large models
+- Jasper's nkometou model (99 submodels, over 5000 influences) now
+  imports, exports, compiles in the page (it takes several minutes, once)
+  and runs. Many of its values cannot be shown yet.
