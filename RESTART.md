@@ -2,7 +2,7 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-01.
+embedded-widget pages. Brought up to date 2026-11-02.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
@@ -16,12 +16,17 @@ time, JSON parameter files (`NOTE-file-parameters.md`). RELEASED as
 specified patterns"), checked against all 4783 `use` terms Simile wrote
 (`tools/headless/scripts/crossings.py`: 4763 agree, the rest stale or
 unfinished). Role arrows crossing boundaries, two associations on one
-influence, `size('caption')`. **nkometou now exports, compiles (in the
-page, ~470 s) and runs** with placeholder parameter values. Next, to put
-to Robert: reading nested values in the page (`sx_value` reads few shapes;
-most of nkometou's answer null), real parameter values (its `.spf`,
-XML), and whether the build time matters. Release only when Robert says
-so.
+influence, `size('caption')`.
+Done since, NOT RELEASED (2026-11-02, 05e9ac3 … b85e901): **values of any
+shape read** from a model running in the page (`sx_value`, recursive);
+**Simile's own parameter files read** (XML and the old text format);
+value-less variable parameters run at their range's MIDPOINT, booleans as
+FALSE (AD HOC, to revisit); our parameter files saved as
+`<model>.parameters.json`. **nkometou RUNS in the app with its real
+parameter values** (100 time units in 74 s). Its files live OUTSIDE the
+public repo: `~/Projects/reference_models/nkometou/`. NEXT: Robert is
+LOOKING AT nkometou himself first; then the **Values table** display
+(proposed, he has not yet chosen). Release only when Robert says so.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
@@ -188,36 +193,54 @@ at a time, with a small test model for each (he made
 - **nkometou now exports, compiles and RUNS in the page** (0f288b8): build
   ~470 s (once per edit, then kept), reset 0.3 s, 3 steps 0.6 s, 1354
   components, placeholder parameter values. Details: `NOTE-nkometou.md`.
-- **NEXT (Robert, 2026-11-01, end of day): READING NESTED VALUES FIRST.**
-  He called nkometou running "more of a milestone" than the farmers &
-  fields one. Then, in some order, the other two below.
-- **nkometou's REAL parameter values** (Robert, 2026-11-01 late):
-  `~/Projects/simile_old_models/nkometou.spf` — Simile's XML format, 15
-  `single_value`s nested by `<submodel label=…>` (labels are Simile
-  captions, `&#10;` = newline: map with the importer's renaming), exactly
-  the 15 FIXED parameters (village rates 1, init cash 200, diseases 0,
-  rainfall variation 0.5). Nothing for the 31 variable parameters. The
-  `nkometou_pl.sml` beside it is byte-identical to nkometou.pl. Reading
-  this format in the Parameters panel's Load… (single_value / multi_value
-  at least; `byte_array` is base64 binary) is a small job, after nested
-  values.
-- **AD HOC, TO REVISIT** (Robert, 2026-11-02): a value-less boolean
-  variable parameter runs as FALSE (nkometou's innovation switches); one
-  with a range runs at its midpoint. Probably to become a formal
-  requirement that every parameter has a default. NOTE-file-parameters.md.
-- Asked 2026-11-01: (1) reading
-  nested values in the page — `sx_value` (bridge.cpp) reads few shapes, and
-  most of nkometou's (`dims [1492,0,0,0]`, single submodels inside a fixed
-  membership; per-member values deep in populations) answer null, which
-  also means deciding how displays show them; (2) its real `.spf`
-  files (XML, not read yet); (3) whether ~8 min in-page build matters.
+- **Done 2026-11-02 — reading nested values** (05e9ac3): `sx_value` in
+  bridge.cpp walks the run-time library's shape (`translate_dims`)
+  recursively — array per fixed size, object per variable level (keys the
+  member's number / the pairing's indices), a conditional submodel's value
+  or null. Every nkometou shape reads; in the catalogue 261 values that
+  were null now read and none that read before changed (value by value).
+- **Done 2026-11-02 — Simile's parameter files** (4d539e1): Parameters ▸
+  Load… reads Simile's XML `.spf` (single_value, multi_value, byte_array
+  incl. time series) and its first MIME text format; data-file references
+  and per-record (population) values are reported, not read.
+  `nkometou.spf`: all 15 values.
+- **AD HOC, TO REVISIT** (Robert, 2026-11-02): a value-less variable
+  parameter runs at the MIDPOINT of its range if it has one (Robert's
+  rule), and a value-less BOOLEAN as FALSE (nkometou's 15 innovation
+  switches, which have neither). Robert: revisit, "presumably by making it
+  a formal requirement that a default value must be provided".
+  `NOTE-file-parameters.md`.
+- **File names** (Robert, 2026-11-02): our parameter files are
+  `<model>.parameters.json` (an extension says what is inside); Simile's
+  originals keep `.pl` / `.spf`, NEVER renamed or edited.
+- **nkometou runs in the app with its real values** (492dfc8): import,
+  Parameters ▸ Load… the `.spf`, ▶ — 493 s compile (once per edit), 100
+  time units in 74 s; households leave, soil fertility changes. Not yet
+  checked against a run in Simile itself.
+- **Where nkometou lives: OUTSIDE the repo** (Robert, 2026-11-02; its
+  terms of distribution are unsettled, incl. whether its data identify
+  individuals): `~/Projects/reference_models/nkometou/` — `nkometou.json`
+  and `nkometou.parameters.json` (what to LOAD: File ▸ Open model file…,
+  Parameters ▸ Load…), the originals `.pl` and `.spf`, a README. Robert's
+  rule: ONE DIRECTORY PER MODEL in `reference_models/`, model + parameters
+  + notes together. It WAS pushed to the public repo for a few hours
+  (e33a4fb, removed in 30105b3); Robert: do NOT rewrite the history.
+  `crossings.py` reads it from there. Not Jasper's model — he forwarded it
+  (FLORES → CamFlores lineage; Robert co-led FLORES).
+- **NEXT**: Robert is looking at nkometou in the app first. Then the
+  **Values table** (proposed 2026-11-02, not yet chosen): pick any
+  component, rows = instances by path (`patch 12 · maize_crop`), an
+  array's elements as columns, blank for null, updating as it runs; then
+  plotter aggregates (sum / mean / count over instances) over time.
+  Still open: whether ~8 min in-page build matters; checking nkometou's
+  numbers against Simile (needs Robert or Jasper).
 - **How to probe nkometou** (scratch, not committed): import, export,
   `swipl generator/headless.pl` natively with `hl_setting(trace,true)` to
   see Simile's `Query` messages (`bad_parameter`, `failed_ref_in_dimensions`)
   — the in-page build only says it failed.
 - **Checks added:** test-only fixtures `test/fixture-satellite.js` and
   `test/fixture-table.js` on `test/fixtures.html` (8/8);
-  `tools/headless/scripts/file-params.py` (25 PASS);
+  `tools/headless/scripts/file-params.py` (29 PASS);
   `tools/headless/scripts/crossings.py` (4763/4783).
 - Found on the way (parameters), fixed: `if'Ta'>0` imported as `ifTa` (`plainNames`);
   `"false"` exported bare (now the atom `'"false"'`); units lost on a
