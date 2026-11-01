@@ -132,4 +132,22 @@ included; no new compile failures. test02's three files are now refused,
 rightly: their equations use the array `Var1` bare (pre-9.0 implicit
 array arithmetic).
 
-Next: compile nkometou in the page and run it (its parameters need values).
+**Compiled and run in the page (2026-11-01):** the in-page build takes
+~470 s (Simile's generator plus clang, both WebAssembly, on 1.2 MB of C++;
+kept afterwards, so once per edit), then reset 0.3 s and 3 time steps 0.6 s
+for 1354 components. Run with placeholder values (1) for its 30 parameters
+without defaults — real ones would come from Jasper's parameter files.
+Without values a fixed parameter left unfilled stops it ("null function"),
+which the run control already prevents by asking for them.
+
+What the page cannot do yet: READ most of its values. `sx_value`
+(tools/engine/bridge.cpp) reads a number, one fixed dimension, and a
+population or association's sparse array; nkometou's commonest shapes are
+fixed memberships with single submodels nested inside (`dims
+[1492,0,0,0]`: 412 components; `[1492,0,0,0,0,0]`: 129), and per-member
+values of a submodel inside a population inside a patch (`["MEMBERS",0,1492,
+"MEMBERS",0,0]`). Those answer null. A display-side job: reading nested
+shapes, and widgets that can show them.
+
+Open questions for Robert: Jasper's parameter files (`.spf`, XML) for real
+values; whether the 470 s build is acceptable or wants a lighter path.
