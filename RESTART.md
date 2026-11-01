@@ -4,7 +4,7 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-01.
 
-**NOW: nkometou.pl** — Jasper's large old-Simile model (99 submodels, 5213
+**NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
 language (events apart). See "Now: nkometou.pl" below and
 `NOTE-nkometou.md`. RELEASED as **2026-10-31b**: SATELLITE submodels and
@@ -19,7 +19,7 @@ unfinished). Role arrows crossing boundaries, two associations on one
 influence, `size('caption')`. **nkometou now exports, compiles (in the
 page, ~470 s) and runs** with placeholder parameter values. Next, to put
 to Robert: reading nested values in the page (`sx_value` reads few shapes;
-most of nkometou's answer null), real parameter values (Jasper's `.spf`,
+most of nkometou's answer null), real parameter values (its `.spf`,
 XML), and whether the build time matters. Release only when Robert says
 so.
 
@@ -136,7 +136,7 @@ model on SimiLive.
 ## Now: nkometou.pl — covering the whole language (Robert, 2026-10-31)
 
 `~/Projects/simile_models/nkometou.pl` (1.75 MB, Simile v7.5, plain Prolog;
-Jasper sent it at Robert's request; a second, larger one exists). Robert:
+Jasper forwarded it at Robert's request — not his model; a second, larger one exists. Now in the repo: `reference/large/`, public with Robert's agreement). Robert:
 not a good strategy to work through its whole error report; take one area
 at a time, with a small test model for each (he made
 `satellite_submodel.json` / `.pl` for the first). Full survey and order:
@@ -209,7 +209,7 @@ at a time, with a small test model for each (he made
   nested values in the page — `sx_value` (bridge.cpp) reads few shapes, and
   most of nkometou's (`dims [1492,0,0,0]`, single submodels inside a fixed
   membership; per-member values deep in populations) answer null, which
-  also means deciding how displays show them; (2) Jasper's real `.spf`
+  also means deciding how displays show them; (2) its real `.spf`
   files (XML, not read yet); (3) whether ~8 min in-page build matters.
 - **How to probe nkometou** (scratch, not committed): import, export,
   `swipl generator/headless.pl` natively with `hl_setting(trace,true)` to

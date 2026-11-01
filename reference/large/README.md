@@ -7,9 +7,11 @@ value is that they do not change.
 
 ## `nkometou.pl` and `nkometou.spf`
 
-Jasper's large old-Simile model (Simile 7.5, file format 11.5, plain
-Prolog, 1.75 MB), sent to Robert in October 2026, with its parameter file.
-Made public here with Robert's agreement (2026-11-02).
+A large old-Simile model (Simile 7.5, file format 11.5, plain Prolog,
+1.75 MB) with its parameter file, forwarded to Robert by Jasper in October
+2026. It descends from FLORES (whose development Robert co-led) by way of
+CamFlores; Robert has established its source and context, and that it is
+free to distribute (2026-11-02). Its provenance in full: below, when added.
 
 - 99 submodels, about 1500 elements and 5000 influences; associations,
   satellites, fixed memberships, populations, conditional submodels.

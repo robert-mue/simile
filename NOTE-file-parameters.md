@@ -255,7 +255,7 @@ nkometou run (`inputParametersOf` in src/simulation.js, `midpoint`):
 - with a Minimum and Maximum: the middle of the range (Robert's rule);
 - a boolean (`units=boolean`) with no range: **false** — nkometou's 15
   innovation switches (`establish oilpalm`, …), which have `spec=[]` and
-  are in neither the model nor Jasper's `.spf`. Robert: "an ad hoc decision
+  are in neither the model nor its `.spf`. Robert: "an ad hoc decision
   that needs to be re-visited, presumably by making it a formal requirement
   that a default value must be provided."
 

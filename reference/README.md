@@ -78,5 +78,5 @@ originals — across up to twenty-three years and four format revisions.
 
 ## `large/` — large models, with their parameter files
 
-`nkometou.pl` (Jasper's, 99 submodels) and its `nkometou.spf`. See
+`nkometou.pl` (a CamFlores-lineage model, 99 submodels) and its `nkometou.spf`. See
 `large/README.md` for what they are and how to run them in the app.
