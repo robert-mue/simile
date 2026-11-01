@@ -173,18 +173,36 @@ at a time, with a small test model for each (he made
   SimiLive, and WHEN/WHERE the panel appears (Robert: later; he dislikes
   Simile showing it only on Run). Robert also foresees a "project file"
   (model + alternative `.spf`s + more, as `.sml` is) — later.
-- **Next — crossing forms** never seen in the catalogue (all that stops
-  nkometou exporting now): an influence with an association role AND a
-  satellite role (`…_link_to_satellite`; "arrives once per role … uses none
-  of those"), lists of arrays `{[x]}`, arrays of arrays `[[x]]`, an array
-  along an influence (needs `array(1,N)`, we write `list(1)`), two names on
-  one arc, `size('submodel')` as a dimension, fixed-membership names Simile
-  writes as scalars (`task_labour_needed`, `cumulate`), and
-  assoc_from_data1/2's swapped role names. One small test model each.
+- **Done — crossing forms** (2026-11-01, 6ee72cc; not released). Robert:
+  nesting is to any depth, "you can't just check for specified patterns".
+  So: Simile's own rule from its source (m_update.pl
+  `get_unit_conversion`/`add_brackets`, ame_gen.pl `get_all_dims`), as
+  `Diagram.valueAt` — units wrapped per dimension of each submodel left,
+  brackets read off. 4763 of 4783 Simile-written `use` terms agree
+  (`crossings.py`). The nkometou "ten problems" were mostly ONE importer
+  bug: role arrows whose base is nested in another submodel (segmented,
+  like influences). Also two associations on one influence
+  (`Diagram.associationCrossings`), one name in two forms (`ID1`/`[ID1]`),
+  `size('caption')` renaming, pre-9.0 array variables, the ID1/ID2 swap.
+  61 catalogue models run with values identical to before (fixed seed).
+- **nkometou now exports, compiles and RUNS in the page** (0f288b8): build
+  ~470 s (once per edit, then kept), reset 0.3 s, 3 steps 0.6 s, 1354
+  components, placeholder parameter values. Details: `NOTE-nkometou.md`.
+- **Next — waiting on Robert's choice** (asked 2026-11-01): (1) reading
+  nested values in the page — `sx_value` (bridge.cpp) reads few shapes, and
+  most of nkometou's (`dims [1492,0,0,0]`, single submodels inside a fixed
+  membership; per-member values deep in populations) answer null, which
+  also means deciding how displays show them; (2) Jasper's real `.spf`
+  files (XML, not read yet); (3) whether ~8 min in-page build matters.
+- **How to probe nkometou** (scratch, not committed): import, export,
+  `swipl generator/headless.pl` natively with `hl_setting(trace,true)` to
+  see Simile's `Query` messages (`bad_parameter`, `failed_ref_in_dimensions`)
+  — the in-page build only says it failed.
 - **Checks added:** test-only fixtures `test/fixture-satellite.js` and
   `test/fixture-table.js` on `test/fixtures.html` (8/8);
-  `tools/headless/scripts/file-params.py`.
-- Found on the way, fixed: `if'Ta'>0` imported as `ifTa` (`plainNames`);
+  `tools/headless/scripts/file-params.py` (25 PASS);
+  `tools/headless/scripts/crossings.py` (4763/4783).
+- Found on the way (parameters), fixed: `if'Ta'>0` imported as `ifTa` (`plainNames`);
   `"false"` exported bare (now the atom `'"false"'`); units lost on a
   variable with no value and no function node.
 
