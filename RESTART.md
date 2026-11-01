@@ -9,14 +9,19 @@ influences), Robert's test of whether the app covers the whole model
 language (events apart). See "Now: nkometou.pl" below and
 `NOTE-nkometou.md`. RELEASED as **2026-10-31b**: SATELLITE submodels and
 TABLES read from data files. RELEASED as **2026-11-01** (the latest):
-**PARAMETERS** — fixed and variable,
-Simile's "Data source" in the dialog, the **Parameters panel** with values
-over time and JSON parameter files (`NOTE-file-parameters.md`, the design
-and Robert's decisions). Next: the **crossing forms** (Robert asked what
-the term means 2026-11-01 — it is ours, not Simile's: how a value is
-written where an influence crossing a submodel boundary arrives, `x`,
-`[x]`, `{x}`, `{[x]}`, role-qualified names), one small test model each;
-then compiling nkometou. Release only when Robert says so.
+**PARAMETERS** — fixed and variable, the Parameters panel, values over
+time, JSON parameter files (`NOTE-file-parameters.md`). Done since, NOT
+RELEASED (6ee72cc, 0f288b8): **CROSSING FORMS** — Simile's own rule
+(`Diagram.valueAt`, any nesting; Robert: "you can't just check for
+specified patterns"), checked against all 4783 `use` terms Simile wrote
+(`tools/headless/scripts/crossings.py`: 4763 agree, the rest stale or
+unfinished). Role arrows crossing boundaries, two associations on one
+influence, `size('caption')`. **nkometou now exports, compiles (in the
+page, ~470 s) and runs** with placeholder parameter values. Next, to put
+to Robert: reading nested values in the page (`sx_value` reads few shapes;
+most of nkometou's answer null), real parameter values (Jasper's `.spf`,
+XML), and whether the build time matters. Release only when Robert says
+so.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
@@ -114,15 +119,15 @@ they are exactly what a regression would change. All re-run 2026-10-21:
 
 | | |
 |---|---|
-| catalogue round trip | **66 of 72 identical, 2 differ, 4 refused, 1 lossy import** (2026-11-01) |
+| catalogue round trip | **65 of 72 identical, 0 differ, 7 refused, 1 lossy import** (2026-11-01, after crossing forms) |
 | fixtures | 8 of 8 reach a fixed point and audit clean |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
 | editor (`test/editor.html`) | 14 of 14 gesture tests pass |
 
 Every remaining refusal is an element left unfinished in its source file.
-The 2 that differ are assoc_from_data1/2 (two role names on one influence,
-ID1/ID2, swap): a crossing form, hidden until parameters stopped them being
-refused. Parameters: `tools/headless/scripts/file-params.py` (25 PASS).
+The 7 refused: 4 with elements unfinished in the file, and test02's three
+(pre-9.0 implicit arrays: `Var1`, an array, used bare). Crossing terms:
+`crossings.py`, 4763 of 4783 agree with Simile. Parameters: `tools/headless/scripts/file-params.py` (25 PASS).
 
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
