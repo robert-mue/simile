@@ -2,17 +2,21 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date at the end of 2026-10-31.
+embedded-widget pages. Brought up to date 2026-11-01.
 
 **NOW: nkometou.pl** — Jasper's large old-Simile model (99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
 language (events apart). See "Now: nkometou.pl" below and
-`NOTE-nkometou.md`. Done 2026-10-31 and RELEASED as **2026-10-31b** (the
-latest): SATELLITE submodels (8e77c38) and TABLES read from data files
-(df363fd).
-Next: FILE PARAMETERS — but Robert is reading up on them first ("so that I
-am better placed to point you in the right direction"); wait for him. Then
-the new crossing forms, then compiling nkometou.
+`NOTE-nkometou.md`. RELEASED as **2026-10-31b** (the latest): SATELLITE
+submodels and TABLES read from data files.
+Done since, NOT RELEASED (4bfeaf0): **PARAMETERS** — fixed and variable,
+Simile's "Data source" in the dialog, the **Parameters panel** with values
+over time and JSON parameter files (`NOTE-file-parameters.md`, the design
+and Robert's decisions). Next: the **crossing forms** (Robert asked what
+the term means 2026-11-01 — it is ours, not Simile's: how a value is
+written where an influence crossing a submodel boundary arrives, `x`,
+`[x]`, `{x}`, `{[x]}`, role-qualified names), one small test model each;
+then compiling nkometou. Release only when Robert says so.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
@@ -110,13 +114,15 @@ they are exactly what a regression would change. All re-run 2026-10-21:
 
 | | |
 |---|---|
-| catalogue round trip | **61 of 72 identical, 0 differ, 11 refused, 1 lossy import** |
-| fixtures | 6 of 6 reach a fixed point and audit clean |
+| catalogue round trip | **66 of 72 identical, 2 differ, 4 refused, 1 lossy import** (2026-11-01) |
+| fixtures | 8 of 8 reach a fixed point and audit clean |
 | equation grammar | 1391 of 1412 parse, 21 known exclusions |
 | editor (`test/editor.html`) | 14 of 14 gesture tests pass |
 
 Every remaining refusal is an element left unfinished in its source file.
-(`feeding1` was the exception until 2026-10-20 — see 0b below.)
+The 2 that differ are assoc_from_data1/2 (two role names on one influence,
+ID1/ID2, swap): a crossing form, hidden until parameters stopped them being
+refused. Parameters: `tools/headless/scripts/file-params.py` (25 PASS).
 
 **But note what "identical" does and does not mean** — see the traps below. It
 is the strongest cheap check, not a complete one. The complete one is running a
@@ -144,21 +150,38 @@ at a time, with a small test model for each (he made
   **Table** tab in the property dialog. All 43 tables in use kept; the
   other 3 tables and 10 graphs are on orphan function nodes Simile never
   uses. A table model compiles and runs (v = [5,7,9], total 21).
-- **Next — file parameters** (`param_type=file`, value from a parameter
-  file at run time): 50 in nkometou, and the cause of ALL 11 refused
-  catalogue models (61/72 would go towards 72/72). Needs a design decision;
-  Robert is reading up first — WAIT for his direction.
-- **Then — crossing forms** never seen in the catalogue: an influence with
-  an association role AND a satellite role (`…_link_to_satellite`), lists of
-  arrays `{[x]}`, arrays of arrays `[[x]]`, an array along an influence
-  (needs `array(1,N)`, we write `list(1)`), two names on one arc,
-  `size('submodel')` as a dimension, and fixed-membership names Simile
-  writes as scalars.
+- **Done — parameters** (2026-10-31/11-01, not released; design, findings
+  in Simile's source and Robert's decisions: `NOTE-file-parameters.md`).
+  Simile's "Data source": Derived / **Variable parameter** (read every step:
+  a slider, or values over time) / **Fixed parameter** (`param_type=file`,
+  read at reset); `props.paramKind`, `exportSimile.parameterKind`, explicit
+  (Robert), imported by Simile's rule (no function node → a parameter).
+  **Parameters panel** (Widgets ▸ Parameters, `src/widgets/parameters.js`):
+  grouped by submodel; values never in the model spec — kept beside it and
+  in JSON parameter files (`.spf`, Robert: JSON, as the dialogue's own entry
+  is); values over time `{"0": 5, "10": 7}` with last/closest/interpolated.
+  Engine: `sx_param_fill`, `sx_param_series`, `sx_param_unseries` (bridge,
+  run-time library rebuilt). 17 of the 20 catalogue models with parameters
+  now run in the page (the 3 others: unfinished elements), Thornthwaite
+  included. nkometou: 31 variable, 15 fixed, no "has no value" left.
+  Open: a population's parameters, wrap time, Simile's XML `.spf`,
+  SimiLive, and WHEN/WHERE the panel appears (Robert: later; he dislikes
+  Simile showing it only on Run). Robert also foresees a "project file"
+  (model + alternative `.spf`s + more, as `.sml` is) — later.
+- **Next — crossing forms** never seen in the catalogue (all that stops
+  nkometou exporting now): an influence with an association role AND a
+  satellite role (`…_link_to_satellite`; "arrives once per role … uses none
+  of those"), lists of arrays `{[x]}`, arrays of arrays `[[x]]`, an array
+  along an influence (needs `array(1,N)`, we write `list(1)`), two names on
+  one arc, `size('submodel')` as a dimension, fixed-membership names Simile
+  writes as scalars (`task_labour_needed`, `cumulate`), and
+  assoc_from_data1/2's swapped role names. One small test model each.
 - **Checks added:** test-only fixtures `test/fixture-satellite.js` and
-  `test/fixture-table.js` on `test/fixtures.html` (8/8). Round trip
-  unchanged, 61/72 identical, 11 refused.
-- Probing tip: give the file parameters a placeholder `0` in the page to see
-  the next layer of export problems (scratch scripts, not committed).
+  `test/fixture-table.js` on `test/fixtures.html` (8/8);
+  `tools/headless/scripts/file-params.py`.
+- Found on the way, fixed: `if'Ta'>0` imported as `ifTa` (`plainNames`);
+  `"false"` exported bare (now the atom `'"false"'`); units lost on a
+  variable with no value and no function node.
 
 ## Done: widgets the user adds (Robert, 2026-10-22; released 2026-10-25)
 
