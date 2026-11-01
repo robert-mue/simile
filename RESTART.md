@@ -191,6 +191,16 @@ at a time, with a small test model for each (he made
 - **NEXT (Robert, 2026-11-01, end of day): READING NESTED VALUES FIRST.**
   He called nkometou running "more of a milestone" than the farmers &
   fields one. Then, in some order, the other two below.
+- **nkometou's REAL parameter values** (Robert, 2026-11-01 late):
+  `~/Projects/simile_old_models/nkometou.spf` — Simile's XML format, 15
+  `single_value`s nested by `<submodel label=…>` (labels are Simile
+  captions, `&#10;` = newline: map with the importer's renaming), exactly
+  the 15 FIXED parameters (village rates 1, init cash 200, diseases 0,
+  rainfall variation 0.5). Nothing for the 31 variable parameters. The
+  `nkometou_pl.sml` beside it is byte-identical to nkometou.pl. Reading
+  this format in the Parameters panel's Load… (single_value / multi_value
+  at least; `byte_array` is base64 binary) is a small job, after nested
+  values.
 - Asked 2026-11-01: (1) reading
   nested values in the page — `sx_value` (bridge.cpp) reads few shapes, and
   most of nkometou's (`dims [1492,0,0,0]`, single submodels inside a fixed
