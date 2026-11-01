@@ -10,8 +10,8 @@ language (events apart). See "Now: nkometou.pl" below and
 `NOTE-nkometou.md`. RELEASED as **2026-10-31b**: SATELLITE submodels and
 TABLES read from data files. RELEASED as **2026-11-01** (the latest):
 **PARAMETERS** — fixed and variable, the Parameters panel, values over
-time, JSON parameter files (`NOTE-file-parameters.md`). Done since, NOT
-RELEASED (6ee72cc, 0f288b8): **CROSSING FORMS** — Simile's own rule
+time, JSON parameter files (`NOTE-file-parameters.md`). RELEASED as
+**2026-11-01b** (the latest): **CROSSING FORMS** — Simile's own rule
 (`Diagram.valueAt`, any nesting; Robert: "you can't just check for
 specified patterns"), checked against all 4783 `use` terms Simile wrote
 (`tools/headless/scripts/crossings.py`: 4763 agree, the rest stale or
@@ -173,7 +173,7 @@ at a time, with a small test model for each (he made
   SimiLive, and WHEN/WHERE the panel appears (Robert: later; he dislikes
   Simile showing it only on Run). Robert also foresees a "project file"
   (model + alternative `.spf`s + more, as `.sml` is) — later.
-- **Done — crossing forms** (2026-11-01, 6ee72cc; not released). Robert:
+- **Done — crossing forms** (2026-11-01, 6ee72cc; released 2026-11-01b). Robert:
   nesting is to any depth, "you can't just check for specified patterns".
   So: Simile's own rule from its source (m_update.pl
   `get_unit_conversion`/`add_brackets`, ame_gen.pl `get_all_dims`), as
