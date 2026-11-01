@@ -76,7 +76,5 @@ Apart from those and some pretty-printing (` 0.005` for `0.005`, a space before
 `else`), the re-saved models are **element-for-element identical** to their
 originals — across up to twenty-three years and four format revisions.
 
-## `large/` — large models, with their parameter files
-
-`nkometou.pl` (a CamFlores-lineage model, 99 submodels) and its `nkometou.spf`. See
-`large/README.md` for what they are and how to run them in the app.
+Models that cannot be published live outside the repository, in
+`~/Projects/reference_models/<model>/` (nkometou is there).

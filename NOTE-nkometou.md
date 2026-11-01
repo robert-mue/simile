@@ -1,6 +1,6 @@
 # Note: nkometou.pl — what stands between it and running (2026-10-31)
 
-A large old-Simile model of the CamFlores lineage, forwarded by Jasper at Robert's request (not Jasper's own; now `reference/large/`; `~/Projects/simile_models/nkometou.pl`,
+A large old-Simile model of the CamFlores lineage, forwarded by Jasper at Robert's request (not Jasper's own; kept outside the repo in `~/Projects/reference_models/nkometou/`; `~/Projects/simile_models/nkometou.pl`,
 1.75 MB, plain Prolog, Simile v7.5). Robert's aim: if the app handles this,
 the model-representation language is essentially covered (events apart).
 
@@ -136,7 +136,7 @@ array arithmetic).
 ~470 s (Simile's generator plus clang, both WebAssembly, on 1.2 MB of C++;
 kept afterwards, so once per edit), then reset 0.3 s and 3 time steps 0.6 s
 for 1354 components. Run with placeholder values (1) for its 30 parameters
-without defaults — real ones are in its parameter file, `reference/large/nkometou.spf`.
+without defaults — real ones are in its parameter file, `~/Projects/reference_models/nkometou/nkometou.spf`.
 Without values a fixed parameter left unfilled stops it ("null function"),
 which the run control already prevents by asking for them.
 

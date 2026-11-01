@@ -52,7 +52,7 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
   (`Diagram.valueAt`), nesting and sizes compared. Prints how many agree
   (4763 of 4783 on 2026-11-01; the rest stale terms or unfinished elements)
   and each kind of mismatch with an example (nkometou from
-  `reference/large/`).
+  `~/Projects/reference_models/nkometou/`, outside the repo).
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.
