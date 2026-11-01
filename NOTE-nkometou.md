@@ -151,3 +151,15 @@ shapes, and widgets that can show them.
 
 Open questions for Robert: Jasper's parameter files (`.spf`, XML) for real
 values; whether the 470 s build is acceptable or wants a lighter path.
+
+## Run in the app with Jasper's values (2026-11-02)
+
+Imported, opened, `nkometou.spf` loaded in the Parameters panel (all 15
+fixed values; the 15 boolean innovation switches false, AD HOC — see
+NOTE-file-parameters.md), then ▶ with the default run settings (100 time
+units, step 0.1, log each 1). Compiled in the page in 493 s (once per
+edit), ran to t = 100 in 74 s. Values move: household 7 has left the
+population by t = 100, patch soil fertility has changed, and nested values
+read (`nutex_maize` per patch, null where no maize crop exists). Not yet
+checked against Simile's own results — Jasper or Robert would have to say
+what a run should look like.
