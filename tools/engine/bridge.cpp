@@ -208,58 +208,97 @@ int sx_execute(double from, double to) {
 EMSCRIPTEN_KEEPALIVE
 double sx_stopped_at() { return stoppedAt; }
 
-// One component's current value as JSON: a number, [v1, v2, …] for a fixed
-// membership of one dimension, {key: value} for a population (keys the
-// members' own numbers, kept for their lives) or an association (keys
-// "i,j", one index per role), or null for a shape not read here yet.
+// How many bytes one value of this shape takes where it sits inline
+// (shank.cpp translate_dims): a fixed dimension, its count of the rest; a
+// sparse array or records, one sizeAndPtr; a base type, its own size.
+static size_t blockSize(const int* dims) {
+  int d = dims[0];
+  if (d > 0) return d * blockSize(dims + 1);
+  if (d == SPARSEARRAY || d == OWNSIZED) return sizeof(sizeAndPtr);
+  return sizeOfType(d);
+}
+
+static bool baseType(int t) {
+  return t == REAL || t == INTEGER || t == FLAG || t <= ENUM_BASE;
+}
+
+// One value of shape `dims` at `p`, as JSON, to any depth — the shapes as
+// shank.cpp's translate_dims makes them:
+//   a base type          a number (null for NaN);
+//   N (a fixed size)     [v1, …, vN]: a fixed membership's instances, or a
+//                        variable's own array, numbered from 1 by readers;
+//   SPARSEARRAY k        {"i": v, …} or {"i,j": v, …}: instances that come
+//                        and go — a population's members (keys their own
+//                        numbers, kept for their lives), an association's
+//                        pairings (one index per role); with NO indices,
+//                        a conditional submodel: its value, or null where
+//                        it does not exist;
+//   OWNSIZED (records)   [v1, …];
+//   anything else        null (UNSTABLE: not readable mid-step).
+static void writeValue(std::string& out, const int* dims, const char* p) {
+  int d = dims[0];
+  if (d > 0) {
+    size_t step = blockSize(dims + 1);
+    out += '[';
+    for (int i = 0; i < d; ++i) {
+      if (i) out += ", ";
+      writeValue(out, dims + 1, p + i * step);
+    }
+    out += ']';
+  } else if (d == SPARSEARRAY) {
+    int k = dims[1];
+    const int* rest = dims + 2;
+    sizeAndPtr sp;
+    memcpy(&sp, p, sizeof sp);
+    // No indices: a conditional submodel, which is there or not — its value,
+    // or null.
+    if (k == 0) {
+      if (sp.size < 1) out += "null"; else writeValue(out, rest, sp.ptr);
+      return;
+    }
+    size_t stride = k * sizeof(int) + blockSize(rest);
+    out += '{';
+    for (int i = 0; i < sp.size; ++i) {
+      const char* at = sp.ptr + i * stride;
+      out += i ? ", \"" : "\"";
+      for (int j = 0; j < k; ++j) {
+        int idx;
+        memcpy(&idx, at + j * sizeof(int), sizeof idx);
+        char num[16];
+        snprintf(num, sizeof num, "%s%d", j ? "," : "", idx);
+        out += num;
+      }
+      out += "\": ";
+      writeValue(out, rest, at + k * sizeof(int));
+    }
+    out += '}';
+  } else if (d == OWNSIZED) {
+    sizeAndPtr sp;
+    memcpy(&sp, p, sizeof sp);
+    size_t step = blockSize(dims + 1);
+    out += '[';
+    for (int i = 0; i < sp.size; ++i) {
+      if (i) out += ", ";
+      writeValue(out, dims + 1, sp.ptr + i * step);
+    }
+    out += ']';
+  } else if (baseType(d)) {
+    addNumber(out, numberAt(p, d));
+  } else {
+    out += "null";
+  }
+}
+
+// One component's current value as JSON, whatever its shape (writeValue):
+// a number; an array per fixed dimension; an object per variable one.
 EMSCRIPTEN_KEEPALIVE
 const char* sx_value(const char* nodeId) {
   nodeValues* v = get_raw_values((char*)nodeId, instance);
   reply = "null";
   if (!v) return reply.c_str();
-  int kind = v->dimSpecs[0];
   if (v->contents) {
-    if (kind == REAL || kind == INTEGER || kind == FLAG || kind <= ENUM_BASE) {
-      reply.clear();
-      addNumber(reply, numberAt(v->contents, kind));
-    } else if (kind > 0 && (v->dimSpecs[1] == REAL || v->dimSpecs[1] == INTEGER
-                            || v->dimSpecs[1] == FLAG || v->dimSpecs[1] <= ENUM_BASE)) {
-      // A fixed membership's instances, one dimension: `kind` of them, packed
-      // one after another (shank.cpp's space_used). Sent as an array, numbered
-      // from 1 by whoever draws it, as Simile's index(1) does.
-      int t = v->dimSpecs[1];
-      int size = sizeOfType(t);
-      reply = "[";
-      for (int i = 0; i < kind; ++i) {
-        if (i) reply += ", ";
-        addNumber(reply, numberAt(v->contents + i * size, t));
-      }
-      reply += "]";
-    } else if (kind == SPARSEARRAY && v->dimSpecs[1] >= 1 && v->dimSpecs[1] <= 8) {
-      // Variable membership: a population (one index, the member's number)
-      // or an association (one index per role — a farmer and a field), each
-      // entry its indices then its value (shank.cpp translate_dims). Keys are
-      // the indices joined by commas: "3" for a member, "3,17" for a pairing.
-      int d = v->dimSpecs[1];
-      int t = v->dimSpecs[2];
-      if (t == REAL || t == INTEGER || t == FLAG || t <= ENUM_BASE) {
-        sizeAndPtr* sp = (sizeAndPtr*)v->contents;
-        int stride = d * sizeof(int) + sizeOfType(t);
-        reply = "{";
-        for (int i = 0; i < sp->size; ++i) {
-          const char* at = sp->ptr + i * stride;
-          reply += i ? ", \"" : "\"";
-          for (int k = 0; k < d; ++k) {
-            int idx; memcpy(&idx, at + k * sizeof(int), sizeof idx);
-            char num[16]; snprintf(num, sizeof num, "%s%d", k ? "," : "", idx);
-            reply += num;
-          }
-          reply += "\": ";
-          addNumber(reply, numberAt(at + d * sizeof(int), t));
-        }
-        reply += "}";
-      }
-    }
+    reply.clear();
+    writeValue(reply, v->dimSpecs, v->contents);
     free_bloc_data(v->contents, v->dimSpecs);
   }
   delete v;

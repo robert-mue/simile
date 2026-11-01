@@ -33,8 +33,12 @@
  * One request of our own: `FileParameters`, the values of a model's file
  * parameters (arrays included), put in before a reset.
  *
- * Not yet: grid renderings (`{format: 'binary'…}` specs answer null), values
- * that are records, and more than the fixed step of Euler.
+ * A value is read whatever its shape (`sx_value`, bridge.cpp): a number, an
+ * array per fixed dimension, an object per variable one ({"3": …} a member,
+ * {"3,17": …} a pairing), and a conditional submodel's value or null.
+ *
+ * Not yet: grid renderings (`{format: 'binary'…}` specs answer null), and
+ * more than the fixed step of Euler.
  *
  * Classic script; no imports/exports.
  */
