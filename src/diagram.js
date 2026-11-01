@@ -318,25 +318,37 @@
   };
 
   /**
-   * If a crossing is between an association and one of its bases, say which way
-   * round. Null for an ordinary containment crossing.
+   * Every association an influence crosses, and which way (Simile's
+   * `get_unit_conversion`): `in_base` where it leaves a submodel that is a
+   * BASE of an association it enters — the value going into each pairing —
+   * and `in_assoc` where it leaves an association and enters one of its
+   * bases — the pairings' values coming back. Wherever along the path they
+   * lie: a base may be nested in what is left (a role arrow can start inside
+   * a submodel), an association in what is entered. And possibly both at
+   * once: nkometou's `village` is a base of `land allocation` AND its
+   * satellite, so a value from `land allocation` into `village` crosses
+   * both ways, a name for each role. Each: `{dir, assoc, base, roles}`.
    */
-  Diagram.associationCrossing = function (model, cross) {
-    if (!cross.out.length || !cross.into.length) return null;
-    var left = cross.out[cross.out.length - 1];
-    var entered = cross.into[0];
-    function joins(assoc, base) {
-      return Diagram.rolesOf(model, assoc).some(function (r) {
-        return model.arcs[r].from === base;
+  Diagram.associationCrossings = function (model, cross) {
+    var out = [];
+    var arcs = model.arcs || {};
+    function add(dir, assoc, inner) {
+      Diagram.rolesOf(model, assoc).forEach(function (r) {
+        var base = arcs[r].from;
+        if (inner.indexOf(base) < 0) return;
+        var p = out.filter(function (x) { return x.dir === dir && x.assoc === assoc && x.base === base; })[0];
+        if (!p) out.push(p = { dir: dir, assoc: assoc, base: base, roles: [] });
+        p.roles.push(r);
       });
     }
-    if (Diagram.isAssociation(model, entered) && joins(entered, left)) {
-      return { dir: 'in_base', assoc: entered, base: left };
-    }
-    if (Diagram.isAssociation(model, left) && joins(left, entered)) {
-      return { dir: 'in_assoc', assoc: left, base: entered };
-    }
-    return null;
+    (cross.into || []).forEach(function (assoc) { add('in_base', assoc, cross.out || []); });
+    (cross.out || []).forEach(function (assoc) { add('in_assoc', assoc, cross.into || []); });
+    return out;
+  };
+
+  /** The first of `associationCrossings`, or null: an ordinary containment crossing. */
+  Diagram.associationCrossing = function (model, cross) {
+    return Diagram.associationCrossings(model, cross)[0] || null;
   };
 
   /** `<alias>_<role label>`, made safe to be an identifier. */
@@ -365,13 +377,19 @@
   Diagram.rolesCrossedBy = function (model, arcId) {
     var arc = (model.arcs || {})[arcId];
     if (!arc || arc.type !== 'influence') return [];
-    var pair = Diagram.associationCrossing(
-      model, Diagram.crossings(model, arc.from, arc.to)
-    );
-    if (!pair) return [];
-    return Diagram.rolesOf(model, pair.assoc).filter(function (r) {
-      return model.arcs[r].from === pair.base;
+    var out = [];
+    Diagram.associationCrossings(model, Diagram.crossings(model, arc.from, arc.to)).forEach(function (p) {
+      p.roles.forEach(function (r) { if (out.indexOf(r) < 0) out.push(r); });
     });
+    return out;
+  };
+
+  /** Which of an influence's association crossings a role belongs to. */
+  Diagram.crossingOfRole = function (model, arc, roleId) {
+    if (typeof arc === 'string') arc = (model.arcs || {})[arc];
+    arc = arc || {};
+    return Diagram.associationCrossings(model, Diagram.crossings(model, arc.from, arc.to))
+      .filter(function (p) { return p.roles.indexOf(roleId) >= 0; })[0] || null;
   };
 
   /**
@@ -392,21 +410,178 @@
    * equation parser reports a reference. Usually one; one per role across an
    * association.
    */
-  /**
-   * `name` as an equation has to write it when the influence leaves a
-   * population (`{size}`) or a fixed membership (`[size]`): one pair of
-   * brackets per such submodel it comes out of, since there it is a list.
-   * The exporter writes the alias the same way (`aliasFor`), so a name
-   * inserted from the property dialog is the one that exports.
-   */
-  Diagram.asWritten = function (model, arc, name) {
-    var out = Diagram.crossings(model, arc.from, arc.to).out || [];
-    out.forEach(function (sub) {
-      if (!Diagram.isMultiInstance(model, sub)) return;
-      var kind = ((model.submodels || {})[sub] || {}).kind;
-      name = kind === 'fixed-membership' ? '[' + name + ']' : '{' + name + '}';
+  // ---- what a value IS where an influence delivers it ---------------------
+  //
+  // Simile's own rule, from its source (Prolog/m_update.pl,
+  // `get_unit_conversion` and `add_brackets`; Prolog/ame_gen.pl,
+  // `get_all_dims`): the value an influence delivers has the source's units
+  // wrapped once for every dimension added by each submodel it LEAVES,
+  // outermost first — a list, `list(U)`, for one whose instances come and go,
+  // an array, `array(U,N)`, for each size of one whose number is fixed. To
+  // any depth: nothing here matches patterns. The name's brackets are then
+  // read off that term, one per level, `{` for a list and `[` for an array
+  // (`{[x]}` is `list(array(1,N))`). The source's own array units sit
+  // innermost, so an array variable is `[x]` without crossing anything.
+  // Checked against every `use` term in the catalogue and nkometou
+  // (tools/headless/scripts/crossings.py).
+
+  function hasCondition(model, subId) {
+    var nodes = model.nodes || {};
+    return Object.keys(nodes).some(function (id) {
+      return nodes[id].type === 'condition' && nodes[id].parent === subId;
     });
-    return name;
+  }
+
+  /** A role arc's base and the submodels left on its way to the association. */
+  function roleExits(model, roleId) {
+    var r = (model.arcs || {})[roleId] || {};
+    return [r.from].concat(Diagram.crossings(model, r.from, r.to).out);
+  }
+
+  /**
+   * Is the number of this submodel's instances not fixed — Simile's
+   * `variable_size`: a population; one holding a condition; an association
+   * one of whose roles comes out of such a submodel.
+   */
+  Diagram.isVariableSize = function (model, subId, seen) {
+    var s = (model.submodels || {})[subId];
+    if (!s) return false;
+    if (s.kind === 'population' || hasCondition(model, subId)) return true;
+    seen = seen || {};
+    if (seen[subId]) return false;
+    seen[subId] = true;
+    return Diagram.rolesOf(model, subId).some(function (r) {
+      return roleExits(model, r).some(function (x) {
+        return x !== subId && Diagram.isVariableSize(model, x, seen);
+      });
+    });
+  };
+
+  /** A fixed membership's sizes as written, one per dimension: "4,44" → ['4','44']. */
+  function sizesOf(sub) {
+    var t = String((sub.props || {}).dimensions || '').trim();
+    if (!t) return [];
+    var out = [], depth = 0, cur = '';
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charAt(i);
+      if (c === '(' || c === '[' || c === '{') depth++;
+      if (c === ')' || c === ']' || c === '}') depth--;
+      if (c === ',' && !depth) { out.push(cur.trim()); cur = ''; } else cur += c;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+
+  /**
+   * The dimensions a submodel's instances span, outermost first (Simile's
+   * `list_local_index_meanings`): an association's roles' first — each
+   * role, in order, its base and the submodels it leaves on the way,
+   * outermost first, recursively — then its own: a fixed membership's
+   * sizes. 'var' for a population's.
+   */
+  function indexDims(model, subId, seen) {
+    var s = (model.submodels || {})[subId];
+    if (!s) return [];
+    seen = seen || {};
+    if (seen[subId]) return [];
+    seen[subId] = true;
+    var dims = [];
+    Diagram.rolesOf(model, subId).forEach(function (r) {
+      roleExits(model, r).reverse().forEach(function (x) {
+        if (x !== subId) dims = dims.concat(indexDims(model, x, Object.assign({}, seen)));
+      });
+    });
+    if (s.kind === 'population') return dims.concat(['var']);
+    if (s.kind === 'fixed-membership') return dims.concat(sizesOf(s));
+    return dims;
+  }
+
+  /**
+   * What a value leaving this submodel gains, outermost first (Simile's
+   * `get_all_dims`): ['var'] — a list — when its instances come and go,
+   * otherwise the dimensions its instances span (none for a single one).
+   */
+  Diagram.dimsOf = function (model, subId) {
+    if (!(model.submodels || {})[subId]) return [];
+    if (Diagram.isVariableSize(model, subId)) return ['var'];
+    return indexDims(model, subId);
+  };
+
+  /** `array(1,5)` → {base: '1', dims: ['5']}; `kg` → {base: '1', dims: []}. */
+  function ownArray(units) {
+    var dims = [];
+    var t = String(units || '').trim();
+    var m;
+    while ((m = /^array\s*\((.*),\s*([^,()]+|size\(.*\))\s*\)$/.exec(t))) {
+      dims.push(m[2].trim());
+      t = m[1].trim();
+    }
+    return { base: dims.length ? t : '1', dims: dims };
+  }
+
+  /**
+   * The value an influence delivers to its consumer: `dims` (outermost
+   * first, 'var' for a list), the Simile units `term` (`list(array(1,4))`)
+   * and the brackets the name is written in, `open`/`close` (`{[`, `]}`).
+   * `roleId`: across an association, the role whose name this is.
+   *
+   * Through an association (Simile's `in_base`, `in_assoc`) only the
+   * submodels left INSIDE the one crossed count — inside the base going in,
+   * inside the association coming out — and coming out the association
+   * itself adds its own dimensions unless the role is EXCLUSIVE (each base
+   * instance in at most one pairing). A creation or immigration counts as
+   * outside its population, as Simile's `counts_as_outside` has it.
+   */
+  Diagram.valueAt = function (model, arc, roleId) {
+    if (typeof arc === 'string') arc = (model.arcs || {})[arc];
+    arc = arc || {};
+    var to = arc.to;
+    var target = (model.nodes || {})[to];
+    if (target && (target.type === 'initialiser' || target.type === 'migrator') && target.parent) {
+      to = target.parent;
+    }
+    var cross = Diagram.crossings(model, arc.from, to);
+    var left = cross.out.slice().reverse();          // biggest first
+    var pair = roleId ? Diagram.associationCrossings(model, cross).filter(function (p) {
+      return p.roles.indexOf(roleId) >= 0;
+    })[0] || null : null;
+    var counted;
+    if (!pair) {
+      counted = left;
+    } else if (pair.dir === 'in_base') {
+      counted = left.slice(left.indexOf(pair.base) + 1);
+    } else {
+      counted = left.slice(left.indexOf(pair.assoc) + 1);
+      var exclusive = roleId && (((model.arcs || {})[roleId] || {}).props || {}).exclusive;
+      if (!exclusive) counted = [pair.assoc].concat(counted);
+    }
+    var dims = [];
+    counted.forEach(function (sub) { dims = dims.concat(Diagram.dimsOf(model, sub)); });
+    var source = (model.nodes || {})[arc.from] || {};
+    var own = ownArray((source.props || {}).units);
+    dims = dims.concat(own.dims);
+    var term = own.base;
+    var open = '', close = '';
+    for (var i = dims.length - 1; i >= 0; i--) {
+      term = dims[i] === 'var' ? 'list(' + term + ')' : 'array(' + term + ',' + dims[i] + ')';
+    }
+    dims.forEach(function (d) {
+      open += d === 'var' ? '{' : '[';
+      close = (d === 'var' ? '}' : ']') + close;
+    });
+    return { dims: dims, term: term, open: open, close: close };
+  };
+
+  /**
+   * `name` as the consumer's equation has to write it: in the brackets the
+   * delivered value has (`valueAt`) — `{size}` out of a population,
+   * `[size]` out of a fixed membership, `{[x]}`, `[[x]]`, … The exporter
+   * writes the alias the same way, so a name inserted from the property
+   * dialog is the one that exports.
+   */
+  Diagram.asWritten = function (model, arc, name, roleId) {
+    var v = Diagram.valueAt(model, arc, roleId);
+    return v.open + name + v.close;
   };
 
   /**
@@ -458,16 +633,12 @@
    * an association (`in_base`) each pairing has one of each: a single value.
    */
   Diagram.roleNameIsList = function (model, arcId, roleArcId) {
-    var arc = (model.arcs || {})[arcId];
-    if (!arc || arc.type !== 'influence') return false;
-    var pair = Diagram.associationCrossing(model, Diagram.crossings(model, arc.from, arc.to));
-    if (!pair || pair.dir !== 'in_assoc') return false;
-    return !(((model.arcs || {})[roleArcId] || {}).props || {}).exclusive;
+    return Diagram.valueAt(model, arcId, roleArcId).dims.length > 0;
   };
 
-  /** A role name as an equation must write it: `{name}` where it is a list. */
+  /** A role name as an equation must write it: see `asWritten`. */
   Diagram.roleAsWritten = function (model, arcId, roleArcId, name) {
-    return Diagram.roleNameIsList(model, arcId, roleArcId) ? '{' + name + '}' : name;
+    return Diagram.asWritten(model, arcId, name, roleArcId);
   };
 
   Diagram.namesSuppliedBy = function (model, arcId) {

@@ -155,24 +155,33 @@
       return node.items[0] && node.items[0].t === 'name' ? node.items[0] : null;
     }
 
-    function walk(n) {
+    // `open` is every bracket wrapped round the name, outermost first —
+    // `{[x]}` gives '{[' — as far as each wraps it alone; '' for a bare name.
+    // `form` is the innermost one, as it always was.
+    function walk(n, open) {
       if (!n || typeof n !== 'object') return;
+      open = open || '';
       switch (n.t) {
         case 'name':
-          out.push({ name: n.name, form: 'scalar', at: n.at });
+          out.push({ name: n.name, form: 'scalar', at: n.at, open: open });
           return;
         case 'list':
         case 'array': {
+          var sym = n.t === 'list' ? '{' : '[';
           var only = soleName(n);
           if (only) {
-            out.push({ name: only.name, form: n.t === 'list' ? 'list' : 'array', at: only.at });
+            out.push({ name: only.name, form: n.t === 'list' ? 'list' : 'array', at: only.at, open: open + sym });
             return;
           }
-          n.items.forEach(walk);
+          if (n.items.length === 1 && n.items[0] && (n.items[0].t === 'list' || n.items[0].t === 'array')) {
+            walk(n.items[0], open + sym);
+            return;
+          }
+          n.items.forEach(function (x) { walk(x); });
           return;
         }
         case 'call':
-          n.args.forEach(walk);       // the function's NAME is not a reference
+          n.args.forEach(function (x) { walk(x); });   // the function's NAME is not a reference
           return;
         case 'binary':
           walk(n.left); walk(n.right);

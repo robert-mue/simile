@@ -64,6 +64,16 @@ footing (`src/widgets/grid.js` is the first).
 - `src/schema/simile-v1.js` — the **notation**, as plain data: vocabulary,
   grammar rules, field model, styling, and the function table. Changing how
   Simile is drawn or what it permits should mean changing this file.
+- **Crossings** — what an influence delivers where it arrives, and so the
+  brackets its name is written in, is ONE rule in the model layer,
+  `Diagram.valueAt` (Simile's own, from its source): the source's units
+  wrapped once per dimension added by each submodel left — `list(…)`/`{x}`
+  where instances come and go, `array(…,N)`/`[x]` per fixed size — to any
+  depth, never matched against patterns. Associations crossed:
+  `Diagram.associationCrossings` (several per influence possible). The
+  exporter writes it, the completeness check and the exporter's check
+  hold equations to it, the dialog inserts it. Checked against every term
+  Simile wrote: `tools/headless/scripts/crossings.py`.
 - `src/grammar.js` + `src/predicates.js` — evaluate the schema's rules; named
   predicates are the escape hatch for what data cannot express (§12.2).
 - `src/equation-grammar.js` / `equation.js` / `equation-check.js` — the PEG, the

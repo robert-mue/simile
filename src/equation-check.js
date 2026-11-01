@@ -144,19 +144,36 @@
       if (!arc || arc.type !== 'influence' || arc.to !== id) return;
       var model = d.model();
       var roles = Sienna.Diagram.rolesCrossedBy(model, a);
+      // Each with the brackets its value has where it arrives
+      // (`Diagram.valueAt`): `{x}` a list, `[x]` an array, `{[x]}` …
       if (roles.length) {
-        // One name per role, each a list or not by its own role (exclusive).
         roles.forEach(function (r) {
           var name = Sienna.Diagram.roleAliasFor(model, a, r);
-          if (name !== '') out.push({ name: name, arc: a, list: Sienna.Diagram.roleNameIsList(model, a, r) });
+          var v = Sienna.Diagram.valueAt(model, a, r);
+          if (name !== '') out.push({ name: name, arc: a, value: v });
         });
         return;
       }
+      var v = Sienna.Diagram.valueAt(model, a);
       d.namesSuppliedBy(a).forEach(function (name) {
-        out.push({ name: name, arc: a, list: false });
+        out.push({ name: name, arc: a, value: v });
       });
     });
     return out;
+  }
+
+  /**
+   * What a delivered value is, in words: 'a single value', 'a list (one value
+   * per instance or pairing)', 'an array of 5', 'a list of arrays of 60'…
+   */
+  function valueWords(v) {
+    if (!v.dims.length) return 'a single value';
+    var words = v.dims.map(function (d, i) {
+      var plural = i > 0;
+      return d === 'var' ? (plural ? 'lists' : 'a list')
+        : (plural ? 'arrays of ' : 'an array of ') + d;
+    });
+    return words.join(' of ') + (v.dims[0] === 'var' ? ' (one value per instance or pairing)' : '');
   }
 
   /**
@@ -244,10 +261,10 @@
           if (!usedNames[ref.name]) {
             usedNames[ref.name] = { field: f.name, at: part.at + ref.at, len: ref.name.length };
           }
-          // Where a SINGLE-value use was written, for the list check below.
-          if (ref.form === 'scalar' && !usedNames[ref.name].scalarAt) {
-            usedNames[ref.name].scalarAt = { field: f.name, at: part.at + ref.at };
-          }
+          // Every way it was written — its brackets — for the form check below.
+          (usedNames[ref.name].forms = usedNames[ref.name].forms || []).push({
+            open: ref.open || '', field: f.name, at: part.at + ref.at,
+          });
         });
       });
     });
@@ -273,17 +290,31 @@
       }
     });
 
-    // A name that comes out of an association is a list (one value per
-    // pairing), and written bare it is a single value: Simile refuses the
-    // model (`bad_parameter`). Robert's item 35.
+    // A name is written in the brackets its value has where it arrives —
+    // one per level, to any depth: `{x}` a list (out of a population, or an
+    // association, one per pairing), `[x]` an array (out of a fixed
+    // membership, or an array variable), `{[x]}` a list of arrays…
+    // (`Diagram.valueAt`, Simile's own rule). Written otherwise, Simile
+    // refuses the model (`bad_parameter`) or its C++ does not compile.
+    // A name with other brackets may be another input: `ID1` (one value,
+    // through a role) beside `[ID1]` (an array, from elsewhere) is two
+    // (assoc_from_data1). So a use is wrong only when nothing supplies the
+    // name in the brackets it is written in.
+    var reported = {};
     supplied.forEach(function (s) {
       var u = usedNames[s.name];
-      if (!s.list || !u || !u.scalarAt) return;
+      if (!u || !u.forms || reported[s.name]) return;
+      var wrong = u.forms.filter(function (w) {
+        return !supplied.some(function (x) { return x.name === s.name && x.value.open === w.open; });
+      })[0];
+      if (!wrong) return;
+      reported[s.name] = true;
+      var want = s.value.open + s.name + s.value.close;
       out.push({
         id: id, label: label, kind: 'form', name: s.name,
-        field: u.scalarAt.field, at: u.scalarAt.at, len: s.name.length,
-        message: '"' + s.name + '" comes out of an association, one value for each pairing, '
-          + 'so it is a list: write {' + s.name + '}, e.g. sum({' + s.name + '})',
+        field: wrong.field, at: wrong.at, len: s.name.length,
+        message: '"' + s.name + '" arrives as ' + valueWords(s.value) + ': write ' + want
+          + (s.value.dims[0] === 'var' ? ', e.g. sum(' + want + ')' : ''),
       });
     });
 

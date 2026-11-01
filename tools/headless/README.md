@@ -47,6 +47,12 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
   Variable: values over time (interpolated, last value, an array), a number,
   a slider beating it, the fill method through a file. PASS/FAIL lines.
   Over http.
+- `scripts/crossings.py` — every influence in the catalogue and nkometou:
+  the units term Simile wrote in its `use(…)` against ours
+  (`Diagram.valueAt`), nesting and sizes compared. Prints how many agree
+  (4763 of 4783 on 2026-11-01; the rest stale terms or unfinished elements)
+  and each kind of mismatch with an example. Needs nkometou in
+  `~/Projects/simile_models`.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.

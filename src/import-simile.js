@@ -438,6 +438,7 @@
       this.ours = {};     // simile id -> our id
       this.n = { node: 0, submodel: 0, arc: 0 };
 
+      this.useLog = [];
       this.pairFunctions();
       this.buildChains();
       this.makeSubmodels();
@@ -445,10 +446,36 @@
       this.makeFlows();
       this.makeRelations();
       this.makeInfluences();
+      this.plainSizes();
       this.plainKinds();
       this.reportDropped();
 
       return m;
+    },
+
+    /**
+     * `size('decision\nadoption')` — a submodel's number of instances, as a
+     * dimension in units or in another submodel's size — names the submodel
+     * by its Simile caption, which we renamed (`name`): so the reference is
+     * renamed with it, or the generator cannot resolve it
+     * (`failed_ref_in_dimensions`, nkometou).
+     */
+    plainSizes: function () {
+      var m = this.m;
+      var fix = function (text) {
+        return String(text).replace(/size\(\s*('(?:[^']|'')*')\s*\)/g, function (all, q) {
+          var safe = unquote(q).trim().replace(/[^A-Za-z0-9_]/g, '_');
+          return 'size(' + (/^[0-9]/.test(safe) ? '_' + safe : safe) + ')';
+        });
+      };
+      Object.keys(m.nodes).forEach(function (id) {
+        var p = m.nodes[id].props;
+        if (p && p.units) p.units = fix(p.units);
+      });
+      Object.keys(m.submodels || {}).forEach(function (id) {
+        var p = m.submodels[id].props;
+        if (p && p.dimensions) p.dimensions = fix(p.dimensions);
+      });
     },
 
     /**
@@ -633,6 +660,15 @@
       }
 
       var units = src.units != null ? src.units : ((own && own.p.units) || null);
+      // A pre-9.0 array variable: `multiplication_spec=[count=[4]]` on the
+      // variable itself, where later files write `units=array(1,4)` (Simile
+      // converts it on load; test02_1submodel). It is that variable's shape.
+      var oldCount = own && type === 'variable' && /count=\[([^\]]+)\]/.exec(String(own.p.multiplication_spec || ''));
+      if (oldCount && !/^\s*array\s*\(/.test(String(units || ''))) {
+        units = oldCount[1].split(',').reverse().reduce(function (u, n) {
+          return 'array(' + u + ',' + n.trim() + ')';
+        }, String(units || '1'));
+      }
       if (units != null && units !== '') {
         var u = unquote(units);
         if (u !== (BOOLEAN_TYPE[type] ? 'boolean' : '1')) out.units = u;
@@ -851,8 +887,26 @@
         .forEach(function (x) {
         var id = x.id;
         var a = self.A[id];
-        var from = self.ours[a.from];
-        var to = self.ours[a.to];
+        // A role arrow crosses boundaries as an influence does: segments
+        // paired by `links`, through border stubs (nkometou: `land patches`,
+        // inside `land`, is the base of `land allocation`'s role `owned`).
+        // The chain is made once, from its LAST segment — the one ending at
+        // the association, carrying the role's name — and its base is where
+        // the FIRST segment starts. Every segment maps to the one role, since
+        // each submodel's `references` names its own segment.
+        if (self.isUpstream[id]) return;
+        var segs = self.chain(id);
+        // The role's own properties (name, `exclusive`) are on the segment at
+        // the level where base and association meet: past every boundary
+        // LEFT (a segment starting at the submodel's own node follows one),
+        // before any entered. `owned` is on the last of `land patches`'s
+        // two; `link_to_satellite`, entering three submodels, on the first.
+        var k = 0;
+        while (k < segs.length - 1 && self.N[self.A[segs[k + 1]].from]
+               && self.N[self.A[segs[k + 1]].from].type === 'submodel') k++;
+        a = self.A[segs[k]];
+        var from = self.ours[self.A[segs[0]].from];
+        var to = self.ours[self.A[id].to];
         if (!from || !to) { self.note('dropped', 'a relation arc with a missing end'); return; }
         // `exclusive=1`: each base instance is in at most one pairing in this
         // role, so a name coming back out through it is a single value, not a
@@ -862,9 +916,10 @@
         var props = {};
         if (String(a.p.exclusive) === '1') props.exclusive = true;
         if (a.p.can_lookup != null) props.canLookup = String(a.p.can_lookup);
-        self.ours[id] = self.put('arc', {
+        var ourRole = self.put('arc', {
           type: 'role', from: from, to: to, label: self.name(a.p.name || 'role'), props: props,
         }, null);
+        segs.forEach(function (sid) { self.ours[sid] = ourRole; });
         });
     },
 
@@ -948,6 +1003,10 @@
           if (Object.keys(kept).length) el.roleAliases = kept;
         }
         self.ours[id] = self.put('arc', el, null);
+        // What the file says the consumer receives — kept for the check that
+        // our rule (`Diagram.valueAt`) gives what Simile wrote
+        // (tools/headless/scripts/crossings.py); not part of the model.
+        self.useLog.push({ arc: self.ours[id], uses: items(a.p.role).map(parseUse).filter(Boolean) });
       });
     },
 
@@ -1103,8 +1162,15 @@
         var el = this.m.nodes[ourFrom] || this.m.submodels[ourFrom] || {};
         return el.label || '';
       }
+      // Across an association, the stem comes from the first ROLE (lowest
+      // index), not the first term: Simile writes them in any order
+      // (assoc_from_data1 has index 1 first), and taking the first made a
+      // round trip swap ID1 for ID2.
       var u = uses[0];
       if (u.dir === 'in_hierarchy') return u.alias;
+      uses.forEach(function (x) {
+        if (x.dir !== 'in_hierarchy' && x.index != null && (u.index == null || x.index < u.index)) u = x;
+      });
 
       // Brackets say "this is a list" and belong to the containment case; an
       // association role carries them on the `use` term, not in our alias.
@@ -1368,6 +1434,7 @@
           arcs: Object.keys(model.arcs).length,
           submodels: Object.keys(model.submodels).length,
         },
+        uses: imp.useLog,     // what each influence's consumer receives, as the file says
       };
     },
 

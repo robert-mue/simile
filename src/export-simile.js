@@ -76,23 +76,26 @@
  * our ports rule — shared on the source side, per-arc on the target side — so
  * our port map and Simile's segments describe the same thing.
  *
- * ## The dimensional term, measured rather than asked
+ * ## What the consumer receives: the units term and the brackets
  *
- * `NOTE-export-to-simile.md` §4 calls `1` vs `list(1)` the blocker. The
- * reference models answer it for containment:
+ * `use(…,ALIAS,UNITS)`: UNITS is what the value IS where it arrives, and
+ * the alias's brackets are read off it — Simile's own rule, from its source
+ * (Prolog/m_update.pl `get_unit_conversion`, `add_brackets`; ame_gen.pl
+ * `get_all_dims`), in the model layer as `Diagram.valueAt`. The source's
+ * units are wrapped once per dimension added by each submodel LEFT,
+ * outermost first: `list(U)` where instances come and go (a population, a
+ * conditional submodel, an association of such), `array(U,N)` for each size
+ * of a fixed membership (an association's roles' dimensions, then its own).
+ * Brackets follow, `{` per list and `[` per array, to any depth:
+ * `{[x]}` with `list(array(1,N))`, `[[x]]` with `array(array(1,4),4)`. The
+ * source's own array units sit innermost, so an array variable is `[x]`
+ * without crossing anything. Entering a submodel adds nothing.
  *
- *   - **Inward** references are scalars: `use(none,in_hierarchy,state,1)`.
- *   - **Outward** references are lists, and the alias carries brackets that the
- *     consumer's equation uses VERBATIM: `use(none,in_hierarchy,{volume},list(1))`
- *     beside an equation reading `sum({volume})`. Curly braces for variable
- *     membership; square for fixed — `fire_rect` crosses a 200×300 grid and
- *     writes `any(any([[lit]]))`, one bracket level per dimension.
- *
- * So the alias is emitted exactly as our model holds it, and an outward
- * crossing of a multi-instance submodel whose alias is NOT bracketed is
- * refused — that is a real modelling error (a list referenced as a scalar), and
- * inventing the brackets here would edit the modeller's equations behind their
- * back.
+ * Checked against every `use` term Simile wrote in the catalogue and
+ * nkometou (tools/headless/scripts/crossings.py): 4763 of 4783 agree; the
+ * rest are terms Simile left stale after an edit, or from unfinished
+ * elements. The base of the units (1, int, boolean) is ours: `1`, or the
+ * source's array units' own.
  *
  * ## Associations
  *
@@ -128,12 +131,15 @@
  * and `underdog`, which no derivation would produce, compiles and returns
  * [4,3,2,1] from the live engine.
  *
- * One asymmetry, established by running it rather than by reading: when a value
- * reaches an association already a list (because it left a multi-instance
- * submodel on the way), the role's alias stays BARE and the equation brackets
- * it — `use(0,in_base,attribute_higher,list(1))` beside
- * `sum([attribute_higher])`. That is the opposite of the containment case,
- * where the brackets live in the alias.
+ * Through an association the units and brackets follow the same rule
+ * (`Diagram.valueAt`): going in (`in_base`) only submodels left inside the
+ * base count; coming out (`in_assoc`) those inside the association, and the
+ * association itself unless the role is exclusive. One influence may cross
+ * two associations at once — nkometou's `village` is a base of `land
+ * allocation` and its satellite — and then carries a `use` for each role of
+ * each (`Diagram.associationCrossings`). A role arrow may itself cross
+ * boundaries (a base nested inside another submodel): it is segmented as an
+ * influence is, and each submodel's `references` names its own segment.
  *
  * Classic script; no imports/exports.
  */
@@ -343,7 +349,8 @@
     this.borderN = 0;
     this.vis = {};      // our id -> Simile id of the VISIBLE node
     this.fn = {};       // our id -> Simile id of the FUNCTION node
-    this.relArc = {};   // our role arc id -> Simile relation arc id
+    this.relArc = {};   // our role arc id -> Simile relation arc id (its LAST segment)
+    this.relArcFirst = {};  // … and its FIRST, which the base's `references` names
     this.flowArc = {};  // our flow arc id -> Simile flow arc id (= its valve's id)
     this.borders = {};  // key -> {id, sub} for boundary stubs
     this.extra = {};    // our submodel id -> [Simile ids of borders inside it]
@@ -408,61 +415,46 @@
         }
         if (a.type !== 'influence') return;
 
-        var cr = self.crossings(a.from, a.to);
-
-        // An outward crossing of a multi-instance submodel produces a LIST, and
-        // the alias has to say so, because the consumer's equation uses the
-        // alias verbatim. Adding the brackets here would silently disagree with
-        // the equation the modeller wrote — unless the equation already uses
-        // them (`aliasFor`).
-        var alias = self.aliasFor(a);
-
-        // An association crossing renames: our one alias becomes one name per
-        // role, `<alias>_<role>`, because Simile needs a name per end. So the
-        // consumer's equation cannot be using the bare alias — say what it
-        // should use rather than letting the model compile into nonsense.
-        var pr = self.assocPair(cr);
-        if (pr) {
-          var names = self.assocNames(a, pr, id);
-          var eq = String((m.nodes[a.to] || {}).props
-            ? (m.nodes[a.to].props[self.exprField(m.nodes[a.to].type)] || '') : '');
-          // Out of an association, through a role that is not exclusive, the
-          // name is a list, and must be written so.
-          var listNames = Sienna.Diagram.rolesCrossedBy(m, id).filter(function (r) {
-            return Sienna.Diagram.roleNameIsList(m, id, r);
-          }).map(function (r) { return Sienna.Diagram.roleAliasFor(m, id, r); });
-          var bareUse = listNames.length && Sienna.equation.references(eq).some(function (r) {
-            return r.form === 'scalar' && listNames.indexOf(r.name) >= 0;
-          });
-          if (bareUse) {
-            problems.push('across the association "'
-              + ((m.submodels || {})[pr.assoc] || {}).label + '", "' + alias
-              + '" arrives in "' + ((m.nodes[a.to] || {}).label || a.to)
-              + '" as a LIST (one value per pairing): write ' + listNames.map(function (n) {
-                return '{' + n + '}';
-              }).join(' or ') + ', e.g. sum({' + listNames[0] + '})');
-          } else if (names.length && !names.some(function (n) { return eq.indexOf(n) >= 0; })) {
-            problems.push('across the association "'
-              + ((m.submodels || {})[pr.assoc] || {}).label + '", "' + alias
-              + '" arrives once per role, under ' + names.map(function (n) {
-                return listNames.indexOf(n) >= 0 ? '{' + n + '}' : n;
-              }).join(' and ') + ' — but the equation for "'
-              + ((m.nodes[a.to] || {}).label || a.to) + '" uses none of those');
-          }
+        // What each name the influence supplies IS where it arrives — one
+        // per role across an association — and the brackets the consumer's
+        // equation must write it in (`Diagram.valueAt`: Simile's own rule, to
+        // any depth). Written otherwise, the model would not compile, or
+        // would compile into something else.
+        var D = Sienna.Diagram;
+        var target = m.nodes[a.to] || {};
+        var tname = target.label || a.to;
+        var eq = String((target.props || {})[self.exprField(target.type)] || '');
+        var refs = eq ? Sienna.equation.references(eq) : [];
+        var roles = D.rolesCrossedBy(m, id);
+        var supplied = roles.length
+          ? roles.map(function (r) { return { name: D.roleAliasFor(m, id, r), v: D.valueAt(m, id, r) }; })
+          : [{ name: D.bareAlias(m, a), v: D.valueAt(m, id) }];
+        var written = function (x) { return x.v.open + x.name + x.v.close; };
+        if (roles.length && refs.length && !supplied.some(function (x) {
+          return refs.some(function (r) { return r.name === x.name; });
+        })) {
+          var pr0 = D.crossingOfRole(m, id, roles[0]) || {};
+          problems.push('across the association "' + ((m.submodels || {})[pr0.assoc] || {}).label
+            + '", "' + D.bareAlias(m, a) + '" arrives once per role, under '
+            + supplied.map(written).join(' and ') + ' — but the equation for "' + tname
+            + '" uses none of those');
           return;
         }
-
-        var left = self.crossings(a.from, a.to).out.filter(function (s) { return self.isMulti(s); });
-        if (left.length && !/^[{[]/.test(alias)) {
-          // Square brackets for a fixed membership, curly for a variable one —
-          // the distinction the reference models draw, and the answer to the
-          // question §4 of the note could not resolve without them.
-          var sub = (self.m.submodels || {})[left[0]] || {};
-          var want = sub.kind === 'fixed-membership' ? '[' + alias + ']' : '{' + alias + '}';
-          problems.push('"' + alias + '" comes out of "' + (sub.label || left[0])
-            + '", which has more than one instance, so it arrives as a LIST. Reference it as '
-            + want + ' — in the alias, and in the equation that uses it');
-        }
+        var intoTarget = self.suppliedTo(a.to);
+        supplied.forEach(function (x) {
+          var bad = refs.filter(function (r) {
+            return r.name === x.name && !intoTarget.some(function (y) {
+              return y.name === x.name && y.open === (r.open || '');
+            });
+          })[0];
+          if (!bad) return;
+          var words = !x.v.dims.length ? 'a single value'
+            : x.v.dims.map(function (d, i) {
+              return d === 'var' ? (i ? 'lists' : 'a list') : (i ? 'arrays of ' : 'an array of ') + d;
+            }).join(' of ');
+          problems.push('"' + x.name + '" arrives in "' + tname + '" as ' + words
+            + ': write it ' + written(x) + ', in the equation and wherever it is named');
+        });
       });
 
       if (problems.length) {
@@ -559,54 +551,6 @@
     },
 
     /**
-     * Does a value coming OUT of this submodel arrive as a list?
-     *
-     * Yes when the submodel has more than one instance, and also when it has a
-     * `condition` — a conditional submodel may or may not exist for a given
-     * instance, so what leaves it is still a list. Read off `landuse1b.pl`,
-     * where `Forest` is `count=[]` yet exports `{volume}` as `list(1)`, and it
-     * is the one submodel there containing a condition. And when it is an
-     * association (a satellite included) with a many-instanced base.
-     */
-    isMulti: function (subId) {
-      // The rule, with an association's (a satellite's) part: `Diagram`.
-      return Sienna.Diagram.isMultiInstance(this.m, subId);
-    },
-
-    /** How many list-making boundaries an influence leaves — 0 for a scalar. */
-    /**
-     * The alias an influence is written with. Ours as held — except that one
-     * leaving a population or fixed membership arrives as a list, which Simile
-     * writes `{size}` (`[size]` for a fixed membership), and the editor names
-     * an influence after its source, plainly. When the equation receiving it
-     * already says `{size}`, as the Trees tutorial's `sum({size})` does, the
-     * modeller has told us which they mean, and the alias takes the brackets.
-     * When it does not, the alias is left alone for `check` to report.
-     */
-    aliasFor: function (a) {
-      var self = this;
-      var alias = String(a.alias || (this.m.nodes[a.from] || {}).label || '').trim();
-      if (!alias || /^[{[]/.test(alias)) return alias;
-      var left = this.crossings(a.from, a.to).out.filter(function (sub) { return self.isMulti(sub); });
-      if (!left.length) return alias;
-      var wrapped = alias;
-      left.forEach(function (sub) {
-        var fixed = ((self.m.submodels || {})[sub] || {}).kind === 'fixed-membership';
-        wrapped = fixed ? '[' + wrapped + ']' : '{' + wrapped + '}';
-      });
-      var to = this.m.nodes[a.to] || {};
-      var eq = String((to.props || {})[this.exprField(to.type)] || '');
-      return eq.indexOf(wrapped) >= 0 ? wrapped : alias;
-    },
-
-    listCrossings: function (from, to) {
-      var self = this;
-      return this.crossings(from, to).out.filter(function (s) {
-        return self.isMulti(s);
-      }).length;
-    },
-
-    /**
      * The stub inside a submodel where a segment starts or ends. Shared per
      * source on the way out, per arc on the way in — which is our own ports
      * rule, and Simile's too (`arc00022` serves two consumers in `landuse1b`).
@@ -646,80 +590,66 @@
       return Sienna.Diagram.rolesOf(this.m, subId);
     },
 
-    isAssoc: function (subId) {
-      return Sienna.Diagram.isAssociation(this.m, subId);
-    },
-
-    assocPair: function (cross) {
-      return Sienna.Diagram.associationCrossing(this.m, cross);
-    },
-
     /**
-     * The role term for an association crossing.
-     *
-     * One `use(…)` per relation arc joining this base to this association — so
-     * a self-association, where the base is related twice, contributes two, and
-     * the consumer's equation gets a name for each end. The INDEX is the
-     * position of that relation arc in the `references` list of the submodel
-     * holding the destination (the header, "Associations"): the association's
-     * going in (`in_base`), the base's coming out (`in_assoc`). A consumer
-     * nested deeper inside the base reads the same position through its
-     * `ancestor(k)` list, which `refsOf` makes mirror the base's.
-     *
-     * The per-role ALIAS is derived — `<alias>_<role>` — because our model
-     * holds one alias per arc and Simile needs one per role. That is Simile's
-     * own convention (`attribute` + `role1` → `attribute_role1`), and the
-     * equation must use those names, which `check` verifies.
-     */
-    assocRole: function (a, pair, cross, arcId) {
-      var self = this;
-      var refs = this.rolesOf(pair.assoc);
-      var mine = refs.filter(function (r) { return self.m.arcs[r].from === pair.base; });
-      var listed = pair.dir === 'in_assoc' ? this.refsOf(pair.base) : refs;
-
-      // The association hop is the LAST boundary left; anything left before it
-      // is ordinary containment, and each multi-instance one makes the value a
-      // list on the way past — so a value from a submodel nested inside the
-      // base arrives at the association already a list, and the role has to say
-      // so. Entering boundaries never do this, which is why only `out` counts.
-      var extra = cross.out.slice(0, -1).filter(function (s) { return self.isMulti(s); }).length;
-
-      return mine.map(function (r) {
-        var idx = listed.indexOf(r);
-        // The stored name where the model has one, the derived `<alias>_<role>`
-        // where it does not. Simile imposes no convention, so a name read from
-        // a file must be written back unchanged — see `Diagram.roleAliasFor`.
-        var name = Sienna.Diagram.roleAliasFor(self.m, arcId, r);
-        var dim = '1';
-        var i;
-        if (pair.dir === 'in_assoc') {
-          // A list, one value per pairing — unless the role is exclusive.
-          var many = Sienna.Diagram.roleNameIsList(self.m, arcId, r);
-          for (i = 0; i < extra + (many ? 1 : 0); i++) dim = 'list(' + dim + ')';
-          return 'use(' + idx + ',in_assoc,' + (many ? '{' + atom(name) + '}' : atom(name)) + ',' + dim + ')';
-        }
-        for (i = 0; i < extra; i++) dim = 'list(' + dim + ')';
-        return 'use(' + idx + ',in_base,' + atom(name) + ',' + dim + ')';
-      }).join(',');
-    },
-
-    /**
-     * What a submodel's `references(…)` lists, as our ids: every role for an
-     * association (in `rolesOf` order), its own roles for a base, and for a
-     * submodel inside either, `ancestor(k)` for each entry of its parent's list
-     * — as Simile writes them (`lamos1a`). An index is a position in one of
-     * these, so they are made in one place.
+     * What a submodel's `references(…)` lists, as our ids — as Simile writes
+     * them (`lamos1a`, nkometou). An index is a position in one of these, so
+     * they are made in one place.
      */
     refsOf: function (subId) {
       var m = this.m;
-      if (this.isAssoc(subId)) return this.rolesOf(subId);
-      var own = Object.keys(m.arcs).filter(function (r) {
-        return m.arcs[r].type === 'role' && m.arcs[r].from === subId;
+      // The roles ending at it (an association, in `rolesOf` order), then
+      // those starting at it (a base) — nkometou's `land allocation` lists
+      // both — then an `ancestor(k)` for each entry of its parent's list.
+      var asAssoc = this.rolesOf(subId);
+      var asBase = Object.keys(m.arcs).filter(function (r) {
+        return m.arcs[r].type === 'role' && m.arcs[r].from === subId && asAssoc.indexOf(r) < 0;
       });
-      if (own.length) return own;
       var parent = (m.submodels[subId] || {}).parent;
-      if (parent == null) return [];
-      return this.refsOf(parent).map(function (r, k) { return { ancestor: k }; });
+      var up = parent == null ? [] : this.refsOf(parent).map(function (r, k) { return { ancestor: k }; });
+      return asAssoc.concat(asBase).concat(up);
+    },
+
+    /** Every name the influences into `to` supply, with its brackets. */
+    suppliedTo: function (to) {
+      var m = this.m;
+      var D = Sienna.Diagram;
+      if (!this._supplied) this._supplied = {};
+      if (this._supplied[to]) return this._supplied[to];
+      var out = [];
+      Object.keys(m.arcs).forEach(function (id) {
+        var a = m.arcs[id];
+        if (a.type !== 'influence' || a.to !== to) return;
+        var roles = D.rolesCrossedBy(m, id);
+        if (roles.length) {
+          roles.forEach(function (r) { out.push({ name: D.roleAliasFor(m, id, r), open: D.valueAt(m, id, r).open }); });
+        } else {
+          out.push({ name: D.bareAlias(m, a), open: D.valueAt(m, id).open });
+        }
+      });
+      return (this._supplied[to] = out);
+    },
+
+    /**
+     * Where a role is in the `references` list of the submodel holding a
+     * link's destination — the index its `use(N,…)` gives — following
+     * `ancestor(k)` entries up. -1 if it is not there.
+     */
+    refIndex: function (subId, roleId) {
+      var list = subId == null ? [] : this.refsOf(subId);
+      for (var k = 0; k < list.length; k++) {
+        var e = list[k];
+        if (e === roleId) return k;
+      }
+      for (k = 0; k < list.length; k++) {
+        var x = list[k];
+        var at = subId;
+        while (x && typeof x === 'object') {
+          at = (this.m.submodels[at] || {}).parent;
+          x = this.refsOf(at)[x.ancestor];
+        }
+        if (x === roleId) return k;
+      }
+      return -1;
     },
 
     /**
@@ -739,11 +669,6 @@
     /** `<alias>_<role label>`, made safe to be a Prolog atom and an identifier. */
     roleAlias: function (alias, roleArcId) {
       return Sienna.Diagram.roleAlias(alias, (this.m.arcs[roleArcId] || {}).label);
-    },
-
-    /** Every name an association crossing gives the consumer's equation. */
-    assocNames: function (a, pair, arcId) {
-      return Sienna.Diagram.namesSuppliedBy(this.m, arcId);
     },
 
     /** `centre=[x,y]` — our layout stores the centre already (`box()` reads x as cx). */
@@ -927,12 +852,37 @@
 
       // A role arc is Simile's `relation`, and its label is the role name — the
       // name the consumer's equation will end up using as a suffix.
+      // A role arrow from a base nested inside another submodel, or to an
+      // association nested in one, crosses those boundaries as an influence
+      // does: one segment per level, through border stubs, paired by
+      // `links` (nkometou's `land patches` → `land allocation`).
       if (a.type === 'role') {
-        var rid = simId('arc', ++this.arcN);
-        this.relArc[id] = rid;
-        this.arcLines.push('arc(' + rid + ',' + this.vis[a.from] + ',' + this.vis[a.to]
-          + ',relation,' + list(this.relationProps(a))
-          + ',' + list(['caption_offset=[0,0]']) + ').');
+        var rc = this.crossings(a.from, a.to);
+        var rcur = this.vis[a.from];
+        var rsegs = [];
+        var rbounds = [];
+        var rprops = list(this.relationProps(a));
+        var rseg = (from, to) => {
+          var sid = simId('arc', ++this.arcN);
+          this.arcLines.push('arc(' + sid + ',' + from + ',' + to + ',relation,' + rprops
+            + ',' + list(['caption_offset=[0,0]']) + ').');
+          rsegs.push(sid);
+          return sid;
+        };
+        rc.out.forEach((sub) => {
+          rseg(rcur, this.border(sub, 'role:' + id));
+          rbounds.push(sub);
+          rcur = this.vis[sub];
+        });
+        rc.into.forEach((sub) => {
+          rseg(rcur, this.vis[sub]);
+          rbounds.push(sub);
+          rcur = this.border(sub, 'role:' + id);
+        });
+        rseg(rcur, this.vis[a.to]);
+        this.relArcFirst[id] = rsegs[0];
+        this.relArc[id] = rsegs[rsegs.length - 1];
+        for (var rj = 0; rj < rbounds.length; rj++) this.link(rbounds[rj], rsegs[rj], rsegs[rj + 1]);
         return;
       }
 
@@ -959,15 +909,25 @@
       // The final segment lands on the consumer's equation and carries the
       // role: the alias exactly as the model holds it (the equation uses it
       // verbatim) and one `list(…)` wrapper per list-making boundary left.
-      var pair = this.assocPair(cross);
+      // What the consumer receives (`Diagram.valueAt`): its units term and
+      // the brackets its name is written in, as Simile derives them — one
+      // `use` per role across each association crossed, else one in the
+      // hierarchy.
+      var D = Sienna.Diagram;
+      var roles = D.rolesCrossedBy(this.m, id);
+      var destSub = this.parentOf(a.to);
       var role;
-      if (pair) {
-        role = this.assocRole(a, pair, cross, id);
+      if (roles.length) {
+        role = roles.map((r) => {
+          var pr = D.crossingOfRole(this.m, id, r);
+          var v = D.valueAt(this.m, id, r);
+          var idx = this.refIndex(destSub, r);
+          return 'use(' + (idx < 0 ? 0 : idx) + ',' + pr.dir + ',' + v.open
+            + atom(D.roleAliasFor(this.m, id, r)) + v.close + ',' + v.term + ')';
+        }).join(',');
       } else {
-        var alias = this.aliasFor(a);
-        var dim = '1';
-        for (var i = 0; i < this.listCrossings(a.from, a.to); i++) dim = 'list(' + dim + ')';
-        role = 'use(none,in_hierarchy,' + aliasTerm(alias) + ',' + dim + ')';
+        var v = D.valueAt(this.m, id);
+        role = 'use(none,in_hierarchy,' + v.open + atom(D.bareAlias(this.m, a)) + v.close + ',' + v.term + ')';
       }
 
       var last = simId('arc', ++this.arcN);
@@ -1116,11 +1076,14 @@
         if (self.links[id]) out.push('links(' + self.vis[id] + ',' + list(self.links[id]) + ').');
 
         // `references`: what `refsOf` says, the lists the role indices point
-        // into — so written from the same place `assocRole` reads.
+        // into — so written from the same place `refIndex` reads.
         var refs = self.refsOf(id);
         if (refs.length) {
           out.push('references(' + self.vis[id] + ',' + list(refs.map(function (r) {
-            return typeof r === 'object' ? 'ancestor(' + r.ancestor + ')' : 'local(' + self.relArc[r] + ')';
+            if (typeof r === 'object') return 'ancestor(' + r.ancestor + ')';
+            // Each submodel names its own segment of a role: the association
+            // the last, the base the first (one and the same unless it crosses).
+            return 'local(' + (m.arcs[r].to === id ? self.relArc[r] : self.relArcFirst[r]) + ')';
           })) + ').');
         }
       });

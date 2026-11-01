@@ -96,3 +96,40 @@ list: assoc_from_data1/2, two roles' names on one influence swapping.
 2. ~~`table_data` tables.~~ Done 2026-10-31.
 3. The crossing forms, each with a small test model as for satellites.
 4. Then compile nkometou in the page and see what the generator says.
+
+## Done 2026-11-01: crossing forms
+
+Not patterns: Simile's own rule, read from its source (m_update.pl
+`get_unit_conversion`, `add_brackets`; ame_gen.pl `get_all_dims`), as
+`Diagram.valueAt` — the units wrapped once per dimension of each submodel
+left (list where instances come and go, array per fixed size), brackets
+read off that, to any depth. Checked against all 4783 `use` terms in the
+catalogue and nkometou: 4763 agree; the 20 others are stale terms (veg_mixed
+was resized after its links were drawn), unfinished sources (var3, var6), a
+renamed submodel (markov1), and test02's pre-9.0 form.
+
+What the ten problems really were:
+- **Role arrows crossing boundaries.** A role's base can be nested
+  (`land patches` inside `land`; `coop_house` inside `household`), the
+  arrow segmented through borders like an influence. We read the outer
+  segment's start as the base — hence the "lost" 1492 and 2 dimensions and
+  the scalars "Simile writes". Importer now follows the chain; properties
+  from the segment where the ends meet; exporter segments roles and lists
+  each submodel's own segment in `references`.
+- **Two association crossings on one influence** (`village`, base AND
+  satellite of `land allocation`): `Diagram.associationCrossings`, a `use`
+  per role of each.
+- **Same name, two forms** (`ID1` and `[ID1]` in assoc_from_data): the
+  brackets are part of the input's identity.
+- **`size('decision\nadoption')`**: renamed with its submodel.
+- assoc_from_data's ID1/ID2 swap: the stem alias was taken from whichever
+  role term came first.
+
+Result: nkometou EXPORTS, and Simile's generator writes its C++ (1.2 MB,
+native, 14 s). Catalogue: round trip no differences, 65/72 identical; 61
+models run with values identical to before (fixed seed), associations
+included; no new compile failures. test02's three files are now refused,
+rightly: their equations use the array `Var1` bare (pre-9.0 implicit
+array arithmetic).
+
+Next: compile nkometou in the page and run it (its parameters need values).
