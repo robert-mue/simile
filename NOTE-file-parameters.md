@@ -262,3 +262,9 @@ nkometou run (`inputParametersOf` in src/simulation.js, `midpoint`):
 Neither is written into the model; both are sent at reset and shown in the
 Parameters panel. Revisit: require a default for every parameter (the
 dialog and the importer saying so), and drop these.
+
+## File names (Robert, 2026-11-02)
+
+Ours are JSON and saved as `<model>.parameters.json` (not `.spf`: an
+extension says what is inside). Simile's own keep their names — `.pl`,
+`.spf` — never renamed. Load… takes both, telling them apart by content.

@@ -146,7 +146,7 @@ footing (`src/widgets/grid.js` is the first).
   (`Simulation.readInputValue`). Values are NEVER in the model spec: the
   ones used last are kept beside it (`simile.fileParameters.v1`,
   `Simulation.setInputValues`), and Load / Save write a JSON parameter file
-  (`.spf`, nested by submodel); Simile's own are READ too, XML and its first, text format (`_fromSimileXml`, `_fromSimileText`), not written. Before
+  (`<model>.parameters.json`, nested by submodel); Simile's own (`.spf`, never renamed) are READ too, XML and its first, text format (`_fromSimileXml`, `_fromSimileText`), not written. Before
   each reset they go to the engine (`FileParameters`, ours, in
   `engine-local.js` → `sx_param_fill` / `sx_param_series` in bridge.cpp); a
   missing one stops the run, naming it — except a variable parameter with no

@@ -22,7 +22,9 @@
  * One model, several parameter files — a scenario, a site, a country each.
  * So the values here are NEVER written into the model: they are kept beside
  * it (the ones used last, `Simulation.inputValues`) and in parameter files,
- * JSON in the same notation, grouped by submodel as Simile's are (`.spf`).
+ * JSON in the same notation, grouped by submodel as Simile's are, saved as
+ * `<model>.parameters.json` — `.json` because it is JSON (Robert); Simile's
+ * own keep `.spf`.
  * Simile's own are read too, not written — XML (`_fromSimileXml`) and its
  * first, text format (`_fromSimileText`):
  *
@@ -50,9 +52,9 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     const bar = $('<div class="slx-palette slx-chrome slx-params-bar">').appendTo(this.element);
     $('<span class="slx-palette-group">').text('parameters').appendTo(bar);
     this._loadBtn = $('<button type="button">').text('Load…')
-      .attr('title', 'Give the parameters their values from a parameter file (.spf)').appendTo(bar);
+      .attr('title', 'Give the parameters their values from a parameter file (ours, .json, or Simile’s, .spf)').appendTo(bar);
     this._saveBtn = $('<button type="button">').text('Save…')
-      .attr('title', 'Save the values given here as a parameter file (.spf)').appendTo(bar);
+      .attr('title', 'Save the values given here as a parameter file (.parameters.json)').appendTo(bar);
     this._clearBtn = $('<button type="button">').text('Clear')
       .attr('title', 'Take away every value given here').appendTo(bar);
     this._on(this._loadBtn, { click: () => this._load() });
@@ -274,7 +276,7 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
 
   _save() {
     const url = URL.createObjectURL(new Blob([this._fileText()], { type: 'application/json' }));
-    const a = $('<a>').attr({ href: url, download: this._modelName() + '.spf' }).appendTo(document.body);
+    const a = $('<a>').attr({ href: url, download: this._modelName() + '.parameters.json' }).appendTo(document.body);
     a[0].click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
