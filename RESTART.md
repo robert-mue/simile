@@ -7,9 +7,9 @@ embedded-widget pages. Brought up to date 2026-11-01.
 **NOW: nkometou.pl** — Jasper's large old-Simile model (99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
 language (events apart). See "Now: nkometou.pl" below and
-`NOTE-nkometou.md`. RELEASED as **2026-10-31b** (the latest): SATELLITE
-submodels and TABLES read from data files.
-Done since, NOT RELEASED (4bfeaf0): **PARAMETERS** — fixed and variable,
+`NOTE-nkometou.md`. RELEASED as **2026-10-31b**: SATELLITE submodels and
+TABLES read from data files. RELEASED as **2026-11-01** (the latest):
+**PARAMETERS** — fixed and variable,
 Simile's "Data source" in the dialog, the **Parameters panel** with values
 over time and JSON parameter files (`NOTE-file-parameters.md`, the design
 and Robert's decisions). Next: the **crossing forms** (Robert asked what
@@ -150,7 +150,7 @@ at a time, with a small test model for each (he made
   **Table** tab in the property dialog. All 43 tables in use kept; the
   other 3 tables and 10 graphs are on orphan function nodes Simile never
   uses. A table model compiles and runs (v = [5,7,9], total 21).
-- **Done — parameters** (2026-10-31/11-01, not released; design, findings
+- **Done — parameters** (2026-10-31/11-01, released 2026-11-01; design, findings
   in Simile's source and Robert's decisions: `NOTE-file-parameters.md`).
   Simile's "Data source": Derived / **Variable parameter** (read every step:
   a slider, or values over time) / **Fixed parameter** (`param_type=file`,
