@@ -136,7 +136,7 @@ model on SimiLive.
 ## Now: nkometou.pl — covering the whole language (Robert, 2026-10-31)
 
 `~/Projects/simile_models/nkometou.pl` (1.75 MB, Simile v7.5, plain Prolog;
-Jasper forwarded it at Robert's request — not his model; a second, larger one exists. Kept OUTSIDE the repo, `~/Projects/reference_models/nkometou/` with its `.spf` — not to be published until its terms are settled). Robert:
+Jasper forwarded it at Robert's request — not his model; a second, larger one exists. Kept OUTSIDE the repo, `~/Projects/reference_models/nkometou/`: `nkometou.json` + `nkometou.parameters.json` (what to load), the originals `.pl` + `.spf` (never renamed), a README — one directory per model, Robert's rule; not to be published until its terms are settled). Robert:
 not a good strategy to work through its whole error report; take one area
 at a time, with a small test model for each (he made
 `satellite_submodel.json` / `.pl` for the first). Full survey and order:
