@@ -24,8 +24,16 @@ value-less variable parameters run at their range's MIDPOINT, booleans as
 FALSE (AD HOC, to revisit); our parameter files saved as
 `<model>.parameters.json`. **nkometou RUNS in the app with its real
 parameter values** (100 time units in 74 s). Its files live OUTSIDE the
-public repo: `~/Projects/reference_models/nkometou/`. NEXT: Robert is
-LOOKING AT nkometou himself first; then the **Values table** display
+public repo: `~/Projects/reference_models/nkometou/`. Then (2026-11-02,
+9f85009 … 20aa18a) **large diagrams made workable**, after Robert found
+nkometou's diagram overlapping and "Page Unresponsive" on load and on
+drag: GHOSTED drags (all five kinds), one redraw per model change, a
+memoised drawing (redraw 33 s → 0.5 s), and **SCALED SUBMODELS** as in
+Simile (77 of nkometou's 99) — which found that our EXPORTER wrote
+submodel contents in the wrong frame (fixed; roundtrip now compares
+layout). See "Done: large diagrams" below. NEXT: Robert to look at
+nkometou's diagram (re-open the REGENERATED `nkometou.json`); open: a
+control for a submodel's scale. Then the **Values table** display
 (proposed, he has not yet chosen). Release only when Robert says so.
 
 Before that: **widgets the user
@@ -245,6 +253,55 @@ at a time, with a small test model for each (he made
 - Found on the way (parameters), fixed: `if'Ta'>0` imported as `ifTa` (`plainNames`);
   `"false"` exported bare (now the atom `'"false"'`); units lost on a
   variable with no value and no function node.
+
+## Done: large diagrams — nkometou workable (Robert, 2026-11-02; NOT released)
+
+Robert: nkometou's submodels overlapped even zoomed in, and the page went
+"Unresponsive" on load and on any drag. Measured: a full redraw took 33 s
+(completeness checks 17.5 s, arcs 15 s), redone on every pointer move.
+Agreed order (Robert): ghosting, then speed, then scaled submodels.
+
+- **Ghosting** (9f85009, 525bf80; Robert's design: the moving set found
+  ONCE at the drag's start from reverse lookups built with the graph;
+  several nodes and whole submodels; arcs at a moving flow's valve too —
+  "no third-order arcs": influences have no midpoint attachments).
+  `_ghostBegin` sorts rigid (one transform per layer) / cut arcs (redrawn
+  alone) / sliding valves; `_ghostResize`, `_ghostStill` (port, bend);
+  label drag moves only the label; `_render` is put off while a ghost
+  lives; the drop redraws once. Editor tests: each ghost == what its drop
+  draws (`t.ghostDrag`, `t.shown`, `t.sameAs`).
+- **The hang was not the drag**: every userData WRITE notified the diagram,
+  which redrew in full — a dropped submodel writes one position per element
+  (1091 for nkometou's largest), and undo replays them all. Now
+  `_renderSoon` (one redraw per change, a microtask later; an explicit
+  `_render` cancels it). `descendantsOf` was O(n²) (3.3 s → 29 ms).
+- **Speed** (4db8194): `Diagram.memo(fn)` — inside, whole-model facts
+  (arcs at an element, roles of an association, conditions, a valve's
+  flow, scales) are found by ONE scan; outside, as before. ONLY for passes
+  that do not write. The drawing and `equationCheck.audit` use it. The
+  widget keeps red/black per element until a NON-layout change
+  (`_modelChanged`). Identical answers: all 4549 nkometou elements, all
+  4812 in the catalogue. nkometou now: open 2.1 s (longest freeze 0.68 s),
+  redraw 0.4–0.5 s, drag 1–4 ms a frame, drop/undo ~0.4 s.
+- **Scaled submodels** (20aa18a): `layout/<sub>.scale`;
+  `Diagram.scaleIn/scaleOf/contentScale`; `Diagram.box` scales node
+  glyphs; styles.css multiplies widths and names by `--k` (`_scaled`);
+  arc segments at the scale of the submodel they run through
+  (`_segmentScales`), arrowheads per scale (`_markerFor`); clamp margins
+  scale; zoom 0.05–60×. Import: frame = origin + scale (box / internal
+  extent; x and y agree within 2.3% on nkometou, so one number), composed
+  down the nesting. Export: the inverse (`frame`, `local`).
+- **Found: the exporter wrote world coordinates** for submodel contents
+  (Simile wants them relative to the submodel): every exported model with
+  submodels was displaced in Simile. Fixed; `test/roundtrip.html` now
+  compares positions, sizes and scales (`layoutDiff`): 41 of 72 fail it
+  with the old exporter, none now.
+- `~/Projects/reference_models/nkometou/nkometou.json` REGENERATED from the
+  `.pl` (only `layout` differs; nodes, arcs, submodels identical). A copy
+  imported before 2026-11-02 has no scales: re-open or re-import.
+- **Open**: no control to change a scale (resizing changes the box, not the
+  scale — a modifier-resize could scale contents with it); a submodel drawn
+  by hand starts at 1.
 
 ## Done: widgets the user adds (Robert, 2026-10-22; released 2026-10-25)
 
@@ -1099,6 +1156,15 @@ association-alias convention (there isn't one), `border` vs the legacy plain
   it, and a port sits on the edge where an arc crosses it.
 - **`pkill -f <pattern>` kills its own shell** when the pattern appears in
   the command line running it. Anchor it: `pkill -f "^/opt/google/chrome/chrome --headless"`.
+- **Headless Chrome runs on Robert's machine — CAP IT.** A stuck test page
+  ran his fan for half an hour (2026-11-02). Start it as `timeout 300 nice
+  -n 19 /opt/google/chrome/chrome --headless=new …` (run in background),
+  and give every script a `timeout` too. A long `ev()` blocks cdp.py: for
+  slow work, start it in `setTimeout` and poll a window variable.
+- **The diagram redraws a microtask AFTER a write** (`_renderSoon`), not
+  inside it. Code that writes and then reads the drawing at once must call
+  `_render()` itself (gesture handlers do). And `Diagram.memo` must never
+  wrap anything that writes: its index would be stale.
 - **Round-tripping is not running.** A model can reach a perfect fixed point and
   still produce Prolog that Simile refuses to build — the comparison is our
   model against itself and never asks Simile anything. Sampled 14 of the 54: 12
