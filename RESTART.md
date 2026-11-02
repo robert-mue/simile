@@ -17,7 +17,7 @@ specified patterns"), checked against all 4783 `use` terms Simile wrote
 (`tools/headless/scripts/crossings.py`: 4763 agree, the rest stale or
 unfinished). Role arrows crossing boundaries, two associations on one
 influence, `size('caption')`.
-Done since, NOT RELEASED (2026-11-02, 05e9ac3 … b85e901): **values of any
+RELEASED as **2026-11-02** (the latest; Robert on nkometou: "fantastic improvement for loading and dragging"): **values of any
 shape read** from a model running in the page (`sx_value`, recursive);
 **Simile's own parameter files read** (XML and the old text format);
 value-less variable parameters run at their range's MIDPOINT, booleans as
@@ -254,7 +254,7 @@ at a time, with a small test model for each (he made
   `"false"` exported bare (now the atom `'"false"'`); units lost on a
   variable with no value and no function node.
 
-## Done: large diagrams — nkometou workable (Robert, 2026-11-02; NOT released)
+## Done: large diagrams — nkometou workable (Robert, 2026-11-02; released 2026-11-02)
 
 Robert: nkometou's submodels overlapped even zoomed in, and the page went
 "Unresponsive" on load and on any drag. Measured: a full redraw took 33 s
