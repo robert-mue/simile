@@ -132,6 +132,68 @@
       return this.check(a === b, what + ': ' + JSON.stringify(a) + ', expected ' + JSON.stringify(b));
     },
 
+    // ---- what is on screen ----
+
+    /**
+     * Where each arc segment starts and ends, each glyph's centre and each
+     * port handle, on screen — whichever element is drawing it, so a ghost
+     * and the drawing after the drop can be compared.
+     */
+    shown: function () {
+      var out = {};
+      var root = this.inst._svg;
+      root.querySelectorAll('path.slx-arc').forEach(function (p) {
+        if (p.style.display === 'none' || !p.getAttribute('d')) return;
+        var id = p.getAttribute('data-id') || p.getAttribute('data-ghost-for');
+        var m = p.getScreenCTM();
+        var n = p.getTotalLength();
+        [0, n].forEach(function (l, k) {
+          var q = p.getPointAtLength(l);
+          out[id + '/' + p.getAttribute('data-segment') + (k ? '>' : '<')] =
+            { x: m.a * q.x + m.c * q.y + m.e, y: m.b * q.x + m.d * q.y + m.f };
+        });
+      });
+      root.querySelectorAll('.slx-node[data-id], .slx-submodel[data-id], [data-port]').forEach(function (g) {
+        var r = g.getBoundingClientRect();
+        out[g.getAttribute('data-id') || g.getAttribute('data-port')] =
+          { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
+      });
+      return out;
+    },
+    /** The ghost (from `shown`) against what the drop drew. */
+    sameAs: function (ghost, drawn, what) {
+      var self = this;
+      var keys = Object.keys(drawn);
+      this.check(keys.length === Object.keys(ghost).length,
+        what + ': ghost shows ' + Object.keys(ghost).length + ' things, the drop ' + keys.length);
+      keys.forEach(function (k) {
+        var g = ghost[k], r = drawn[k];
+        var ok = g && Math.hypot(g.x - r.x, g.y - r.y) < 0.5
+          && (r.w == null || (Math.abs(g.w - r.w) < 0.5 && Math.abs(g.h - r.h) < 0.5));
+        self.check(ok, what + ': ' + k + ' ghosted at ' + (g ? round(g.x) + ',' + round(g.y) : '(none)')
+          + ', drawn at ' + round(r.x) + ',' + round(r.y));
+      });
+    },
+    /**
+     * Press at `from`, move to `to` in steps, paint the ghost as the next frame
+     * would, and drop: the ghost must be what the drop draws. `target` is
+     * pressed directly when given (a port handle, an arc's strip).
+     */
+    ghostDrag: function (from, to, what, target) {
+      this.inst._lastClick = null;
+      this.pointer('pointerdown', this.at(from[0], from[1]), target);
+      for (var i = 1; i <= 4; i++) {
+        this.pointer('pointermove', this.at(from[0] + (to[0] - from[0]) * i / 4, from[1] + (to[1] - from[1]) * i / 4));
+      }
+      var g = this.inst._ghost;
+      if (!this.check(!!g, what + ': no ghost')) { this.pointer('pointerup', this.at(to[0], to[1])); return; }
+      g.paint();
+      var ghost = this.shown();
+      this.pointer('pointerup', this.at(to[0], to[1]));
+      this.check(!this.inst._ghost, what + ': the ghost outlived the drop');
+      this.sameAs(ghost, this.shown(), what);
+    },
+
     // ---- building, through the gestures ----
 
     /** A submodel dragged out with the tool, from (x1,y1) to (x2,y2), named. */
@@ -261,39 +323,6 @@
         t.d.addInfluence(w, v);
         t.inst._render();
 
-        // Where each arc segment starts and ends, and each glyph's centre, on
-        // screen — whichever element is drawing it.
-        function shown() {
-          var out = {};
-          var root = t.inst._svg;
-          root.querySelectorAll('path.slx-arc').forEach(function (p) {
-            if (p.style.display === 'none' || !p.getAttribute('d')) return;
-            var id = p.getAttribute('data-id') || p.getAttribute('data-ghost-for');
-            var m = p.getScreenCTM();
-            var n = p.getTotalLength();
-            [0, n].forEach(function (l, k) {
-              var q = p.getPointAtLength(l);
-              out[id + '/' + p.getAttribute('data-segment') + (k ? '>' : '<')] =
-                { x: m.a * q.x + m.c * q.y + m.e, y: m.b * q.x + m.d * q.y + m.f };
-            });
-          });
-          root.querySelectorAll('.slx-node[data-id], .slx-submodel[data-id]').forEach(function (g) {
-            var r = g.getBoundingClientRect();
-            out[g.getAttribute('data-id')] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-          });
-          return out;
-        }
-        function compare(ghost, drawn, what) {
-          var keys = Object.keys(drawn);
-          t.check(keys.length === Object.keys(ghost).length,
-            what + ': ghost shows ' + Object.keys(ghost).length + ' things, the drop ' + keys.length);
-          keys.forEach(function (k) {
-            var g = ghost[k], r = drawn[k];
-            t.check(g && Math.hypot(g.x - r.x, g.y - r.y) < 0.5,
-              what + ': ' + k + ' ghosted at ' + (g ? round(g.x) + ',' + round(g.y) : '(none)')
-              + ', drawn at ' + round(r.x) + ',' + round(r.y));
-          });
-        }
         function ghosted(id, from, to, what) {
           t.inst._lastClick = null;
           t.pointer('pointerdown', t.at(from[0], from[1]));
@@ -303,10 +332,10 @@
           var g = t.inst._ghost;
           if (!t.check(!!g, what + ': no ghost')) return;
           t.inst._ghostDraw(g);
-          var ghost = shown();
+          var ghost = t.shown();
           t.pointer('pointerup', t.at(to[0], to[1]));
           t.check(!t.inst._ghost, what + ': the ghost outlived the drop');
-          compare(ghost, shown(), what);
+          t.sameAs(ghost, t.shown(), what);
         }
 
         // A submodel: its contents ride along, the flow out of it is cut and
@@ -317,6 +346,43 @@
         t.inst._sel = [b, v];
         ghosted(b, [150, 110], [120, 150], 'selection');
         t.near(t.d.box(v).cy, 240, 'rate carried');
+      },
+    },
+    {
+      name: 'resizing, a port and a bend are ghosted too',
+      guards: 'a submodel resized, a port dragged along its boundary and an influence bent each redraw only what they change, and the ghost is what the drop draws',
+      run: function (t) {
+        var s = t.submodel(250, 50, 420, 210, 'patch');
+        var a = t.place('stock', 300, 110, 'soil');
+        var w = t.place('variable', 350, 170, 'rain');
+        var b = t.place('stock', 120, 110, 'store');
+        var v = t.place('variable', 120, 200, 'rate');
+        var flow = t.d.addFlow({ from: a, to: b });
+        t.d.addInfluence(v, flow.valve);
+        t.d.addInfluence(w, v);
+        var inner = t.d.addInfluence(w, a);
+        t.inst._render();
+
+        // Resize from the top-left corner: the box grows, and the ports on
+        // its left edge (the flow and the influence leaving it) go with it.
+        t.ghostDrag([251, 51], [235, 40], 'resize');
+        t.near(t.box(s).l, 234, 'resized left edge');    // pressed 1 inside it
+
+        // A port, along its edge.
+        var ports = t.d.portsOn(s);
+        if (t.check(ports.length > 0, 'no port on the submodel')) {
+          var p = t.d.layout(ports[0]);
+          var h = t.inst._svg.querySelector('[data-port="' + ports[0] + '"]');
+          t.ghostDrag([p.x, p.y], [p.x, p.y + 15], 'port', h);
+        }
+
+        // A bend, by its strip at the middle of the arc.
+        var strip = t.inst._svg.querySelector('path.slx-arc-hit[data-id="' + inner + '"]');
+        if (t.check(!!strip, 'no strip for the inner influence')) {
+          var mid = strip.getPointAtLength(strip.getTotalLength() / 2);
+          t.ghostDrag([mid.x, mid.y], [mid.x + 12, mid.y - 12], 'bend', strip);
+          t.check(t.d.arcBow(inner) != null, 'the bend was not kept');
+        }
       },
     },
     {

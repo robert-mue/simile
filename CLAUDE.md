@@ -64,7 +64,8 @@ footing (`src/widgets/grid.js` is the first).
   made with each drawing), it sorts what it carries — rigid (moved by one
   transform per layer), cut arcs (redrawn alone each frame), and a cut
   flow's valve with the arcs at it; no third order. A label drag moves only
-  the label. Checked: `test/editor-tests.js` (the ghost is what the drop draws).
+  the label; a resize, a port drag and a bend redraw only the box, handle
+  and arcs they change (`_ghostResize`, `_ghostStill`). Checked: `test/editor-tests.js` (the ghost is what the drop draws).
   It redraws ONCE per model change, however many writes (`_renderSoon`), and
   keeps each element's red/black until the model changes in anything but
   layout (`_incomplete`). A drawing runs inside **`Diagram.memo`**: for a

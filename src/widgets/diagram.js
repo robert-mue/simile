@@ -899,10 +899,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         if (q.x !== p.x || q.y !== p.y) preview[p.key] = q;
       });
       this._drag = { id, moves: preview };
-      this._render();
+      // Ghosted (`_ghostResize`): the box, its ports and the arcs they carry.
+      if (!ghost) ghost = this._ghostResize(d, id, ports.map((p) => p.key));
+      this._ghostFrame(ghost);
     };
+    let ghost = null;
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      if (ghost) this._ghostEnd(ghost);
       const drag = this._drag;
       this._drag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }
@@ -1378,10 +1382,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // exceeds a semicircle, which a large-arc-flag of 0 cannot express, and
       // the curve would silently snap to the minor arc on the far side.
       this._bowDrag = { id, bow: Math.max(-this._MAX_BOW, Math.min(this._MAX_BOW, -side / c)) };
-      this._render();
+      // Ghosted: this arc alone is redrawn.
+      if (!ghost) ghost = this._ghostStill(d, [id], () => {}, null, () => this._bowDrag.bow);
+      this._ghostFrame(ghost);
     };
+    let ghost = null;
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      if (ghost) this._ghostEnd(ghost);
       const final = this._bowDrag && this._bowDrag.bow;
       this._bowDrag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
@@ -1474,10 +1482,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const move = (ev) => {
       const w = this._toWorld(ev.clientX, ev.clientY);
       this._portDrag = { [port.key]: this._ontoRect(w, rect) };
-      this._render();
+      // Ghosted: the handle, and the arcs passing through it.
+      if (!ghost) {
+        const handle = this._layer.overlay.querySelector('[data-port="' + port.key + '"]');
+        ghost = this._ghostStill(d, port.arcs || [], () => {
+          const q = this._portDrag[port.key];
+          if (handle) { handle.setAttribute('cx', q.x); handle.setAttribute('cy', q.y); }
+        }, (p) => (p.port === port.key ? this._portDrag[port.key] : p));
+      }
+      this._ghostFrame(ghost);
     };
+    let ghost = null;
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      if (ghost) this._ghostEnd(ghost);
       const final = this._portDrag && this._portDrag[port.key];
       this._portDrag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
@@ -1757,7 +1775,6 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     touched.forEach((a) => { if (together(a, moves)) rigid.add(a); else cut.push(a); });
     valves.forEach((v) => { if (moves(v)) rigid.add(v); });
     const sliding = new Set(valves.filter((v) => !rigid.has(v)));
-    const cutSet = new Set(cut);
 
     // Where an end's box is at an offset: carried, riding on a flow whose
     // ends are carried, or where it was.
@@ -1778,7 +1795,6 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // The drawing's own elements, sorted once.
     const wraps = [];
     const slid = [];
-    const labels = {};
     this._LAYERS.forEach((name) => {
       const layer = this._layer[name];
       const wrap = this._el('g', { class: 'slx-ghost-carried' });
@@ -1788,46 +1804,27 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         if (!id) return;
         if (rigid.has(id)) wrap.appendChild(el);
         else if (sliding.has(id)) slid.push({ el, id });
-        else if (cutSet.has(id)) {
-          if (el.hasAttribute('data-label-for')) labels[id] = el;
-          else el.style.display = 'none';
-        }
       });
       layer.appendChild(wrap);
       wraps.push(wrap);
     });
 
-    // A cut arc is redrawn through its own paths, laid where the arcs are.
-    const ghostLayer = this._el('g', { class: 'slx-ghost', style: 'pointer-events:none' });
-    this._layer.arcs.appendChild(ghostLayer);
-    const arcs = cut.map((a) => {
-      const arc = d.get(a);
-      const mid = d.arcPoints(a).slice(1, -1);
-      const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
-      const cls = 'slx-arc slx-arc-' + arc.type + (ports(a).length ? ' slx-arc-split' : '')
-        + (this._sel.indexOf(a) >= 0 ? ' slx-arc-selected' : '');
-      const paths = [];
-      for (let i = 0; i <= mid.length; i++) {
-        const path = this._el('path', { class: cls, 'data-ghost-for': a, 'data-segment': i });
-        if (i === mid.length) path.setAttribute('marker-end', 'url(#' + marker + ')');
-        ghostLayer.appendChild(path);
-        paths.push(path);
-      }
-      return {
-        arc, mid, paths, bow: this._bowFor(d, a, arc),
-        label: labels[a], off: d.labelOffset(a) || { dx: 0, dy: 0 },
-      };
-    });
-
-    this._ghost = { boxAt, box0, movers, wraps, slid, arcs, frame: null, dx: 0, dy: 0 };
-    return this._ghost;
+    const g = { boxAt, box0, movers, wraps, slid, arcs: this._ghostArcs(d, cut), frame: null, dx: 0, dy: 0 };
+    g.paint = () => this._ghostDraw(g);
+    this._ghost = g;
+    return g;
   },
 
   /** Ask for the ghost at an offset; drawn on the next frame, once however many ask. */
   _ghostTo(g, dx, dy) {
     g.dx = dx;
     g.dy = dy;
-    if (g.frame == null) g.frame = requestAnimationFrame(() => { g.frame = null; this._ghostDraw(g); });
+    this._ghostFrame(g);
+  },
+
+  /** Paint a ghost on the next frame — once, however many pointer events ask first. */
+  _ghostFrame(g) {
+    if (g.frame == null) g.frame = requestAnimationFrame(() => { g.frame = null; g.paint(); });
   },
 
   _ghostDraw(g) {
@@ -1839,18 +1836,126 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const b = g.boxAt(s.id, dx, dy);
       s.el.setAttribute('transform', `translate(${b.cx - b0.cx},${b.cy - b0.cy})`);
     });
-    g.arcs.forEach((c) => {
-      const a = g.boxAt(c.arc.from, dx, dy);
-      const z = g.boxAt(c.arc.to, dx, dy);
+    this._ghostArcsDraw(g.arcs, (k) => g.boxAt(k, dx, dy),
+      (p) => (g.movers.has(p.port) ? { x: p.x + dx, y: p.y + dy } : p));
+  },
+
+  /**
+   * A ghost for a gesture that moves no glyph — a port, or an arc's bend: the
+   * arcs it changes are redrawn each frame, after `paint` has moved whatever
+   * else it moves. Ends stay where they are; `portOf` and `bowOf` say what
+   * the gesture changes (see `_ghostArcsDraw`).
+   */
+  _ghostStill(d, arcIds, paint, portOf, bowOf) {
+    const boxes = {};
+    const boxOf = (k) => boxes[k] || (boxes[k] = Sienna.Diagram.memo(() => d.box(k)));
+    const arcs = this._ghostArcs(d, arcIds);
+    const g = { frame: null };
+    g.paint = () => {
+      paint();
+      this._ghostArcsDraw(arcs, boxOf, portOf || ((p) => p), bowOf);
+    };
+    this._ghost = g;
+    return g;
+  },
+
+  /**
+   * A ghost for resizing a submodel: its box is redrawn in place (in the
+   * same spot in its layer, so what it holds stays on top), the handles of
+   * the ports on its boundary moved, and the arcs at it or through those
+   * ports redrawn — all from the preview in `_drag.moves`.
+   */
+  _ghostResize(d, id, portKeys) {
+    const moving = new Set(portKeys);
+    const arcIds = new Set((this._index && this._index.at[id]) || []);
+    if (moving.size) {
+      Sienna.Diagram.memo(() => d.allPorts()).forEach((p) => {
+        if (moving.has(p.key)) p.arcs.forEach((a) => arcIds.add(a));
+      });
+    }
+    const arcs = this._ghostArcs(d, Array.from(arcIds));
+    const handles = portKeys.map((k) => this._layer.overlay.querySelector('[data-port="' + k + '"]'));
+    const boxes = {};
+    const sub = d.get(id);
+    const g = { frame: null };
+    g.paint = () => {
+      const moves = (this._drag && this._drag.moves) || {};
+      // The box itself, redrawn where it was.
+      const old = this._layer.bodies.querySelector('[data-id="' + id + '"]');
+      const next = old ? old.nextSibling : null;
+      if (old) old.remove();
+      const label = this._layer.labels.querySelector('[data-label-for="' + id + '"]');
+      if (label) label.remove();
+      this._renderSubmodel(d, id, sub);
+      if (next) this._layer.bodies.insertBefore(this._layer.bodies.lastChild, next);
+      const ring = this._layer.overlay.querySelector('[data-ring-for="' + id + '"]');
+      if (ring) {
+        const b = d.box(id, moves);
+        ring.setAttribute('x', b.cx - b.w / 2 - 4); ring.setAttribute('y', b.cy - b.h / 2 - 4);
+        ring.setAttribute('width', b.w + 8); ring.setAttribute('height', b.h + 8);
+      }
+      portKeys.forEach((k, i) => {
+        const q = moves[k];
+        if (q && handles[i]) { handles[i].setAttribute('cx', q.x); handles[i].setAttribute('cy', q.y); }
+      });
+      this._ghostArcsDraw(arcs,
+        (k) => (k === id ? d.box(id, moves) : boxes[k] || (boxes[k] = Sienna.Diagram.memo(() => d.box(k)))),
+        (p) => moves[p.port] || p);
+    };
+    this._ghost = g;
+    return g;
+  },
+
+  /**
+   * Ghosting for arcs: each one's drawn paths (and hit strips) hidden, and a
+   * path per segment of its own laid where the arcs are, to be redrawn by
+   * `_ghostArcsDraw` from wherever its ends and ports are meanwhile. Its label,
+   * if it has one, is the drawing's own, moved.
+   */
+  _ghostArcs(d, ids) {
+    const layer = this._el('g', { class: 'slx-ghost', style: 'pointer-events:none' });
+    this._layer.arcs.appendChild(layer);
+    return ids.map((a) => {
+      const arc = d.get(a);
+      this._layer.arcs.querySelectorAll('[data-id="' + a + '"]').forEach((el) => { el.style.display = 'none'; });
+      const mid = d.arcPoints(a).slice(1, -1);
+      const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
+      const cls = 'slx-arc slx-arc-' + arc.type + (d.portsFor(a).length ? ' slx-arc-split' : '')
+        + (this._sel.indexOf(a) >= 0 ? ' slx-arc-selected' : '');
+      const paths = [];
+      for (let i = 0; i <= mid.length; i++) {
+        const path = this._el('path', { class: cls, 'data-ghost-for': a, 'data-segment': i });
+        if (i === mid.length) path.setAttribute('marker-end', 'url(#' + marker + ')');
+        layer.appendChild(path);
+        paths.push(path);
+      }
+      return {
+        id: a, arc, mid, paths, bow: this._bowFor(d, a, arc),
+        label: this._layer.labels.querySelector('[data-label-for="' + a + '"]'),
+        off: d.labelOffset(a) || { dx: 0, dy: 0 },
+      };
+    });
+  },
+
+  /**
+   * Redraw ghosted arcs: `boxOf(id)` is where an end's glyph is now,
+   * `portOf(p)` where a port is (p as it was: {x, y, port}), `bowOf(c)`, if
+   * given, an arc's bend.
+   */
+  _ghostArcsDraw(arcs, boxOf, portOf, bowOf) {
+    arcs.forEach((c) => {
+      const a = boxOf(c.arc.from);
+      const z = boxOf(c.arc.to);
       const raw = [{ x: a.cx, y: a.cy }].concat(
-        c.mid.map((p) => (g.movers.has(p.port) ? { x: p.x + dx, y: p.y + dy } : { x: p.x, y: p.y })),
+        c.mid.map((p) => { const q = portOf(p); return { x: q.x, y: q.y }; }),
         [{ x: z.cx, y: z.cy }]);
+      const bow = bowOf ? bowOf(c) : c.bow;
       const pts = this._trimChain(c.arc, raw, a, z);
-      this._segmentPaths(c.arc, pts, c.bow, a, z).forEach((dAttr, i) => {
+      this._segmentPaths(c.arc, pts, bow, a, z).forEach((dAttr, i) => {
         if (c.paths[i]) c.paths[i].setAttribute('d', dAttr || '');
       });
       if (c.label) {
-        const at = this._arcLabelAt(pts, c.bow);
+        const at = this._arcLabelAt(pts, bow);
         c.label.setAttribute('x', at.x + (c.off.dx || 0));
         c.label.setAttribute('y', at.y + (c.off.dy || 0));
       }
