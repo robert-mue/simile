@@ -115,8 +115,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     // Live-update on model change (undo, a sibling panel, an import) — ONCE
     // per change, however many writes it makes (`_renderSoon`).
-    if (this._bound()) this._watchModel(this._renderSoon);
-    else this._unsub = Sienna.userData.subscribe(this.options.path, () => this._renderSoon());
+    if (this._bound()) this._watchModel(this._modelChanged);
+    else this._unsub = Sienna.userData.subscribe(this.options.path, (c) => this._modelChanged(c));
 
     this._render();
   },
@@ -602,6 +602,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * in one task; the redraw comes straight after it, before the screen is
    * painted. A redraw asked for meanwhile does the job and cancels this one.
    */
+  /**
+   * The model changed. What is red or black is kept until it changes in
+   * anything but layout: where things are drawn cannot make an equation
+   * complete or incomplete, and on a large model deriving it is most of a
+   * redraw — so a move, a resize or a bend keeps every answer.
+   */
+  _modelChanged(change) {
+    if (!change || !/\/layout(\/|$)/.test(change.ref || '')) this._complete = null;
+    this._renderSoon();
+  },
+
   _renderSoon() {
     if (this._soon) return;
     this._soon = true;
@@ -622,6 +633,11 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       return;
     }
 
+    Sienna.Diagram.memo(() => this._draw(d));
+  },
+
+  /** The drawing itself: one pass that only reads, so memoised (`Diagram.memo`). */
+  _draw(d) {
     const model = d.model();
     this._index = this._arcIndex(model);
 
@@ -1022,7 +1038,15 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    */
   _incomplete(d, id) {
     if (!Sienna.equationCheck) return false;
-    return !Sienna.equationCheck.completeness(d, id).complete;
+    // Kept per element until the model changes (`_modelChanged`): asked for
+    // twice per element per drawing (glyph and name), and every drawing.
+    if (!this._complete || this._completeFor !== d.path) {
+      this._complete = {};
+      this._completeFor = d.path;
+    }
+    const c = this._complete;
+    if (!(id in c)) c[id] = !Sienna.equationCheck.completeness(d, id).complete;
+    return c[id];
   },
 
   _renderNode(d, id, node) {

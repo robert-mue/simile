@@ -65,6 +65,13 @@ footing (`src/widgets/grid.js` is the first).
   transform per layer), cut arcs (redrawn alone each frame), and a cut
   flow's valve with the arcs at it; no third order. A label drag moves only
   the label. Checked: `test/editor-tests.js` (the ghost is what the drop draws).
+  It redraws ONCE per model change, however many writes (`_renderSoon`), and
+  keeps each element's red/black until the model changes in anything but
+  layout (`_incomplete`). A drawing runs inside **`Diagram.memo`**: for a
+  pass that only reads, the whole-model facts (arcs at an element, an
+  association's roles, conditions, a valve's flow) are found by one scan
+  and looked up; outside one, derived afresh as before. The audit uses it
+  too. nkometou: a redraw 33 s → 0.5 s.
 - `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,
   submodels, parentage, naming. Notation-neutral; knows nothing about drawing.
 - `src/schema/simile-v1.js` — the **notation**, as plain data: vocabulary,

@@ -34,6 +34,51 @@
     return m[1] === 'submodel' ? 'submodels' : m[1] + 's';
   }
 
+  // --- memo scope ---------------------------------------------------------
+  //
+  // Facts derived by scanning the whole model — the arcs at an element, the
+  // role arcs of an association, whether a submodel holds a condition — are
+  // asked for over and over in one pass: a drawing checks every element's
+  // equations, and each check asks them again. On nkometou (2,883 arcs) that
+  // was nine million arc lookups and most of a 13-second redraw. Inside
+  // `Diagram.memo(fn)` they are found ONCE per model, by one scan, and looked
+  // up. Only for the length of `fn`, because nothing here hears the model
+  // change: a pass that does not write can be memoised, nothing longer.
+  // Outside one, every answer is derived afresh, exactly as before.
+
+  var scope = null;                   // model -> its index, while memo runs
+
+  function derived(model) {
+    if (!scope || !model) return null;
+    var x = scope.get(model);
+    if (!x) { x = indexModel(model); scope.set(model, x); }
+    return x;
+  }
+
+  function indexModel(model) {
+    var at = {};
+    var roles = {};
+    var cond = {};
+    var host = {};
+    var arcs = model.arcs || {};
+    Object.keys(arcs).forEach(function (a) {
+      var arc = arcs[a];
+      if (!arc) return;
+      var ends = [];
+      [arc.from, arc.to, arc.valve].forEach(function (e) {
+        if (e != null && ends.indexOf(e) < 0) ends.push(e);
+      });
+      ends.forEach(function (e) { (at[e] = at[e] || []).push(a); });
+      if (arc.type === 'role') (roles[arc.to] = roles[arc.to] || []).push(a);
+      if (arc.valve != null && host[arc.valve] == null) host[arc.valve] = a;
+    });
+    var nodes = model.nodes || {};
+    Object.keys(nodes).forEach(function (n) {
+      if (nodes[n] && nodes[n].type === 'condition') cond[nodes[n].parent] = true;
+    });
+    return { at: at, roles: roles, cond: cond, host: host };
+  }
+
   /**
    * `text` with every reference to the name `was` made `now`, found by the
    * equation parser so that only identifiers change — not `accounts`, not a
@@ -307,10 +352,23 @@
    * makes it an association (§4: inferred from role arcs, never stored).
    */
   Diagram.rolesOf = function (model, subId) {
+    var x = derived(model);
+    if (x) return (x.roles[subId] || []).slice();
     var arcs = model.arcs || {};
     return Object.keys(arcs).filter(function (id) {
       return arcs[id].type === 'role' && arcs[id].to === subId;
     });
+  };
+
+  /**
+   * Run `fn` with the model's whole-model facts found once and looked up (see
+   * the memo scope, above). For a pass that reads and does not write — a
+   * drawing, a check. Nested calls share the outer scope.
+   */
+  Diagram.memo = function (fn) {
+    if (scope) return fn();
+    scope = new WeakMap();
+    try { return fn(); } finally { scope = null; }
   };
 
   Diagram.isAssociation = function (model, subId) {
@@ -426,6 +484,8 @@
   // (tools/headless/scripts/crossings.py).
 
   function hasCondition(model, subId) {
+    var x = derived(model);
+    if (x) return !!x.cond[subId];
     var nodes = model.nodes || {};
     return Object.keys(nodes).some(function (id) {
       return nodes[id].type === 'condition' && nodes[id].parent === subId;
@@ -859,6 +919,8 @@
 
     /** Arcs with `id` at either end (the reverse index of §10.2, derived). */
     arcsAt: function (id) {
+      var x = derived(this.model());
+      if (x) return (x.at[id] || []).slice();
       var self = this;
       return this.ids('arcs').filter(function (a) {
         var arc = self.get(a);
@@ -985,6 +1047,8 @@
 
     /** The arc an attachment node (e.g. a valve) belongs to, or null. */
     hostArcOf: function (nodeId) {
+      var x = derived(this.model());
+      if (x) return x.host[nodeId] != null ? this.get(x.host[nodeId]) : null;
       var self = this;
       var found = null;
       this.ids('arcs').some(function (a) {

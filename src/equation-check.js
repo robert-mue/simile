@@ -427,11 +427,14 @@
    * is reported alongside a wrong one: both leave the model unable to run.
    */
   function audit(d) {
-    var out = [];
-    ['nodes', 'submodels', 'arcs'].forEach(function (fam) {
-      d.ids(fam).forEach(function (id) { out = out.concat(completeness(d, id).reasons); });
+    // A pass that only reads: the model's whole-model facts found once.
+    return Sienna.Diagram.memo(function () {
+      var out = [];
+      ['nodes', 'submodels', 'arcs'].forEach(function (fam) {
+        d.ids(fam).forEach(function (id) { out = out.concat(completeness(d, id).reasons); });
+      });
+      return out;
     });
-    return out;
   }
 
   Sienna.equationCheck = {
