@@ -384,3 +384,40 @@ Large models
 - Jasper's nkometou model (99 submodels, over 5000 influences) now
   imports, exports, compiles in the page (it takes several minutes, once)
   and runs. Many of its values cannot be shown yet.
+
+
+------------------------------------------------------------------------
+Release 2026-11-02
+------------------------------------------------------------------------
+
+Large diagrams
+- Dragging no longer redraws the whole diagram at every movement: what
+  is being dragged moves on its own, with only the arrows it pulls along
+  redrawn, and the diagram is redrawn once when it is dropped. This
+  holds for one element, several selected ones, a whole submodel, a
+  name, a submodel being resized, a crossing point and an arrow being
+  bent.
+- Drawing is much faster: the nkometou model (99 submodels, over 5000
+  influences) now opens in about two seconds instead of making the
+  browser report the page as unresponsive, and a drop or an undo takes
+  under half a second.
+- Submodels can be drawn smaller than their contents, as in Simile: a
+  submodel imported from Simile keeps the scale it had there, and its
+  contents - symbols, arrows and names - are drawn at that size inside
+  it, instead of spilling over its neighbours. Zoom in to read them;
+  the view now zooms up to 60 times.
+
+Import and export
+- Exporting a model with submodels placed their contents in the wrong
+  position when the file was opened in Simile; fixed. Positions are now
+  checked when models are converted there and back.
+
+Running models
+- Values of every shape can be read from a model running in the page:
+  lists of arrays, values per pairing, a conditional submodel's value
+  or nothing.
+- The Parameters panel reads Simile's own parameter files (.spf), as
+  well as its own (now saved as <model>.parameters.json).
+- A variable parameter with no value but a range runs at the middle of
+  its range, and a true/false one with neither runs as false. These are
+  stop-gaps, to be revisited.
