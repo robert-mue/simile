@@ -76,7 +76,7 @@
     Object.keys(nodes).forEach(function (n) {
       if (nodes[n] && nodes[n].type === 'condition') cond[nodes[n].parent] = true;
     });
-    return { at: at, roles: roles, cond: cond, host: host };
+    return { at: at, roles: roles, cond: cond, host: host, scale: {} };
   }
 
   /**
@@ -1033,14 +1033,50 @@
         }
       }
       var style = (this.schema().style || {})[el ? el.type : 'submodel'] || {};
-      if (el && mapOf(id) === 'submodels') style = (this.schema().style || {}).submodel || style;
+      var sub = el && mapOf(id) === 'submodels';
+      if (sub) style = (this.schema().style || {}).submodel || style;
+      // A submodel's box is held at the size it is drawn; a node's glyph is
+      // the notation's size, drawn at the scale of the submodels it is in.
+      var k = sub ? 1 : this.scaleOf(id);
       return {
         cx: geom.x || 0,
         cy: geom.y || 0,
-        w: geom.w != null ? geom.w : style.w || 30,
-        h: geom.h != null ? geom.h : style.h || 30,
+        w: (geom.w != null ? geom.w : style.w || 30) * k,
+        h: (geom.h != null ? geom.h : style.h || 30) * k,
         shape: style.shape,
       };
+    },
+
+    // ---- scale (a submodel drawn smaller than its contents, as in Simile) ----
+    //
+    // A submodel may show its contents scaled down, `layout/<id>.scale` (1, or
+    // absent, is full size): Simile draws one wherever its box is smaller
+    // than what it holds, and a large model relies on it — 71 of nkometou's
+    // 99 submodels. Positions stay in the one world space (§11.4); what
+    // scales is how big things are drawn — glyphs, lines, arrowheads, names —
+    // so an element is drawn at the product of the scales of every submodel
+    // it is in. Layout, not model: it changes no equation.
+
+    /** A submodel's own scale: how big its contents are drawn, relative to it. */
+    scaleIn: function (subId) {
+      var g = subId == null ? null : this.layout(subId);
+      return g && g.scale > 0 ? g.scale : 1;
+    },
+
+    /** How big an element (or a submodel's box and name) is drawn: 1 at the top level. */
+    scaleOf: function (id) {
+      var x = derived(this.model());
+      if (x && x.scale[id] != null) return x.scale[id];
+      var self = this;
+      var k = 1;
+      this.ancestorsOf(id).forEach(function (s) { k *= self.scaleIn(s); });
+      if (x) x.scale[id] = k;
+      return k;
+    },
+
+    /** The scale things INSIDE a submodel are drawn at (null: the top level, 1). */
+    contentScale: function (subId) {
+      return subId == null ? 1 : this.scaleOf(subId) * this.scaleIn(subId);
     },
 
     // ---- ports and segments (§13) ----

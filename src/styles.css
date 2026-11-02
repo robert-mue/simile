@@ -36,6 +36,11 @@
   user-select: none;
 }
 
+/* Scaled submodels: an element inside a submodel drawn smaller than its
+   contents (Simile's own way of fitting a large model; Diagram.scaleOf) carries
+   --k, its scale, and every line width and name below is multiplied by it, so
+   it is drawn as a whole at that size. Absent, 1. */
+
 /* --- nodes --------------------------------------------------------- */
 
 .slx-node rect,
@@ -43,7 +48,7 @@
 .slx-node path {
   fill: #fff;
   stroke: #222;
-  stroke-width: 0.9;
+  stroke-width: calc(0.9px * var(--k, 1));
 }
 
 /* A stock: solid box. */
@@ -95,13 +100,13 @@ text.slx-incomplete {
    it runs through (the glyphs shrank to 70% in format 3). */
 .slx-arc-flow {
   stroke: #222;
-  stroke-width: 1.9;
+  stroke-width: calc(1.9px * var(--k, 1));
 }
 
 /* An influence carries information: hairline. */
 .slx-arc-influence {
   stroke: #666;
-  stroke-width: 0.8;
+  stroke-width: calc(0.8px * var(--k, 1));
 }
 
 /* A role says "this submodel plays this part in that association" — structural
@@ -110,8 +115,8 @@ text.slx-incomplete {
    left role arcs drawn with the browser's default and effectively invisible. */
 .slx-arc-role {
   stroke: #555;
-  stroke-width: 2.2;
-  stroke-dasharray: 6 3;
+  stroke-width: calc(2.2px * var(--k, 1));
+  stroke-dasharray: calc(6px * var(--k, 1)) calc(3px * var(--k, 1));
 }
 
 /* An arc's own label — only role arcs have one in this notation (§14). */
@@ -129,6 +134,7 @@ text.slx-incomplete {
 
 .slx-label {
   font: 7.5px/1.2 system-ui, sans-serif;   /* 60% of the first draft, with the glyphs */
+  font-size: calc(7.5px * var(--k, 1));   /* drawn at its submodel's scale */
   fill: #111;
   text-anchor: middle;
   cursor: default;         /* draggable, but see the cursor note by .slx-node */
@@ -145,7 +151,7 @@ text.slx-incomplete {
 .slx-submodel rect {
   fill: #fcfcfa;
   stroke: #555;
-  stroke-width: 0.9;
+  stroke-width: calc(0.9px * var(--k, 1));
 }
 
 /* Membership kind, drawn (§6). The stack is a known number of instances seen
@@ -154,12 +160,12 @@ text.slx-incomplete {
 .slx-submodel .slx-kind-stack {
   fill: none;
   stroke: #999;
-  stroke-width: 0.7;
+  stroke-width: calc(0.7px * var(--k, 1));
 }
 .slx-submodel .slx-kind-shadow {
   fill: none;
   stroke: #999;
-  stroke-width: 1.6;
+  stroke-width: calc(1.6px * var(--k, 1));
   stroke-linecap: butt;
 }
 
@@ -184,7 +190,7 @@ text.slx-incomplete {
 .slx-port {
   fill: #fff;
   stroke: #4a7fb5;
-  stroke-width: 0.9;
+  stroke-width: calc(0.9px * var(--k, 1));
   cursor: default;
 }
 .slx-port-shared {
@@ -192,7 +198,7 @@ text.slx-incomplete {
 }
 .slx-port:hover {
   stroke: #1f5fa0;
-  stroke-width: 2.5;
+  stroke-width: calc(2.5px * var(--k, 1));
 }
 .slx-port:active {
   cursor: default;
@@ -372,7 +378,7 @@ text.slx-incomplete {
 .slx-arc-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 10;
+  stroke-width: calc(10px * var(--k, 1));
   pointer-events: stroke;
   cursor: default;         /* not the canvas's grab: this strip IS an element */
 }
@@ -380,7 +386,7 @@ text.slx-incomplete {
 /* A selected arrow: Delete removes it. */
 .slx-arc.slx-arc-selected {
   stroke: #2f7de1;
-  stroke-width: 2.4;
+  stroke-width: calc(2.4px * var(--k, 1));
 }
 
 /* Only an arc that CAN be bent says so. A flow is routed by the model, not by

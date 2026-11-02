@@ -73,6 +73,13 @@ footing (`src/widgets/grid.js` is the first).
   association's roles, conditions, a valve's flow) are found by one scan
   and looked up; outside one, derived afresh as before. The audit uses it
   too. nkometou: a redraw 33 s → 0.5 s.
+  **Scaled submodels**, as in Simile: `layout/<sub>.scale` draws its
+  contents smaller (`Diagram.scaleIn` / `scaleOf` / `contentScale`); positions
+  stay in one world space, sizes follow — `Diagram.box` scales a node's
+  glyph, and styles.css multiplies line widths and names by `--k`
+  (`_scaled`); an arc segment is drawn at the scale of the submodel it runs
+  through (`_segmentScales`, `_markerFor`). Imported from Simile's
+  box / `internal_extent` (77 of nkometou's 99), exported back the same way.
 - `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,
   submodels, parentage, naming. Notation-neutral; knows nothing about drawing.
 - `src/schema/simile-v1.js` — the **notation**, as plain data: vocabulary,

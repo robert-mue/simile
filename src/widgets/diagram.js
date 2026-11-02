@@ -61,10 +61,21 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   // growing submodel to anything outside it, in world units (Robert,
   // 2026-10-20). Never enforced against a gap that is already smaller.
   _MARGIN: 10,
+  // How far in and out the view goes. In far enough to read the inside of a
+  // submodel drawn at a twentieth of its size, nested in one at a half
+  // (nkometou has both).
+  _ZOOM_MIN: 0.05,
+  _ZOOM_MAX: 60,
 
   // Arrowhead length per arc type, in world units — must match the marker
   // paths built in _buildCanvas, since the line is shortened by exactly this.
   _ARROW_LEN: { flow: 6.3, influence: 4.725, role: 7.5 },
+  // Arrowheads: path, length, half-height (see `_marker`).
+  _ARROWS: {
+    flow: ['M0,0 L6.3,2.625 L0,5.25 z', 6.3, 2.625],
+    influence: ['M0,0.525 L4.725,2.625 L0,4.725 z', 4.725, 2.625],
+    role: ['M0,0 L7.5,3.15 L0,6.3 z', 7.5, 3.15],
+  },
 
   // Sagitta as a fraction of the chord may not reach 0.5: at 0.5 the arc is a
   // semicircle, and beyond it the drawn arc is no longer the one intended.
@@ -284,7 +295,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * stepped counterpart of the wheel, which holds the pointer still instead.
    */
   _zoomTo(k) {
-    k = Math.min(4, Math.max(0.2, k));
+    k = Math.min(this._ZOOM_MAX, Math.max(this._ZOOM_MIN, k));
     const c = this._centre();
     const p = this._toWorld(c.x, c.y);
     this._userView = true;
@@ -389,11 +400,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     // Arrowheads: one marker per arc type, so the schema's styling can grow.
     const defs = this._el('defs');
-    defs.appendChild(this._marker('slx-arrow-flow', 'M0,0 L6.3,2.625 L0,5.25 z', 6.3, 2.625));
-    defs.appendChild(this._marker('slx-arrow-influence', 'M0,0.525 L4.725,2.625 L0,4.725 z', 4.725, 2.625));
     // A role's head is the largest: it is drawn thick and dashed, and a small
-    // head was lost in the dashes (Robert's item 36).
-    defs.appendChild(this._marker('slx-arrow-role', 'M0,0 L7.5,3.15 L0,6.3 z', 7.5, 3.15));
+    // head was lost in the dashes (Robert's item 36). Scaled copies are made
+    // as scaled submodels ask for them (`_markerFor`).
+    Object.keys(this._ARROWS).forEach((t) => {
+      const [path, w, h] = this._ARROWS[t];
+      defs.appendChild(this._marker('slx-arrow-' + t, path, w, h));
+    });
     svg.appendChild(defs);
 
     // THE root transform — pan/zoom lives here and nowhere else.
@@ -417,7 +430,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         this._userView = true;
         const ev = e.originalEvent;
         const p = this._toWorld(ev.clientX, ev.clientY);
-        const k = Math.min(4, Math.max(0.2, this._view.k * (ev.deltaY < 0 ? 1.1 : 1 / 1.1)));
+        const k = Math.min(this._ZOOM_MAX, Math.max(this._ZOOM_MIN, this._view.k * (ev.deltaY < 0 ? 1.1 : 1 / 1.1)));
         // Keep the world point under the cursor fixed.
         this._view.x += p.x * (this._view.k - k);
         this._view.y += p.y * (this._view.k - k);
@@ -695,17 +708,19 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   /** A submodel: a box in the bodies layer, labelled along its top edge. */
   _renderSubmodel(d, id, sub) {
     const b = this._box(d, id);
+    const k = d.scaleOf(id);                 // the scale its box is drawn at
     const g = this._el('g', {
       class: 'slx-submodel slx-submodel-' + sub.kind + (this._incomplete(d, id) ? ' slx-incomplete' : ''),
       'data-id': id,
     });
+    this._scaled(g, k);
     // The kind's decoration goes on FIRST, so the box itself paints over it and
     // the stack reads as sitting behind. Which decoration is the schema's to
     // say (`style.submodel.byKind`); how to draw one is this renderer's.
-    this._decorateKind(g, b, ((d.schema().style || {}).submodel || {}).byKind, sub.kind);
+    this._decorateKind(g, b, ((d.schema().style || {}).submodel || {}).byKind, sub.kind, k);
 
     g.appendChild(this._el('rect', {
-      x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 8,
+      x: b.cx - b.w / 2, y: b.cy - b.h / 2, width: b.w, height: b.h, rx: 8 * k,
       // A pastel that deepens with nesting, so an inner submodel stands out
       // from the one it is in (Robert, 2026-10-21). Inline: a stylesheet's
       // `fill` would beat an attribute.
@@ -720,8 +735,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // 2026-10-20): inside, it took room from the contents and sat in the way
     // of the top edge's resize zone.
     if (sub.label) {
-      this._placeLabel(d, id, sub.label, b.cx - b.w / 2, b.cy - b.h / 2 - 4,
-        'slx-label slx-submodel-label');            // anchored at its start: styles.css
+      this._placeLabel(d, id, sub.label, b.cx - b.w / 2, b.cy - b.h / 2 - 4 * k,
+        'slx-label slx-submodel-label', k);         // anchored at its start: styles.css
     }
   },
 
@@ -790,7 +805,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     e.stopPropagation();
 
     const MIN_W = 40, MIN_H = 30, PAD = 4;
-    const MARGIN = this._MARGIN;
+    const MARGIN = this._MARGIN * d.scaleOf(id);      // at the scale the box is drawn
     const rect = (bx) => ({ l: bx.cx - bx.w / 2, r: bx.cx + bx.w / 2, t: bx.cy - bx.h / 2, b: bx.cy + bx.h / 2 });
     const hits = (a, c) => a.l < c.r && a.r > c.l && a.t < c.b && a.b > c.t;
     const geom = d.appearanceOf(id) || {};
@@ -947,7 +962,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // nothing but two-unit lines, and a double-click aimed at its middle fell
     // through to the canvas, so its dialog would not open (Trees tutorial).
     g.appendChild(this._el('rect', {
-      class: 'slx-hit-box', x: x1 - 2, y: y1 - 2, width: w + 4, height: h + 4,
+      class: 'slx-hit-box', x: x1 - w * 0.1, y: y1 - h * 0.1, width: w * 1.2, height: h * 1.2,
     }));
 
     switch (b.shape) {
@@ -999,7 +1014,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * Decoration only: the box itself remains the hit target, so selecting,
    * dragging and dropping are untouched.
    */
-  _decorateKind(g, b, byKind, kind) {
+  _decorateKind(g, b, byKind, kind, k = 1) {
     const spec = (byKind || {})[kind];
     if (!spec) return;                       // `single` — one instance, no mark
 
@@ -1007,20 +1022,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const x2 = b.cx + b.w / 2, y2 = b.cy + b.h / 2;
 
     if (spec.decoration === 'stack') {
-      const step = spec.step || 3;
+      const step = (spec.step || 3) * k;
       // Back to front, so each sits over the one behind it. Down and to the
       // right (ruled 2026-08-06).
       for (let i = (spec.layers || 3) - 1; i >= 1; i--) {
         g.appendChild(this._el('rect', {
           class: 'slx-kind-stack',
-          x: x1 + i * step, y: y1 + i * step, width: b.w, height: b.h, rx: 8,
+          x: x1 + i * step, y: y1 + i * step, width: b.w, height: b.h, rx: 8 * k,
         }));
       }
       return;
     }
 
     if (spec.decoration === 'open-shadow') {
-      const o = spec.offset || 4;
+      const o = (spec.offset || 4) * k;
       const gx = b.w * (spec.gap || 0.2);    // how far short of each open corner
       const gy = b.h * (spec.gap || 0.2);
       g.appendChild(this._el('path', {
@@ -1055,10 +1070,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   _renderNode(d, id, node) {
     const b = this._box(d, id);
+    const k = d.scaleOf(id);
     const g = this._el('g', {
       class: 'slx-node slx-node-' + node.type + (this._incomplete(d, id) ? ' slx-incomplete' : ''),
       'data-id': id,
     });
+    this._scaled(g, k);
 
     switch (b.shape) {
       case 'rect':
@@ -1114,10 +1131,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // the whole of the symbol is the symbol again. The valve's clearance is
       // larger than the stock's because it has a flow line running through it.
       let ly;
-      if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13;
-      else if (b.shape === 'rect') ly = b.cy + b.h / 2 + 8;
-      else ly = b.cy - b.h / 2 - 6;
-      this._placeLabel(d, id, node.label, b.cx, ly);
+      if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13 * k;
+      else if (b.shape === 'rect') ly = b.cy + b.h / 2 + 8 * k;
+      else ly = b.cy - b.h / 2 - 6 * k;
+      this._placeLabel(d, id, node.label, b.cx, ly, null, k);
     }
   },
 
@@ -1134,7 +1151,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * element — the default stays the schema's business, so a label that has
    * never been moved follows the notation if that changes.
    */
-  _placeLabel(d, id, text, ax, ay, cls) {
+  _placeLabel(d, id, text, ax, ay, cls, k = 1) {
     const off = (this._labelDrag && this._labelDrag.id === id)
       ? this._labelDrag.off
       : (d.labelOffset(id) || { dx: 0, dy: 0 });
@@ -1144,6 +1161,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const full = (cls || 'slx-label') + (this._incomplete(d, id) ? ' slx-incomplete' : '');
     const t = this._text(ax + (off.dx || 0), ay + (off.dy || 0), text, full);
     t.setAttribute('data-label-for', id);
+    this._scaled(t, k);
     t.__drawnOff = off;                           // what a label drag moves it from
     t.addEventListener('pointerdown', (e) => this._beginLabelDrag(e, d, id, off));
     this._layer.labels.appendChild(t);
@@ -1204,26 +1222,30 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const ov = this._overrides();
     const boxA = d.box(arc.from, ov);
     const boxZ = d.box(arc.to, ov);
-    const pts = this._trimChain(arc, d.arcPoints(id, ov).slice(), boxA, boxZ);
+    const raw = d.arcPoints(id, ov).slice();
+    const ks = this._segmentScales(d, id, arc, raw);
+    const kz = ks[ks.length - 1];
+    const pts = this._trimChain(arc, raw, boxA, boxZ, kz);
     if (pts.length < 2) return;
 
     const crossings = d.portsFor(id).length;
-    const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
+    const marker = this._markerFor(arc.type, kz);
     const bow = this._bowFor(d, id, arc);
     const curved = Math.abs(bow) > 0.001;
     // Only a role arrow can be incomplete (unnamed); asking for every arc
     // would parse nothing, but costs a lookup per segment.
     const red = arc.type === 'role' && this._incomplete(d, id);
 
-    this._segmentPaths(arc, pts, bow, boxA, boxZ).forEach((dAttr, i) => {
+    this._segmentPaths(arc, pts, bow, boxA, boxZ, kz).forEach((dAttr, i) => {
       if (!dAttr) return;
       const last = i === pts.length - 2;
+      const k = ks[i] || 1;
 
       // A wide invisible twin under the visible stroke: a 0.8px hairline is
       // impossible to hit otherwise, so this is what the pointer actually grabs.
-      const hit = this._el('path', {
+      const hit = this._scaled(this._el('path', {
         class: 'slx-arc-hit', 'data-id': id, 'data-segment': i, d: dAttr,
-      });
+      }), k);
       if (curved) {
         hit.setAttribute('class', 'slx-arc-hit slx-arc-hit-bow');
         hit.addEventListener('pointerdown', (e) => this._beginBowDrag(e, d, id, pts[i], pts[i + 1]));
@@ -1246,6 +1268,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         'data-segment': i,
         d: dAttr,
       });
+      this._scaled(path, k);
       if (last) path.setAttribute('marker-end', 'url(#' + marker + ')');
       this._layer.arcs.appendChild(path);
     });
@@ -1255,8 +1278,42 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // two-role association showed as two unnamed arcs.
     if (arc.label && d.arcType(arc.type).has_label) {
       const at = this._arcLabelAt(pts, bow);
-      this._placeLabel(d, id, arc.label, at.x, at.y, 'slx-label slx-arc-label');
+      this._placeLabel(d, id, arc.label, at.x, at.y, 'slx-label slx-arc-label',
+        ks[Math.max(0, Math.floor((pts.length - 1) / 2))] || 1);
     }
+  },
+
+  /**
+   * The scale each segment of an arc is drawn at: that of the submodel it runs
+   * through. `pts` is the arc's chain (`arcPoints`), its ports marked: the
+   * first segment is in the source's submodel, and each port passed changes
+   * it — to the boundary's parent going out, into the boundary coming in.
+   */
+  _segmentScales(d, id, arc, pts) {
+    const byKey = {};
+    d.portsFor(id).forEach((p) => { byKey[p.key] = p; });
+    let c = d.parentOf(arc.from);
+    const out = [d.contentScale(c)];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const p = byKey[pts[i].port];
+      if (p) c = p.shared ? d.parentOf(p.boundary) : p.boundary;
+      out.push(d.contentScale(c));
+    }
+    return out;
+  },
+
+  /** The arrowhead for an arc type at scale `k`: made the first time one is asked for. */
+  _markerFor(type, k) {
+    const t = type === 'flow' || type === 'role' ? type : 'influence';
+    if (k === 1) return 'slx-arrow-' + t;
+    const id = 'slx-arrow-' + t + '-' + Math.round(k * 1e5);
+    if (!this._svg.querySelector('#' + id)) {
+      const [path, w, h] = this._ARROWS[t];
+      const m = this._marker(id, path, w * k, h * k);
+      m.firstChild.setAttribute('transform', 'scale(' + k + ')');
+      this._svg.querySelector('defs').appendChild(m);
+    }
+    return id;
   },
 
   /**
@@ -1265,9 +1322,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * a glyph to trim against (`boxA`, `boxZ`); a port is a bare point on a
    * boundary, so a segment runs right up to it. Only the last has a head.
    */
-  _segmentPaths(arc, pts, bow, boxA, boxZ) {
+  _segmentPaths(arc, pts, bow, boxA, boxZ, kz = 1) {
     const curved = Math.abs(bow) > 0.001;
-    const head = this._ARROW_LEN[arc.type] || 4.5;
+    const head = (this._ARROW_LEN[arc.type] || 4.5) * kz;
     const out = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const last = i === pts.length - 2;
@@ -1410,7 +1467,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * at the midpoint (derived — see Diagram.box) and rides on the line rather
    * than being a bend in it.
    */
-  _trimChain(arc, pts, boxA, boxZ) {
+  _trimChain(arc, pts, boxA, boxZ, kz = 1) {
     if (pts.length < 2) return pts;
 
     // An INFLUENCE keeps the raw centres: its arc is defined THROUGH them and
@@ -1428,7 +1485,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // glyph edge on its own. Without this the stroke's square end shows through
     // the point of the arrow.
     const n = pts.length - 1;
-    const head = this._ARROW_LEN[arc.type] || 7;
+    const head = (this._ARROW_LEN[arc.type] || 7) * kz;
     const dx = pts[n].x - pts[n - 1].x;
     const dy = pts[n].y - pts[n - 1].y;
     const len = Math.hypot(dx, dy);
@@ -1450,11 +1507,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _renderPort(d, port) {
     const ov = this._overrides();
     const pos = (ov && ov[port.key]) || port;
+    const k = d.scaleOf(port.boundary);      // the scale its boundary is drawn at
     const h = this._el('circle', {
       class: 'slx-port' + (port.shared ? ' slx-port-shared' : ''),
-      cx: pos.x, cy: pos.y, r: 5,
+      cx: pos.x, cy: pos.y, r: 5 * k,
       'data-port': port.key,
     });
+    this._scaled(h, k);
     const title = this._el('title');
     title.textContent = port.shared
       ? `shared exit of ${d.label(port.owner) || port.owner} (${port.arcs.length} arc${port.arcs.length > 1 ? 's' : ''})`
@@ -1918,19 +1977,21 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     return ids.map((a) => {
       const arc = d.get(a);
       this._layer.arcs.querySelectorAll('[data-id="' + a + '"]').forEach((el) => { el.style.display = 'none'; });
-      const mid = d.arcPoints(a).slice(1, -1);
-      const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
+      const chain = d.arcPoints(a);
+      const mid = chain.slice(1, -1);
+      const ks = this._segmentScales(d, a, arc, chain);
+      const marker = this._markerFor(arc.type, ks[ks.length - 1]);
       const cls = 'slx-arc slx-arc-' + arc.type + (d.portsFor(a).length ? ' slx-arc-split' : '')
         + (this._sel.indexOf(a) >= 0 ? ' slx-arc-selected' : '');
       const paths = [];
       for (let i = 0; i <= mid.length; i++) {
-        const path = this._el('path', { class: cls, 'data-ghost-for': a, 'data-segment': i });
+        const path = this._scaled(this._el('path', { class: cls, 'data-ghost-for': a, 'data-segment': i }), ks[i] || 1);
         if (i === mid.length) path.setAttribute('marker-end', 'url(#' + marker + ')');
         layer.appendChild(path);
         paths.push(path);
       }
       return {
-        id: a, arc, mid, paths, bow: this._bowFor(d, a, arc),
+        id: a, arc, mid, paths, ks, bow: this._bowFor(d, a, arc),
         label: this._layer.labels.querySelector('[data-label-for="' + a + '"]'),
         off: d.labelOffset(a) || { dx: 0, dy: 0 },
       };
@@ -1950,8 +2011,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         c.mid.map((p) => { const q = portOf(p); return { x: q.x, y: q.y }; }),
         [{ x: z.cx, y: z.cy }]);
       const bow = bowOf ? bowOf(c) : c.bow;
-      const pts = this._trimChain(c.arc, raw, a, z);
-      this._segmentPaths(c.arc, pts, bow, a, z).forEach((dAttr, i) => {
+      const kz = c.ks[c.ks.length - 1];
+      const pts = this._trimChain(c.arc, raw, a, z, kz);
+      this._segmentPaths(c.arc, pts, bow, a, z, kz).forEach((dAttr, i) => {
         if (c.paths[i]) c.paths[i].setAttribute('d', dAttr || '');
       });
       if (c.label) {
@@ -2038,8 +2100,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _clampPlan(d, primaries, start) {
     const rect = (b) => ({ l: b.cx - b.w / 2, r: b.cx + b.w / 2, t: b.cy - b.h / 2, bo: b.cy + b.h / 2 });
     const hits = (a, b) => a.l < b.r && a.r > b.l && a.t < b.bo && a.bo > b.t;
-    const m = (gap) => Math.min(this._MARGIN, Math.max(gap, 0));
     return primaries.filter((id) => start[id]).map((id) => {
+      // The margin is drawn at the element's scale, like everything else.
+      const M = this._MARGIN * d.scaleOf(id);
+      const m = (gap) => Math.min(M, Math.max(gap, 0));
       const b = rect(d.box(id));
       const parent = d.parentOf(id);
       let within = null;
@@ -2479,6 +2543,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   // ---- small SVG helpers ----------------------------------------------
+
+  /** Mark an element as drawn at scale `k` (styles.css multiplies its lines and text by --k). */
+  _scaled(el, k) {
+    if (k !== 1) el.style.setProperty('--k', k);
+    return el;
+  },
 
   _el(name, attrs) {
     const n = document.createElementNS('http://www.w3.org/2000/svg', name);

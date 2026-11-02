@@ -43,6 +43,18 @@
  * alias rather than the source's label. That correspondence is the reason this
  * conversion is as short as it is.
  *
+ * ## Coordinates
+ *
+ * We hold every position in one world space; Simile holds a child's `centre`
+ * in its submodel's own frame, and a submodel's `bounding_box` in its
+ * parent's. A submodel drawn smaller than its contents (`layout.scale`) has an
+ * `internal_extent` larger than its box by that scale, which is how Simile
+ * says so. `frame` is each submodel's frame (its box's top-left, and the
+ * scale one of its units is drawn at); `local` puts a point in it. Until
+ * 2026-11-02 positions were written as world ones, which left the contents of
+ * every submodel displaced in Simile; `test/roundtrip.html` compares layout
+ * now (41 of the catalogue's 72 failed it with the old code).
+ *
  * ## Submodels: one arc of ours becomes a chain of Simile's
  *
  * We store a cross-boundary influence as ONE arc end to end and derive the
@@ -164,6 +176,11 @@
    * files quote anything that is not `[a-z][a-zA-Z0-9_]*`, and double an
    * internal quote to escape it.
    */
+  /** A coordinate as written: to three decimals, an integer where it is one. */
+  function coord(v) {
+    return Math.round(v * 1000) / 1000;
+  }
+
   function atom(s) {
     var t = String(s == null ? '' : s);
     if (/^[a-z][a-zA-Z0-9_]*$/.test(t)) return t;
@@ -671,10 +688,40 @@
       return Sienna.Diagram.roleAlias(alias, (this.m.arcs[roleArcId] || {}).label);
     },
 
-    /** `centre=[x,y]` — our layout stores the centre already (`box()` reads x as cx). */
+    /**
+     * `centre=[x,y]`, in its submodel's frame: Simile holds a child's position
+     * relative to the submodel it is in, at that submodel's scale (see
+     * `frame`); we hold it in the one world space.
+     */
     centre: function (id) {
       var g = (this.m.layout || {})[id] || {};
-      return 'centre=[' + (g.x || 0) + ',' + (g.y || 0) + ']';
+      var c = this.local(this.parentOf(id), g.x || 0, g.y || 0);
+      return 'centre=[' + c[0] + ',' + c[1] + ']';
+    },
+
+    /**
+     * A submodel's internal frame as Simile will read it back: its internal
+     * (0,0) at the top-left of its box, one of its units drawn `k` big — its
+     * own `scale` times its parent's. `emitSubmodel` writes the extent that
+     * makes it so; the importer's `origin` is the inverse.
+     */
+    frame: function (subId) {
+      if (subId == null) return { x: 0, y: 0, k: 1 };
+      this._frames = this._frames || {};
+      if (this._frames[subId]) return this._frames[subId];
+      var g = (this.m.layout || {})[subId] || {};
+      var w = g.w || 200;
+      var h = g.h || 130;
+      var p = this.frame(this.parentOf(subId));
+      var f = { x: (g.x || 0) - w / 2, y: (g.y || 0) - h / 2, k: p.k * (g.scale > 0 ? g.scale : 1) };
+      this._frames[subId] = f;
+      return f;
+    },
+
+    /** A world point in a submodel's frame, to three decimals. */
+    local: function (subId, x, y) {
+      var f = this.frame(subId);
+      return [coord((x - f.x) / f.k), coord((y - f.y) / f.k)];
     },
 
     /** The visible half of one element. */
@@ -984,10 +1031,16 @@
     emitSubmodel: function (id, out) {
       var s = this.m.submodels[id];
       var g = (this.m.layout || {})[id] || {};
-      var w = g.w || 200;
-      var h = g.h || 130;
-      var x = (g.x || 0) - w / 2;
-      var y = (g.y || 0) - h / 2;
+      // The box in its PARENT's frame; the extent its contents' own frame
+      // spans, larger by its scale where it is drawn smaller than them.
+      var p = this.frame(this.parentOf(id));
+      var f = this.frame(id);
+      var tl = this.local(this.parentOf(id), f.x, f.y);
+      var x = tl[0];
+      var y = tl[1];
+      var w = coord((g.w || 200) / p.k);
+      var h = coord((g.h || 130) / p.k);
+      var sc = g.scale > 0 ? g.scale : 1;
 
       out.push('node(' + this.vis[id] + ',submodel,' + list(this.childrenOf(id)) + ','
         + list([
@@ -996,9 +1049,9 @@
           'name=' + atom(s.label || id),
           'separate=0',
         ].concat(this.timeBase(id))) + ',' + list([
-          'bounding_box=[' + x + ',' + y + ',' + (x + w) + ',' + (y + h) + ']',
+          'bounding_box=[' + x + ',' + y + ',' + coord(x + w) + ',' + coord(y + h) + ']',
           'caption_offset=[0,-8]',
-          'internal_extent=[0,0,' + w + ',' + h + ']',
+          'internal_extent=[0,0,' + coord(w / sc) + ',' + coord(h / sc) + ']',
         ]) + ').');
     },
 

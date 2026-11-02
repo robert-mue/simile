@@ -50,10 +50,13 @@
  * ## Coordinates
  *
  * Simile stores a child's `centre` relative to its submodel's frame; we store
- * absolute positions. The origin of a submodel's frame is
- * `bounding_box.x1 - internal_extent.x1`, accumulated down the containment
- * tree. Read off the files rather than assumed — `test02_1submodel_1.pl` has a
- * 252-wide box and a `[0,0,252,206]` extent, which pins it.
+ * absolute positions. A submodel's box is in its parent's frame, and its own
+ * frame maps `internal_extent` onto that box — scaled, where the box is the
+ * smaller (Simile draws the contents shrunk; nkometou does it to 71 of 99).
+ * So a frame is an origin and a scale, composed down the containment tree
+ * (`origin`), and the scale is kept as the submodel's `scale` so its contents
+ * are DRAWN that size too. Read off the files rather than assumed —
+ * `test02_1submodel_1.pl` has a 252-wide box and a `[0,0,252,206]` extent.
  *
  * ## Names
  *
@@ -388,18 +391,42 @@
       });
     },
 
-    /** The absolute origin of a submodel's internal coordinate frame. */
+    /**
+     * A submodel's scale: its box over its internal extent — how much smaller
+     * Simile draws its contents than they are. One number: Simile's are the
+     * same across and down to within its rounding (2% on nkometou), and a
+     * scale within half a percent of 1 is 1.
+     */
+    scaleIn: function (subId) {
+      var g = this.N[subId] ? this.N[subId].g : {};
+      var bb = nums(g.bounding_box);
+      var ie = nums(g.internal_extent);
+      var iw = (ie[2] || 0) - (ie[0] || 0);
+      var ih = (ie[3] || 0) - (ie[1] || 0);
+      if (!(iw > 0) || !(ih > 0) || bb.length < 4) return 1;
+      var s = (((bb[2] - bb[0]) / iw) + ((bb[3] - bb[1]) / ih)) / 2;
+      return s > 0 && Math.abs(s - 1) > 0.005 ? s : 1;
+    },
+
+    /**
+     * A submodel's internal coordinate frame, absolute: where its internal
+     * (0,0) lands, `x`/`y`, and how big one of its units is drawn, `k`.
+     * Simile places the internal extent's corner at the box's, scaled by
+     * `scaleIn`; frames compose down the containment tree.
+     */
     origin: function (subId) {
-      if (subId == null) return { x: 0, y: 0 };
+      if (subId == null) return { x: 0, y: 0, k: 1 };
       this._org = this._org || {};
       if (this._org[subId]) return this._org[subId];
       var base = this.origin(this.parent[subId] == null ? null : this.parent[subId]);
       var g = this.N[subId] ? this.N[subId].g : {};
       var bb = nums(g.bounding_box);
       var ie = nums(g.internal_extent);
+      var s = this.scaleIn(subId);
       var o = {
-        x: base.x + (bb[0] || 0) - (ie[0] || 0),
-        y: base.y + (bb[1] || 0) - (ie[1] || 0),
+        x: base.x + base.k * ((bb[0] || 0) - (ie[0] || 0) * s),
+        y: base.y + base.k * ((bb[1] || 0) - (ie[1] || 0) * s),
+        k: base.k * s,
       };
       this._org[subId] = o;
       return o;
@@ -409,7 +436,7 @@
     centre: function (id) {
       var c = nums((this.N[id] || {}).g && this.N[id].g.centre);
       var o = this.origin(this.parent[id] == null ? null : this.parent[id]);
-      return { x: o.x + (c[0] || 0), y: o.y + (c[1] || 0) };
+      return { x: o.x + o.k * (c[0] || 0), y: o.y + o.k * (c[1] || 0) };
     },
 
     // ---- names -----------------------------------------------------------
@@ -698,8 +725,13 @@
         var g = self.N[id].g;
         var bb = nums(g.bounding_box);
         var o = self.origin(self.parent[id] == null ? null : self.parent[id]);
-        var w = Math.max(40, (bb[2] || 0) - (bb[0] || 0));
-        var h = Math.max(30, (bb[3] || 0) - (bb[1] || 0));
+        // The box as drawn: in its parent's frame, so at its parent's scale.
+        // A box with no size gets a usable one.
+        var w = bb.length < 4 || bb[2] <= bb[0] ? 40 : o.k * (bb[2] - bb[0]);
+        var h = bb.length < 4 || bb[3] <= bb[1] ? 30 : o.k * (bb[3] - bb[1]);
+        var geom = { x: o.x + o.k * (bb[0] || 0) + w / 2, y: o.y + o.k * (bb[1] || 0) + h / 2, w: w, h: h };
+        var s = self.scaleIn(id);
+        if (s !== 1) geom.scale = s;
         var kind = self.kindOf(id);
         // The time base it runs on (`step=2`); 1, or none, is the model's own.
         var step = parseInt(String(self.N[id].p.step || ''), 10);
@@ -709,7 +741,7 @@
           parent: null,                    // filled in once every id exists
           label: self.name(self.N[id].p.name || id),
           props: kind.props,
-        }, { x: o.x + (bb[0] || 0) + w / 2, y: o.y + (bb[1] || 0) + h / 2, w: w, h: h });
+        }, geom);
       });
       // Parents second: a submodel may be listed before the one containing it.
       this.nodeIds.forEach(function (id) {

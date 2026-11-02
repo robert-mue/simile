@@ -118,6 +118,43 @@
           };
         }
 
+        /**
+         * Where each element is, how big, and a submodel's scale — compared
+         * apart from `shape`, with a tolerance, since coordinates are written
+         * to three decimals in each submodel's own frame. Keyed by path, the
+         * elements of one path in order. Until 2026-11-02 nothing compared
+         * these, and contents of submodels were written in the wrong frame.
+         */
+        function layoutDiff(m1, m2) {
+          function where(m) {
+            function pathOf(id) {
+              var e = m.nodes[id] || m.submodels[id];
+              if (!e) return '?' + id;
+              return (e.parent ? pathOf(e.parent) + '/' : '') + (e.label || '·' + (e.type || 'sub'));
+            }
+            var out = {};
+            Object.keys(m.nodes).concat(Object.keys(m.submodels)).forEach(function (id) {
+              if ((m.nodes[id] || {}).type === 'valve') return;      // derived: rides on its flow
+              var g = (m.layout || {})[id] || {};
+              var k = pathOf(id);
+              (out[k] = out[k] || []).push([g.x || 0, g.y || 0, g.w || 0, g.h || 0, g.scale || 1]);
+            });
+            Object.keys(out).forEach(function (k) {
+              out[k].sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+            });
+            return out;
+          }
+          var a = where(m1), b = where(m2), out = [];
+          Object.keys(a).forEach(function (k) {
+            (a[k] || []).forEach(function (p, i) {
+              var q = (b[k] || [])[i];
+              var off = !q || p.some(function (v, j) { return Math.abs(v - q[j]) > (j === 4 ? 0.001 : 0.01); });
+              if (off) out.push('moved  ' + k + ' ' + JSON.stringify(p) + ' -> ' + JSON.stringify(q || null));
+            });
+          });
+          return out;
+        }
+
         function diff(a, b, what) {
           var A = {}, B = {}, out = [];
           a.forEach(function (x) { A[x] = 1; });
@@ -177,7 +214,8 @@
             var s1 = shape(m1), s2 = shape(m2);
             var d = diff(s1.subs, s2.subs, 'sub')
               .concat(diff(s1.nodes, s2.nodes, 'node'))
-              .concat(diff(s1.arcs, s2.arcs, 'arc'));
+              .concat(diff(s1.arcs, s2.arcs, 'arc'))
+              .concat(layoutDiff(m1, m2));
             if (d.length) {
               row.state = 'differs'; row.why = d.length + ' difference(s)'; row.full = d.join('\n');
               counts.differs++;
