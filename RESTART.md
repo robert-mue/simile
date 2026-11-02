@@ -8,10 +8,10 @@ embedded-widget pages. Brought up to date 2026-11-02.
 influences), Robert's test of whether the app covers the whole model
 language (events apart). See "Now: nkometou.pl" below and
 `NOTE-nkometou.md`. RELEASED as **2026-10-31b**: SATELLITE submodels and
-TABLES read from data files. RELEASED as **2026-11-01** (the latest):
+TABLES read from data files. RELEASED as **2026-11-01**:
 **PARAMETERS** — fixed and variable, the Parameters panel, values over
 time, JSON parameter files (`NOTE-file-parameters.md`). RELEASED as
-**2026-11-01b** (the latest): **CROSSING FORMS** — Simile's own rule
+**2026-11-01b**: **CROSSING FORMS** — Simile's own rule
 (`Diagram.valueAt`, any nesting; Robert: "you can't just check for
 specified patterns"), checked against all 4783 `use` terms Simile wrote
 (`tools/headless/scripts/crossings.py`: 4763 agree, the rest stale or
