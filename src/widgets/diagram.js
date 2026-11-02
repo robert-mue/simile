@@ -113,9 +113,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._ro.observe(this.element[0]);
     }
 
-    // Live-update on model change (undo, a sibling panel, an import).
-    if (this._bound()) this._watchModel(this._render);
-    else this._unsub = Sienna.userData.subscribe(this.options.path, () => this._render());
+    // Live-update on model change (undo, a sibling panel, an import) — ONCE
+    // per change, however many writes it makes (`_renderSoon`).
+    if (this._bound()) this._watchModel(this._renderSoon);
+    else this._unsub = Sienna.userData.subscribe(this.options.path, () => this._renderSoon());
 
     this._render();
   },
@@ -592,7 +593,26 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   // ---- render ---------------------------------------------------------
 
+  /**
+   * Redraw when the change under way is complete. Every write to the model
+   * notifies, and one action can write hundreds of times — a dropped
+   * submodel writes the position of each thing it holds, and undoing it
+   * writes them all back — so redrawing per write made one drop on a large
+   * model take hours (nkometou, 2026-11-02). The writes of one action happen
+   * in one task; the redraw comes straight after it, before the screen is
+   * painted. A redraw asked for meanwhile does the job and cancels this one.
+   */
+  _renderSoon() {
+    if (this._soon) return;
+    this._soon = true;
+    queueMicrotask(() => { if (this._soon) this._render(); });
+  },
+
   _render() {
+    this._soon = false;
+    // A ghosted drag owns the drawing until it is dropped (`_ghostBegin`):
+    // the drop redraws, so a redraw asked for meanwhile is only put off.
+    if (this._ghost) { this._ghost.stale = true; return; }
     const d = this._diagram();
     this._LAYERS.forEach((n) => { this._layer[n].textContent = ''; });
     if (!d) {
@@ -603,6 +623,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     }
 
     const model = d.model();
+    this._index = this._arcIndex(model);
 
     // Bodies first (submodels sit under everything), then arcs, then nodes.
     Object.keys(model.submodels || {}).forEach((id) => this._renderSubmodel(d, id, model.submodels[id]));
@@ -615,7 +636,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (!d.get(sid)) return;
       const b = d.box(sid, this._overrides());
       this._layer.overlay.appendChild(this._el('rect', {
-        class: 'slx-selected',
+        class: 'slx-selected', 'data-ring-for': sid,
         x: b.cx - b.w / 2 - 4, y: b.cy - b.h / 2 - 4,
         width: b.w + 8, height: b.h + 8, rx: 3,
       }));
@@ -633,6 +654,26 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._fit();
       if (this._root.getBBox && this._root.getBBox().width) this._fittedOnce = true;
     }
+  },
+
+  /**
+   * The graph's reverse lookups, made once per render: the arcs at each
+   * element (`at`, in the model's arc order) and the flow each attachment
+   * node rides on (`host`, valve → flow). A drag reads them to find what it
+   * carries; drawing reads them so no arc has to scan every other one.
+   */
+  _arcIndex(model) {
+    const at = {};
+    const host = {};
+    const arcs = model.arcs || {};
+    Object.keys(arcs).forEach((a) => {
+      const arc = arcs[a];
+      if (!arc) return;
+      (at[arc.from] = at[arc.from] || []).push(a);
+      if (arc.to !== arc.from) (at[arc.to] = at[arc.to] || []).push(a);
+      if (arc.valve) host[arc.valve] = a;
+    });
+    return { at, host };
   },
 
   /** A submodel: a box in the bodies layer, labelled along its top edge. */
@@ -1075,6 +1116,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const full = (cls || 'slx-label') + (this._incomplete(d, id) ? ' slx-incomplete' : '');
     const t = this._text(ax + (off.dx || 0), ay + (off.dy || 0), text, full);
     t.setAttribute('data-label-for', id);
+    t.__drawnOff = off;                           // what a label drag moves it from
     t.addEventListener('pointerdown', (e) => this._beginLabelDrag(e, d, id, off));
     this._layer.labels.appendChild(t);
     return t;
@@ -1103,11 +1145,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
     const move = (ev) => {
       const w = this._toWorld(ev.clientX, ev.clientY);
-      this._labelDrag = {
-        id,
-        off: { dx: start.dx + (w.x - origin.x), dy: start.dy + (w.y - origin.y) },
-      };
-      this._render();
+      const off2 = { dx: start.dx + (w.x - origin.x), dy: start.dy + (w.y - origin.y) };
+      this._labelDrag = { id, off: off2 };
+      // Only the label moves, so only the label is touched — the one drawn
+      // now, which a redraw meanwhile may have replaced.
+      const el = this._layer.labels.querySelector('[data-label-for="' + id + '"]');
+      const was = (el && el.__drawnOff) || { dx: 0, dy: 0 };
+      if (el) el.setAttribute('transform', `translate(${off2.dx - (was.dx || 0)},${off2.dy - (was.dy || 0)})`);
     };
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
@@ -1129,34 +1173,23 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   _renderArc(d, id, arc) {
-    const pts = this._chainFor(d, id, arc);
+    const ov = this._overrides();
+    const boxA = d.box(arc.from, ov);
+    const boxZ = d.box(arc.to, ov);
+    const pts = this._trimChain(arc, d.arcPoints(id, ov).slice(), boxA, boxZ);
     if (pts.length < 2) return;
 
     const crossings = d.portsFor(id).length;
     const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
     const bow = this._bowFor(d, id, arc);
     const curved = Math.abs(bow) > 0.001;
-    const head = this._ARROW_LEN[arc.type] || 4.5;
-    const ov = this._overrides();
     // Only a role arrow can be incomplete (unnamed); asking for every arc
     // would parse nothing, but costs a lookup per segment.
     const red = arc.type === 'role' && this._incomplete(d, id);
 
-    for (let i = 0; i < pts.length - 1; i++) {
+    this._segmentPaths(arc, pts, bow, boxA, boxZ).forEach((dAttr, i) => {
+      if (!dAttr) return;
       const last = i === pts.length - 2;
-      let dAttr;
-
-      if (curved) {
-        // Only the true ends have a glyph to trim against; a port is a bare
-        // point on a boundary, so the segment runs right up to it.
-        const boxA = i === 0 ? d.box(arc.from, ov) : null;
-        const boxZ = last ? d.box(arc.to, ov) : null;
-        const seg = this._arcPath(pts[i], pts[i + 1], boxA, boxZ, bow, last ? head : 0);
-        if (!seg) continue;
-        dAttr = seg.d;
-      } else {
-        dAttr = `M${pts[i].x},${pts[i].y} L${pts[i + 1].x},${pts[i + 1].y}`;
-      }
 
       // A wide invisible twin under the visible stroke: a 0.8px hairline is
       // impossible to hit otherwise, so this is what the pointer actually grabs.
@@ -1187,28 +1220,56 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       });
       if (last) path.setAttribute('marker-end', 'url(#' + marker + ')');
       this._layer.arcs.appendChild(path);
-    }
+    });
 
     // An arc type may carry a label — in this notation only `role` does (§14),
     // and until the reference models were built nothing drew it, so a
-    // two-role association showed as two unnamed arcs. It sits at the middle of
-    // the chain, pushed out along the bow so that fanned siblings do not stack
-    // their labels on one another, and it is draggable like any other.
+    // two-role association showed as two unnamed arcs.
     if (arc.label && d.arcType(arc.type).has_label) {
-      const mid = Math.max(0, Math.floor((pts.length - 1) / 2));
-      const a = pts[mid];
-      const z = pts[mid + 1] || pts[mid];
-      const len = Math.hypot(z.x - a.x, z.y - a.y) || 1;
-      // Just outside the curve's furthest point (its sagitta, len × bow), so
-      // the labels of a fanned pair sit apart, each by its own arrow.
-      const out = len * bow + Math.sign(bow) * 5;
-      this._placeLabel(
-        d, id, arc.label,
-        (a.x + z.x) / 2 - ((z.y - a.y) / len) * out,
-        (a.y + z.y) / 2 + ((z.x - a.x) / len) * out - 3 + (bow > 0 ? 6 : 0),
-        'slx-label slx-arc-label'
-      );
+      const at = this._arcLabelAt(pts, bow);
+      this._placeLabel(d, id, arc.label, at.x, at.y, 'slx-label slx-arc-label');
     }
+  },
+
+  /**
+   * The path data of each of an arc's segments, through `pts` (from
+   * `_trimChain`), or null for one too short to draw. Only the true ends have
+   * a glyph to trim against (`boxA`, `boxZ`); a port is a bare point on a
+   * boundary, so a segment runs right up to it. Only the last has a head.
+   */
+  _segmentPaths(arc, pts, bow, boxA, boxZ) {
+    const curved = Math.abs(bow) > 0.001;
+    const head = this._ARROW_LEN[arc.type] || 4.5;
+    const out = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const last = i === pts.length - 2;
+      if (curved) {
+        const seg = this._arcPath(pts[i], pts[i + 1], i === 0 ? boxA : null, last ? boxZ : null,
+          bow, last ? head : 0);
+        out.push(seg ? seg.d : null);
+      } else {
+        out.push(`M${pts[i].x},${pts[i].y} L${pts[i + 1].x},${pts[i + 1].y}`);
+      }
+    }
+    return out;
+  },
+
+  /**
+   * Where an arc's label is anchored: the middle of the chain, pushed out along
+   * the bow so that fanned siblings do not stack their labels on one another.
+   */
+  _arcLabelAt(pts, bow) {
+    const mid = Math.max(0, Math.floor((pts.length - 1) / 2));
+    const a = pts[mid];
+    const z = pts[mid + 1] || pts[mid];
+    const len = Math.hypot(z.x - a.x, z.y - a.y) || 1;
+    // Just outside the curve's furthest point (its sagitta, len × bow), so
+    // the labels of a fanned pair sit apart, each by its own arrow.
+    const out = len * bow + Math.sign(bow) * 5;
+    return {
+      x: (a.x + z.x) / 2 - ((z.y - a.y) / len) * out,
+      y: (a.y + z.y) / 2 + ((z.x - a.x) / len) * out - 3 + (bow > 0 ? 6 : 0),
+    };
   },
 
   /**
@@ -1218,7 +1279,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    */
   _fanOf(d, id, arc) {
     const key = [arc.from, arc.to].sort().join('|');
-    const set = d.ids('arcs').filter((a) => {
+    const pool = this._index ? this._index.at[arc.from] || [] : d.ids('arcs');
+    const set = pool.filter((a) => {
       const x = d.get(a);
       return x && [x.from, x.to].sort().join('|') === key;
     });
@@ -1316,22 +1378,19 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * at the midpoint (derived — see Diagram.box) and rides on the line rather
    * than being a bend in it.
    */
-  _chainFor(d, id, arc) {
-    const pts = d.arcPoints(id, this._overrides()).slice();
+  _trimChain(arc, pts, boxA, boxZ) {
     if (pts.length < 2) return pts;
-
-    // Every box lookup here must see the drag override, or a dragged glyph
-    // slides away from the arc that is attached to it.
-    const ov = this._overrides();
 
     // An INFLUENCE keeps the raw centres: its arc is defined THROUGH them and
     // trimmed where it crosses each glyph (see _arcPath), which is what makes
     // it look like it leaves the node rather than a point on its rim. Straight
-    // arcs can be clipped here, since chord and curve coincide.
+    // arcs can be clipped here, since chord and curve coincide. The boxes must
+    // be the ones being drawn — a drag's, while it is live — or a dragged
+    // glyph slides away from the arc attached to it.
     if (arc.type === 'influence') return pts;
 
-    pts[0] = this._edge(d.box(arc.from, ov), pts[1]);
-    pts[pts.length - 1] = this._edge(d.box(arc.to, ov), pts[pts.length - 2]);
+    pts[0] = this._edge(boxA, pts[1]);
+    pts[pts.length - 1] = this._edge(boxZ, pts[pts.length - 2]);
 
     // Stop the line short so the arrowhead — anchored at its base — reaches the
     // glyph edge on its own. Without this the stroke's square end shows through
@@ -1554,7 +1613,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       carried.push(gid);
       if (gid.indexOf('submodel') === 0) carried = carried.concat(d.descendantsOf(gid));
     });
-    const keys = carried.filter((v, i, a) => a.indexOf(v) === i);
+    const keys = Array.from(new Set(carried));
     // A submodel's boundary ports travel with it, as do those of its contents.
     const portKeys = [];
     keys.forEach((k) => {
@@ -1581,33 +1640,42 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // constrained by whatever stops its ancestor.
     const primaries = group.filter((g) => !group.some(
       (o) => o !== g && d.descendantsOf(o).indexOf(g) >= 0));
+    const plan = this._clampPlan(d, primaries, start);
 
-    const move = (ev) => {
-      const w = this._toWorld(ev.clientX, ev.clientY);
-      // Preventive geometry: the drag stops at the submodel boundary (§12.3).
-      const c = this._clampDrag(d, primaries, start,
-        w.x - origin.x, w.y - origin.y, legal);
-      const dx = c.dx;
-      const dy = c.dy;
-      legal = c;                       // the last position known to be legal
+    // Where everything would be at an offset — what the drop writes.
+    const movesAt = (dx, dy) => {
       const moves = {};
       Object.keys(start).forEach((k) => {
         moves[k] = Object.assign({}, start[k], { x: start[k].x + dx, y: start[k].y + dy });
         if (moves[k].w === undefined) delete moves[k].w;
         if (moves[k].h === undefined) delete moves[k].h;
       });
-      this._drag = { id, moves };
-      this._render();
+      return moves;
+    };
+
+    // Nothing is redrawn while the drag is live: what moves is ghosted
+    // (`_ghostBegin`), from the first movement, so a press that never moves
+    // stays a plain click.
+    this._drag = { id, moves: null };
+    let ghost = null;
+
+    const move = (ev) => {
+      const w = this._toWorld(ev.clientX, ev.clientY);
+      // Preventive geometry: the drag stops at the submodel boundary (§12.3).
+      // Clamped on every event, even those not drawn, so a flick still meets
+      // what is in its way.
+      legal = this._clampDrag(plan, w.x - origin.x, w.y - origin.y, legal);
+      if (!ghost && (legal.dx || legal.dy)) ghost = this._ghostBegin(d, keys, portKeys);
+      if (ghost) this._ghostTo(ghost, legal.dx, legal.dy);
     };
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
-      const drag = this._drag;
+      if (ghost) this._ghostEnd(ghost);
       this._drag = null;
       // Cancelled is not dropped: nothing is written until the drop, so putting
       // it back is just drawing what the model still says.
       if (ev && ev.type === 'pointercancel') { this._render(); return; }
-      const moved = drag && drag.moves[id]
-        && (drag.moves[id].x !== start[id].x || drag.moves[id].y !== start[id].y);
+      const moved = legal.dx !== 0 || legal.dy !== 0;
       // (a) A press that never moved is a SELECTION, not a drag.
       if (!moved) {
         this._select(id, additive);
@@ -1618,10 +1686,157 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // already made an illegal position unreachable, so there is nothing left
       // to judge here — and an element cannot have crossed into a submodel it
       // does not belong to. Changing an element's parent is cut-and-paste.
-      if (moved) d.commitDrag(drag.moves, null);
-      if (moved || drag) this._render();
+      d.commitDrag(movesAt(legal.dx, legal.dy), null);
+      this._render();
     };
     $(document).on('pointermove', move).on('pointerup pointercancel', end);
+  },
+
+  /**
+   * Ghosting (Robert, 2026-11-02): while elements are dragged nothing is
+   * redrawn, which on a large model takes far longer than a pointer waits.
+   * What the drag carries is found ONCE, when it starts, from the graph's
+   * reverse lookups (`_index`, made with the drawing):
+   *   - RIGID: what is dragged (a submodel with all it holds, or a whole
+   *     selection), its labels and selection rings, the ports on a dragged
+   *     boundary, and every arc whose points all move with it. Gathered into
+   *     one group per layer, so a frame moves all of it with five transforms.
+   *   - CUT: arcs with some points moving and some not. Only these are
+   *     redrawn each frame, by the same geometry as the drawing.
+   *   - The second order: a cut flow moves its valve, which rides on its
+   *     middle, and with it the arcs at that valve. There is no third: nothing
+   *     attaches to an influence or a role.
+   * The drop redraws everything properly; until then a redraw asked for by
+   * anything else is put off (`_render`).
+   */
+  _ghostBegin(d, keys, portKeys) {
+    const idx = this._index || this._arcIndex(d.model());
+    const derived = (k) => idx.host[k] != null;
+    const movers = new Set(keys.filter((k) => !derived(k)).concat(portKeys));
+    const portsOf = {};
+    const ports = (a) => portsOf[a] || (portsOf[a] = d.portsFor(a).map((p) => p.key));
+    const together = (a, moves) => {
+      const arc = d.get(a);
+      return moves(arc.from) && moves(arc.to) && ports(a).every((k) => movers.has(k));
+    };
+    const rigidFlow = (f) => together(f, (k) => movers.has(k));
+    const moves = (k) => movers.has(k) || (derived(k) && rigidFlow(idx.host[k]));
+
+    const touched = new Set();
+    movers.forEach((k) => (idx.at[k] || []).forEach((a) => touched.add(a)));
+    const valves = [];
+    touched.forEach((a) => { const v = d.get(a).valve; if (v) valves.push(v); });
+    valves.forEach((v) => (idx.at[v] || []).forEach((a) => touched.add(a)));
+
+    const rigid = new Set(movers);
+    const cut = [];
+    touched.forEach((a) => { if (together(a, moves)) rigid.add(a); else cut.push(a); });
+    valves.forEach((v) => { if (moves(v)) rigid.add(v); });
+    const sliding = new Set(valves.filter((v) => !rigid.has(v)));
+    const cutSet = new Set(cut);
+
+    // Where an end's box is at an offset: carried, riding on a flow whose
+    // ends are carried, or where it was.
+    const base = {};
+    const box0 = (k) => base[k] || (base[k] = d.box(k));
+    const boxAt = (k, dx, dy) => {
+      const b = box0(k);
+      if (rigid.has(k)) return Object.assign({}, b, { cx: b.cx + dx, cy: b.cy + dy });
+      if (sliding.has(k)) {
+        const f = d.get(idx.host[k]);
+        const a = boxAt(f.from, dx, dy);
+        const z = boxAt(f.to, dx, dy);
+        return Object.assign({}, b, { cx: (a.cx + z.cx) / 2, cy: (a.cy + z.cy) / 2 });
+      }
+      return b;
+    };
+
+    // The drawing's own elements, sorted once.
+    const wraps = [];
+    const slid = [];
+    const labels = {};
+    this._LAYERS.forEach((name) => {
+      const layer = this._layer[name];
+      const wrap = this._el('g', { class: 'slx-ghost-carried' });
+      Array.from(layer.children).forEach((el) => {
+        const id = el.getAttribute('data-id') || el.getAttribute('data-label-for')
+          || el.getAttribute('data-ring-for') || el.getAttribute('data-port');
+        if (!id) return;
+        if (rigid.has(id)) wrap.appendChild(el);
+        else if (sliding.has(id)) slid.push({ el, id });
+        else if (cutSet.has(id)) {
+          if (el.hasAttribute('data-label-for')) labels[id] = el;
+          else el.style.display = 'none';
+        }
+      });
+      layer.appendChild(wrap);
+      wraps.push(wrap);
+    });
+
+    // A cut arc is redrawn through its own paths, laid where the arcs are.
+    const ghostLayer = this._el('g', { class: 'slx-ghost', style: 'pointer-events:none' });
+    this._layer.arcs.appendChild(ghostLayer);
+    const arcs = cut.map((a) => {
+      const arc = d.get(a);
+      const mid = d.arcPoints(a).slice(1, -1);
+      const marker = 'slx-arrow-' + (arc.type === 'flow' || arc.type === 'role' ? arc.type : 'influence');
+      const cls = 'slx-arc slx-arc-' + arc.type + (ports(a).length ? ' slx-arc-split' : '')
+        + (this._sel.indexOf(a) >= 0 ? ' slx-arc-selected' : '');
+      const paths = [];
+      for (let i = 0; i <= mid.length; i++) {
+        const path = this._el('path', { class: cls, 'data-ghost-for': a, 'data-segment': i });
+        if (i === mid.length) path.setAttribute('marker-end', 'url(#' + marker + ')');
+        ghostLayer.appendChild(path);
+        paths.push(path);
+      }
+      return {
+        arc, mid, paths, bow: this._bowFor(d, a, arc),
+        label: labels[a], off: d.labelOffset(a) || { dx: 0, dy: 0 },
+      };
+    });
+
+    this._ghost = { boxAt, box0, movers, wraps, slid, arcs, frame: null, dx: 0, dy: 0 };
+    return this._ghost;
+  },
+
+  /** Ask for the ghost at an offset; drawn on the next frame, once however many ask. */
+  _ghostTo(g, dx, dy) {
+    g.dx = dx;
+    g.dy = dy;
+    if (g.frame == null) g.frame = requestAnimationFrame(() => { g.frame = null; this._ghostDraw(g); });
+  },
+
+  _ghostDraw(g) {
+    const { dx, dy } = g;
+    const t = `translate(${dx},${dy})`;
+    g.wraps.forEach((w) => w.setAttribute('transform', t));
+    g.slid.forEach((s) => {
+      const b0 = g.box0(s.id);
+      const b = g.boxAt(s.id, dx, dy);
+      s.el.setAttribute('transform', `translate(${b.cx - b0.cx},${b.cy - b0.cy})`);
+    });
+    g.arcs.forEach((c) => {
+      const a = g.boxAt(c.arc.from, dx, dy);
+      const z = g.boxAt(c.arc.to, dx, dy);
+      const raw = [{ x: a.cx, y: a.cy }].concat(
+        c.mid.map((p) => (g.movers.has(p.port) ? { x: p.x + dx, y: p.y + dy } : { x: p.x, y: p.y })),
+        [{ x: z.cx, y: z.cy }]);
+      const pts = this._trimChain(c.arc, raw, a, z);
+      this._segmentPaths(c.arc, pts, c.bow, a, z).forEach((dAttr, i) => {
+        if (c.paths[i]) c.paths[i].setAttribute('d', dAttr || '');
+      });
+      if (c.label) {
+        const at = this._arcLabelAt(pts, c.bow);
+        c.label.setAttribute('x', at.x + (c.off.dx || 0));
+        c.label.setAttribute('y', at.y + (c.off.dy || 0));
+      }
+    });
+  },
+
+  /** The drag is over: stop drawing it. The caller redraws, from the model. */
+  _ghostEnd(g) {
+    if (g.frame != null) cancelAnimationFrame(g.frame);
+    if (this._ghost === g) this._ghost = null;
   },
 
   /**
@@ -1650,52 +1865,24 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    *     one (a valve stranded by a boundary-crossing flow, a model built before
    *     this rule) must stay draggable, or it could never be tidied up.
    */
-  _clampDrag(d, primaries, start, dx, dy, prev) {
-    const rect = (b) => ({ l: b.cx - b.w / 2, r: b.cx + b.w / 2, t: b.cy - b.h / 2, bo: b.cy + b.h / 2 });
+  _clampDrag(plan, dx, dy, prev) {
     const hits = (a, b) => a.l < b.r && a.r > b.l && a.t < b.bo && a.bo > b.t;
-    const boxAt = (id, ddx, ddy) => {
-      const s0 = start[id];
-      if (!s0) return null;
-      const mv = {};
-      mv[id] = Object.assign({}, s0, { x: s0.x + ddx, y: s0.y + ddy });
-      return d.box(id, mv);
-    };
-
-    primaries.forEach((id) => {
-      if (!start[id]) return;
+    const shift = (b, ddx, ddy) => ({ l: b.l + ddx, r: b.r + ddx, t: b.t + ddy, bo: b.bo + ddy });
+    plan.forEach((pl) => {
+      const b = pl.box;
       // (a) stay inside the parent — an exact interval, so clamp rather than veto.
-      const parent = d.parentOf(id);
-      // _MARGIN inside it, or the gap there already is, if less.
-      if (parent && !start[parent]) {
-        const b = rect(boxAt(id, 0, 0));
-        const p0 = rect(d.box(parent));
-        const m = (gap) => Math.min(this._MARGIN, Math.max(gap, 0));
-        const p = { l: p0.l + m(b.l - p0.l), r: p0.r - m(p0.r - b.r),
-          t: p0.t + m(b.t - p0.t), bo: p0.bo - m(p0.bo - b.bo) };
+      const p = pl.within;
+      if (p) {
         dx = Math.min(Math.max(dx, p.l - b.l), p.r - b.r);
         dy = Math.min(Math.max(dy, p.t - b.t), p.bo - b.bo);
         if (p.r - b.r < p.l - b.l) dx = 0;   // wider than its parent: do not fight
         if (p.bo - b.bo < p.t - b.t) dy = 0;
       }
       // (b) do not enter a stranger. Per axis, so sliding past still works.
-      const strangers = d.ids('submodels').filter((sid) => {
-        if (sid === id || start[sid]) return false;                 // itself, or moving too
-        if (d.ancestorsOf(id).indexOf(sid) >= 0) return false;      // own ancestor: expected
-        if (d.descendantsOf(id).indexOf(sid) >= 0) return false;    // own content
-        return !hits(rect(boxAt(id, 0, 0)), rect(d.box(sid)));      // already inside: leave alone
-      });
-      if (!strangers.length) return;
-      // Each kept _MARGIN away, or the gap there already is, if less.
-      const b0 = rect(boxAt(id, 0, 0));
-      const walls = strangers.map((sid) => {
-        const k = rect(d.box(sid));
-        const gap = Math.max(k.l - b0.r, b0.l - k.r, k.t - b0.bo, b0.t - k.bo);
-        const m = Math.min(this._MARGIN, Math.max(gap, 0));
-        return { l: k.l - m, r: k.r + m, t: k.t - m, bo: k.bo + m };
-      });
+      if (!pl.walls.length) return;
       const blocked = (ddx, ddy) => {
-        const b = rect(boxAt(id, ddx, ddy));
-        return walls.some((w) => hits(b, w));
+        const m = shift(b, ddx, ddy);
+        return pl.walls.some((w) => hits(m, w));
       };
       // Fall back to the last offset known to be legal, NOT to zero. Two
       // reasons. Zero would snap the element back to where the drag started
@@ -1712,6 +1899,42 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       }
     });
     return { dx, dy };
+  },
+
+  /**
+   * What `_clampDrag` holds each primary to, worked out once when the drag
+   * starts: none of it changes while the drag is live, and on a large model
+   * finding it costs far more than testing against it.
+   */
+  _clampPlan(d, primaries, start) {
+    const rect = (b) => ({ l: b.cx - b.w / 2, r: b.cx + b.w / 2, t: b.cy - b.h / 2, bo: b.cy + b.h / 2 });
+    const hits = (a, b) => a.l < b.r && a.r > b.l && a.t < b.bo && a.bo > b.t;
+    const m = (gap) => Math.min(this._MARGIN, Math.max(gap, 0));
+    return primaries.filter((id) => start[id]).map((id) => {
+      const b = rect(d.box(id));
+      const parent = d.parentOf(id);
+      let within = null;
+      if (parent && !start[parent]) {
+        // _MARGIN inside it, or the gap there already is, if less.
+        const p0 = rect(d.box(parent));
+        within = { l: p0.l + m(b.l - p0.l), r: p0.r - m(p0.r - b.r),
+          t: p0.t + m(b.t - p0.t), bo: p0.bo - m(p0.bo - b.bo) };
+      }
+      const up = d.ancestorsOf(id);
+      const down = id.indexOf('submodel') === 0 ? d.descendantsOf(id) : [];
+      const walls = d.ids('submodels').filter((sid) => {
+        if (sid === id || start[sid]) return false;                 // itself, or moving too
+        if (up.indexOf(sid) >= 0) return false;                     // own ancestor: expected
+        if (down.indexOf(sid) >= 0) return false;                   // own content
+        return !hits(b, rect(d.box(sid)));                          // already inside: leave alone
+      }).map((sid) => {
+        // Each kept _MARGIN away, or the gap there already is, if less.
+        const k = rect(d.box(sid));
+        const g = m(Math.max(k.l - b.r, b.l - k.r, k.t - b.bo, b.t - k.bo));
+        return { l: k.l - g, r: k.r + g, t: k.t - g, bo: k.bo + g };
+      });
+      return { box: b, within, walls };
+    });
   },
 
   _dropTargetAt(d, pt, exclude) {

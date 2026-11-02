@@ -828,15 +828,31 @@
       return out;
     },
 
-    /** Everything inside `id`, at any depth. */
+    /**
+     * Everything inside `id`, at any depth. The model is scanned ONCE, into
+     * parent -> children: asking `childrenOf` for each element found scanned
+     * it again per element, two million lookups for nkometou's largest
+     * submodel, and three seconds before a press on it could start a drag.
+     */
     descendantsOf: function (id) {
+      var self = this;
+      var kids = {};
+      ['nodes', 'submodels'].forEach(function (fam) {
+        self.ids(fam).forEach(function (k) {
+          var p = self.parentOf(k);
+          if (p == null) p = '';                       // the top level
+          (kids[p] = kids[p] || []).push(k);
+        });
+      });
       var out = [];
-      var stack = this.childrenOf(id);
+      var seen = {};
+      var stack = (kids[id == null ? '' : id] || []).slice();
       while (stack.length) {
         var k = stack.pop();
-        if (out.indexOf(k) >= 0) continue;
+        if (seen[k]) continue;
+        seen[k] = true;
         out.push(k);
-        stack = stack.concat(this.childrenOf(k));
+        if (kids[k]) stack = stack.concat(kids[k]);
       }
       return out;
     },

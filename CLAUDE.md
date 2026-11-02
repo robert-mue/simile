@@ -59,6 +59,12 @@ footing (`src/widgets/grid.js` is the first).
   is the old floating workspace. View ▸ Layout switches.
 - `src/widgets/diagram.js` — the diagram widget: renders the model as SVG and
   handles every editing gesture. The one place that knows about pixels.
+  A drag of elements is **ghosted** (`_ghostBegin`): nothing is redrawn
+  until the drop. At the start, from the graph's reverse lookups (`_index`,
+  made with each drawing), it sorts what it carries — rigid (moved by one
+  transform per layer), cut arcs (redrawn alone each frame), and a cut
+  flow's valve with the arcs at it; no third order. A label drag moves only
+  the label. Checked: `test/editor-tests.js` (the ghost is what the drop draws).
 - `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,
   submodels, parentage, naming. Notation-neutral; knows nothing about drawing.
 - `src/schema/simile-v1.js` — the **notation**, as plain data: vocabulary,

@@ -145,7 +145,7 @@
     place: function (type, x, y, name) {
       this.tool('node:' + type);
       this.click(x, y);
-      this.type(name);
+      try { this.type(name); } catch (e) { throw new Error('placing ' + name + ': ' + e.message); }
       return this.node(name);
     },
   };
@@ -219,6 +219,104 @@
         var a = t.model().arcs[flows[0]];
         t.equal(a.from, stock, 'flow comes from');
         t.equal((t.model().nodes[a.to] || {}).parent, s, 'the cloud\'s parent');
+      },
+    },
+    {
+      name: 'drag a label',
+      guards: 'mid-drag only the label moves, and the drop keeps it where it was let go',
+      run: function (t) {
+        var id = t.place('stock', 150, 100, 'wealth');
+        var label = function () { return t.inst._svg.querySelector('[data-label-for="' + id + '"]'); };
+        var r0 = label().getBoundingClientRect();
+        var p = { x: r0.left + r0.width / 2, y: r0.top + r0.height / 2 };
+        var k = t.inst._view.k;
+        t.inst._lastClick = null;
+        t.pointer('pointerdown', p, label());
+        t.pointer('pointermove', { x: p.x + 15 * k, y: p.y + 10 * k });
+        t.pointer('pointermove', { x: p.x + 30 * k, y: p.y + 20 * k });
+        var r1 = label().getBoundingClientRect();
+        t.near((r1.left - r0.left) / k, 30, 'mid-drag, moved right');
+        t.near((r1.top - r0.top) / k, 20, 'mid-drag, moved down');
+        t.pointer('pointerup', { x: p.x + 30 * k, y: p.y + 20 * k });
+        var off = t.d.labelOffset(id) || {};
+        t.near(off.dx, 30, 'offset x'); t.near(off.dy, 20, 'offset y');
+        var r2 = label().getBoundingClientRect();
+        t.near((r2.left - r0.left) / k, 30, 'dropped, right');
+        t.near((r2.top - r0.top) / k, 20, 'dropped, down');
+      },
+    },
+    {
+      name: 'a drag is ghosted, and the ghost is what the drop draws',
+      guards: 'mid-drag only what moves is touched (a submodel with its contents and ports, a selection; a cut flow\'s valve and the arcs at it), and every arc end and glyph is where the drop then puts it',
+      run: function (t) {
+        var s = t.submodel(300, 50, 460, 220, 'patch');
+        var a = t.place('stock', 350, 110, 'soil');
+        var w = t.place('variable', 410, 180, 'rain');
+        var b = t.place('stock', 150, 110, 'store');
+        var v = t.place('variable', 180, 200, 'rate');
+        var flow = t.d.addFlow({ from: a, to: b });
+        var valve = flow.valve;
+        t.d.addInfluence(v, valve);
+        t.d.addInfluence(w, a);
+        t.d.addInfluence(w, v);
+        t.inst._render();
+
+        // Where each arc segment starts and ends, and each glyph's centre, on
+        // screen — whichever element is drawing it.
+        function shown() {
+          var out = {};
+          var root = t.inst._svg;
+          root.querySelectorAll('path.slx-arc').forEach(function (p) {
+            if (p.style.display === 'none' || !p.getAttribute('d')) return;
+            var id = p.getAttribute('data-id') || p.getAttribute('data-ghost-for');
+            var m = p.getScreenCTM();
+            var n = p.getTotalLength();
+            [0, n].forEach(function (l, k) {
+              var q = p.getPointAtLength(l);
+              out[id + '/' + p.getAttribute('data-segment') + (k ? '>' : '<')] =
+                { x: m.a * q.x + m.c * q.y + m.e, y: m.b * q.x + m.d * q.y + m.f };
+            });
+          });
+          root.querySelectorAll('.slx-node[data-id], .slx-submodel[data-id]').forEach(function (g) {
+            var r = g.getBoundingClientRect();
+            out[g.getAttribute('data-id')] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+          });
+          return out;
+        }
+        function compare(ghost, drawn, what) {
+          var keys = Object.keys(drawn);
+          t.check(keys.length === Object.keys(ghost).length,
+            what + ': ghost shows ' + Object.keys(ghost).length + ' things, the drop ' + keys.length);
+          keys.forEach(function (k) {
+            var g = ghost[k], r = drawn[k];
+            t.check(g && Math.hypot(g.x - r.x, g.y - r.y) < 0.5,
+              what + ': ' + k + ' ghosted at ' + (g ? round(g.x) + ',' + round(g.y) : '(none)')
+              + ', drawn at ' + round(r.x) + ',' + round(r.y));
+          });
+        }
+        function ghosted(id, from, to, what) {
+          t.inst._lastClick = null;
+          t.pointer('pointerdown', t.at(from[0], from[1]));
+          for (var i = 1; i <= 4; i++) {
+            t.pointer('pointermove', t.at(from[0] + (to[0] - from[0]) * i / 4, from[1] + (to[1] - from[1]) * i / 4));
+          }
+          var g = t.inst._ghost;
+          if (!t.check(!!g, what + ': no ghost')) return;
+          t.inst._ghostDraw(g);
+          var ghost = shown();
+          t.pointer('pointerup', t.at(to[0], to[1]));
+          t.check(!t.inst._ghost, what + ': the ghost outlived the drop');
+          compare(ghost, shown(), what);
+        }
+
+        // A submodel: its contents ride along, the flow out of it is cut and
+        // its valve slides, and so the influence into the valve is cut too.
+        ghosted(s, [440, 70], [480, 100], 'submodel');
+        t.near(t.d.box(a).cx, 390, 'soil carried');
+        // A selection of two, one of them feeding the valve of a cut flow.
+        t.inst._sel = [b, v];
+        ghosted(b, [150, 110], [120, 150], 'selection');
+        t.near(t.d.box(v).cy, 240, 'rate carried');
       },
     },
     {
