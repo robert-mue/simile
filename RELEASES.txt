@@ -421,3 +421,31 @@ Running models
 - A variable parameter with no value but a range runs at the middle of
   its range, and a true/false one with neither runs as false. These are
   stop-gaps, to be revisited.
+
+
+------------------------------------------------------------------------
+Release 2026-11-03
+------------------------------------------------------------------------
+
+Submodels
+- A submodel now has a properties dialog, based on Simile's, with four
+  tabs. Instances: single, fixed array or population, with what each
+  means. Styling: Relative scale, Background shade and Hide contents.
+  Notes: Description and Comments. Advanced: Time step index, Use units
+  in math, First index is 0 and Enumerated types.
+- Relative scale changes how big a submodel's contents are drawn; the
+  box and where things are in it stay as they are.
+- Hide contents draws a submodel as a closed box, with arrows stopping
+  at its edge.
+- Comments, background shades, enumerated types and every time step
+  index are now kept when a Simile model is imported and exported.
+  Before, they were lost. Models imported from Simile show its shades.
+
+Large models
+- Compiling the nkometou model in the page takes about four minutes
+  instead of about eight. Models are compiled exactly as before.
+- Exporting it takes under two seconds instead of about nine.
+- Double-clicking a submodel in a large model now opens its dialog; it
+  often did nothing. A double-click on an arrow that runs over an
+  element opens that element's dialog.
+- Clicking an element no longer redraws the whole diagram.

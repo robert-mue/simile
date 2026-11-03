@@ -17,7 +17,7 @@ specified patterns"), checked against all 4783 `use` terms Simile wrote
 (`tools/headless/scripts/crossings.py`: 4763 agree, the rest stale or
 unfinished). Role arrows crossing boundaries, two associations on one
 influence, `size('caption')`.
-RELEASED as **2026-11-02** (the latest; Robert on nkometou: "fantastic improvement for loading and dragging"): **values of any
+RELEASED as **2026-11-02** (Robert on nkometou: "fantastic improvement for loading and dragging"): **values of any
 shape read** from a model running in the page (`sx_value`, recursive);
 **Simile's own parameter files read** (XML and the old text format);
 value-less variable parameters run at their range's MIDPOINT, booleans as
@@ -33,9 +33,9 @@ Simile (77 of nkometou's 99) — which found that our EXPORTER wrote
 submodel contents in the wrong frame (fixed; roundtrip now compares
 layout). See "Done: large diagrams" below. Robert on the release:
 "fantastic improvement for loading and dragging". RELEASED
-as 2026-11-02. Since, NOT RELEASED (2026-11-03, 16555b4, dc691fb): a
-**SUBMODEL PROPERTIES DIALOG** after Simile's, and **nkometou's build
-halved** (~480 s -> ~240 s). See "Done: the submodel dialog and the build"
+as 2026-11-02. RELEASED as **2026-11-03** (the latest): a **SUBMODEL
+PROPERTIES DIALOG** after Simile's, **nkometou's build halved** (~480 s ->
+~240 s), double-click working on large models. See "Done: the submodel dialog and the build"
 below. Left for an in-person session with Jasper (Robert, 2026-11-03):
 checking nkometou's numbers, and the stop-gap parameter defaults. The
 **Values table** display is PARKED (see below). NEXT: Robert's call.
@@ -262,7 +262,7 @@ at a time, with a small test model for each (he made
   `"false"` exported bare (now the atom `'"false"'`); units lost on a
   variable with no value and no function node.
 
-## Done: the submodel dialog and the build (Robert, 2026-11-03; NOT released)
+## Done: the submodel dialog and the build (Robert, 2026-11-03; released 2026-11-03)
 
 - **Submodel dialog** (16555b4). Robert: base it on what Simile provides,
   tabs like the node dialog, scaling under styling, a tab for descriptive
