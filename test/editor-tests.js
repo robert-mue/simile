@@ -456,6 +456,69 @@
       },
     },
     {
+      name: 'double-click on a submodel, with a redraw in the way',
+      guards: 'a click redraws nothing, only the selection, so the second click finds what the first did; a double-click on an arrow\'s strip opens what is under it; both found on nkometou, where neither worked',
+      run: function (t) {
+        var s = t.submodel(100, 40, 460, 230, 'patch');
+        var a = t.place('variable', 170, 80, 'rain');
+        var b = t.place('variable', 400, 200, 'soil');
+        var arc = t.d.addInfluence(a, b);
+        t.inst._render();
+        var body = t.inst._svg.querySelector('.slx-submodel[data-id="' + s + '"]');
+        function close() { var c = document.querySelector('.slx-dlg [data-act=cancel]'); if (c) c.click(); return !!c; }
+
+        // One click: selected, and the drawing not replaced.
+        t.click(300, 60);
+        t.check(t.inst._sel.indexOf(s) >= 0, 'not selected');
+        t.check(body.isConnected, 'a click redrew the diagram');
+        t.check(!!t.inst._svg.querySelector('[data-ring-for="' + s + '"]'), 'no selection ring');
+        // The arrow's selection shows too, and another click moves the ring.
+        t.inst._sel = [arc]; t.inst._showSelection(t.d);
+        t.check(!!t.inst._svg.querySelector('path.slx-arc-selected'), 'arrow not shown selected');
+        t.check(!t.inst._svg.querySelector('[data-ring-for="' + s + '"]'), 'old ring left behind');
+        t.inst._sel = [];  t.inst._showSelection(t.d);
+
+        // Two presses on the interior.
+        t.inst._lastClick = null;
+        var p = t.at(300, 60);
+        t.pointer('pointerdown', p); t.pointer('pointerup', p);
+        t.pointer('pointerdown', p);
+        t.check(!!document.querySelector('.slx-dlg'), 'double-click on the interior opened nothing');
+        t.pointer('pointerup', p); close();
+
+        // Two presses on a resize zone.
+        t.inst._lastClick = null;
+        var q = t.at(459, 150);
+        t.pointer('pointerdown', q); t.pointer('pointerup', q);
+        t.pointer('pointerdown', q);
+        t.check(!!document.querySelector('.slx-dlg'), 'double-click at the edge opened nothing');
+        t.pointer('pointerup', q); close();
+
+        // The browser's own double-click: the dialog, once, and not the name box.
+        t.inst._lastClick = null;
+        var body2 = t.inst._svg.querySelector('.slx-submodel[data-id="' + s + '"] rect');
+        body2.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: p.x, clientY: p.y }));
+        t.equal(document.querySelectorAll('.slx-dlg').length, 1, 'dialogs after dblclick');
+        t.check(!document.querySelector('input.slx-label-edit'), 'the name box opened');
+        body2 = t.inst._svg.querySelector('.slx-submodel[data-id="' + s + '"] rect');
+        body2.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: p.x, clientY: p.y }));
+        t.equal(document.querySelectorAll('.slx-dlg').length, 1, 'dialogs after a second dblclick');
+        close();
+
+        // Two presses on an arrow's strip, over the submodel: its dialog.
+        t.inst._lastClick = null;
+        var strip = t.inst._svg.querySelector('path.slx-arc-hit[data-id="' + arc + '"]');
+        var m = strip.getPointAtLength(strip.getTotalLength() / 2);
+        var r = t.at(m.x, m.y);
+        t.pointer('pointerdown', r, strip); t.pointer('pointerup', r);
+        strip = t.inst._svg.querySelector('path.slx-arc-hit[data-id="' + arc + '"]');
+        t.pointer('pointerdown', r, strip);
+        var h = document.querySelector('.slx-dlg #fld-label');
+        t.check(!!h && h.value === 'patch', 'double-click on a strip: ' + (h ? h.value : 'no dialog'));
+        t.pointer('pointerup', r); close();
+      },
+    },
+    {
       name: 'role arrows named after the base (items 34, 37)',
       guards: 'a role arrow drawn from a submodel\'s interior attaches to it, is named after it, and a second one is numbered; the line starts at the press',
       run: function (t) {

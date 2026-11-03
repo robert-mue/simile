@@ -282,6 +282,15 @@ at a time, with a small test model for each (he made
   natively, whole build ~240 s in the page, all checked byte-identical.
   Further gains mean rewriting Simile's dependency-list logic.
 - `nkometou.json` regenerated again (notes and shades).
+- **Double-click on a submodel failed on nkometou** (Robert; found after the
+  dialog was built; a new small model was fine). Three causes: a click redrew
+  everything, so the second press came outside the window (now
+  `_showSelection`, and press time from `e.timeStamp`); arrows' invisible
+  strips covered nearly half of submodels' insides (a double-click on a strip
+  now opens what is under it, `_throughStrip`); and with no redraw the native
+  `dblclick` began firing, wired to the label editor (now the dialog, with a
+  guard in `_openDialog` as both routes can fire). 20 of 20 real double-clicks
+  on nkometou open, from 0 of 12.
 
 ## Done: large diagrams — nkometou workable (Robert, 2026-11-02; released 2026-11-02)
 

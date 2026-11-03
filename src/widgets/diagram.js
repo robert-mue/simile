@@ -666,16 +666,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     });
     d.allPorts().forEach((p) => { if (!d.isHidden(p.boundary)) this._renderPort(d, p); });
 
-    // The selection ring sits in the overlay, so it is never painted over.
-    this._sel.forEach((sid) => {
-      if (!d.get(sid)) return;
-      const b = d.box(sid, this._overrides());
-      this._layer.overlay.appendChild(this._el('rect', {
-        class: 'slx-selected', 'data-ring-for': sid,
-        x: b.cx - b.w / 2 - 4, y: b.cy - b.h / 2 - 4,
-        width: b.w + 8, height: b.h + 8, rx: 3,
-      }));
-    });
+    this._drawRings(d);
 
     // Frame the model ONCE, when content it did not draw itself first arrives —
     // a model opened, imported or restored. Never re-frame after an edit:
@@ -689,6 +680,35 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._fit();
       if (this._root.getBBox && this._root.getBBox().width) this._fittedOnce = true;
     }
+  },
+
+  /** The selection rings, in the overlay so they are never painted over. */
+  _drawRings(d) {
+    this._sel.forEach((sid) => {
+      if (!d.get(sid)) return;
+      const b = d.box(sid, this._overrides());
+      this._layer.overlay.appendChild(this._el('rect', {
+        class: 'slx-selected', 'data-ring-for': sid,
+        x: b.cx - b.w / 2 - 4, y: b.cy - b.h / 2 - 4,
+        width: b.w + 8, height: b.h + 8, rx: 3,
+      }));
+    });
+  },
+
+  /**
+   * Show the selection as it now is, redrawing nothing else. A click selects,
+   * and is very often the first of two: a whole redraw between them is what a
+   * double-click on a large model could not survive, and it changes nothing a
+   * selection shows.
+   */
+  _showSelection(d) {
+    this._layer.overlay.querySelectorAll('[data-ring-for]').forEach((el) => el.remove());
+    this._layer.arcs.querySelectorAll('.slx-arc-selected').forEach((el) => el.classList.remove('slx-arc-selected'));
+    this._sel.forEach((sid) => {
+      this._layer.arcs.querySelectorAll('path.slx-arc[data-id="' + sid + '"]')
+        .forEach((el) => el.classList.add('slx-arc-selected'));
+    });
+    this._drawRings(d);
   },
 
   /**
@@ -733,7 +753,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       style: 'fill:' + this._submodelFill(d.ancestorsOf(id).length, (d.layout(id) || {}).fill),
     }));
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
-    g.addEventListener('dblclick', () => this._editLabel(d, id));
+    g.addEventListener('dblclick', () => this._openDialog(d, id));
     this._resizeZones(d, id, g, b);
     this._layer.bodies.appendChild(g);
 
@@ -806,7 +826,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * The ports on its boundary stay on the side they were on.
    */
   _beginResize(e, d, id, edge) {
-    if (this._tool || this._drag || this._portDrag || this._isDoubleClick(id)) {
+    if (this._tool || this._drag || this._portDrag || this._isDoubleClick(id, e)) {
       return this._beginElementDrag(e, d, id);
     }
     e.preventDefault();
@@ -936,7 +956,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // A press that never changed the size is a selection, as on the body.
       if (!changed || !drag) {
         this._select(id, additive);
-        this._render();
+        this._showSelection(d);
         return;
       }
       d.commitDrag(drag.moves, null);
@@ -1124,7 +1144,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         g.appendChild(this._el('circle', { cx: b.cx, cy: b.cy, r: Math.max(b.w, b.h) / 2 }));
     }
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
-    g.addEventListener('dblclick', () => this._editLabel(d, id));
+    g.addEventListener('dblclick', () => this._openDialog(d, id));
     this._layer.nodes.appendChild(g);
 
     if (node.label) {
@@ -1178,7 +1198,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   _beginLabelDrag(e, d, id, off) {
     if (this._tool) return;                       // placing/connecting takes precedence
-    if (this._isDoubleClick(id)) {
+    if (this._isDoubleClick(id, e)) {
       e.preventDefault();
       e.stopPropagation();
       // (c) A label sitting INSIDE its node's rectangle counts as part of the
@@ -1258,16 +1278,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       }), k);
       if (curved) {
         hit.setAttribute('class', 'slx-arc-hit slx-arc-hit-bow');
-        hit.addEventListener('pointerdown', (e) => this._beginBowDrag(e, d, id, pts[i], pts[i + 1]));
+        hit.addEventListener('pointerdown', (e) => {
+          if (!this._throughStrip(e, d, id)) this._beginBowDrag(e, d, id, pts[i], pts[i + 1]);
+        });
       } else if (arc.type !== 'flow') {
         // A straight influence or role: a click selects it. (A flow is
         // selected by its valve, which deleting takes the flow with.)
         hit.addEventListener('click', (e) => {
           if (this._tool) return;
           this._select(id, e.shiftKey || e.ctrlKey || e.metaKey);
-          this._render();
+          this._showSelection(d);
         });
       }
+      if (!curved) hit.addEventListener('pointerdown', (e) => this._throughStrip(e, d, id));
+      hit.addEventListener('dblclick', (e) => this._openUnder(e, d));
       this._layer.arcs.appendChild(hit);
 
       const path = this._el('path', {
@@ -1422,6 +1446,32 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   },
 
   /**
+   * A double-click on an arrow's invisible strip goes to what is under it. The
+   * strip is wider than the line so the line can be grabbed, and where arrows
+   * are dense they cover what they cross — about half of the insides of
+   * nkometou's submodels — while a double-click on an arrow has nothing of its
+   * own to do. True if it was one, and was taken.
+   */
+  _throughStrip(e, d, id) {
+    if (this._tool || !this._isDoubleClick(id, e)) return false;
+    if (!this._openUnder(e, d)) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    this._lastClick = null;
+    return true;
+  },
+
+  /** Open the dialog of the element under a pointer event: true if there was one. */
+  _openUnder(e, d) {
+    const under = document.elementsFromPoint(e.clientX, e.clientY)
+      .map((el) => el.closest && el.closest('.slx-node[data-id], .slx-submodel[data-id]'))
+      .filter(Boolean)[0];
+    if (!under) return false;
+    this._openDialog(d, under.getAttribute('data-id'));
+    return true;
+  },
+
+  /**
    * Drag an influence's curvature. The new bow is the pointer's signed
    * perpendicular distance from the segment's chord, as a fraction of it — so
    * dragging across the chord flips the bend to the other side. Nothing is
@@ -1470,7 +1520,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
       if (!moved) {
         this._select(id, additive);               // a press that never moved selects
-        this._render();
+        this._showSelection(d);
         return;
       }
       if (final != null && final !== start) d.setArcBow(id, final);
@@ -1711,7 +1761,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const fromSubmodel = id.indexOf('submodel') === 0 && this._tool !== 'arc:role';
       return this._beginArcDraw(e, d, fromSubmodel ? null : id);
     }
-    if (!this._tool && this._isDoubleClick(id)) {
+    if (!this._tool && this._isDoubleClick(id, e)) {
       e.preventDefault();
       e.stopPropagation();
       return this._openDialog(d, id);            // (c) the node's own dialog
@@ -1798,7 +1848,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // (a) A press that never moved is a SELECTION, not a drag.
       if (!moved) {
         this._select(id, additive);
-        this._render();
+        this._showSelection(d);
         return;
       }
       // A drag moves things; it never re-parents. The clamp in `move` has
@@ -2374,6 +2424,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * the whole window instead.
    */
   _openDialog(d, id) {
+    // Two routes reach here for one double-click: the second press, and the
+    // browser's own `dblclick` after it. And no dialog with a tool armed.
+    if (this._tool || this.element[0].querySelector('.slx-dlg')
+        || document.querySelector('body > .slx-dlg-backdrop')) return;
     this._select(id, false);
     this._render();
     const host = this._panel().length ? this.element : $('body');
@@ -2382,12 +2436,17 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
 
   /**
    * Our own double-click detection, keyed on the element ID rather than the DOM
-   * node. The native `dblclick` cannot be relied on here: every gesture ends in
-   * a re-render that REPLACES the SVG element, so the browser sees two clicks
-   * on two different nodes and never pairs them.
+   * node. The native `dblclick` cannot be relied on alone: a gesture that
+   * changes the model ends in a re-render that REPLACES the SVG element, so the
+   * browser sees two clicks on two different nodes and never pairs them. A
+   * plain click no longer redraws (`_showSelection`), so it usually does pair
+   * them, at the user's own double-click speed, and is heard too.
    */
-  _isDoubleClick(id) {
-    const now = Date.now();
+  _isDoubleClick(id, e) {
+    // When the press HAPPENED, not when it got here: a press waits for
+    // whatever is running, and on a large model what ran was a redraw long
+    // enough to put every second click outside the window (nkometou).
+    const now = e && e.timeStamp ? e.timeStamp : performance.now();
     const prev = this._lastClick;
     this._lastClick = { id, t: now };
     return !!(prev && prev.id === id && now - prev.t < 450);
