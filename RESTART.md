@@ -32,10 +32,14 @@ memoised drawing (redraw 33 s → 0.5 s), and **SCALED SUBMODELS** as in
 Simile (77 of nkometou's 99) — which found that our EXPORTER wrote
 submodel contents in the wrong frame (fixed; roundtrip now compares
 layout). See "Done: large diagrams" below. Robert on the release:
-"fantastic improvement for loading and dragging". Open: a control for a
-submodel's scale. The **Values table** display is PARKED (Robert,
-2026-11-03; see below). NEXT: Robert's call. Release only when Robert
-says so.
+"fantastic improvement for loading and dragging". RELEASED
+as 2026-11-02. Since, NOT RELEASED (2026-11-03, 16555b4, dc691fb): a
+**SUBMODEL PROPERTIES DIALOG** after Simile's, and **nkometou's build
+halved** (~480 s -> ~240 s). See "Done: the submodel dialog and the build"
+below. Left for an in-person session with Jasper (Robert, 2026-11-03):
+checking nkometou's numbers, and the stop-gap parameter defaults. The
+**Values table** display is PARKED (see below). NEXT: Robert's call.
+Release only when Robert says so.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
@@ -244,8 +248,8 @@ at a time, with a small test model for each (he made
   elements as columns, blank for null, updating as it runs; then plotter
   aggregates (sum / mean / count over instances) over time. Do not start it
   unprompted.
-- Still open: whether ~8 min in-page build matters; checking nkometou's
-  numbers against Simile (needs Robert or Jasper).
+- Still open: checking nkometou's numbers against Simile (Robert, with
+  Jasper in person, later).
 - **How to probe nkometou** (scratch, not committed): import, export,
   `swipl generator/headless.pl` natively with `hl_setting(trace,true)` to
   see Simile's `Query` messages (`bad_parameter`, `failed_ref_in_dimensions`)
@@ -257,6 +261,27 @@ at a time, with a small test model for each (he made
 - Found on the way (parameters), fixed: `if'Ta'>0` imported as `ifTa` (`plainNames`);
   `"false"` exported bare (now the atom `'"false"'`); units lost on a
   variable with no value and no function node.
+
+## Done: the submodel dialog and the build (Robert, 2026-11-03; NOT released)
+
+- **Submodel dialog** (16555b4). Robert: base it on what Simile provides,
+  tabs like the node dialog, scaling under styling, a tab for descriptive
+  text. From Simile's `Disaggregate` (Run/forms.tcl): tabs Instances, Styling,
+  Notes, Advanced, declared in the schema (field `tab`, `firstTab`, `layout`,
+  `explain`, `showWhen`; types `scale`, `colour`, `longtext`). Relative scale is
+  Simile's `refatten` (`Diagram._setScale`): box and positions stay, only
+  drawn size changes, a nested submodel keeps its contents' size up to scale
+  1. Hide contents (arcs stop at the closed box). Comments, shades, enum types
+  and Time step index (`step` <= 1 too) now survive import and export; they
+  were dropped before, so nkometou now shows Simile's own shades. White means
+  the standard pastel. LEFT OUT, nothing could act on them: background image,
+  external code, threads, data-records and grid kinds (no catalogue model
+  uses the last two). Same tabs could serve the node dialog (notes on nodes
+  are still dropped on import).
+- **The build** (dc691fb): see `NOTE-nkometou.md`. Generator 76 s -> 32 s
+  natively, whole build ~240 s in the page, all checked byte-identical.
+  Further gains mean rewriting Simile's dependency-list logic.
+- `nkometou.json` regenerated again (notes and shades).
 
 ## Done: large diagrams — nkometou workable (Robert, 2026-11-02; released 2026-11-02)
 
