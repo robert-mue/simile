@@ -218,15 +218,34 @@
     // A submodel is one object whose KIND is a property (§2), so its dialog is
     // where that gets chosen. `target: 'kind'` says the value is stored on the
     // element itself rather than in its props.
+    // The dialog follows Simile's own (Run/forms.tcl, `Disaggregate`): what
+    // its Basic and Advanced tabs hold, here under Instances, Styling, Notes and
+    // Advanced. A field's `tab` says where it goes; `layout` that it is kept
+    // with the element's layout, not in the model spec's props. Left out, as
+    // nothing here could act on them yet: a background image, external code,
+    // multi-threading, and the data-records and grid kinds.
     submodel: {
       has_label: true,
+      firstTab: 'Instances',
       fields: [
-        { name: 'kind', label: 'Membership', type: 'choice', target: 'kind',
+        { name: 'kind', label: 'Instances', type: 'choice', target: 'kind',
           options: [
-            { value: 'single', label: 'Single instance' },
-            { value: 'fixed-membership', label: 'Fixed membership' },
+            { value: 'single', label: 'Single' },
+            { value: 'fixed-membership', label: 'Fixed array' },
             { value: 'population', label: 'Population' },
-          ] },
+          ],
+          // Simile's own words for each.
+          explain: {
+            single: 'Single-instance submodel. This can denote a functionally '
+              + 'distinct part of the parent model, or the set of components to '
+              + 'which some other special feature applies, e.g. a different time step.',
+            'fixed-membership': 'Single- or multi-dimensional array of instances. '
+              + 'Dimensions can be numerical, or the names of enumerated types, '
+              + 'with one element for each member of the type.',
+            population: 'Population submodel. Membership is controlled by the '
+              + 'population symbols. It must contain at least one creation or '
+              + 'immigration symbol for the population to have any members.',
+          } },
         // `expression-list`, not `expression`, because Simile's membership is
         // per DIMENSION: `count=[4,44]` is a 4×44 grid of instances, two sizes
         // and not one expression. Held as the comma-separated text the modeller
@@ -241,16 +260,53 @@
         // the importer (STATUS item 37).
         { name: 'dimensions', label: 'Number of instances', type: 'expression-list',
           requiredWhen: { kind: 'fixed-membership' },
-          help: 'Fixed-membership submodels only. One size per dimension, '
-              + 'separated by commas — "4,44" is a 4 × 44 grid.' },
-        // Simile's `step=N` on a submodel: which time base it runs on. Each
-        // base has its own time step (`dt(N)` in an equation; the run's time
-        // step is then one value per base, "0.1 0.01"). Blank is base 1, the
-        // model's own. Dropped on import until 2026-10-20, which made
-        // `lamos1a` (two submodels on base 2, using `dt(2)`) fail to build.
-        { name: 'timeBase', label: 'Time base', type: 'number',
-          help: 'Leave blank to run with the model\'s time step. 2, 3… run '
-              + 'on a further time base, with its own time step, dt(2)…' },
+          showWhen: { kind: 'fixed-membership' },
+          help: 'One size per dimension, separated by commas — "4,44" is a '
+              + '4 × 44 grid.' },
+
+        // Styling. Kept in layout: none of it changes what the model means.
+        { name: 'scale', label: 'Relative scale', type: 'scale', layout: 'scale', tab: 'Styling',
+          min: 0.01, max: 1.5, step: 0.01, default: 1,
+          help: 'How big its contents are drawn, relative to the submodel it is '
+              + 'in. The box and where things are in it stay as they are. A '
+              + 'submodel inside this one keeps its own contents\' size, as far '
+              + 'as it can.' },
+        { name: 'fill', label: 'Background shade', type: 'colour', layout: 'fill', tab: 'Styling',
+          help: 'Clear it for the standard shade, which deepens with nesting.' },
+        { name: 'hide', label: 'Hide contents', type: 'boolean', layout: 'hide', tab: 'Styling',
+          help: 'Draw it as a closed box. Nothing is changed in the model.' },
+
+        // Notes. Simile's `description` and `comment`.
+        { name: 'description', label: 'Description', type: 'text', tab: 'Notes' },
+        { name: 'comment', label: 'Comments', type: 'longtext', tab: 'Notes',
+          help: 'What this submodel represents, where it came from, anything a '
+              + 'reader of the model should know.' },
+
+        // Advanced. Simile's `step=N` on a submodel: which time base it runs
+        // on. Each base has its own time step (`dt(N)` in an equation; the
+        // run's time step is then one value per base, "0.1 0.01"). Default is
+        // the time base of the submodel it is in. Dropped on import until
+        // 2026-10-20, which made `lamos1a` (two submodels on base 2, using
+        // `dt(2)`) fail to build.
+        { name: 'timeBase', label: 'Time step index', type: 'choice', tab: 'Advanced',
+          options: [
+            { value: '', label: 'Default' },
+            { value: '-2', label: 'Initialize only' },
+            { value: '-1', label: 'New params only' },
+            { value: '0', label: 'Reset only' },
+            { value: '1', label: '1st' }, { value: '2', label: '2nd' },
+            { value: '3', label: '3rd' }, { value: '4', label: '4th' },
+            { value: '5', label: '5th' }, { value: '6', label: '6th' },
+            { value: '7', label: '7th' },
+          ],
+          help: 'Default runs with the submodel it is in. 2nd, 3rd… run on a '
+              + 'further time base, with its own time step, dt(2)…' },
+        { name: 'eqnUnits', label: 'Use units in math', type: 'choice', tab: 'Advanced',
+          options: [{ value: '', label: 'Default' }, { value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }] },
+        { name: 'index0', label: 'First index is 0', type: 'choice', tab: 'Advanced',
+          options: [{ value: '', label: 'Default' }, { value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }] },
+        { name: 'enumTypes', label: 'Enumerated types', type: 'longtext', rows: 2, tab: 'Advanced',
+          help: 'One type per line, its name then its members: fruit: apple, orange, lemon' },
       ],
     },
 

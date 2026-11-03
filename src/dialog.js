@@ -77,7 +77,10 @@
  *
  * Values live where the model already keeps them: `props[name]`, except for
  * fields marked `target`, which address the element itself (a submodel's
- * `kind`). The element's **label** is always offered first — it is also the
+ * `kind`), and `layout`, kept with its layout (a submodel's scale). A field
+ * with a `tab` goes on a tab of that name, in the order they first appear; a
+ * type's `firstTab` names the first, and makes it a plain form, with no
+ * equation aids. The element's **label** is always offered first — it is also the
  * equation name (§14), so it belongs at the top of its own dialog.
  *
  * OK writes everything in ONE action, so a visit to the dialog is one undo
@@ -245,7 +248,9 @@
 
   /** Current value of one field, from the element. */
   function readValue(el, f) {
-    var v = f.target ? el[f.target] : (el.props || {})[f.name];
+    var v = f.layout ? (el.layoutFields || {})[f.layout]
+      : f.target ? el[f.target] : (el.props || {})[f.name];
+    if (v == null && f.default != null) return f.default;
     return v == null ? '' : v;
   }
 
@@ -410,12 +415,33 @@
     var id = 'fld-' + f.name;
     var control;
     if (f.type === 'choice') {
+      // A value the list does not have (from a file, say) stays selectable:
+      // OK must write back what was there, not the first option.
+      var known = (f.options || []).some(function (o) { return String(o.value) === String(value); });
+      var opts = (f.options || []).concat(known ? [] : [{ value: value }]);
       control = '<select id="' + id + '" data-field="' + esc(f.name) + '">'
-        + (f.options || []).map(function (o) {
+        + opts.map(function (o) {
           var sel = String(o.value) === String(value) ? ' selected' : '';
           return '<option value="' + esc(o.value) + '"' + sel + '>' + esc(o.label || o.value) + '</option>';
         }).join('')
         + '</select>';
+    } else if (f.type === 'scale') {
+      // A slider and the number it stands for, either of which can be used.
+      // Only the number is the field: a value beyond the slider stays as it is.
+      control = '<span class="slx-scale-field"><input type="range" class="slx-scale-slider" min="' + esc(f.min)
+        + '" max="' + esc(f.max) + '" step="' + esc(f.step) + '" value="' + esc(value) + '">'
+        + '<input type="number" id="' + id + '" data-field="' + esc(f.name) + '" min="' + esc(f.min)
+        + '" step="' + esc(f.step) + '" value="' + esc(Math.round(value * 1000) / 1000) + '"></span>';
+    } else if (f.type === 'colour') {
+      // The hidden input is the field, so a shade the picker cannot show
+      // (`white`, from a file) survives a visit, and Clear can mean "none".
+      var hex = /^#[0-9a-f]{6}$/i.test(value) ? value : '#ffffff';
+      control = '<span class="slx-colour-field"><input type="color" class="slx-colour-pick" value="' + esc(hex) + '">'
+        + '<input type="hidden" id="' + id + '" data-field="' + esc(f.name) + '" value="' + esc(value) + '">'
+        + '<button type="button" class="slx-colour-clear">Clear</button>'
+        + '<span class="slx-colour-state">' + (value ? '' : 'standard shade') + '</span></span>';
+    } else if (f.type === 'longtext') {
+      control = '<textarea id="' + id + '" rows="' + (f.rows || 5) + '" data-field="' + esc(f.name) + '">' + esc(value) + '</textarea>';
     } else if (f.type === 'boolean') {
       control = '<input type="checkbox" id="' + id + '" data-field="' + esc(f.name) + '"'
         + (value ? ' checked' : '') + '>';
@@ -431,9 +457,10 @@
     } else {
       control = '<input type="text" id="' + id + '" data-field="' + esc(f.name) + '" value="' + esc(value) + '">';
     }
-    return '<div class="slx-dlg-row">'
+    return '<div class="slx-dlg-row"' + (f.showWhen ? ' data-show-when="' + esc(JSON.stringify(f.showWhen)) + '"' : '') + '>'
       + '<label for="' + id + '">' + esc(f.label || f.name) + '</label>'
       + control
+      + (f.explain ? '<p class="slx-dlg-help" data-explain="' + esc(f.name) + '">' + esc(f.explain[value] || '') + '</p>' : '')
       + (f.help ? '<p class="slx-dlg-help">' + esc(f.help) + '</p>' : '')
       + '</div>';
   }
@@ -479,6 +506,9 @@
       el.props[f.name] = infer(d.model(), id);
     });
     var typeName = String(id).indexOf('submodel') === 0 ? 'submodel' : el.type;
+    if (fields.some(function (f) { return f.layout; })) {
+      el = $.extend({}, el, { layoutFields: d.layout(id) || {} });
+    }
 
     // The standard row for one field, by name — what a custom renderer reuses
     // for the parts it does not want to reinvent.
@@ -487,8 +517,8 @@
       return f ? fieldHtml(f, readValue(el, f)) : '';
     }
     // A sketched graph is not a row: it has a tab of its own (below).
-    function allRows() {
-      return fields.filter(function (f) { return f.type !== 'sketch'; })
+    function allRows(tab) {
+      return fields.filter(function (f) { return f.type !== 'sketch' && (f.tab || null) === (tab || null); })
         .map(function (f) { return fieldHtml(f, readValue(el, f)); }).join('');
     }
 
@@ -496,7 +526,7 @@
 
     var schema = d.schema();
     var renderer = Sienna.dialogs.rendererFor(schema.name, typeName);
-    var body = renderer
+    var body = spec.firstTab ? allRows() : renderer
       ? renderer({
         element: el,
         id: id,
@@ -539,9 +569,13 @@
     // would be a lie in service of a layout.
     var tabs = [{
       key: 'equation',
-      label: hasEquation ? 'Equation' : 'Properties',
+      label: spec.firstTab || (hasEquation ? 'Equation' : 'Properties'),
       body: body,
     }];
+    fields.forEach(function (f) {
+      if (!f.tab || tabs.some(function (t) { return t.label === f.tab; })) return;
+      tabs.push({ key: 'tab-' + f.tab, label: f.tab, body: allRows(f.tab) });
+    });
     // **Graph** — the sketched graph, as a tab where Simile has a button that
     // opens a separate window (Robert, 2026-10-13): it is a property of this
     // element like its equation, so it belongs in the element's dialog, and a
@@ -637,6 +671,40 @@
     }
 
     $dlg.on('click', '.slx-dlg-tab', function () { showTab($(this).attr('data-tab')); });
+
+    // What depends on a choice: its explanation, and the rows that apply.
+    function syncChoices() {
+      fields.forEach(function (f) {
+        if (!f.explain) return;
+        var v = $dlg.find('[data-field="' + f.name + '"]').val();
+        $dlg.find('[data-explain="' + f.name + '"]').text(f.explain[v] || '');
+      });
+      $dlg.find('[data-show-when]').each(function () {
+        var when = JSON.parse($(this).attr('data-show-when'));
+        var on = Object.keys(when).every(function (k) {
+          var f = fields.filter(function (x) { return x.target === k || x.name === k; })[0];
+          return $dlg.find('[data-field="' + (f ? f.name : k) + '"]').val() === when[k];
+        });
+        $(this).toggleClass('slx-hidden', !on);
+      });
+    }
+    $dlg.on('change', 'select[data-field]', syncChoices);
+    syncChoices();
+
+    $dlg.on('input', '.slx-scale-slider', function () {
+      $(this).siblings('input[type=number]').val(this.value);
+    });
+    $dlg.on('input', '.slx-scale-field input[type=number]', function () {
+      $(this).siblings('.slx-scale-slider').val(this.value);
+    });
+    $dlg.on('input', '.slx-colour-pick', function () {
+      $(this).siblings('input[type=hidden]').val(this.value);
+      $(this).siblings('.slx-colour-state').text('');
+    });
+    $dlg.on('click', '.slx-colour-clear', function () {
+      $(this).siblings('input[type=hidden]').val('');
+      $(this).siblings('.slx-colour-state').text('standard shade');
+    });
     $dlg.on('click', '[data-act=back]', function () { showTab(tabs[0].key); });
 
     // ---- inserting at the caret -----------------------------------------
@@ -707,12 +775,14 @@
       var label = $dlg.find('[data-field=":label"]').val();
       var props = {};
       var direct = {};
+      var layout = {};
       $dlg.find('[data-field]').each(function () {
         var name = $(this).attr('data-field');
         if (name === ':label') return;
         var f = fields.filter(function (x) { return x.name === name; })[0] || { name: name };
         var v = this.type === 'checkbox' ? this.checked : $(this).val();
-        if (f.target) direct[f.target] = v;
+        if (f.layout) layout[f.layout] = v;
+        else if (f.target) direct[f.target] = v;
         else props[name] = v;
       });
       // The graph is kept only if there is one to keep: visiting the tab and
@@ -734,7 +804,7 @@
       // of the problem report, since nothing is written until the end.
       function write() {
         try {
-          d.setProperties(id, { label: label, props: props, direct: direct });
+          d.setProperties(id, { label: label, props: props, direct: direct, layout: layout });
         } catch (err) {
           reject(err.message);
           return false;                            // the label was rejected; stay open

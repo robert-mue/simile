@@ -718,6 +718,26 @@
       return out;
     },
 
+    /**
+     * What Simile's submodel dialog holds besides its kind: its Notes and
+     * Advanced fields, into `props`, and its shade and Hide contents, into
+     * layout. All kept for the dialog, and written back.
+     */
+    notesOf: function (id, props, geom) {
+      var p = this.N[id].p;
+      ['description', 'comment'].forEach(function (k) {
+        var t = p[k] == null ? '' : unquote(p[k]);
+        if (t) props[k] = t;
+      });
+      if (p.eqn_units != null && unquote(p.eqn_units)) props.eqnUnits = unquote(p.eqn_units);
+      if (p.index0 != null && unquote(p.index0)) props.index0 = unquote(p.index0);
+      var types = enumTypes(p.enum_types);
+      if (types) props.enumTypes = types;
+      var fill = p.fill_colour == null ? '' : unquote(p.fill_colour);
+      if (fill) geom.fill = fill;
+      if (parseInt(String(this.N[id].g.hide_contents || '0'), 10) === 1) geom.hide = true;
+    },
+
     makeSubmodels: function () {
       var self = this;
       this.nodeIds.forEach(function (id) {
@@ -733,9 +753,10 @@
         var s = self.scaleIn(id);
         if (s !== 1) geom.scale = s;
         var kind = self.kindOf(id);
-        // The time base it runs on (`step=2`); 1, or none, is the model's own.
-        var step = parseInt(String(self.N[id].p.step || ''), 10);
-        if (step > 1) kind.props.timeBase = String(step);
+        // The time base it runs on (`step=2`); none means its parent's.
+        var step = parseInt(String(self.N[id].p.step == null ? '' : self.N[id].p.step), 10);
+        if (!isNaN(step)) kind.props.timeBase = String(step);
+        self.notesOf(id, kind.props, geom);
         self.ours[id] = self.put('submodel', {
           kind: kind.kind,
           parent: null,                    // filled in once every id exists
@@ -1288,6 +1309,9 @@
       var look = function (bag, id) {
         Object.keys(bag).forEach(function (k) {
           if ((k === 'min_val' || k === 'max_val') && ranged[id]) return;
+          // A submodel keeps these (`notesOf`); elsewhere they still go.
+          if (id && self.N[id].type === 'submodel'
+              && (k === 'comment' || k === 'fill_colour' || k === 'enum_types')) return;
           if (DROPPED.indexOf(k) >= 0 && k !== 'name' && k !== 'value' && k !== 'units'
               && k !== 'role' && k !== 'attached' && k !== 'multiplication_spec'
               && k !== 'centre' && k !== 'bounding_box' && k !== 'internal_extent'
@@ -1303,6 +1327,21 @@
       });
     },
   };
+
+  /**
+   * `[fruit-[apple,orange],tester-[foo]]` as the dialog holds it, a line per
+   * type: `fruit: apple, orange`. A type with no name is nothing (Simile writes
+   * `''-[]` for an empty list).
+   */
+  function enumTypes(raw) {
+    if (raw == null) return '';
+    return items(raw).map(function (t) {
+      var at = t.indexOf('-[');
+      if (at < 0) return '';
+      var name = unquote(t.slice(0, at)).trim();
+      return name ? name + ': ' + items(t.slice(at + 1)).map(unquote).join(', ') : '';
+    }).filter(Boolean).join('\n');
+  }
 
   /** `use(0,in_base,attribute_higher,list(1))` → its four fields. */
   function parseUse(raw) {

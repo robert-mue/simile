@@ -171,20 +171,21 @@
 
   // ---- Prolog term helpers ---------------------------------------------
 
-  /**
-   * A Prolog atom: bare when it can be, quoted when it must be. Simile's own
-   * files quote anything that is not `[a-z][a-zA-Z0-9_]*`, and double an
-   * internal quote to escape it.
-   */
   /** A coordinate as written: to three decimals, an integer where it is one. */
   function coord(v) {
     return Math.round(v * 1000) / 1000;
   }
 
+  /**
+   * A Prolog atom: bare when it can be, quoted when it must be. Simile's own
+   * files quote anything that is not `[a-z][a-zA-Z0-9_]*`, and double an
+   * internal quote to escape it.
+   */
   function atom(s) {
     var t = String(s == null ? '' : s);
     if (/^[a-z][a-zA-Z0-9_]*$/.test(t)) return t;
-    return "'" + t.replace(/\\/g, '\\\\').replace(/'/g, "''") + "'";
+    // A line break is written `\n`: a quoted atom may not hold a real one.
+    return "'" + t.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/\n/g, '\\n') + "'";
   }
 
   /**
@@ -1048,11 +1049,11 @@
           'multiplication_spec=' + this.spec(id),
           'name=' + atom(s.label || id),
           'separate=0',
-        ].concat(this.timeBase(id))) + ',' + list([
+        ].concat(this.timeBase(id), this.submodelNotes(id))) + ',' + list([
           'bounding_box=[' + x + ',' + y + ',' + coord(x + w) + ',' + coord(y + h) + ']',
           'caption_offset=[0,-8]',
           'internal_extent=[0,0,' + coord(w / sc) + ',' + coord(h / sc) + ']',
-        ]) + ').');
+        ].concat(g.hide ? ['hide_contents=1'] : [])) + ').');
     },
 
     /**
@@ -1060,8 +1061,34 @@
      * own (the schema's `timeBase`, "Time base"). Absent means base 1.
      */
     timeBase: function (id) {
-      var n = parseInt(String(((this.m.submodels[id] || {}).props || {}).timeBase || ''), 10);
-      return n > 1 ? ['step=' + n] : [];
+      var v = ((this.m.submodels[id] || {}).props || {}).timeBase;
+      var n = parseInt(String(v == null ? '' : v), 10);
+      // The space matters: `=-` would be one Prolog token.
+      return isNaN(n) ? [] : ['step=' + (n < 0 ? ' ' : '') + n];
+    },
+
+    /**
+     * What the submodel dialog holds besides its kind and time base (the
+     * importer's `notesOf`): written only where set, so a model that never
+     * used them exports as it did.
+     */
+    submodelNotes: function (id) {
+      var props = (this.m.submodels[id] || {}).props || {};
+      var g = (this.m.layout || {})[id] || {};
+      var out = [];
+      if (props.description) out.push('description=' + atom(props.description));
+      if (props.comment) out.push('comment=' + atom(props.comment));
+      if (props.eqnUnits) out.push('eqn_units=' + atom(props.eqnUnits));
+      if (props.index0) out.push('index0=' + atom(props.index0));
+      if (g.fill) out.push('fill_colour=' + atom(g.fill));
+      var types = String(props.enumTypes || '').split('\n').map(function (line) {
+        var at = line.indexOf(':');
+        if (at < 1) return '';
+        var members = line.slice(at + 1).split(',').map(function (m) { return m.trim(); }).filter(Boolean);
+        return atom(line.slice(0, at).trim()) + '-[' + members.map(atom).join(',') + ']';
+      }).filter(Boolean);
+      if (types.length) out.push('enum_types=[' + types.join(',') + ']');
+      return out;
     },
 
     /**

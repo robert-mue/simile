@@ -1457,3 +1457,15 @@ button.slx-fn:hover { background: #eaf2fa; }
 .slx-table-values th, .slx-table-values td { padding: 2px 10px; text-align: right; border-bottom: 1px solid #eceef2; }
 .slx-table-values th { position: sticky; top: 0; background: #f4f5f8; }
 .slx-table-values td:first-child, .slx-table-values th:first-child { color: #888; width: 3em; }
+
+/* The submodel dialog's Styling tab. */
+.slx-scale-field,
+.slx-colour-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.slx-scale-slider { flex: 1; min-width: 0; }
+.slx-scale-field input[type=number] { width: 5em; }
+.slx-colour-pick { width: 3em; height: 1.8em; padding: 0; }
+.slx-colour-state { color: #777; font-size: 12px; }

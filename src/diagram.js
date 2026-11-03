@@ -1074,6 +1074,12 @@
       return k;
     },
 
+    /** Is this element inside a submodel showing a closed box (`layout.hide`)? */
+    isHidden: function (id) {
+      var self = this;
+      return this.ancestorsOf(id).some(function (s) { return !!(self.layout(s) || {}).hide; });
+    },
+
     /** The scale things INSIDE a submodel are drawn at (null: the top level, 1). */
     contentScale: function (subId) {
       return subId == null ? 1 : this.scaleOf(subId) * this.scaleIn(subId);
@@ -1346,8 +1352,49 @@
             var merged = Object.assign({}, self.get(id).props || {}, c.props);
             Sienna.userData.set(base + '/props', merged);
           }
+          Object.keys(c.layout || {}).forEach(function (k) {
+            if (k === 'scale') self._setScale(id, c.layout[k]);
+            else self._setLayoutField(id, k, c.layout[k]);
+          });
         }
       );
+    },
+
+    /** One field of an element's layout: an empty value removes it. */
+    _setLayoutField: function (id, key, value) {
+      var ref = this.path + '/layout/' + id + '/' + key;
+      if (value === '' || value === false || value == null) {
+        if (Sienna.userData.has(ref)) Sienna.userData.remove(ref);
+      } else {
+        Sienna.userData.set(ref, value);
+      }
+    },
+
+    /**
+     * Change a submodel's scale, as Simile's Relative scale does (`refatten`,
+     * Prolog/menu.pl): the box and the positions in it stay; only how big its
+     * contents are drawn changes. A submodel inside it takes the opposite
+     * change, so ITS contents keep their size — unless that would draw them
+     * larger than the submodel they are in, when it stops at 1 and passes the
+     * rest down.
+     */
+    _setScale: function (id, value) {
+      var self = this;
+      var was = this.scaleIn(id);
+      var now = +value;
+      if (!(now > 0) || Math.abs(now - was) <= 0.005) return;
+      function write(sub, s) {
+        self._setLayoutField(sub, 'scale', Math.abs(s - 1) <= 0.005 ? '' : s);
+      }
+      function carry(parent, factor) {
+        self.childrenOf(parent).forEach(function (k) {
+          if (mapOf(k) !== 'submodels') return;
+          var s = self.scaleIn(k) * factor;
+          if (s > 1.005) { write(k, 1); carry(k, s); } else write(k, s);
+        });
+      }
+      write(id, now);
+      carry(id, was / now);
     },
 
     /**

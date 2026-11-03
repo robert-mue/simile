@@ -137,7 +137,8 @@
               if ((m.nodes[id] || {}).type === 'valve') return;      // derived: rides on its flow
               var g = (m.layout || {})[id] || {};
               var k = pathOf(id);
-              (out[k] = out[k] || []).push([g.x || 0, g.y || 0, g.w || 0, g.h || 0, g.scale || 1]);
+              (out[k] = out[k] || []).push([g.x || 0, g.y || 0, g.w || 0, g.h || 0, g.scale || 1,
+                g.fill || '', !!g.hide]);
             });
             Object.keys(out).forEach(function (k) {
               out[k].sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
@@ -148,7 +149,9 @@
           Object.keys(a).forEach(function (k) {
             (a[k] || []).forEach(function (p, i) {
               var q = (b[k] || [])[i];
-              var off = !q || p.some(function (v, j) { return Math.abs(v - q[j]) > (j === 4 ? 0.001 : 0.01); });
+              var off = !q || p.some(function (v, j) {
+                return j > 4 ? v !== q[j] : Math.abs(v - q[j]) > (j === 4 ? 0.001 : 0.01);
+              });
               if (off) out.push('moved  ' + k + ' ' + JSON.stringify(p) + ' -> ' + JSON.stringify(q || null));
             });
           });

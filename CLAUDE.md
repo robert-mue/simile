@@ -78,7 +78,7 @@ footing (`src/widgets/grid.js` is the first).
   stay in one world space, sizes follow — `Diagram.box` scales a node's
   glyph, and styles.css multiplies line widths and names by `--k`
   (`_scaled`); an arc segment is drawn at the scale of the submodel it runs
-  through (`_segmentScales`, `_markerFor`). Imported from Simile's
+  through (`_segments`, `_markerFor`). Imported from Simile's
   box / `internal_extent` (77 of nkometou's 99), exported back the same way.
 - `src/diagram.js` — the **model layer** (`Sienna.Diagram`): nodes, arcs,
   submodels, parentage, naming. Notation-neutral; knows nothing about drawing.
@@ -97,6 +97,15 @@ footing (`src/widgets/grid.js` is the first).
   Simile wrote: `tools/headless/scripts/crossings.py`.
 - `src/grammar.js` + `src/predicates.js` — evaluate the schema's rules; named
   predicates are the escape hatch for what data cannot express (§12.2).
+- **The submodel dialog** follows Simile's (`Disaggregate`, Run/forms.tcl):
+  tabs Instances, Styling, Notes, Advanced, declared in the schema (a field's
+  `tab`; `firstTab`; `layout` for what is kept with layout, not props; types
+  `scale`, `colour`, `longtext`; `explain`, `showWhen`). Relative scale is
+  `Diagram._setScale`, Simile's `refatten`: box and positions stay, a nested
+  submodel keeps its contents' size up to scale 1. Hide contents: `layout.hide`,
+  `Diagram.isHidden`, `_segments`. All imported and exported (`notesOf`,
+  `submodelNotes`). Not there, nothing could act on them: a background image,
+  external code, threads, the data-records and grid kinds.
 - `src/equation-grammar.js` / `equation.js` / `equation-check.js` — the PEG, the
   parser wrapper with its cache, and the join of parser + model + schema that
   produces the red/black completeness findings.

@@ -386,6 +386,76 @@
       },
     },
     {
+      name: 'the submodel dialog',
+      guards: 'tabs as in Simile\'s dialog; Relative scale changes drawn size and nothing else, a nested submodel keeps its contents\' size; shade, Hide contents and notes are kept, and one undo takes it all back',
+      run: function (t) {
+        var outer = t.submodel(100, 40, 460, 230, 'patch');
+        var inner = t.submodel(270, 90, 420, 200, 'plot');
+        var a = t.place('stock', 170, 130, 'soil');
+        var b = t.place('variable', 340, 140, 'rain');
+        t.d.addInfluence(b, a);
+        t.d.setProperties(b, { props: { value: '1' } });
+        t.d.setProperties(a, { props: { initial: t.d.namesSuppliedBy(t.d.arcsAt(a)[0])[0] } });
+        t.d._setScale(inner, 0.5);
+        t.inst._render();
+        var before = { a: t.box(a), inner: t.box(inner) };
+        var innerK = t.d.contentScale(inner);
+
+        t.inst._openDialog(t.d, outer);
+        var dlg = document.querySelector('.slx-dlg');
+        if (!t.check(!!dlg, 'no dialog')) return;
+        var tabs = Array.prototype.map.call(dlg.querySelectorAll('.slx-dlg-tab'), function (x) { return x.textContent; });
+        t.equal(tabs.join(','), 'Instances,Styling,Notes,Advanced', 'tabs');
+        var field = function (n) { return dlg.querySelector('[data-field="' + n + '"]'); };
+        t.check(!!dlg.querySelector('[data-explain="kind"]').textContent, 'no explanation of the kind');
+        t.check(field('dimensions').closest('.slx-dlg-row').classList.contains('slx-hidden'), 'sizes shown for a single instance');
+        field('kind').value = 'fixed-membership';
+        field('kind').dispatchEvent(new Event('change', { bubbles: true }));
+        t.check(!field('dimensions').closest('.slx-dlg-row').classList.contains('slx-hidden'), 'sizes not shown for an array');
+        field('kind').value = 'single';
+        field('kind').dispatchEvent(new Event('change', { bubbles: true }));
+        field('scale').value = '0.5';
+        field('fill').value = '#ffcc00';
+        field('comment').value = 'where the soil is\nand what it does';
+        field('timeBase').value = '2';
+        dlg.querySelector('[data-act=ok]').click();
+
+        t.near(t.d.scaleIn(outer), 0.5, 'scale');
+        t.near(t.box(a).l, before.a.l + (before.a.r - before.a.l) / 4, 'glyph shrinks about its centre');
+        t.near((t.box(a).l + t.box(a).r) / 2, (before.a.l + before.a.r) / 2, 'position kept');
+        t.near(t.box(inner).r, before.inner.r, 'inner box kept');
+        t.near(t.d.contentScale(inner), innerK, 'inner contents keep their size');
+        t.equal(t.model().layout[outer].fill, '#ffcc00', 'shade');
+        t.equal(t.model().submodels[outer].props.comment, 'where the soil is\nand what it does', 'comment');
+        t.inst._render();
+        var rect = t.inst._svg.querySelector('.slx-submodel[data-id="' + outer + '"] rect');
+        t.check(/255, 204, 0|ffcc00/i.test(rect.getAttribute('style')), 'shade not drawn: ' + rect.getAttribute('style'));
+
+        // Survives a trip through Simile's format.
+        var back = Sienna.importSimile.read(Sienna.exportSimile.prolog(t.model())).model;
+        var sub = Object.keys(back.submodels).filter(function (k) { return back.submodels[k].label === 'patch'; })[0];
+        t.equal(back.submodels[sub].props.comment, 'where the soil is\nand what it does', 'comment round trip');
+        t.equal(back.submodels[sub].props.timeBase, '2', 'time step index round trip');
+        t.equal(back.layout[sub].fill, '#ffcc00', 'shade round trip');
+
+        // Hide contents: a closed box, the arc gone with what is inside it.
+        t.inst._openDialog(t.d, inner);
+        dlg = document.querySelector('.slx-dlg');
+        dlg.querySelector('[data-field="hide"]').checked = true;
+        dlg.querySelector('[data-act=ok]').click();
+        t.inst._render();
+        t.check(!t.inst._svg.querySelector('.slx-node[data-id="' + b + '"]'), 'a hidden element was drawn');
+        t.check(!!t.inst._svg.querySelector('.slx-node[data-id="' + a + '"]'), 'an element outside was not drawn');
+        t.check(t.inst._svg.querySelectorAll('path.slx-arc').length === 1, 'the arc should stop at the closed box');
+        Sienna.history.undo();
+        t.inst._render();
+        t.check(!!t.inst._svg.querySelector('.slx-node[data-id="' + b + '"]'), 'undo did not bring it back');
+        Sienna.history.undo();
+        t.near(t.d.scaleIn(outer), 1, 'one undo takes the first visit back');
+        t.near(t.d.contentScale(inner), innerK, 'and leaves the inner size');
+      },
+    },
+    {
       name: 'role arrows named after the base (items 34, 37)',
       guards: 'a role arrow drawn from a submodel\'s interior attaches to it, is named after it, and a second one is numbered; the line starts at the press',
       run: function (t) {
@@ -577,6 +647,15 @@
   Simile.ready().then(function () {
     document.getElementById('summary').textContent = 'running…';
     return Sienna.widgetRegistry.loadWidget('diagram');
+  }).then(function () {
+    // Not in embed.js: a page has no use for it. One test goes through it.
+    return new Promise(function (ok, no) {
+      var el = document.createElement('script');
+      el.src = '../src/import-simile.js';
+      el.onload = ok;
+      el.onerror = function () { no(new Error('could not load the importer')); };
+      document.head.appendChild(el);
+    });
   }).then(runAll).catch(function (e) {
     var el = document.getElementById('summary');
     el.className = 'fail';

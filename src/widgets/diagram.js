@@ -655,10 +655,16 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._index = this._arcIndex(model);
 
     // Bodies first (submodels sit under everything), then arcs, then nodes.
-    Object.keys(model.submodels || {}).forEach((id) => this._renderSubmodel(d, id, model.submodels[id]));
+    // What is inside a closed submodel (`Diagram.isHidden`) is left out, and so
+    // is any stretch of an arc in there (`_renderArc`).
+    Object.keys(model.submodels || {}).forEach((id) => {
+      if (!d.isHidden(id)) this._renderSubmodel(d, id, model.submodels[id]);
+    });
     Object.keys(model.arcs || {}).forEach((id) => this._renderArc(d, id, model.arcs[id]));
-    Object.keys(model.nodes || {}).forEach((id) => this._renderNode(d, id, model.nodes[id]));
-    d.allPorts().forEach((p) => this._renderPort(d, p));
+    Object.keys(model.nodes || {}).forEach((id) => {
+      if (!d.isHidden(id)) this._renderNode(d, id, model.nodes[id]);
+    });
+    d.allPorts().forEach((p) => { if (!d.isHidden(p.boundary)) this._renderPort(d, p); });
 
     // The selection ring sits in the overlay, so it is never painted over.
     this._sel.forEach((sid) => {
@@ -724,7 +730,7 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // A pastel that deepens with nesting, so an inner submodel stands out
       // from the one it is in (Robert, 2026-10-21). Inline: a stylesheet's
       // `fill` would beat an attribute.
-      style: 'fill:' + this._submodelFill(d.ancestorsOf(id).length),
+      style: 'fill:' + this._submodelFill(d.ancestorsOf(id).length, (d.layout(id) || {}).fill),
     }));
     g.addEventListener('pointerdown', (e) => this._beginElementDrag(e, d, id));
     g.addEventListener('dblclick', () => this._editLabel(d, id));
@@ -745,7 +751,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
    * a step darker for each level in, stopping well short of dark so the
    * contents stay easy to read however deep the nesting goes.
    */
-  _submodelFill(depth) {
+  _submodelFill(depth, shade) {
+    // Its own Background shade, if it has one. White is how Simile says none.
+    if (shade && !/^(white|#ffffff)$/i.test(shade)) return shade;
     const light = Math.max(80, 96 - depth * 5);
     return `hsl(205, 70%, ${light}%)`;
   },
@@ -1223,8 +1231,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const boxA = d.box(arc.from, ov);
     const boxZ = d.box(arc.to, ov);
     const raw = d.arcPoints(id, ov).slice();
-    const ks = this._segmentScales(d, id, arc, raw);
-    const kz = ks[ks.length - 1];
+    const seg = this._segments(d, id, arc, raw);
+    if (seg.lastShown < 0) return;           // wholly inside a closed submodel
+    const ks = seg.scales;
+    const kz = ks[seg.lastShown];
     const pts = this._trimChain(arc, raw, boxA, boxZ, kz);
     if (pts.length < 2) return;
 
@@ -1237,8 +1247,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const red = arc.type === 'role' && this._incomplete(d, id);
 
     this._segmentPaths(arc, pts, bow, boxA, boxZ, kz).forEach((dAttr, i) => {
-      if (!dAttr) return;
-      const last = i === pts.length - 2;
+      if (!dAttr || seg.hidden[i]) return;
+      const last = i === seg.lastShown;
       const k = ks[i] || 1;
 
       // A wide invisible twin under the visible stroke: a 0.8px hairline is
@@ -1276,30 +1286,38 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // An arc type may carry a label — in this notation only `role` does (§14),
     // and until the reference models were built nothing drew it, so a
     // two-role association showed as two unnamed arcs.
-    if (arc.label && d.arcType(arc.type).has_label) {
+    const midSeg = Math.max(0, Math.floor((pts.length - 1) / 2));
+    if (arc.label && d.arcType(arc.type).has_label && !seg.hidden[midSeg]) {
       const at = this._arcLabelAt(pts, bow);
-      this._placeLabel(d, id, arc.label, at.x, at.y, 'slx-label slx-arc-label',
-        ks[Math.max(0, Math.floor((pts.length - 1) / 2))] || 1);
+      this._placeLabel(d, id, arc.label, at.x, at.y, 'slx-label slx-arc-label', ks[midSeg] || 1);
     }
   },
 
   /**
-   * The scale each segment of an arc is drawn at: that of the submodel it runs
-   * through. `pts` is the arc's chain (`arcPoints`), its ports marked: the
-   * first segment is in the source's submodel, and each port passed changes
-   * it — to the boundary's parent going out, into the boundary coming in.
+   * What each segment of an arc runs through. `pts` is its chain (`arcPoints`),
+   * ports marked: the first segment is in the source's submodel, and each port
+   * passed changes it — to the boundary's parent going out, into the boundary
+   * coming in. So: `scales`, the scale each is drawn at; `hidden`, whether it
+   * is inside a closed submodel; `lastShown`, the last that is not (-1: none),
+   * which carries the arrowhead, so an arc into a closed box ends at its edge.
    */
-  _segmentScales(d, id, arc, pts) {
+  _segments(d, id, arc, pts) {
     const byKey = {};
     d.portsFor(id).forEach((p) => { byKey[p.key] = p; });
+    const scales = [];
+    const hidden = [];
     let c = d.parentOf(arc.from);
-    const out = [d.contentScale(c)];
+    const add = () => {
+      scales.push(d.contentScale(c));
+      hidden.push(c != null && (!!(d.layout(c) || {}).hide || d.isHidden(c)));
+    };
+    add();
     for (let i = 1; i < pts.length - 1; i++) {
       const p = byKey[pts[i].port];
       if (p) c = p.shared ? d.parentOf(p.boundary) : p.boundary;
-      out.push(d.contentScale(c));
+      add();
     }
-    return out;
+    return { scales, hidden, lastShown: hidden.lastIndexOf(false) };
   },
 
   /** The arrowhead for an arc type at scale `k`: made the first time one is asked for. */
@@ -1979,19 +1997,20 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       this._layer.arcs.querySelectorAll('[data-id="' + a + '"]').forEach((el) => { el.style.display = 'none'; });
       const chain = d.arcPoints(a);
       const mid = chain.slice(1, -1);
-      const ks = this._segmentScales(d, a, arc, chain);
-      const marker = this._markerFor(arc.type, ks[ks.length - 1]);
+      const seg = this._segments(d, a, arc, chain);
+      const ks = seg.scales;
+      const marker = this._markerFor(arc.type, ks[Math.max(0, seg.lastShown)]);
       const cls = 'slx-arc slx-arc-' + arc.type + (d.portsFor(a).length ? ' slx-arc-split' : '')
         + (this._sel.indexOf(a) >= 0 ? ' slx-arc-selected' : '');
       const paths = [];
       for (let i = 0; i <= mid.length; i++) {
         const path = this._scaled(this._el('path', { class: cls, 'data-ghost-for': a, 'data-segment': i }), ks[i] || 1);
-        if (i === mid.length) path.setAttribute('marker-end', 'url(#' + marker + ')');
+        if (i === seg.lastShown) path.setAttribute('marker-end', 'url(#' + marker + ')');
         layer.appendChild(path);
         paths.push(path);
       }
       return {
-        id: a, arc, mid, paths, ks, bow: this._bowFor(d, a, arc),
+        id: a, arc, mid, paths, seg, bow: this._bowFor(d, a, arc),
         label: this._layer.labels.querySelector('[data-label-for="' + a + '"]'),
         off: d.labelOffset(a) || { dx: 0, dy: 0 },
       };
@@ -2011,10 +2030,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
         c.mid.map((p) => { const q = portOf(p); return { x: q.x, y: q.y }; }),
         [{ x: z.cx, y: z.cy }]);
       const bow = bowOf ? bowOf(c) : c.bow;
-      const kz = c.ks[c.ks.length - 1];
+      const kz = c.seg.scales[Math.max(0, c.seg.lastShown)];
       const pts = this._trimChain(c.arc, raw, a, z, kz);
       this._segmentPaths(c.arc, pts, bow, a, z, kz).forEach((dAttr, i) => {
-        if (c.paths[i]) c.paths[i].setAttribute('d', dAttr || '');
+        if (c.paths[i]) c.paths[i].setAttribute('d', c.seg.hidden[i] ? '' : dAttr || '');
       });
       if (c.label) {
         const at = this._arcLabelAt(pts, bow);
