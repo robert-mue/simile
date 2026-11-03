@@ -31,10 +31,11 @@ drag: GHOSTED drags (all five kinds), one redraw per model change, a
 memoised drawing (redraw 33 s → 0.5 s), and **SCALED SUBMODELS** as in
 Simile (77 of nkometou's 99) — which found that our EXPORTER wrote
 submodel contents in the wrong frame (fixed; roundtrip now compares
-layout). See "Done: large diagrams" below. NEXT: Robert to look at
-nkometou's diagram (re-open the REGENERATED `nkometou.json`); open: a
-control for a submodel's scale. Then the **Values table** display
-(proposed, he has not yet chosen). Release only when Robert says so.
+layout). See "Done: large diagrams" below. Robert on the release:
+"fantastic improvement for loading and dragging". Open: a control for a
+submodel's scale. The **Values table** display is PARKED (Robert,
+2026-11-03; see below). NEXT: Robert's call. Release only when Robert
+says so.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
@@ -235,12 +236,15 @@ at a time, with a small test model for each (he made
   (e33a4fb, removed in 30105b3); Robert: do NOT rewrite the history.
   `crossings.py` reads it from there. Not Jasper's model — he forwarded it
   (FLORES → CamFlores lineage; Robert co-led FLORES).
-- **NEXT**: Robert is looking at nkometou in the app first. Then the
-  **Values table** (proposed 2026-11-02, not yet chosen): pick any
-  component, rows = instances by path (`patch 12 · maize_crop`), an
-  array's elements as columns, blank for null, updating as it runs; then
-  plotter aggregates (sum / mean / count over instances) over time.
-  Still open: whether ~8 min in-page build matters; checking nkometou's
+- **PARKED — the Values table** (Robert, 2026-11-03): "It has so many
+  layout options, and one can't anticipate what the user will want. The
+  trick will be to provide what users want without overwhelming them with
+  a whole suite of options." The proposal, for when it comes back: pick any
+  component, rows = instances by path (`patch 12 · maize_crop`), an array's
+  elements as columns, blank for null, updating as it runs; then plotter
+  aggregates (sum / mean / count over instances) over time. Do not start it
+  unprompted.
+- Still open: whether ~8 min in-page build matters; checking nkometou's
   numbers against Simile (needs Robert or Jasper).
 - **How to probe nkometou** (scratch, not committed): import, export,
   `swipl generator/headless.pl` natively with `hl_setting(trace,true)` to
