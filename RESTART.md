@@ -39,7 +39,12 @@ PROPERTIES DIALOG** after Simile's, **nkometou's build halved** (~480 s ->
 below. Left for an in-person session with Jasper (Robert, 2026-11-03):
 checking nkometou's numbers, and the stop-gap parameter defaults. The
 **Values table** display is PARKED (see below). NEXT: Robert's call.
-Release only when Robert says so.
+Small things open, none chosen: an influence has no dialog of its own
+(Simile opens one on a double-click; ours does nothing, or opens what is
+under it); notes on NODES are still dropped on import (the dialog's tabs
+could hold them); the submodel dialog's left-out features (image, external
+code, threads, data-records and grid kinds). Release only when Robert says
+so.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
