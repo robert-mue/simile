@@ -1322,7 +1322,10 @@
     parameterKind: parameterKind,
     /** @returns {string} the model as Simile Prolog */
     prolog: function (model) {
-      return new Emitter(model).run();
+      // Only reads, so memoised: on a large model the same questions are asked
+      // of it thousands of times (nkometou: 10 s, and a run's check that the
+      // model has not changed exports it too).
+      return Sienna.Diagram.memo(function () { return new Emitter(model).run(); });
     },
 
     /**

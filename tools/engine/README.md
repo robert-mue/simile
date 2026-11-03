@@ -434,3 +434,12 @@ starting and drawing the model, which the page did in the page too.
 predator-prey, edited in the page: still 14 of 14 against the slider. With
 `Worker` made to throw, the app compiles in the page, frozen as before.
 
+## Speed of the generator (2026-11-03)
+
+`headless.pl` replaces a few of Simile's predicates once loaded (`hl_no_drawing`,
+`hl_sorts`, `hl_faster`) and `struct_db.pl` looks ids up (`sd_id_of`): nkometou
+76 s -> 32 s natively, about 240 s for the whole build in the page. They must
+answer exactly as the originals: after changing them, generate every catalogue
+model with the old and new versions and compare the C++ bar line 2 (its date).
+`pack.js` puts them in `vendor/simile-generator/`: run it after any change here.
+See NOTE-nkometou.md.

@@ -69,9 +69,58 @@ export_cpp :-
 	split_string(Made, " ", "", [NodeS, CanvasS]),
 	atom_string(Node, NodeS),
 	atom_string(Canvas, CanvasS),
+	hl_no_drawing,
+	hl_sorts,
 	user:tk_menu(Canvas, file, open),
+	hl_faster,
 	user:tk_code(Node, build_c, dummy),
 	hl_var("fromProlog", "1").
+
+%% Making C++ of a LARGE model is slow in places that are a matter of asking
+%% again what has not changed. Nothing in Simile's source is changed for it;
+%% the predicates are replaced here, once the model is open, and must answer
+%% exactly as the originals do. Checked: the C++ is byte-identical, every
+%% catalogue model and nkometou (tools/engine/README.md).
+%%
+%% ame_gen:name_matches(-Node, +Top, +Name), behind size('name'), walks every
+%% component of the model each time (a third of nkometou's generation time).
+%% No caption changes while code is made, so one walk answers them all.
+:- dynamic hl_named/3, hl_named_done/1.
+
+%% draw:redraw_window/1 draws the model in a window, and there is no window:
+%% every drawing command it sends is ignored (`hl_tcl`), an eighth of the time.
+hl_no_drawing :-
+	abolish(draw:redraw_window/1),
+	assertz(draw:redraw_window(_)).
+
+%% ame_gen:is_class_of_sort(?Class, ?Sort) is a table written as a member/2 of a
+%% long literal list, copied on every call. As facts it is the same table,
+%% hashed. In Simile's order, so answers come in the same order too.
+hl_sorts :-
+	findall(C-S, ame_gen:is_class_of_sort(C, S), Pairs),
+	abolish(ame_gen:is_class_of_sort/2),
+	forall(member(C-S, Pairs), assertz(ame_gen:is_class_of_sort(C, S))).
+
+hl_faster :-
+	retractall(hl_named(_, _, _)),
+	retractall(hl_named_done(_)),
+	hl_rename(ame_gen, name_matches, 3, hl_name_matches),
+	assertz((ame_gen:name_matches(Node, Top, Name) :- user:hl_named_in(Node, Top, Name))).
+
+%% The clauses of Module:Name/Arity under the name New; the old name left free.
+hl_rename(Module, Name, Arity, New) :-
+	functor(Head, Name, Arity),
+	Head =.. [_ | Args],
+	NewHead =.. [New | Args],
+	forall(clause(Module:Head, Body), assertz(Module:(NewHead :- Body))),
+	abolish(Module:Name/Arity).
+
+hl_named_in(Node, Top, Name) :-
+	(   hl_named_done(Top) -> true
+	;   forall(ame_gen:hl_name_matches(N, Top, C), assertz(hl_named(Top, C, N))),
+	    assertz(hl_named_done(Top))
+	),
+	hl_named(Top, Name, Node).
 
 %% Simile's version, as its Makefile says (MAJREL.MINREL): what Tcl passes.
 simile_version(SimileDir, V) :-

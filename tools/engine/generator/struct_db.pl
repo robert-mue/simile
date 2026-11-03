@@ -46,8 +46,28 @@ database:sd_reset :-
 
 % -- ids and lists --
 
-database:sd_num(Prefix, Id, N) :-
-	atom_length(Prefix, L),
+% What an id says, worked out the first time it is seen and looked up after:
+% Kind is node, arc or other, N the number after the prefix (atoi: the leading
+% digits, 0 if none). Asked of every id on every database call, so parsing it
+% each time was a third of the generator's time on a large model (nkometou:
+% 17 million parses). The table is first-argument indexed and never cleared,
+% as what an atom says never changes.
+:- dynamic database:sd_id/3.
+
+database:sd_id_of(Id, Kind, N) :-
+	(   database:sd_id(Id, K0, N0) -> Kind = K0, N = N0
+	;   database:sd_parse(Id, K0, N0),
+	    assertz(database:sd_id(Id, K0, N0)),
+	    Kind = K0, N = N0
+	).
+
+database:sd_parse(Id, Kind, N) :-
+	(   sub_atom(Id, 0, 4, _, node) -> Kind = node, database:sd_after(4, Id, N)
+	;   sub_atom(Id, 0, 3, _, arc) -> Kind = arc, database:sd_after(3, Id, N)
+	;   Kind = other, N = 0
+	).
+
+database:sd_after(L, Id, N) :-
 	sub_atom(Id, L, _, 0, Digits0),
 	atom_codes(Digits0, Cs),
 	sd_leading_digits(Cs, Ds),
@@ -56,10 +76,13 @@ database:sd_num(Prefix, Id, N) :-
 sd_leading_digits([C | Cs], [C | Ds]) :- code_type(C, digit), !, sd_leading_digits(Cs, Ds).
 sd_leading_digits(_, []).
 
-database:sd_is_node(Id) :- atom(Id), sub_atom(Id, 0, 4, _, node).
-database:sd_is_arc(Id) :- atom(Id), sub_atom(Id, 0, 3, _, arc).
-database:sd_node_num(Id, N) :- database:sd_num(node, Id, N).
-database:sd_arc_num(Id, N) :- database:sd_num(arc, Id, N).
+database:sd_is_node(Id) :- atom(Id), database:sd_id_of(Id, node, _).
+database:sd_is_arc(Id) :- atom(Id), database:sd_id_of(Id, arc, _).
+database:sd_node_num(Id, N) :- database:sd_id_of(Id, K, N0), ( K == node -> N = N0 ; database:sd_as(node, Id, N) ).
+database:sd_arc_num(Id, N) :- database:sd_id_of(Id, K, N0), ( K == arc -> N = N0 ; database:sd_as(arc, Id, N) ).
+
+% As the C reads it: whatever the id is, the number after that many characters.
+database:sd_as(Prefix, Id, N) :- atom_length(Prefix, L), database:sd_after(L, Id, N).
 
 database:sd_get(Key, L) :- ( database:sd_list(Key, L0) -> L = L0 ; L = [] ).
 database:sd_set(Key, L) :- retractall(database:sd_list(Key, _)), assertz(database:sd_list(Key, L)).
@@ -76,8 +99,8 @@ database:sd_set1(F, N, V) :-
 	H =.. [F, N, V], assertz(database:H).
 database:sd_unset1(F, N) :- G =.. [F, N, _], retractall(database:G).
 
-database:sd_node_live(Id, N) :- database:sd_is_node(Id), database:sd_node_num(Id, N), database:sd_exists(N).
-database:sd_arc_live(Id, N) :- database:sd_is_arc(Id), database:sd_arc_num(Id, N), database:sd_dest(N, _).
+database:sd_node_live(Id, N) :- atom(Id), database:sd_id_of(Id, node, N), database:sd_exists(N).
+database:sd_arc_live(Id, N) :- atom(Id), database:sd_id_of(Id, arc, N), database:sd_dest(N, _).
 
 % -- the foreign predicates --
 

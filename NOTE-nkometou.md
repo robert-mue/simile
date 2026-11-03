@@ -163,3 +163,28 @@ population by t = 100, patch soil fertility has changed, and nested values
 read (`nutex_maize` per patch, null where no maize crop exists). Not yet
 checked against Simile's own results — Jasper or Robert would have to say
 what a run should look like.
+
+## The build, brought down (2026-11-03)
+
+Measured: nearly all of the 470-493 s was Simile's generator in Prolog (76 s
+natively, about five times that in WebAssembly); clang is 4 s natively, 74 s in
+the page. Now, in the page, at low priority: export 1.6 s, generator 164 s,
+clang 74 s, **about 240 s**. Native generator 76 s -> 32 s. From, in order:
+
+- `struct_db.pl` parsed the number out of an id on every database call (17
+  million parses): now once per id (`sd_id_of`).
+- `name_matches`, behind `size('name')`, walked the whole model each time:
+  one walk per top model now (`hl_faster` in headless.pl).
+- The model was drawn, to no window (`hl_no_drawing`).
+- `is_class_of_sort`, a member/2 of a long literal list: now hashed facts
+  (`hl_sorts`).
+- Our exporter runs inside `Diagram.memo` (9.2 s -> 1.6 s; it also runs to check
+  the model has not changed).
+
+Nothing in Simile's source is changed: predicates are replaced in headless.pl
+once it is loaded. Checked: C++ byte-identical bar its date on nkometou and all
+67 catalogue models that make any; export text identical on all 66 exportable;
+61 models' run values identical. What is left is spread through Simile's own
+dependency lists (`add_to_deps`, `merge_lists`, `=..` in `utility:all`):
+further gains mean rewriting its logic. `-O1` would save little (native 3.4 s
+against 4.0), `-O0` much but slows the run.
