@@ -215,7 +215,11 @@ footing (`src/widgets/grid.js` is the first).
   page's `<name>.compiled.js` (`build-model.sh`) and the in-page tools
   (`build-browser-tools.sh`); they need Simile built from source in
   `~/Projects/simile-src` and emsdk in `~/emsdk`; the patches to Simile's
-  run-time code, and the record of what was found (`README.md`).
+  run-time code, and the record of what was found (`README.md`). **How to
+  change the engine** (a fix to Simile's code, the generator, a newer Simile:
+  where each change goes, what to rebuild, the checks):
+  `tools/engine/MAINTAINING.md`. Simile's checkout is never edited; our
+  changes to Simile's code are patches and replacement predicates here.
 - `reference/` — **data, not code.** `catalogue/` is the 72-model Simile
   catalogue (all format 9.0 or older) that `test/roundtrip.html` and
   `test/corpus.js` are built from; `catalogue-2026/` is six of them re-saved by

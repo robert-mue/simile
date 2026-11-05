@@ -1,7 +1,8 @@
 # What happens when a page is loaded and a model is run
 
-State on 2026-10-16 (commit c026d7e). The details are in `README.md` beside
-this file.
+State on 2026-10-16 (commit c026d7e), brought up to date on 2026-11-05. The
+details are in `README.md` beside this file; how to change any of it is in
+`MAINTAINING.md`.
 
 ## Terms
 
@@ -38,7 +39,9 @@ this file.
    opening the page.
 6. The plot draws the results. When the reader moves a slider, the model runs
    again with the new value as the slider is dragged, in milliseconds. No
-   server is involved.
+   server is involved. Values given in the Parameters panel (fixed
+   parameters, values over time) are handed to the model before each reset
+   (`bridge.cpp`, `sx_param_fill` and `sx_param_series`).
 7. The page keeps nothing. Reader edits and compiled models are gone when
    the page is closed.
 
@@ -68,7 +71,9 @@ this file.
     at a time.
 
 Typical times: the first compile of a visit is 6–9 s, mostly loading the
-tools; later compiles take about 3 s.
+tools; later compiles take about 3 s. A very large model takes far longer:
+nkometou (about 4,500 elements) takes about 4 minutes on Robert's laptop,
+of which the generator is about 2.7 minutes and clang about 1.2.
 
 ## C. The app (`index.html` at the repo root)
 
@@ -77,7 +82,9 @@ tools; later compiles take about 3 s.
 16. The app ships no compiled models. The first time any model is run, it
     is compiled as in steps 8–13.
 17. The app keeps each compiled model in the browser's own storage
-    (IndexedDB), up to the 50 used most recently. On later visits, a model
+    (IndexedDB), up to the 50 used most recently, labelled with the tools
+    that made it (`KIT` in `src/engine-local.js`), so that a new generator
+    or run-time library does not reuse old ones. On later visits, a model
     whose fingerprint is unchanged runs at once, in about 0.2–0.4 s, with no
     tools loaded. Measured: Growth took 6.5 s on the first visit and 0.17 s
     on the next.

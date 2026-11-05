@@ -1,12 +1,13 @@
 #!/bin/bash
 # Compile one model for an embedded-widget page:
 #   model script (File > Export model as script) -> Simile Prolog (the app's
-#   exporter) -> C++ (Simile itself, built from source) -> WebAssembly side
+#   exporter) -> C++ (Simile's generator, headless) -> WebAssembly side
 #   module -> <out>.compiled.js, a script calling Simile.compiledModel(name, …).
 #
 #   tools/engine/build-model.sh <simile source> <model script .js> <out .compiled.js>
 #
-# Opens Simile's window briefly (it needs a display). Needs emsdk (~/emsdk).
+# Needs emsdk (~/emsdk) and SWI-Prolog. Rebuild a page's after any edit to its
+# model, or when the C++ changes (tools/engine/MAINTAINING.md).
 set -e
 SRC=$(cd "${1:?usage: build-model.sh <simile source> <model .js> <out .compiled.js>}" && pwd)
 MODEL=$(realpath "${2:?model script}")
@@ -18,16 +19,12 @@ trap 'rm -rf "$WORK"' EXIT
 
 node "$HERE/export-pl.js" "$MODEL" "$WORK/model.pl" > /dev/null
 
-# Simile from source, with its own HOME so the installed Simile's settings
-# are left alone, and the export extension in place.
-mkdir -p "$WORK/home/.simile"
-cp "$SRC/Run/mdlrinfo.swi" "$WORK/home/.simile/mdlrinfo.txt"
-cp "$HERE/zz_export_cpp.tcl" "$SRC/Extensions/"
-(cd "$SRC" && HOME="$WORK/home" LD_LIBRARY_PATH="$SRC/System/lib" \
-  SIMILE_EXPORT_IN="$WORK/model.pl" SIMILE_EXPORT_OUT="$WORK/model.cpp" \
-  timeout 120 tclsh System/bin/simile > "$WORK/simile.log" 2>&1) || true
+# Simile's own generator, headless (generator/headless.pl): the same C++
+# desktop Simile writes (README, step 3), with no window.
+(cd "$HERE/generator" && timeout 600 swipl headless.pl --structdb=prolog \
+  "$SRC" "$WORK/model.pl" "$WORK/model.cpp" > "$WORK/gen.log" 2>&1) || true
 if [ ! -s "$WORK/model.cpp" ]; then
-  echo "Simile wrote no C++:"; cat "$WORK/model.cpp.log" "$WORK/simile.log" 2>/dev/null; exit 1
+  echo "Simile's generator wrote no C++:"; cat "$WORK/gen.log"; exit 1
 fi
 
 emcc -O2 -fPIC -I"$HERE/stubs" -I"$SRC/Run" -sSIDE_MODULE=1 \

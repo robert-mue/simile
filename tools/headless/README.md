@@ -53,6 +53,10 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
   (4763 of 4783 on 2026-11-01; the rest stale terms or unfinished elements)
   and each kind of mismatch with an example (nkometou from
   `~/Projects/reference_models/nkometou/`, outside the repo).
+- `scripts/run-values.py` — every catalogue model compiled in the page and
+  run twice with a fixed seed; fingerprints of the values to `$RUN_VALUES`,
+  compared with `$BASELINE` when given. Before and after any change to the
+  engine (`tools/engine/MAINTAINING.md`).
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.
