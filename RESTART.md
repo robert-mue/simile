@@ -46,7 +46,7 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**2026-11-05 (not released): an ENGINE MAINTENANCE GUIDE**,
+**RELEASED as 2026-11-05: an ENGINE MAINTENANCE GUIDE**,
 `tools/engine/MAINTAINING.md`, at Robert's request: how a future session
 fixes Simile's code, changes the generator or takes a newer Simile. Our
 changes to Simile's code are patches (`tools/engine/patches/`) and
@@ -58,7 +58,7 @@ Found doing it: `export-pl.js` and `compiled-file.js` had been broken
 since 2026-10-21 (no equation parser loaded), so `build-model.sh` failed and
 BOTH sample pages' compiled models were STALE: every reader compiled the
 model in the page. Fixed, rebuilt, checked (ccebd26). `build-model.sh` now
-uses the headless generator: no display needed. In the next release.
+uses the headless generator: no display needed.
 
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
