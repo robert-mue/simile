@@ -46,6 +46,20 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
+**2026-11-05 (not released): an ENGINE MAINTENANCE GUIDE**,
+`tools/engine/MAINTAINING.md`, at Robert's request: how a future session
+fixes Simile's code, changes the generator or takes a newer Simile. Our
+changes to Simile's code are patches (`tools/engine/patches/`) and
+replacement predicates (`generator/headless.pl`, `struct_db.pl`), NEVER
+edits to the checkout (Robert asked why; the guide says). The checks are
+committed now: `tools/engine/check/generate-all.sh`,
+`tools/headless/scripts/run-values.py`, `tools/engine/check/pages-current.sh`.
+Found doing it: `export-pl.js` and `compiled-file.js` had been broken
+since 2026-10-21 (no equation parser loaded), so `build-model.sh` failed and
+BOTH sample pages' compiled models were STALE: every reader compiled the
+model in the page. Fixed, rebuilt, checked (ccebd26). `build-model.sh` now
+uses the headless generator: no display needed. In the next release.
+
 Before that: **widgets the user
 adds** (by URL, file or toolkit; 2026-10-22) and **helping people write one**
 (2026-10-24/25: instructions for an AI assistant, errors on the panel,
