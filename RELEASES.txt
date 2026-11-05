@@ -449,3 +449,22 @@ Large models
   often did nothing. A double-click on an arrow that runs over an
   element opens that element's dialog.
 - Clicking an element no longer redraws the whole diagram.
+
+
+------------------------------------------------------------------------
+Release 2026-11-05
+------------------------------------------------------------------------
+
+Embedded-widget pages
+- The sample pages (Trees, Predator-prey) start running at once again,
+  using the model compiled for them. Since 21 October they had been
+  compiling their model in the reader's browser on every visit, which
+  meant downloading about 39 MB of tools first.
+
+For developers
+- A guide to maintaining Simile's engine in the page
+  (tools/engine/MAINTAINING.md): where a fix to Simile's code goes, what
+  to rebuild, how to take a newer Simile, and the checks that show
+  nothing else changed. The checks are now part of the repository.
+- Compiling a model for an embedded-widget page (build-model.sh) works
+  again, and no longer needs a display.
