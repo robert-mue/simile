@@ -2,7 +2,7 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-02.
+embedded-widget pages. Brought up to date 2026-11-07.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
@@ -33,7 +33,7 @@ Simile (77 of nkometou's 99) — which found that our EXPORTER wrote
 submodel contents in the wrong frame (fixed; roundtrip now compares
 layout). See "Done: large diagrams" below. Robert on the release:
 "fantastic improvement for loading and dragging". RELEASED
-as 2026-11-02. RELEASED as **2026-11-03** (the latest): a **SUBMODEL
+as 2026-11-02. RELEASED as **2026-11-03**: a **SUBMODEL
 PROPERTIES DIALOG** after Simile's, **nkometou's build halved** (~480 s ->
 ~240 s), double-click working on large models. See "Done: the submodel dialog and the build"
 below. Left for an in-person session with Jasper (Robert, 2026-11-03):
@@ -46,7 +46,7 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**RELEASED as 2026-11-05: an ENGINE MAINTENANCE GUIDE**,
+**RELEASED as 2026-11-05 (the latest): an ENGINE MAINTENANCE GUIDE**,
 `tools/engine/MAINTAINING.md`, at Robert's request: how a future session
 fixes Simile's code, changes the generator or takes a newer Simile. Our
 changes to Simile's code are patches (`tools/engine/patches/`) and
@@ -933,6 +933,12 @@ Then open `index.html` itself and check the devtools console is clean.
 All three can be run without a hand: `tools/headless/scripts/test-pages.py`
 and `roundtrip.py` (see `tools/headless/README.md`).
 
+**Touched the engine** (Simile's code, the generator, the run-time library,
+clang, the exporter's output)? Those pages do not cover it: follow
+`tools/engine/MAINTAINING.md`, "The checks" — `generate-all.sh` and
+`run-values.py` before and after, and `check/pages-current.sh` (the sample
+pages' compiled models went stale unseen for two weeks).
+
 **None of that exercises the editor.** Add a stock, drag it, name it, undo it.
 Four of the day's five bugs lived in the half-second between a click and the
 picture, and all four pages above were green throughout.
@@ -1157,7 +1163,8 @@ is in `NOTE-model-file-reference.md`. Settled:
 
 ### 7. The Simile engine in the browser (Robert, 2026-10-14) — DONE, released 2026-10-16
 
-See "Now" above; kept for why it was wanted.
+See "Done: the Simile engine in the browser" above; kept for why it was
+wanted. To CHANGE the engine now: `tools/engine/MAINTAINING.md`.
 
 Run models on the client instead of SimiLive — the whole chain, Prolog
 interpreter and C++ compiler included (WebAssembly, presumably) — for far
