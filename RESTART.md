@@ -46,7 +46,30 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**RELEASED as 2026-11-05 (the latest): an ENGINE MAINTENANCE GUIDE**,
+**2026-11-08 (not released): towards a MODEL LIBRARY** (Robert). Decided:
+the library is its OWN repo (not simile's), published with GitHub Pages
+(so it is a site to browse, with links and text about each model); each
+model is PLAIN JSON (the model spec as File > Save writes it, no
+Simile.model(...) wrapper: declarative modelling on show), with
+`<name>.parameters.json` beside it; curated = admins commit. GitHub serves
+every file with `Access-Control-Allow-Origin: *` (checked), and a page
+from file:// can fetch it (checked, Chrome). Built so far:
+(1) sienna ONE LIVE TAB (2d76737, 27716b5; app a676d02): the app open in
+two tabs used to lose work; now the tab opened last writes, the other
+stands down with a notice. `two-tabs.py`.
+(2) `index.html?open=<address of a .json>` (cceaa5b): ANY address
+(Robert), the copy records `openedFrom`, the same address again offers
+it, parameter file beside it or `&parameters=`. `open-address.py`.
+(3) embedded-widget pages take a model BY ADDRESS (e34f878):
+`Simile.model(name, '<model>.json', run)`; `src/remote.js` shared by both.
+Each library page is to show the model LIVE with a plot (Robert). OPEN,
+for Robert ("needs some thought"): how a page scales the diagram (now a
+340px-high box, fit: lamos comes out at 27%, unreadable) and which
+variables a page plots (now none, and the list starts on a meaningless
+one). Then: the library repo itself, its index, its page per model, and
+its checks. Not started.
+
+**RELEASED as 2026-11-05 (the latest release): an ENGINE MAINTENANCE GUIDE**,
 `tools/engine/MAINTAINING.md`, at Robert's request: how a future session
 fixes Simile's code, changes the generator or takes a newer Simile. Our
 changes to Simile's code are patches (`tools/engine/patches/`) and
