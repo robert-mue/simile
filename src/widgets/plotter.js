@@ -492,7 +492,7 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
             ? ' not in the model loaded yet. Press ▶: the model is loaded again first, and plotted from then on.'
             : ' plotted once the model is loaded.')
         : this._sim.base
-          ? 'Choose a variable and press add.'
+          ? 'Select a variable and press add.'
           : 'Load a model in a Run control panel.');
       return;
     }
