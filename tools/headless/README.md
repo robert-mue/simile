@@ -60,6 +60,10 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
 - `scripts/two-tabs.py` — the app open in two tabs: the later takes over,
   the earlier stops saving and says so (sienna's "one live tab"). Run on
   its own (it drives several tabs), over http or with `file`. PASS/FAIL lines.
+- `scripts/open-address.py` — `index.html?open=<address>`: a model fetched
+  from another site (it serves one itself, with and without CORS), its
+  parameter file, the copy offered again, the errors. Standalone, over http
+  or with `file`. PASS/FAIL lines.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.

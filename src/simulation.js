@@ -1433,6 +1433,37 @@
     return m ? [Number(m[2])].concat(arrayDims(m[1])) : [];
   }
 
+  /**
+   * A parameter file, parsed (`<model>.parameters.json`, or one of Simile's
+   * read into the same shape): `{variables: {name: value}, fill: {name:
+   * method}, submodels: {name: {…}}}`, nested by submodel. What it gives
+   * each of the model at `ref`'s fixed and variable parameters: `{values,
+   * fills}` by node id (for `setInputValues`), and what could not be used:
+   * `unknown` (no such parameter), `bad` (`label: why`). The Parameters
+   * panel's Load, and a model opened from an address (`?open=`, main.js).
+   */
+  Simulation.readParameterFile = function (ref, doc) {
+    var params = Simulation.inputParametersOf(ref);
+    var out = { values: {}, fills: {}, unknown: [], bad: [] };
+    (function walk(node, path) {
+      Object.keys((node && node.variables) || {}).forEach(function (name) {
+        var label = path.concat([name]).join('/');
+        var p = params.filter(function (x) { return x.label === label; })[0];
+        if (!p) { out.unknown.push(label); return; }
+        var v = node.variables[name];
+        var r = Simulation.readInputValue(p, v);
+        if (r.error) { out.bad.push(label + ': ' + r.error); return; }
+        out.values[p.id] = v;
+        var f = ((node && node.fill) || {})[name];
+        if (f && p.kind === 'variable') out.fills[p.id] = f;
+      });
+      Object.keys((node && node.submodels) || {}).forEach(function (s) {
+        walk(node.submodels[s], path.concat([s]));
+      });
+    })(doc, []);
+    return out;
+  };
+
   Simulation.parameterNeedsLoad = function (ref, id) {
     // The engine in the page takes a starting value at a reset (src/engine-local.js).
     if (Simulation.runsHere(ref)) return false;

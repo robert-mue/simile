@@ -378,6 +378,116 @@
   }
 
   /** A model id from a filename: `landuse1b.pl` → `landuse1b`. */
+  // =======================================================================
+  // OPENING A MODEL FROM AN ADDRESS
+  // =======================================================================
+  // `index.html?open=<address of a model's .json>` — how a model library's
+  // page (or any page, or a link in an email) opens a model in the app: the
+  // file File ▸ Save writes, fetched, added to the user's models as a copy,
+  // and opened. Any address (Robert): a model is data, never run, and is
+  // checked as File ▸ Open checks one. Parameter values come from
+  // `&parameters=<address>`, or else from `<name>.parameters.json` beside
+  // the model, if there is one. The copy records where it came from
+  // (`openedFrom`), so opening the same address again offers that copy.
+  // Fetching from another site needs it to allow that (CORS); GitHub Pages
+  // does, for any file. From a copy of the app opened from disk, only web
+  // addresses can be fetched.
+
+  /** `{model, parameters}` from the address bar, taken out of it, or null. */
+  function openRequested() {
+    var q;
+    try { q = new URLSearchParams(window.location.search); } catch (e) { return null; }
+    var model = q.get('open');
+    if (!model) return null;
+    var parameters = q.get('parameters');
+    // Once only: a reload must not open another copy. Taken out of the text
+    // as it stands, so the rest is left exactly as it was (`?newuser`).
+    var rest = window.location.search.replace(/^\?/, '').split('&').filter(function (kv) {
+      return !/^(open|parameters)(=|$)/.test(kv);
+    }).join('&');
+    try {
+      history.replaceState(history.state, '',
+        window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+    } catch (e) { /* the address stays; a reload asks again about the copy */ }
+    return { model: model, parameters: parameters };
+  }
+
+  /** A Promise of the text at `url`, or a rejection saying why not, in words. */
+  function fetchText(url, quiet) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = ctl && setTimeout(function () { ctl.abort(); }, 30000);
+    return fetch(url, ctl ? { signal: ctl.signal } : {}).then(function (r) {
+      if (!r.ok) throw new Error(r.status === 404 ? 'there is no file at that address'
+        : 'the site answered ' + r.status + (r.statusText ? ' (' + r.statusText + ')' : ''));
+      return r.text();
+    }, function () {
+      throw new Error(quiet ? 'unreachable'
+        : /^file:/.test(url) ? 'a copy of the app opened from disk can open only web addresses (https://…)'
+        : 'it could not be reached: no connection, or the site does not allow other sites to read its files');
+    }).finally(function () { if (timer) clearTimeout(timer); });
+  }
+
+  function openFromAddress(address, parametersAddress) {
+    var url;
+    try { url = new URL(address, window.location.href).href; } catch (e) {
+      window.alert('Could not open a model from "' + address + '": that is not an address.');
+      return Promise.resolve();
+    }
+    var said = function (e) { return e && e.message ? e.message : String(e); };
+    return fetchText(url).then(function (text) {
+      var model;
+      try { model = JSON.parse(text); } catch (e) {
+        throw new Error('the file there is not a model (it is not JSON)');
+      }
+      // A copy already among the user's models?
+      var had = Sienna.documents.list().filter(function (d) {
+        var m = Sienna.userData.get(d.path);
+        return m && m.openedFrom && m.openedFrom.url === url;
+      })[0];
+      if (had && window.confirm('You already have a copy of this model: "' + had.name + '".\n\n'
+          + 'OK opens that copy, with any changes you made to it.\n'
+          + 'Cancel makes a new copy from the address.')) {
+        Sienna.documents.openOrShow(app, had.path);
+        return;
+      }
+      model.openedFrom = { url: url, at: new Date().toISOString() };
+      var path;
+      try { path = Sienna.documents.import(model); } catch (e) {
+        throw new Error('the file there is not a model this app can open: ' + said(e));
+      }
+      return giveParameters(path, url, parametersAddress).then(function (note) {
+        Sienna.documents.open(app, path);
+        if (note) window.alert(note);
+      });
+    }).catch(function (e) {
+      window.alert('Could not open the model at\n' + url + '\n\n' + said(e).charAt(0).toUpperCase() + said(e).slice(1) + '.');
+    });
+  }
+
+  /**
+   * Parameter values for a model just opened from `url`: from the address
+   * given, or `<name>.parameters.json` beside it if there is one. A Promise
+   * of a note for the user when the file could not be used, else of null.
+   */
+  function giveParameters(path, url, given) {
+    var at = given ? new URL(given, url).href
+      : url.replace(/[?#].*$/, '').replace(/(\.json)?$/i, '.parameters.json');
+    if (at === url) return Promise.resolve(null);
+    return fetchText(at, !given).then(function (text) {
+      var doc;
+      try { doc = JSON.parse(text); } catch (e) { return 'The parameter file at ' + at + ' is not JSON, so it was not used.'; }
+      var got = Sienna.Simulation.readParameterFile(path, doc);
+      Sienna.Simulation.setInputValues(path, got.values, true, got.fills);
+      var told = [];
+      if (got.unknown.length) told.push('not in this model: ' + got.unknown.join(', '));
+      if (got.bad.length) told.push('not taken: ' + got.bad.join('; '));
+      return told.length ? 'Parameter values were loaded from ' + at + ', but some were not used — '
+        + told.join('. ') + '.' : null;
+    }, function (e) {
+      return given ? 'The parameter file at ' + at + ' could not be used: ' + (e && e.message) + '.' : null;
+    });
+  }
+
   function idFromFilename(name) {
     var base = String(name).replace(/\.(pl|sml)$/i, '').replace(/[^A-Za-z0-9_-]+/g, '-');
     return base.replace(/^-+|-+$/g, '').toLowerCase() || 'imported';
@@ -681,7 +791,10 @@
   if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
   if (!Sienna.userData.get('models/pangolin') && Sienna.demoPangolin) Sienna.demoPangolin();
 
-  app.restore().then(afterRestore);
+  app.restore().then(afterRestore).then(function () {
+    var wanted = openRequested();
+    if (wanted) openFromAddress(wanted.model, wanted.parameters);
+  });
 
   // Handy for tinkering from the browser console.
   window.app = app;

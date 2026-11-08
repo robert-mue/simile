@@ -321,25 +321,7 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
         return;
       }
     }
-    const params = this._params();
-    const values = {};
-    const fills = {};
-    const unknown = [];
-    const bad = [];
-    const walk = (node, path) => {
-      Object.keys((node && node.variables) || {}).forEach((name) => {
-        const label = path.concat([name]).join('/');
-        const p = params.find((x) => x.label === label);
-        if (!p) { unknown.push(label); return; }
-        const got = this._parse(p, JSON.stringify(node.variables[name]));
-        if (got.error) { bad.push(label + ': ' + got.error); return; }
-        values[p.id] = got.value;
-        const f = ((node && node.fill) || {})[name];
-        if (f && p.kind === 'variable') fills[p.id] = f;
-      });
-      Object.keys((node && node.submodels) || {}).forEach((s) => walk(node.submodels[s], path.concat([s])));
-    };
-    walk(doc, []);
+    const { values, fills, unknown, bad } = Sienna.Simulation.readParameterFile(this._ref(), doc);
     this._action('load', { file: fileName, values, fill: fills }, () => {
       this._sim.setInputValues(this._ref(), values, true, fills);
     });
