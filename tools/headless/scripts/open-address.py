@@ -4,7 +4,8 @@
 # values from `<name>.parameters.json` beside it, or `&parameters=`; the same
 # address again offering the copy; and the errors — no file, not JSON, not a
 # model, a site that does not allow it. Runs in a new-user preview, so the
-# real store is not touched. Starts its own second site on :8732 (CORS on),
+# real store is not touched. Then an embedded-widget page on that other site
+# (and one opened from disk) given its model by address. Starts its own second site on :8732 (CORS on),
 # and :8733 (CORS off). Standalone, like two-tabs.py; Chrome on :9350:
 #   python3 tools/headless/scripts/open-address.py          # app over http (tools/serve.py)
 #   python3 tools/headless/scripts/open-address.py file     # app from file://
@@ -117,12 +118,45 @@ async def main():
     for name, u, want in (
             ('no file there', 'http://localhost:8732/nothing.json', 'There is no file at that address'),
             ('not JSON', 'http://localhost:8732/notjson.json', 'not JSON'),
-            ('not a model', 'http://localhost:8732/notmodel.json', 'not a model this app can open'),
+            ('not a model', 'http://localhost:8732/notmodel.json', 'not a model'),
             ('a site that does not allow it', 'http://localhost:8733/growth/growth.json', 'does not allow other sites')):
         n0 = await T.ev(count)
         await T.go(opened(u), 5)
         said = await T.ev('__said')
         check('error, ' + name, len(said) == 1 and want in said[0] and await T.ev(count) == n0, said)
+    # An embedded-widget page on ANOTHER site, its model given by address:
+    # fetched, its parameter values from beside it, run, plotted. And a page
+    # whose model is not there says so where its widgets go.
+    labour_plot = await T.ev("""(() => { const m = %s; return Object.values(m.nodes)
+      .filter(n => n.type === 'stock' || n.type === 'variable').map(n => n.label)[0]; })()""" % made)
+    page = '''<!doctype html><html><head><meta charset="utf-8"><title>Labour</title>
+<script src="%sembed.js"></script></head><body>
+<div id="d" data-simile="diagram" data-model="labour"></div>
+<div id="c" data-simile="controls" data-model="labour"></div>
+<div id="p" data-simile="plotter" data-model="labour"></div>
+<div id="x" data-simile="diagram" data-model="gone"></div>
+<script>Simile.model('labour', 'labour/labour.json', { runLength: 10 });
+Simile.model('gone', 'nowhere/gone.json');
+Simile.page();</script></body></html>''' % APP
+    open(SITE + '/page.html', 'w').write(page)
+    # From disk, the model's full web address (a relative one is a file on disk).
+    open(SITE + '/page-disk.html', 'w').write(page.replace("'labour/labour.json'", "'http://localhost:8732/labour/labour.json'"))
+    # A page on a web site cannot load the app from disk, so with the app
+    # from file:// only the page from disk is tried.
+    pages = [('from disk', 'file://' + SITE + '/page-disk.html')]
+    if not APP.startswith('file:'): pages.insert(0, ('from another site', 'http://localhost:8732/page.html'))
+    for where, url in pages:
+        await T.go(url, 12)
+        status = await T.ev("document.querySelector('#c .slx-page-status') && document.querySelector('#c .slx-page-status').textContent")
+        check('a page ' + where + ': the model by address runs, with its parameter file', bool(status) and status.startswith('Ran to t = 10'), status)
+        check('a page ' + where + ': the diagram is drawn', await T.ev("document.querySelectorAll('#d svg g').length > 10") is True)
+        check('a page ' + where + ': a missing model is said where its widgets go',
+              'Could not load the model "gone"' in (await T.ev("document.getElementById('x').textContent") or ''),
+              await T.ev("document.getElementById('x').textContent"))
+    await T.go('file://' + SITE + '/page.html', 8)
+    said = await T.ev("document.getElementById('d').textContent") or ''
+    check('a page from disk, a model by a relative address: says only web addresses can be fetched',
+          'opened from disk can fetch only from a web address' in said, said)
     print(ok[0], 'passed,', ok[1], 'failed')
     urllib.request.urlopen(B + '/json/close/' + t['id'])
 asyncio.run(main())

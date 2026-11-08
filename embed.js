@@ -60,6 +60,7 @@
     'src/export-simile.js',
     'src/engine-local.js',
     'src/simulation.js',
+    'src/remote.js',
     'src/widgets/index.js',
     'src/page.js',
   ];

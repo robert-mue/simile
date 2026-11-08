@@ -48,7 +48,8 @@ footing (`src/widgets/grid.js` is the first).
   coders) and the example; `tools/headless/scripts/added-widget.py` checks
   all of it.
 - **Opening a model from an address**: `index.html?open=<address of a
-  model's .json>` (`openFromAddress` in `src/main.js`) — how a model
+  model's .json>` (`openFromAddress` in `src/main.js`, fetching through
+  `src/remote.js`) — how a model
   library's page, or any link, opens a model in the app. The file File ▸
   Save writes, FETCHED (from any address, Robert: a model is data, never
   run; checked as File ▸ Open checks one), added as a copy that records
@@ -199,7 +200,11 @@ footing (`src/widgets/grid.js` is the first).
   `tools/headless/scripts/file-params.py`.
 - `src/page.js` — **embedded-widget pages** (`window.Simile`): widgets placed
   straight into an ordinary web page, no workspace. A model ships as a script
-  calling `Simile.model(name, model, runSettings)` — File ▸ Export model as
+  calling `Simile.model(name, model, runSettings)` — or is given by its
+  ADDRESS, `Simile.model(name, '<model>.json', run, { parameters? })`: the
+  model spec fetched as the page fills (`src/remote.js`, shared with the
+  app's `?open=`), with `<model>.parameters.json` beside it if there; for a
+  page on a web site such as a model library's — File ▸ Export model as
   script writes one (`exportScriptFile` in `src/main.js`, with the run
   settings chosen for the model, `Simulation.settingsFor`); elements say
   `data-simile="diagram|plotter|lollipop|…|controls"` and `data-model`

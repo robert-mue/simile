@@ -412,37 +412,18 @@
     return { model: model, parameters: parameters };
   }
 
-  /** A Promise of the text at `url`, or a rejection saying why not, in words. */
-  function fetchText(url, quiet) {
-    var ctl = window.AbortController ? new AbortController() : null;
-    var timer = ctl && setTimeout(function () { ctl.abort(); }, 30000);
-    return fetch(url, ctl ? { signal: ctl.signal } : {}).then(function (r) {
-      if (!r.ok) throw new Error(r.status === 404 ? 'there is no file at that address'
-        : 'the site answered ' + r.status + (r.statusText ? ' (' + r.statusText + ')' : ''));
-      return r.text();
-    }, function () {
-      throw new Error(quiet ? 'unreachable'
-        : /^file:/.test(url) ? 'a copy of the app opened from disk can open only web addresses (https://…)'
-        : 'it could not be reached: no connection, or the site does not allow other sites to read its files');
-    }).finally(function () { if (timer) clearTimeout(timer); });
-  }
-
   function openFromAddress(address, parametersAddress) {
-    var url;
-    try { url = new URL(address, window.location.href).href; } catch (e) {
-      window.alert('Could not open a model from "' + address + '": that is not an address.');
-      return Promise.resolve();
-    }
-    var said = function (e) { return e && e.message ? e.message : String(e); };
-    return fetchText(url).then(function (text) {
-      var model;
-      try { model = JSON.parse(text); } catch (e) {
-        throw new Error('the file there is not a model (it is not JSON)');
-      }
+    var said = function (e) {
+      var m = e && e.message ? e.message : String(e);
+      return m.charAt(0).toUpperCase() + m.slice(1);
+    };
+    var url = address;
+    try { url = Sienna.remote.absolute(address); } catch (e) { /* said below */ }
+    return Sienna.remote.model(address, parametersAddress).then(function (got) {
       // A copy already among the user's models?
       var had = Sienna.documents.list().filter(function (d) {
         var m = Sienna.userData.get(d.path);
-        return m && m.openedFrom && m.openedFrom.url === url;
+        return m && m.openedFrom && m.openedFrom.url === got.url;
       })[0];
       if (had && window.confirm('You already have a copy of this model: "' + had.name + '".\n\n'
           + 'OK opens that copy, with any changes you made to it.\n'
@@ -450,41 +431,28 @@
         Sienna.documents.openOrShow(app, had.path);
         return;
       }
-      model.openedFrom = { url: url, at: new Date().toISOString() };
+      var model = got.model;
+      model.openedFrom = { url: got.url, at: new Date().toISOString() };
       var path;
       try { path = Sienna.documents.import(model); } catch (e) {
-        throw new Error('the file there is not a model this app can open: ' + said(e));
+        throw new Error('the file there is not a model this app can open: ' + (e && e.message));
       }
-      return giveParameters(path, url, parametersAddress).then(function (note) {
-        Sienna.documents.open(app, path);
-        if (note) window.alert(note);
-      });
+      var notes = got.problem ? [said({ message: got.problem }) + '.'] : [];
+      if (got.parameters) {
+        var given = Sienna.Simulation.readParameterFile(path, got.parameters);
+        Sienna.Simulation.setInputValues(path, given.values, true, given.fills);
+        var told = [];
+        if (given.unknown.length) told.push('not in this model: ' + given.unknown.join(', '));
+        if (given.bad.length) told.push('not taken: ' + given.bad.join('; '));
+        if (told.length) {
+          notes.push('Parameter values were loaded from ' + got.parametersAt
+            + ', but some were not used — ' + told.join('. ') + '.');
+        }
+      }
+      Sienna.documents.open(app, path);
+      if (notes.length) window.alert(notes.join('\n\n'));
     }).catch(function (e) {
-      window.alert('Could not open the model at\n' + url + '\n\n' + said(e).charAt(0).toUpperCase() + said(e).slice(1) + '.');
-    });
-  }
-
-  /**
-   * Parameter values for a model just opened from `url`: from the address
-   * given, or `<name>.parameters.json` beside it if there is one. A Promise
-   * of a note for the user when the file could not be used, else of null.
-   */
-  function giveParameters(path, url, given) {
-    var at = given ? new URL(given, url).href
-      : url.replace(/[?#].*$/, '').replace(/(\.json)?$/i, '.parameters.json');
-    if (at === url) return Promise.resolve(null);
-    return fetchText(at, !given).then(function (text) {
-      var doc;
-      try { doc = JSON.parse(text); } catch (e) { return 'The parameter file at ' + at + ' is not JSON, so it was not used.'; }
-      var got = Sienna.Simulation.readParameterFile(path, doc);
-      Sienna.Simulation.setInputValues(path, got.values, true, got.fills);
-      var told = [];
-      if (got.unknown.length) told.push('not in this model: ' + got.unknown.join(', '));
-      if (got.bad.length) told.push('not taken: ' + got.bad.join('; '));
-      return told.length ? 'Parameter values were loaded from ' + at + ', but some were not used — '
-        + told.join('. ') + '.' : null;
-    }, function (e) {
-      return given ? 'The parameter file at ' + at + ' could not be used: ' + (e && e.message) + '.' : null;
+      window.alert('Could not open the model at\n' + url + '\n\n' + said(e) + '.');
     });
   }
 

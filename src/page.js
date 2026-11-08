@@ -15,6 +15,13 @@
  *      one with `<script>`, and a call rather than an assignment lets several
  *      models share a page. `run` is how to run it (`runLength`, `timeStep`,
  *      `logEach`, `updateEach`), over the model's own defaults.
+ *      Or **its address**: `Simile.model('trees', 'trees.json', run)` — the
+ *      model spec as File ▸ Save writes it, plain JSON, fetched when the page
+ *      is filled (`Sienna.remote`), with its parameter values from
+ *      `trees.parameters.json` beside it if there is one, or from
+ *      `Simile.model(…, run, { parameters: '<address>' })`. For a page on a
+ *      web site, such as a model library's: from disk, only an address on
+ *      a site that allows it (CORS) can be fetched.
  *   2. **Where the widgets go**: an element per widget, saying which and of
  *      what —
  *
@@ -47,7 +54,7 @@
 (function (Sienna, $) {
   'use strict';
 
-  var models = {};   // name -> { model, run }
+  var models = {};   // name -> { model, run } — or, until fetched, { address, parameters, run }
   var order = [];    // the order the page declared them, so "the first" means something
   var RERUN_AFTER = 1200;   // ms of quiet after an edit before running again
 
@@ -179,10 +186,12 @@
      * @param {object} model — the model, as the app stores it
      * @param {object} [run] — run settings over the model's defaults
      */
-    model: function (name, model, run) {
+    model: function (name, model, run, more) {
       if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error('A model name is letters, digits, - and _: ' + name);
       if (!models[name]) order.push(name);
-      models[name] = { model: copy(model), run: run || {} };
+      models[name] = typeof model === 'string'
+        ? { address: model, parameters: (more && more.parameters) || null, run: run || {} }
+        : { model: copy(model), run: run || {} };
     },
 
     /**
@@ -206,37 +215,75 @@
     page: function (opts) {
       opts = opts || {};
       if (opts.base != null) Sienna.widgetRegistry.setBase(opts.base);
-      order.forEach(fresh);
-      running = order[0] || null;
-
-      var made = [];
-      $('[data-simile]').each(function () {
-        var $el = $(this);
-        var kind = $el.attr('data-simile');
-        var name = $el.attr('data-model') || running;
-        if (!models[name]) {
-          $el.text('No model called "' + name + '" on this page.');
-          return;
-        }
-        if (kind === 'controls') { buildControls($el, name); return; }
-        // A diagram on a page is there to be read: the view commands only,
-        // unless the page asks for more (data-options='{"tools":"all"}').
-        var o = $.extend(kind === 'diagram' ? { tools: 'view' } : {},
-          optionsFrom($el), { ref: pathOf(name) });
-        made.push(Sienna.widgetRegistry.embed($el, kind, o).catch(function (err) {
-          $el.text(err.message);
-        }));
-      });
-
-      if (!running) return Promise.all(made);
-      Sienna.Simulation.presetSettings(pathOf(running), models[running].run);
-      rerunOnEdit(running);
-      // The widgets first, so every plot has said what it wants before the
-      // first values come back.
-      return Promise.all(made).then(function () { return loadAndRun(running); });
+      // At once when every model is in the page, as before; after fetching
+      // when one is given by its address.
+      if (!order.some(function (name) { return models[name].address; })) return fill();
+      return fetchAll().then(function () { return fill(); });
     },
 
     /** For the console: the store path a page's model lives at. */
     pathOf: pathOf,
   };
+
+  /**
+   * Fetch every model given by its address, and its parameter file. One that
+   * cannot be had is kept as the reason why, shown where its widgets go.
+   */
+  function fetchAll() {
+    return Promise.all(order.map(function (name) {
+      var m = models[name];
+      if (!m.address) return null;
+      return Sienna.remote.model(m.address, m.parameters).then(function (got) {
+        m.model = got.model;
+        m.given = got.parameters;
+        if (got.problem && window.console) console.warn(name + ': ' + got.problem);
+      }, function (e) {
+        m.error = 'Could not load the model "' + name + '" from ' + m.address + ': ' + e.message + '.';
+      });
+    }));
+  }
+
+  /** Put every model in the store, make every `[data-simile]` element its widget, run the first. */
+  function fill() {
+    order.forEach(function (name) {
+      if (models[name].error) return;
+      fresh(name);
+      var given = models[name].given;
+      if (given) {
+        var got = Sienna.Simulation.readParameterFile(pathOf(name), given);
+        Sienna.Simulation.setInputValues(pathOf(name), got.values, true, got.fills);
+      }
+    });
+    running = order.filter(function (name) { return !models[name].error; })[0] || null;
+
+    var made = [];
+    $('[data-simile]').each(function () {
+      var $el = $(this);
+      var kind = $el.attr('data-simile');
+      var name = $el.attr('data-model') || running;
+      if (!models[name]) {
+        $el.text('No model called "' + name + '" on this page.');
+        return;
+      }
+      if (models[name].error) {
+        $el.addClass('slx-page-error').text(models[name].error);
+        return;
+      }
+      if (kind === 'controls') { buildControls($el, name); return; }
+      // A diagram on a page is there to be read: the view commands only,
+      // unless the page asks for more (data-options='{"tools":"all"}').
+      var o = $.extend(kind === 'diagram' ? { tools: 'view' } : {},
+        optionsFrom($el), { ref: pathOf(name) });
+      made.push(Sienna.widgetRegistry.embed($el, kind, o).catch(function (err) {
+        $el.text(err.message);
+      }));
+    });
+
+    if (!running) return Promise.all(made);
+    Sienna.Simulation.presetSettings(pathOf(running), models[running].run);
+    rerunOnEdit(running);
+    // The widgets first, so every plot has said what it wants before the
+    // first values come back.
+    return Promise.all(made).then(function () { return loadAndRun(running); });
+  }
 })(window.Sienna, window.jQuery);
