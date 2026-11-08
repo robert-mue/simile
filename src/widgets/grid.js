@@ -236,7 +236,7 @@ $.widget('sienna.grid', $.sienna.widgetBase, {
       return;
     }
 
-    $('<option>').val('').text('choose a variable…').appendTo(this._pick);
+    $('<option>').val('').text('select a variable…').appendTo(this._pick);
     candidates.forEach((c) => {
       $('<option>').val(c.id)
         .text(c.label + '  [' + c.rows + (c.cols ? '×' + c.cols : '×?') + ']')
@@ -394,7 +394,7 @@ $.widget('sienna.grid', $.sienna.widgetBase, {
     this._highLabel.text(Number(this.options.max).toPrecision(3));
     this._colours();  // makes sure the legend ramp matches the scheme
     if (!this._sim.base) this._say('Load a model in a Run control panel.');
-    else if (!this._spec) this._say('Choose a variable to show.');
+    else if (!this._spec) this._say('Select a variable to show.');
     else this._say('');
   },
 

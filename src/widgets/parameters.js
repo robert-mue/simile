@@ -106,7 +106,7 @@ $.widget('sienna.parameters', $.sienna.widgetBase, {
     if (none) {
       $('<p class="slx-params-empty">').text(this._bound()
         ? 'No parameters. A parameter is a variable whose value is given when the model '
-          + 'runs, not by an equation: choose Variable or Fixed parameter as its Data source.'
+          + 'runs, not by an equation: select Variable or Fixed parameter as its Data source.'
         : 'Not bound to a model.').appendTo(this._list);
       this._note.text('');
       return;

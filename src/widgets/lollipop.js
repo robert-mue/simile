@@ -193,7 +193,7 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
         $('<option>').val('').text(this._sim.base ? '(no population)' : '(no model loaded)').appendTo(pick);
         return;
       }
-      $('<option>').val('').text('choose…').appendTo(pick);
+      $('<option>').val('').text('select…').appendTo(pick);
       list.forEach((c) => $('<option>').val(c.id)
         .text(c.label + (c.next ? '  (from the next run)' : '')).appendTo(pick));
       const c = guess[role];
@@ -332,7 +332,7 @@ $.widget('sienna.lollipop', $.sienna.widgetBase, {
     }
     if (!this._ready()) {
       this._say(this._sim.memberComponents && this._sim.memberComponents().length
-        ? 'Choose the variables for x, y and size.'
+        ? 'Select the variables for x, y and size.'
         : 'This display shows the members of a population. The model loaded has none.');
       return;
     }
