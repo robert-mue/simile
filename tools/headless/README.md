@@ -57,6 +57,9 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
   run twice with a fixed seed; fingerprints of the values to `$RUN_VALUES`,
   compared with `$BASELINE` when given. Before and after any change to the
   engine (`tools/engine/MAINTAINING.md`).
+- `scripts/two-tabs.py` — the app open in two tabs: the later takes over,
+  the earlier stops saving and says so (sienna's "one live tab"). Run on
+  its own (it drives several tabs), over http or with `file`. PASS/FAIL lines.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.
