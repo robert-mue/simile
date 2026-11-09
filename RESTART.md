@@ -2,7 +2,7 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-07.
+embedded-widget pages. Brought up to date 2026-11-09.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
@@ -46,7 +46,20 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**2026-11-08 (not released): towards a MODEL LIBRARY** (Robert). Decided:
+**RELEASED as 2026-11-09 (the latest release)**: what follows (one live
+tab, `?open=`, pages taking a model's address), and since then: the
+exporter REFUSES a name nothing supplies (an arrow missing, or the element
+deleted), by name, instead of "the model would not compile" (c067b0b;
+`Diagram.over(model)`); `size(<submodel>)` no longer drawn red (AntsWorld,
+drainage1, lamos1a/b); "select" not "choose" everywhere, tutorials
+included; ALL 49 TUTORIAL PICTURES RETAKEN (15bd9b1): Bank account has its
+own script now (`bank-account.py`, checks the values the text quotes),
+Predator-prey's stages 2 and 4 repaired, Trees' submodel step rewritten for
+the tabbed dialog. How to retake them: tools/headless/README.md. Trap: a
+dialog's equation box must be scrolled to the MIDDLE before it is clicked,
+or the click misses and a Backspace deletes the selected element.
+
+**2026-11-08: towards a MODEL LIBRARY** (Robert). Decided:
 the library is its OWN repo (not simile's), published with GitHub Pages
 (so it is a site to browse, with links and text about each model); each
 model is PLAIN JSON (the model spec as File > Save writes it, no
@@ -69,7 +82,7 @@ variables a page plots (now none, and the list starts on a meaningless
 one). Then: the library repo itself, its index, its page per model, and
 its checks. Not started.
 
-**RELEASED as 2026-11-05 (the latest release): an ENGINE MAINTENANCE GUIDE**,
+**RELEASED as 2026-11-05: an ENGINE MAINTENANCE GUIDE**,
 `tools/engine/MAINTAINING.md`, at Robert's request: how a future session
 fixes Simile's code, changes the generator or takes a newer Simile. Our
 changes to Simile's code are patches (`tools/engine/patches/`) and
