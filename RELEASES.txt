@@ -489,7 +489,8 @@ Opening models from the web
   offers the copy you already have. This is for a model library to come,
   but any address works.
 - A page with Simile widgets embedded in it can give its model's address
-  instead of the model itself (see Help > Embedded-widget pages).
+  instead of the model itself (see Help > Live models in your own web
+  pages).
 
 Checking models
 - A model whose equation uses a name that nothing supplies (no influence
