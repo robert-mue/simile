@@ -47,7 +47,7 @@ async def runall():
 async def win(t):
     await menu('View'); await menu('Windows'); await menu(t); await sleep(0.6)
 async def expr(text):
-    await ev("document.querySelector('textarea.slx-expression').scrollIntoView({block:'nearest'})")
+    await ev("document.querySelector('textarea.slx-expression').scrollIntoView({block:'center'})")
     ta = await at("document.querySelector('textarea.slx-expression')"); await click(ta[0],ta[1]); await ev("document.activeElement.select()"); await typekeys(text)
 async def seteq(label, text):
     await dlg(label); await expr(text); await ok()
