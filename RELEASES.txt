@@ -468,3 +468,39 @@ For developers
   nothing else changed. The checks are now part of the repository.
 - Compiling a model for an embedded-widget page (build-model.sh) works
   again, and no longer needs a display.
+
+
+------------------------------------------------------------------------
+Release 2026-11-09
+------------------------------------------------------------------------
+
+Working safely
+- Simile open in two tabs no longer loses work. Before, each tab saved
+  over the other, so models made or changed in one could disappear.
+  Now the tab opened last is the one that saves; any other says
+  "Simile is open in another tab" and stops saving, with a button to
+  use it there instead.
+
+Opening models from the web
+- A link can open a model in Simile: add ?open= and the address of the
+  model's file (what File > Save writes) to Simile's address. The model
+  is added to your models as a copy and opened. If a parameter file is
+  beside it, its values are loaded too. Following the same link again
+  offers the copy you already have. This is for a model library to come,
+  but any address works.
+- A page with Simile widgets embedded in it can give its model's address
+  instead of the model itself (see Help > Embedded-widget pages).
+
+Checking models
+- A model whose equation uses a name that nothing supplies (no influence
+  arrow brings it, or the element was deleted) is now refused when it is
+  run, saying which name. Before, the run failed with only "the model
+  would not compile".
+- size() of a submodel, such as size(cell), is no longer drawn red: it
+  needs no influence arrow. This affected several catalogue models.
+
+Help
+- The pictures in all three tutorials are retaken with Simile as it is
+  now. The Trees tutorial's submodel step matches the submodel dialog,
+  and submodels can be coloured, as the original tutorial does.
+- Throughout, "select" instead of "choose".
