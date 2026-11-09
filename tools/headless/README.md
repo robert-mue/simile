@@ -35,6 +35,15 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
 - `scripts/trees.py` — builds the Trees tutorial from a fresh new-user session,
   all four stages, and takes its screenshots (`tr/…`).
 - `scripts/predator-prey-P1…P5.py` — the Predator-prey stages, run in order.
+- `scripts/bank-account.py` — builds the Bank account tutorial from a fresh
+  new-user session and takes all 21 of its pictures (`ba/…`); prints the
+  values the text quotes ($618.75, $1,445.50, $1,010.63).
+
+To retake a tutorial's pictures: run its script(s) with `HEADLESS_OUT` set to
+a scratch folder, compare with `help/tutorials/img/<tutorial>/`, and copy the
+ones the page uses (`<img src=…>`), setting each `<img>`'s width and height to
+the new size. Chrome capped (`timeout`), the scripts in order, one Chrome at a
+time on :9350. Last done 2026-11-09, all three tutorials.
 - `scripts/test-pages.py` — opens `test/index.html` and `test/fixtures.html`.
 - `scripts/editor.py` — runs `test/editor.html` (over http, via `tools/serve.py`)
   and prints its bar and any failing tests.
@@ -71,6 +80,11 @@ first line, the app helpers in `lib.py`: `menu('File')`, `tool('stock')`,
   (upload raw Prolog to the engine) and `__series(label, step, len, log)`.
 
 ## Traps
+
+- A dialog scrolls: click an equation box only after scrolling it to the
+  MIDDLE of the dialog (`expr` in lib.py); at the bottom edge the footer
+  covers it and the click lands elsewhere — on Backspace, the selected
+  element is then deleted.
 
 - A script that clicks a palette tool that is already armed switches it OFF,
   and the next drag pans the canvas instead.
