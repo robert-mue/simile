@@ -421,6 +421,16 @@
         if (whole === 'list' || (whole === 'array' && spec.scalar)) {
           problems.push('"' + name + '": ' + Sienna.equation.collectionMessage(whole, text));
         }
+        // A name nothing supplies — no arrow brings it, or it names nothing
+        // in the model at all (an element deleted after the equation was
+        // written). The completeness check's own finding, the one that draws
+        // the element red. Simile's generator refuses the model ("not a
+        // valid parameter"), so the run would fail with no useful message.
+        if (Sienna.equationCheck && parsed && parsed.ok) {
+          Sienna.equationCheck.element(Sienna.Diagram.over(m), id).forEach(function (r) {
+            if (r.kind === 'undeclared') problems.push('"' + name + '": ' + r.message);
+          });
+        }
       });
 
       Object.keys(m.arcs).forEach(function (id) {

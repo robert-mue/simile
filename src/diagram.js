@@ -2009,5 +2009,24 @@
     },
   };
 
+  /**
+   * A Diagram over a model OBJECT rather than a path in the store: read only,
+   * for a pass that is handed a model (the exporter's check, which asks the
+   * completeness check about each element). What reads goes to the object;
+   * nothing may be written through it.
+   */
+  Diagram.over = function (model) {
+    var d = Object.create(Diagram.prototype);
+    d.path = '(a model being exported)';
+    d.model = function () { return model; };
+    d.get = function (id) {
+      var map = mapOf(id);
+      return map ? (model[map] || {})[id] : undefined;
+    };
+    d.ids = function (family) { return Object.keys(model[family] || {}); };
+    d.layout = function (id) { return (model.layout || {})[id]; };
+    return d;
+  };
+
   Sienna.Diagram = Diagram;
 })(window.Sienna);

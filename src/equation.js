@@ -181,7 +181,14 @@
           return;
         }
         case 'call':
-          n.args.forEach(function (x) { walk(x); });   // the function's NAME is not a reference
+          // The function's NAME is not a reference. A bare name alone in
+          // `size(…)` may be a submodel's, which needs no arrow (Simile's
+          // `size(cell)`: how many instances it has): said, for the check.
+          if (n.name === 'size' && n.args.length === 1 && n.args[0] && n.args[0].t === 'name') {
+            out.push({ name: n.args[0].name, form: 'scalar', at: n.args[0].at, open: '', sizeOf: true });
+            return;
+          }
+          n.args.forEach(function (x) { walk(x); });
           return;
         case 'binary':
           walk(n.left); walk(n.right);

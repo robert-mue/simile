@@ -11,6 +11,7 @@ async def sketch(fn):
     pts=[(pad[0]+1+u/80*(pad[2]-2), pad[1]+pad[3]*(1-fn(u/80))) for u in range(0,81)]
     await drag(pts); await sleep(0.3)
 async def clear_eq():
+    await ev("document.querySelector('textarea.slx-expression').scrollIntoView({block:'center'})")
     ta = await at("document.querySelector('textarea.slx-expression')"); await click(ta[0],ta[1]); await ev("document.activeElement.select()"); await press('Backspace','Backspace',8); await sleep(0.2)
 
 # eaten_per_fox

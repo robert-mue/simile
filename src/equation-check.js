@@ -259,8 +259,9 @@
         // AST, which is the only place they can come from.
         Sienna.equation.references(parsed.ast).forEach(function (ref) {
           if (!usedNames[ref.name]) {
-            usedNames[ref.name] = { field: f.name, at: part.at + ref.at, len: ref.name.length };
+            usedNames[ref.name] = { field: f.name, at: part.at + ref.at, len: ref.name.length, onlySize: true };
           }
+          if (!ref.sizeOf) usedNames[ref.name].onlySize = false;
           // Every way it was written — its brackets — for the form check below.
           (usedNames[ref.name].forms = usedNames[ref.name].forms || []).push({
             open: ref.open || '', field: f.name, at: part.at + ref.at,
@@ -279,7 +280,14 @@
     var suppliedSet = {};
     supplied.forEach(function (s) { suppliedSet[s.name] = true; });
 
+    // `size(cell)`, `cell` a submodel: its number of instances, which
+    // Simile gives without an arrow (AntsWorld, drainage1, lamos1a/b).
+    var key = function (x) { return String(x).replace(/[^A-Za-z0-9]/g, '').toLowerCase(); };
+    var submodelNames = {};
+    d.ids('submodels').forEach(function (sid) { submodelNames[key((d.get(sid) || {}).label || '')] = true; });
+
     Object.keys(usedNames).forEach(function (name) {
+      if (usedNames[name].onlySize && submodelNames[key(name)]) return;
       if (!suppliedSet[name]) {
         var where = usedNames[name];
         out.push({

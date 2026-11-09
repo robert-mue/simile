@@ -20,7 +20,7 @@ let captured = null;
 ctx.Simile = { model: (name, model, run) => { captured = { name, model, run }; } };
 vm.createContext(ctx);
 for (const f of ['vendor/peggy.min.js', 'src/schema/simile-v1.js', 'src/diagram.js',
-    'src/equation-grammar.js', 'src/equation.js', 'src/export-simile.js']) {
+    'src/equation-grammar.js', 'src/equation.js', 'src/equation-check.js', 'src/export-simile.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 vm.runInContext(fs.readFileSync(modelScript, 'utf8'), ctx, { filename: modelScript });

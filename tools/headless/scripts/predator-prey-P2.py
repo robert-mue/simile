@@ -20,6 +20,6 @@ m = await at("[...document.querySelectorAll('.slx-popup button, .slx-popup li, .
 await click(m[0],m[1]); await sleep(0.6)
 await runall()
 print('s2', await series())
-await menu('View'); await menu('Arrange windows'); await shot('pp/x-arrange-windows.png',(0,0,800,300)); 
-print(await ev("[...document.querySelectorAll('.slx-submenu')].filter(e=>e.offsetParent).map(s=>[...s.children].map(c=>c.textContent).join(' | ')).join(' // ')"))
-await press('Escape','Escape',27)
+# Step 8: the model beside its simulation (the tutorial's s2-run).
+await menu('View'); await menu('Arrange windows'); await menu('This model beside its simulation'); await sleep(0.8)
+await shot('pp/s2-run.png')
