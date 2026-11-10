@@ -1048,9 +1048,9 @@
     m.id = p.split('/').pop();
     Sienna.Diagram.migrate(m);
     Sienna.userData.set(p, m);
-    // Long enough to settle: most of the paper's scenarios do by ~1000 years.
+    // 50 years (Robert): long enough to see the paper's quick extinctions.
     if (Sienna.Simulation) {
-      Sienna.Simulation.presetSettings(p, { runLength: 1000, timeStep: '0.1', logEach: 1 });
+      Sienna.Simulation.presetSettings(p, { runLength: 50, timeStep: '0.1', logEach: 1 });
     }
     return p;
   }

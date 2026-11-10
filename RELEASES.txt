@@ -505,3 +505,28 @@ Help
   now. The Trees tutorial's submodel step matches the submodel dialog,
   and submodels can be coloured, as the original tutorial does.
 - Throughout, "select" instead of "choose".
+
+
+------------------------------------------------------------------------
+Release 2026-11-10
+------------------------------------------------------------------------
+
+Model gallery
+- A gallery of example models, selected for exploring Simile:
+  https://robert-mue.github.io/model_gallery/
+  Each model has a page saying what it is about, and an "Open in
+  Simile" link that opens it in Simile in a new tab, as a copy in your
+  own browser. To start with: Bank account, Lotka-Volterra
+  predator-prey, Trees, LAMOS, and Pangolin harvest (Almeida et al.
+  2023).
+- Help > Live models in your own web pages links to it.
+
+Importing Simile models
+- Models saved by the oldest versions of Simile (such as lamos1a, from
+  2003) are drawn as they were made. Before, the elements inside each
+  submodel were piled on top of one another in its corner.
+
+Built-in models
+- Pangolin harvest runs for 50 years, not 1000. This applies when it is
+  first added to your models; if you already have it, set Execute for
+  to 50 yourself.
