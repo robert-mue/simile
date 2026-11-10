@@ -75,12 +75,16 @@ stands down with a notice. `two-tabs.py`.
 it, parameter file beside it or `&parameters=`. `open-address.py`.
 (3) embedded-widget pages take a model BY ADDRESS (e34f878):
 `Simile.model(name, '<model>.json', run)`; `src/remote.js` shared by both.
-Each library page is to show the model LIVE with a plot (Robert). OPEN,
-for Robert ("needs some thought"): how a page scales the diagram (now a
-340px-high box, fit: lamos comes out at 27%, unreadable) and which
-variables a page plots (now none, and the list starts on a meaningless
-one). Then: the library repo itself, its index, its page per model, and
-its checks. Not started.
+2026-11-10, Robert, REVISED: a library page is NOT live for now
+(scaling etc. not worth the time yet). The minimum per model: a title, a
+brief description, a link to a published paper if there is one, and a
+link that opens the app with the model and its files
+(`https://robert-mue.github.io/simile/index.html?open=<model .json>`).
+Screenshots, more text, links to projects: case by case. KEEP (1)-(3) as
+they are, for later; just do not use (3) in the library's pages yet. The
+diagram-scaling and plot-variable questions are shelved with it. Next:
+the library repo itself, its index, a page per model, its checks. Not
+started; creating the repo waits for Robert.
 
 **RELEASED as 2026-11-05: an ENGINE MAINTENANCE GUIDE**,
 `tools/engine/MAINTAINING.md`, at Robert's request: how a future session
