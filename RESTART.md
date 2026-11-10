@@ -75,7 +75,13 @@ IMPORT BUG, fixed (1e6591f, NOT RELEASED): the oldest files (lamos1a/b,
 Roundtrip unchanged (65 of 72), grammar and fixtures green. The gallery's
 lamos.json was made with the fix, so it shows right in the released app
 (checked through the published link). LAMOS has no paper link yet: ask
-Robert. NEXT: Robert's call: which models go in the gallery
+Robert. PANGOLIN HARVEST ADDED (Robert; src/demo-pangolin.js's model spec
+as seeded, i.e. migrated): the paper (Almeida, Bonachela & Lockwood 2023,
+J. Appl. Ecol. 60(5): 754-763, doi:10.1111/1365-2664.14376) and its Dryad
+record (the R script, doi:10.5061/dryad.0p2ngf25b), both checked against
+their DOIs. Opened from the gallery it runs for the app's default 100, not
+the seeded 1000 (presetSettings is not in the spec), so the page says
+1000 at 0.1. Ready to release (the import fix); waiting for Robert. NEXT: Robert's call: which models go in the gallery
 (and their descriptions, papers, pictures). Headless trap seen again: a
 `pgrep -f` pattern matches the shell running it; find Chrome by
 `ps -eo pid,comm,args` with comm == chrome and no `--type=`.
