@@ -46,7 +46,12 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**RELEASED as 2026-11-09 (the latest release)**: what follows (one live
+**RELEASED as 2026-11-10 (the latest release)**: the model gallery
+(below), the import fix for the oldest files (lamos1a/b), Pangolin
+harvest run for 50 years (Robert: 1000 too long; presetSettings applies
+only when the model is first seeded, so existing users keep theirs).
+
+**RELEASED as 2026-11-09**: what follows (one live
 tab, `?open=`, pages taking a model's address), and since then: the
 exporter REFUSES a name nothing supplies (an arrow missing, or the element
 deleted), by name, instead of "the model would not compile" (c067b0b;
@@ -80,8 +85,9 @@ as seeded, i.e. migrated): the paper (Almeida, Bonachela & Lockwood 2023,
 J. Appl. Ecol. 60(5): 754-763, doi:10.1111/1365-2664.14376) and its Dryad
 record (the R script, doi:10.5061/dryad.0p2ngf25b), both checked against
 their DOIs. Opened from the gallery it runs for the app's default 100, not
-the seeded 1000 (presetSettings is not in the spec), so the page says
-1000 at 0.1. Ready to release (the import fix); waiting for Robert. NEXT: Robert's call: which models go in the gallery
+the seeded run length (presetSettings is not in the spec), so the page
+says 50 years at 0.1 (Robert, 2026-11-10: 1000 too long; seeded now 50
+too). RELEASED with all this as 2026-11-10. NEXT: Robert's call: which models go in the gallery
 (and their descriptions, papers, pictures). Headless trap seen again: a
 `pgrep -f` pattern matches the shell running it; find Chrome by
 `ps -eo pid,comm,args` with comm == chrome and no `--type=`.
