@@ -2,7 +2,7 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-09.
+embedded-widget pages. Brought up to date 2026-11-10.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
@@ -58,6 +58,17 @@ Predator-prey's stages 2 and 4 repaired, Trees' submodel step rewritten for
 the tabbed dialog. How to retake them: tools/headless/README.md. Trap: a
 dialog's equation box must be scrolled to the MIDDLE before it is clicked,
 or the click misses and a Backspace deletes the selected element.
+
+**LATEST (2026-11-10, after that release): the MODEL GALLERY is made and
+live** (see its section below): github.com/robert-mue/model_gallery,
+https://robert-mue.github.io/model_gallery/, three tutorial models in it,
+static pages, `check/check.py`. Each page's real link followed into the
+PUBLISHED app and checked: the model opens, complete. Nothing in the app
+changed but comments and docs ("gallery", not "library"), so no release
+is needed for it. NEXT: Robert's call: which models go in the gallery
+(and their descriptions, papers, pictures). Headless trap seen again: a
+`pgrep -f` pattern matches the shell running it; find Chrome by
+`ps -eo pid,comm,args` with comm == chrome and no `--type=`.
 
 **2026-11-10: the MODEL GALLERY** (Robert: "gallery", NEVER "library",
 which sounds like a software library): its own repo,
