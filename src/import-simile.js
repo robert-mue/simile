@@ -432,9 +432,15 @@
       return o;
     },
 
-    /** A node's absolute centre. */
+    /**
+     * A node's absolute centre. The oldest files (lamos1a, 2003) give a node
+     * no `centre`, only a `bounding_box`; no file gives both. Its middle, then.
+     */
     centre: function (id) {
-      var c = nums((this.N[id] || {}).g && this.N[id].g.centre);
+      var g = (this.N[id] || {}).g || {};
+      var c = nums(g.centre);
+      var bb = nums(g.bounding_box);
+      if (c.length < 2 && bb.length >= 4) c = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2];
       var o = this.origin(this.parent[id] == null ? null : this.parent[id]);
       return { x: o.x + o.k * (c[0] || 0), y: o.y + o.k * (c[1] || 0) };
     },
