@@ -65,7 +65,17 @@ https://robert-mue.github.io/model_gallery/, three tutorial models in it,
 static pages, `check/check.py`. Each page's real link followed into the
 PUBLISHED app and checked: the model opens, complete. Nothing in the app
 changed but comments and docs ("gallery", not "library"), so no release
-is needed for it. NEXT: Robert's call: which models go in the gallery
+is needed for it. LAMOS ADDED (Robert asked): lamos1a from the
+catalogue, its one comma-for-"and" condition (`neighbours` in
+patch_results; our grammar's known exclusion) rewritten with `and` so
+nothing is red: same values over 120 months, checked. Adding it FOUND an
+IMPORT BUG, fixed (1e6591f, NOT RELEASED): the oldest files (lamos1a/b,
+2003) give elements a `bounding_box` and no `centre`, and we read only
+`centre`, so 83 elements sat on 13 spots; now the box's middle.
+Roundtrip unchanged (65 of 72), grammar and fixtures green. The gallery's
+lamos.json was made with the fix, so it shows right in the released app
+(checked through the published link). LAMOS has no paper link yet: ask
+Robert. NEXT: Robert's call: which models go in the gallery
 (and their descriptions, papers, pictures). Headless trap seen again: a
 `pgrep -f` pattern matches the shell running it; find Chrome by
 `ps -eo pid,comm,args` with comm == chrome and no `--type=`.
