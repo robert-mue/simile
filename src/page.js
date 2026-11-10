@@ -20,7 +20,7 @@
  *      is filled (`Sienna.remote`), with its parameter values from
  *      `trees.parameters.json` beside it if there is one, or from
  *      `Simile.model(…, run, { parameters: '<address>' })`. For a page on a
- *      web site, such as a model library's: from disk, only an address on
+ *      web site, such as the model gallery's: from disk, only an address on
  *      a site that allows it (CORS) can be fetched.
  *   2. **Where the widgets go**: an element per widget, saying which and of
  *      what —

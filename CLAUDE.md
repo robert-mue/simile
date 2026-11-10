@@ -49,8 +49,8 @@ footing (`src/widgets/grid.js` is the first).
   all of it.
 - **Opening a model from an address**: `index.html?open=<address of a
   model's .json>` (`openFromAddress` in `src/main.js`, fetching through
-  `src/remote.js`) — how a model
-  library's page, or any link, opens a model in the app. The file File ▸
+  `src/remote.js`) — how the model gallery's
+  page, or any link, opens a model in the app. The file File ▸
   Save writes, FETCHED (from any address, Robert: a model is data, never
   run; checked as File ▸ Open checks one), added as a copy that records
   `openedFrom` (so the same address again offers that copy), and opened;
@@ -204,7 +204,7 @@ footing (`src/widgets/grid.js` is the first).
   ADDRESS, `Simile.model(name, '<model>.json', run, { parameters? })`: the
   model spec fetched as the page fills (`src/remote.js`, shared with the
   app's `?open=`), with `<model>.parameters.json` beside it if there; for a
-  page on a web site such as a model library's — File ▸ Export model as
+  page on a web site such as the model gallery's — File ▸ Export model as
   script writes one (`exportScriptFile` in `src/main.js`, with the run
   settings chosen for the model, `Simulation.settingsFor`); elements say
   `data-simile="diagram|plotter|lollipop|…|controls"` and `data-model`

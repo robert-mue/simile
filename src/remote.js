@@ -2,7 +2,7 @@
  * `Sienna.remote` — a model fetched from an address: the one way the app
  * (`index.html?open=…`, `openFromAddress` in main.js) and embedded-widget
  * pages (`Simile.model(name, '<address>.json')`, page.js) get a model from
- * the web, e.g. from a model library's site.
+ * the web, e.g. from the model gallery's site.
  *
  * What is fetched is the model spec, the file File ▸ Save writes: plain
  * JSON, data that is never run. Its parameter values come from a parameter

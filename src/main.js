@@ -381,7 +381,7 @@
   // =======================================================================
   // OPENING A MODEL FROM AN ADDRESS
   // =======================================================================
-  // `index.html?open=<address of a model's .json>` — how a model library's
+  // `index.html?open=<address of a model's .json>` — how the model gallery's
   // page (or any page, or a link in an email) opens a model in the app: the
   // file File ▸ Save writes, fetched, added to the user's models as a copy,
   // and opened. Any address (Robert): a model is data, never run, and is

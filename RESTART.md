@@ -59,32 +59,38 @@ the tabbed dialog. How to retake them: tools/headless/README.md. Trap: a
 dialog's equation box must be scrolled to the MIDDLE before it is clicked,
 or the click misses and a Backspace deletes the selected element.
 
-**2026-11-08: towards a MODEL LIBRARY** (Robert). Decided:
-the library is its OWN repo (not simile's), published with GitHub Pages
-(so it is a site to browse, with links and text about each model); each
-model is PLAIN JSON (the model spec as File > Save writes it, no
-Simile.model(...) wrapper: declarative modelling on show), with
-`<name>.parameters.json` beside it; curated = admins commit. GitHub serves
-every file with `Access-Control-Allow-Origin: *` (checked), and a page
-from file:// can fetch it (checked, Chrome). Built so far:
-(1) sienna ONE LIVE TAB (2d76737, 27716b5; app a676d02): the app open in
-two tabs used to lose work; now the tab opened last writes, the other
-stands down with a notice. `two-tabs.py`.
-(2) `index.html?open=<address of a .json>` (cceaa5b): ANY address
-(Robert), the copy records `openedFrom`, the same address again offers
-it, parameter file beside it or `&parameters=`. `open-address.py`.
-(3) embedded-widget pages take a model BY ADDRESS (e34f878):
-`Simile.model(name, '<model>.json', run)`; `src/remote.js` shared by both.
-2026-11-10, Robert, REVISED: a library page is NOT live for now
-(scaling etc. not worth the time yet). The minimum per model: a title, a
-brief description, a link to a published paper if there is one, and a
-link that opens the app with the model and its files
-(`https://robert-mue.github.io/simile/index.html?open=<model .json>`).
-Screenshots, more text, links to projects: case by case. KEEP (1)-(3) as
-they are, for later; just do not use (3) in the library's pages yet. The
-diagram-scaling and plot-variable questions are shelved with it. Next:
-the library repo itself, its index, a page per model, its checks. Not
-started; creating the repo waits for Robert.
+**2026-11-10: the MODEL GALLERY** (Robert: "gallery", NEVER "library",
+which sounds like a software library): its own repo,
+github.com/robert-mue/model_gallery, published with GitHub Pages
+(main, /) at https://robert-mue.github.io/model_gallery/. Local checkout:
+`~/Projects/model_gallery`. Its README is the curator's guide. Each model
+has its own directory, `models/<name>/`: `<name>.json` (the model spec, as
+File > Save writes it: plain JSON, no Simile.model(...) wrapper),
+`<name>.parameters.json` optional beside it, `index.html`, pictures as
+needed. Curated = commit access. A page is STATIC (Robert, 2026-11-10: not
+live yet, scaling etc. not worth the time now): at least a title, a short
+description, a paper link if there is one, and the Open in Simile link
+(`https://robert-mue.github.io/simile/index.html?open=<the .json on the
+gallery site>`, new tab). Check: `python3 check/check.py` there (every
+model directory, its spec, its page, its link exactly right, its
+pictures' sizes, the index lists them all). Seeded with the tutorials'
+three models, built by the headless scripts and saved as File > Save
+does: Bank account (rate put back to 0.1), Lotka-Volterra (Predator-prey
+stage 5), Trees; each opened by address and run in the app (checked).
+WHICH models to add is Robert's. The model spec carries no run settings,
+so a model opens with the app's default run settings; each page says
+what to run it for.
+Built for it in the app, KEPT for later: (1) sienna ONE LIVE TAB
+(2d76737, 27716b5; app a676d02): the app open in two tabs used to lose
+work; now the tab opened last writes, the other stands down with a
+notice. `two-tabs.py`. (2) `index.html?open=<address of a .json>`
+(cceaa5b): ANY address (Robert), the copy records `openedFrom`, the same
+address again offers it, parameter file beside it or `&parameters=`.
+`open-address.py`. (3) embedded-widget pages take a model BY ADDRESS
+(e34f878): `Simile.model(name, '<model>.json', run)`; `src/remote.js`
+shared by both. (3) is NOT used by the gallery's pages yet; the open
+questions of a live page (diagram scaling: lamos fits a 340px box at
+27%; which variables to plot) are shelved with it.
 
 **RELEASED as 2026-11-05: an ENGINE MAINTENANCE GUIDE**,
 `tools/engine/MAINTAINING.md`, at Robert's request: how a future session
