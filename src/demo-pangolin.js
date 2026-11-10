@@ -1,8 +1,10 @@
 /**
  * `Sienna.demoPangolin` — **Pangolin harvest**, a published model converted
- * from R: Almeida et al. (2023), "Multiple co-occurring bioeconomic drivers of
- * overexploitation accelerate rare species extinction risk" (`AAE_OE` in the
- * authors' script).
+ * from R: Almeida, Bonachela & Lockwood (2023), "Multiple co-occurring
+ * bioeconomic drivers of overexploitation can accelerate rare species
+ * extinction risk", Journal of Applied Ecology 60(5): 754-763,
+ * doi:10.1111/1365-2664.14376. The authors' R script (`AAE_OE`):
+ * doi:10.5061/dryad.0p2ngf25b.
  *
  * Three ODEs — a rare focal species (pangolins), a common species hunted
  * alongside it, and harvest effort — split into flows as System Dynamics does
