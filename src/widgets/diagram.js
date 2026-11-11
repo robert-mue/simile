@@ -28,7 +28,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   options: {
     /** Model path to view when the panel is unbound (no `ref`). */
     path: 'models/growth',
-    padding: 40,
+    /** Screen pixels left clear around the model by fit (labels are inside the box measured). */
+    padding: 16,
     maxFitScale: 2,
     /**
      * What the view bar's "100%" restores. The notation's world units are small
