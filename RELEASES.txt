@@ -556,4 +556,4 @@ Diagrams
   dropped: moving elements or a submodel, dragging a name, bending an
   arrow, resizing a submodel, and dragging a port. The model is still
   changed once, at the drop, so Undo takes back the whole drag in one
-  step. Escape during a drag puts every diagram back.
+  step.
