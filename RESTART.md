@@ -46,6 +46,23 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
+**NOT RELEASED (2026-11-11, done while Robert was away; he asked for it,
+not for a release): a drag in one diagram is FOLLOWED by every other
+diagram of the same model while in progress** (Robert: before, the other
+updated only at the drop). Sienna d69902c: `userData.announce(ref,
+message, from)` / `hear(prefix, fn)`, what is IN PROGRESS, never stored,
+saved, logged or undone; widgetBase `_announce` / `_hearAnnouncements`
+(own left out). Simile d20a167: each gesture (element and submodel move,
+label, bend, resize, port) announces itself and `{gesture:'end'}` BEFORE
+its commit; other views draw the same ghost (`_follow`, sets their own
+`_drag`/`_portDrag`/`_bowDrag`/`_labelDrag` so they start no gesture
+meanwhile) and on 'end' only `_renderSoon`, so the drop's write (same
+task) gives one redraw. Shared helpers `_ghostBend`, `_ghostPort`,
+`_labelTo`. nkometou (1091 elements dragged): follower ~105 ms at the
+start, ~1 ms a frame; the drop redraws both views (~1.5 s), as before.
+Check: `tools/headless/scripts/two-views.py` 22/22; editor 19/19, grammar
+and fixtures, two-tabs 13/13, sample pages run. Release when Robert says.
+
 **RELEASED as 2026-11-11 (the latest release)**: Pangolin harvest
 re-laid out at about half the spacing (Robert: "much better"; 760x590 ->
 425x328; six flow labels moved above their valve, opportunistic_catch's
