@@ -530,3 +530,17 @@ Built-in models
 - Pangolin harvest runs for 50 years, not 1000. This applies when it is
   first added to your models; if you already have it, set Execute for
   to 50 yourself.
+
+
+------------------------------------------------------------------------
+Release 2026-11-11
+------------------------------------------------------------------------
+
+Diagrams
+- "fit" leaves less empty space around a model, so it draws the model
+  larger: about 13% larger when the window's height is what limits it.
+- Pangolin harvest is laid out more compactly, at about half the
+  spacing, so "fit" shows it much larger and easier to read. This
+  applies when it is first added to your models; if you already have
+  it, delete it and reload Simile to get the new layout, or open it
+  from the model gallery.
