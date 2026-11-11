@@ -80,6 +80,13 @@ footing (`src/widgets/grid.js` is the first).
   flow's valve with the arcs at it; no third order. A label drag moves only
   the label; a resize, a port drag and a bend redraw only the box, handle
   and arcs they change (`_ghostResize`, `_ghostStill`). Checked: `test/editor-tests.js` (the ghost is what the drop draws).
+  Another diagram of the same model FOLLOWS a gesture while it is in
+  progress (Robert, 2026-11-11): each gesture announces itself and its end
+  (sienna's `userData.announce`, `_announce`) and the other views draw the
+  same ghost (`_follow`); nothing is written until the drop, which every
+  view then hears as a change, once. nkometou, a 1091-element submodel: the
+  follower ~105 ms at the start, ~1 ms a frame. Checked:
+  `tools/headless/scripts/two-views.py` (every gesture, a click, a cancel).
   It redraws ONCE per model change, however many writes (`_renderSoon`), and
   keeps each element's red/black until the model changes in anything but
   layout (`_incomplete`). A drawing runs inside **`Diagram.memo`**: for a

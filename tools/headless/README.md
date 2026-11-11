@@ -44,6 +44,10 @@ a scratch folder, compare with `help/tutorials/img/<tutorial>/`, and copy the
 ones the page uses (`<img src=…>`), setting each `<img>`'s width and height to
 the new size. Chrome capped (`timeout`), the scripts in order, one Chrome at a
 time on :9350. Last done 2026-11-09, all three tutorials.
+- `scripts/two-views.py` — two diagrams of one model: a drag in one is
+  followed by the other while in progress (element, submodel, label, bend,
+  resize, port), nothing written until the drop; a click and a cancel leave
+  the other as it was. PASS/FAIL lines. Over http.
 - `scripts/test-pages.py` — opens `test/index.html` and `test/fixtures.html`.
 - `scripts/editor.py` — runs `test/editor.html` (over http, via `tools/serve.py`)
   and prints its bar and any failing tests.

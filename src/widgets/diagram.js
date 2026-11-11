@@ -129,6 +129,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     // per change, however many writes it makes (`_renderSoon`).
     if (this._bound()) this._watchModel(this._modelChanged);
     else this._unsub = Sienna.userData.subscribe(this.options.path, (c) => this._modelChanged(c));
+    // ...and follow a gesture in another view of the same model while it is
+    // in progress, before anything is written (`_follow`).
+    if (this._bound()) this._hearAnnouncements(this._follow);
 
     this._render();
   },
@@ -946,11 +949,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // Ghosted (`_ghostResize`): the box, its ports and the arcs they carry.
       if (!ghost) ghost = this._ghostResize(d, id, ports.map((p) => p.key));
       this._ghostFrame(ghost);
+      this._announce({ gesture: 'resize', id, ports: ports.map((p) => p.key), moves: preview });
     };
     let ghost = null;
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
-      if (ghost) this._ghostEnd(ghost);
+      if (ghost) { this._ghostEnd(ghost); this._announce({ gesture: 'end' }); }
       const drag = this._drag;
       this._drag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }
@@ -1197,6 +1201,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     return t;
   },
 
+  /** Show a label at an offset while it is dragged: only the label is touched. */
+  _labelTo(id, off) {
+    // The label drawn now, which a redraw meanwhile may have replaced.
+    const el = this._layer.labels.querySelector('[data-label-for="' + id + '"]');
+    const was = (el && el.__drawnOff) || { dx: 0, dy: 0 };
+    if (el) el.setAttribute('transform', `translate(${off.dx - (was.dx || 0)},${off.dy - (was.dy || 0)})`);
+  },
+
   _beginLabelDrag(e, d, id, off) {
     if (this._tool) return;                       // placing/connecting takes precedence
     if (this._isDoubleClick(id, e)) {
@@ -1222,14 +1234,12 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       const w = this._toWorld(ev.clientX, ev.clientY);
       const off2 = { dx: start.dx + (w.x - origin.x), dy: start.dy + (w.y - origin.y) };
       this._labelDrag = { id, off: off2 };
-      // Only the label moves, so only the label is touched — the one drawn
-      // now, which a redraw meanwhile may have replaced.
-      const el = this._layer.labels.querySelector('[data-label-for="' + id + '"]');
-      const was = (el && el.__drawnOff) || { dx: 0, dy: 0 };
-      if (el) el.setAttribute('transform', `translate(${off2.dx - (was.dx || 0)},${off2.dy - (was.dy || 0)})`);
+      this._labelTo(id, off2);
+      this._announce({ gesture: 'label', id, off: off2 });
     };
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
+      if (this._labelDrag) this._announce({ gesture: 'end' });
       const final = this._labelDrag && this._labelDrag.off;
       this._labelDrag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
@@ -1509,13 +1519,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // the curve would silently snap to the minor arc on the far side.
       this._bowDrag = { id, bow: Math.max(-this._MAX_BOW, Math.min(this._MAX_BOW, -side / c)) };
       // Ghosted: this arc alone is redrawn.
-      if (!ghost) ghost = this._ghostStill(d, [id], () => {}, null, () => this._bowDrag.bow);
+      if (!ghost) ghost = this._ghostBend(d, id);
       this._ghostFrame(ghost);
+      this._announce({ gesture: 'bend', id, bow: this._bowDrag.bow });
     };
     let ghost = null;
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
-      if (ghost) this._ghostEnd(ghost);
+      if (ghost) { this._ghostEnd(ghost); this._announce({ gesture: 'end' }); }
       const final = this._bowDrag && this._bowDrag.bow;
       this._bowDrag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
@@ -1610,20 +1621,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const move = (ev) => {
       const w = this._toWorld(ev.clientX, ev.clientY);
       this._portDrag = { [port.key]: this._ontoRect(w, rect) };
-      // Ghosted: the handle, and the arcs passing through it.
-      if (!ghost) {
-        const handle = this._layer.overlay.querySelector('[data-port="' + port.key + '"]');
-        ghost = this._ghostStill(d, port.arcs || [], () => {
-          const q = this._portDrag[port.key];
-          if (handle) { handle.setAttribute('cx', q.x); handle.setAttribute('cy', q.y); }
-        }, (p) => (p.port === port.key ? this._portDrag[port.key] : p));
-      }
+      if (!ghost) ghost = this._ghostPort(d, port);
       this._ghostFrame(ghost);
+      this._announce({ gesture: 'port', key: port.key, at: this._portDrag[port.key] });
     };
     let ghost = null;
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
-      if (ghost) this._ghostEnd(ghost);
+      if (ghost) { this._ghostEnd(ghost); this._announce({ gesture: 'end' }); }
       const final = this._portDrag && this._portDrag[port.key];
       this._portDrag = null;
       if (ev && ev.type === 'pointercancel') { this._render(); return; }    // cancelled: put it back
@@ -1836,11 +1841,14 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       // what is in its way.
       legal = this._clampDrag(plan, w.x - origin.x, w.y - origin.y, legal);
       if (!ghost && (legal.dx || legal.dy)) ghost = this._ghostBegin(d, keys, portKeys);
-      if (ghost) this._ghostTo(ghost, legal.dx, legal.dy);
+      if (ghost) {
+        this._ghostTo(ghost, legal.dx, legal.dy);
+        this._announce({ gesture: 'move', keys, ports: portKeys, dx: legal.dx, dy: legal.dy });
+      }
     };
     const end = (ev) => {
       $(document).off('pointermove', move).off('pointerup pointercancel', end);
-      if (ghost) this._ghostEnd(ghost);
+      if (ghost) { this._ghostEnd(ghost); this._announce({ gesture: 'end' }); }
       this._drag = null;
       // Cancelled is not dropped: nothing is written until the drop, so putting
       // it back is just drawing what the model still says.
@@ -1966,6 +1974,80 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     });
     this._ghostArcsDraw(g.arcs, (k) => g.boxAt(k, dx, dy),
       (p) => (g.movers.has(p.port) ? { x: p.x + dx, y: p.y + dy } : p));
+  },
+
+  /** Ghosted bend: this arc alone is redrawn, at `_bowDrag.bow`. */
+  _ghostBend(d, id) {
+    return this._ghostStill(d, [id], () => {}, null, () => this._bowDrag.bow);
+  },
+
+  /** Ghosted port drag: the handle, and the arcs passing through it, at `_portDrag`. */
+  _ghostPort(d, port) {
+    const handle = this._layer.overlay.querySelector('[data-port="' + port.key + '"]');
+    return this._ghostStill(d, port.arcs || [], () => {
+      const q = this._portDrag[port.key];
+      if (handle) { handle.setAttribute('cx', q.x); handle.setAttribute('cy', q.y); }
+    }, (p) => (p.port === port.key ? this._portDrag[port.key] : p));
+  },
+
+  /**
+   * Follow a gesture another view of this model is making (Robert,
+   * 2026-11-11): what it announces (`_announce`, sienna's
+   * `userData.announce`) is drawn here by the same ghost it draws there, so
+   * every view moves together, mid-drag. Nothing is written until the drop,
+   * which this view then hears as any change and redraws from — once: on
+   * 'end' the redraw is only asked for (`_renderSoon`), and the drop's write
+   * comes in the same task, before it runs. A drag cancelled writes nothing,
+   * and the redraw puts the drawing back. While following, this view's own
+   * gestures wait (`_drag` and the rest are set, as for its own), and a
+   * gesture of its own already in progress is not interrupted.
+   */
+  _follow(msg) {
+    const f = this._following;
+    if (msg.gesture === 'end') {
+      if (!f) return;
+      this._following = null;
+      if (f.ghost) this._ghostEnd(f.ghost);
+      this._drag = this._portDrag = this._bowDrag = this._labelDrag = null;
+      this._renderSoon();
+      return;
+    }
+    if (!f && (this._ghost || this._drag || this._portDrag || this._bowDrag || this._labelDrag)) return;
+    const d = this._diagram();
+    if (!d) return;
+    if (!f) this._following = { gesture: msg.gesture, ghost: null };
+    const g = this._following;
+    switch (msg.gesture) {
+      case 'move':
+        this._drag = { id: null, moves: null };
+        if (!g.ghost) g.ghost = this._ghostBegin(d, msg.keys, msg.ports);
+        this._ghostTo(g.ghost, msg.dx, msg.dy);
+        break;
+      case 'resize':
+        this._drag = { id: msg.id, moves: msg.moves };
+        if (!g.ghost) g.ghost = this._ghostResize(d, msg.id, msg.ports);
+        this._ghostFrame(g.ghost);
+        break;
+      case 'bend':
+        this._bowDrag = { id: msg.id, bow: msg.bow };
+        if (!g.ghost) g.ghost = this._ghostBend(d, msg.id);
+        this._ghostFrame(g.ghost);
+        break;
+      case 'port': {
+        this._portDrag = { [msg.key]: msg.at };
+        if (!g.ghost) {
+          const port = d.allPorts().find((p) => p.key === msg.key);
+          if (port) g.ghost = this._ghostPort(d, port);
+        }
+        if (g.ghost) this._ghostFrame(g.ghost);
+        break;
+      }
+      case 'label':
+        this._labelDrag = { id: msg.id, off: msg.off };
+        this._labelTo(msg.id, msg.off);
+        break;
+      default:
+    }
   },
 
   /**
