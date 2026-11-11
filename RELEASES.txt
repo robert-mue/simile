@@ -544,3 +544,16 @@ Diagrams
   applies when it is first added to your models; if you already have
   it, delete it and reload Simile to get the new layout, or open it
   from the model gallery.
+
+
+------------------------------------------------------------------------
+Release 2026-11-11b
+------------------------------------------------------------------------
+
+Diagrams
+- With more than one diagram of a model open, a drag in one is now
+  followed by the others while it is in progress, not only when it is
+  dropped: moving elements or a submodel, dragging a name, bending an
+  arrow, resizing a submodel, and dragging a port. The model is still
+  changed once, at the drop, so Undo takes back the whole drag in one
+  step. Escape during a drag puts every diagram back.
