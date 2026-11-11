@@ -2,7 +2,7 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-10.
+embedded-widget pages. Brought up to date 2026-11-11.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
@@ -46,7 +46,17 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**RELEASED as 2026-11-10 (the latest release)**: the model gallery
+**RELEASED as 2026-11-11 (the latest release)**: Pangolin harvest
+re-laid out at about half the spacing (Robert: "much better"; 760x590 ->
+425x328; six flow labels moved above their valve, opportunistic_catch's
+to the left: `layout.labels`, keyed by the VALVE node), fit in its Model
+window 0.60 -> 1.04; and fit's margin 40 -> 16 px (`padding`, the
+diagram widget's option; app-wide, pages too), 1.04 -> 1.18. Editor
+tests 19/19. Existing copies keep the old layout (seeded only when
+missing); the gallery has the new one and its picture. What still leaves
+space at a fitted diagram's sides is the window's shape, not the margin.
+
+**RELEASED as 2026-11-10**: the model gallery
 (below), the import fix for the oldest files (lamos1a/b), Pangolin
 harvest run for 50 years (Robert: 1000 too long; presetSettings applies
 only when the model is first seeded, so existing users keep theirs).
