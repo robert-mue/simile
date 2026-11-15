@@ -5,8 +5,8 @@ all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
 **STATE 2026-11-15: the latest release is 2026-11-11b** (checked live:
-the site's `src/release.js` and its diagram-following code). Nothing of
-the app is unreleased; `release` lacks only restart-note commits. Both
+the site's `src/release.js` and its diagram-following code). Since then,
+one change, below. Both
 repos (simile, sienna) match origin. The model gallery
 (robert-mue/model_gallery) has bank-account, lotka-volterra, trees,
 lamos, pangolin. NOT RELEASED (2026-11-15, Robert asked): opened from
