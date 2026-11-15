@@ -28,5 +28,5 @@ m = await at("[...document.querySelectorAll('.slx-popup *')].find(e=>e.textConte
 await click(m[0],m[1]); await sleep(0.6)
 await runall()
 print('s5', await series())
-await menu('View'); await menu('Arrange windows'); await menu('This model beside its simulation'); await sleep(1)
+await menu('View'); await menu('Arrange panels'); await menu('This model beside its simulation'); await sleep(1)
 await shot('pp/s5-run.png')

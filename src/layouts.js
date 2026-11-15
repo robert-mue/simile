@@ -7,8 +7,8 @@
  * are kept apart because a modeller often compares two structures, and
  * separately two runs. The layouts differ in where the collections go:
  *
- *   - **Model and simulation panels** (the default): floating panels, as in
- *     Simile's windows, both opened with the model — see where it is
+ *   - **Model and simulation panels** (the default): floating panels, as
+ *     Simile's windows are, both opened with the model — see where it is
  *     registered (its id is still 'windows', which saved sessions name).
  *   - **Model and simulation areas**: all the Model collections in one area
  *     and all the Simulation collections in another, side by side, each area
@@ -18,7 +18,7 @@
  * Collections are made from templates: a model's first diagram makes its
  * Model collection, its first run control or display its Simulation
  * collection, which always comes with a run control at the top (and in the
- * windows layout, either makes both). Each carries the model's `ref`, so it
+ * default layout, either makes both). Each carries the model's `ref`, so it
  * wears the model's colour and only that model's panels go in it. A
  * collection closes when its last panel does.
  *
@@ -63,7 +63,7 @@
         widget: 'container',
         title: 'Model',
         openWithDocument: true,
-        // Closing the model window closes the model, simulation window too.
+        // Closing the Model panel closes the model, its Simulation panel too.
         primary: true,
         geometry: { left: 0.01, top: 0.02, width: 0.56, height: 0.92 },
         // Tiled, so a lone diagram fills the window.

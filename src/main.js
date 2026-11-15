@@ -585,12 +585,12 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  // ---- windows --------------------------------------------------------
-  // A WINDOW is a collection at the top level — a model window, a simulation
-  // window; what is inside one is a panel. These find a model's windows by the
+  // ---- top-level panels -----------------------------------------------
+  // A collection at the top level — a model's Model panel, its Simulation
+  // panel (never "window" to the user: Robert). These find a model's by the
   // template they were made from (src/layouts.js).
 
-  /** The open windows made from one template, frontmost first. */
+  /** The open top-level panels made from one template, frontmost first. */
   function windowsOf(template) {
     return app.windows().filter(function ($p) {
       var $c = $p.panel('content');
@@ -652,8 +652,8 @@
         // every panel into the new arrangement, so nothing is lost.
         // Every open window, to bring one to the front; re-drawn as windows
         // come and go.
-        { label: 'Windows', items: function () { return app.windowItems(); } },
-        { label: 'Arrange windows', items: arrangeItems },
+        { label: 'Panels', items: function () { return app.windowItems(); } },
+        { label: 'Arrange panels', items: arrangeItems },
         { label: 'Layout', items: Sienna.layouts.menuItems(app) },
         { label: 'Clear workspace', onSelect: function () { app.clearWorkspace(); } },
       ],

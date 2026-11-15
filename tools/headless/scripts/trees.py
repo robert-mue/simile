@@ -2,7 +2,7 @@ exec(open('lib.py').read(), globals())
 async def desel():
     await ev("$('.slx-diagram').diagram('instance')._sel=[]; $('.slx-diagram').diagram('instance')._render()")
 async def beside():
-    await menu('View'); await menu('Arrange windows'); await menu('This model beside its simulation'); await sleep(0.8)
+    await menu('View'); await menu('Arrange panels'); await menu('This model beside its simulation'); await sleep(0.8)
 async def arrange(label):
     btn = await at("[...document.querySelectorAll('.slx-panel')].find(p=>$(p).panel('option','title')==='Displays').querySelector(':scope > .slx-panel-titlebar .slx-panel-arrange')")
     await click(btn[0],btn[1]); await sleep(0.4)

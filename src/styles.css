@@ -984,7 +984,7 @@ body > .slx-dlg-backdrop { position: fixed; z-index: 1000; }
   max-width: 92%;
   /* Name and tabs stay at the top, OK and Cancel at the bottom, and only the
      tab's contents scroll. Scrolling the whole dialog, as it did, carried the
-     tabs out of sight above and left OK out of sight below, in a Model window
+     tabs out of sight above and left OK out of sight below, in a Model panel
      of ordinary size. */
   display: flex;
   flex-direction: column;

@@ -155,7 +155,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
   _buildFields() {
     // Fields wrap, several to a line, rather than one per row: a column of
     // five left the run control so tall that the Displays under it, in a
-    // Simulation window of ordinary height, were too small for the plotter's
+    // Simulation panel of ordinary height, were too small for the plotter's
     // own toolbar — it became a thumbnail before it had been used.
     const box = $('<div class="slx-run-fields">').appendTo(this.element);
     this._inputs = {};

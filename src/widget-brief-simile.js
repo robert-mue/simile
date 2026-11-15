@@ -17,11 +17,11 @@
   brief.setApp('simile (a diagram editor and simulator for Simile models)');
 
   brief.addSection('In simile: where a widget opens', [
-    'Each model has a Model window (its diagram) and a Simulation window (a run',
+    'Each model has a Model panel (its diagram) and a Simulation panel (a run',
     'control, which loads and runs the model, and an area of displays). A',
     'widget\'s `role` says which it opens in: `\'display\'` (the usual one for',
     'anything that shows results: plots, tables, gauges) opens among the',
-    'model\'s displays; no role opens it as a separate window. The panel is',
+    'model\'s displays; no role opens it as a separate panel. The panel is',
     'bound to the model that was current when the user opened it, so',
     '`this._ref()` is that model\'s path.',
   ].join('\n'));
