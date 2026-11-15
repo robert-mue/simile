@@ -119,6 +119,19 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
     this._draw();
   },
 
+  /** The variables plotted, by name as the list shows them (`tree/size`). */
+  variableNames() {
+    return this._series.map((s) => s.label);
+  },
+
+  /**
+   * Kept with the panel (sienna's `state()`): a reload, or a model's default
+   * displays (src/presentation.js), plots the same variables again.
+   */
+  state() {
+    return { variables: this.variableNames() };
+  },
+
   /** Plot a variable given by name: now if the loaded model has it, else when it does. */
   _addByName(name) {
     const all = this._sim.scalarComponents()
@@ -212,7 +225,9 @@ $.widget('sienna.plotter', $.sienna.widgetBase, {
       const into = list.length && members.length
         ? $('<optgroup>').attr('label', title).appendTo(this._pick) : this._pick;
       items.forEach((c) => $('<option>').val(c.id)
-        .text(c.label + (c.next ? '  (from the next run)' : '')).appendTo(into));
+        // Said only of what the PREPARED model lacks: before ▶ every name
+        // is from the next run, and saying so of each says nothing.
+        .text(c.label + (c.next && this._sim.base ? '  (from the next run)' : '')).appendTo(into));
     };
     group('Single values', list);
     group('A line for each instance', members);

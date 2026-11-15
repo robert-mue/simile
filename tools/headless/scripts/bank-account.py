@@ -70,8 +70,7 @@ print('incomplete', await ev("$('.slx-diagram .slx-incomplete').length"), 'dialo
 # ---------------- Step 4
 await win('Bank account: Simulation')
 await shot('ba/11-simulation.png')
-b = await at("[...__sim().querySelectorAll('.slx-run button')].find(e=>e.textContent==='load')"); await click(b[0], b[1]); await sleep(0.5)
-print(await waitready())
+# No Load (2026-11-15): the settings are the model's before it is prepared, and ▶ prepares it.
 await field('Time step(s)', '1'); await field('Execute for', '10')
 await panel_shot('ba/12-runcontrol.png', 'Bank account: runControl/1')
 
@@ -97,6 +96,6 @@ await shot('ba/20-rerun.png')
 # ---------------- Step 8
 await menu('File'); await hover('Save model as file…'); await menu_shot('ba/21-file-save.png', 420, 460)
 await closemenus()
-await menu('File'); await menu('Recent'); await sleep(0.3); await hover('Bank account')
+await menu('File'); await menu('Recent models'); await sleep(0.3); await hover('Bank account')
 await menu_shot('ba/22-file-recent.png', 700, 600)
 await closemenus()

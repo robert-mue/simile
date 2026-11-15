@@ -82,6 +82,13 @@ time on :9350. Last done 2026-11-09, all three tutorials.
   sorting and Open, File's lists, `?demos`, a gallery out of reach. Serves
   the gallery repo (`~/Projects/model_gallery`, or the directory given) on
   :8734. Standalone, over http. PASS/FAIL lines.
+- `scripts/presentation.py` — the run control with no Load (a model of
+  one's own: green before it is prepared, a setting typed first kept, ▶
+  prepares and runs, red and ▶ greyed while incomplete) and a model's
+  default displays (Metadata's "Use the displays open now", undo, a plot's
+  variables over a reload, opened again: plotted and run once); then each
+  gallery model from the Sample models panel, plotted and run to its end.
+  Serves the gallery as samples.py does. Standalone, over http.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.

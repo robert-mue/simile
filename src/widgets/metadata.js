@@ -12,6 +12,11 @@
  * model's structure and never entered: its size and its Simile features
  * (`Sienna.modelSummary`), kept up to date as the model is edited.
  *
+ * And its DEFAULT DISPLAYS (`<model>/presentation`, src/presentation.js):
+ * the plots and sliders it opens with, and the run settings, shown in words;
+ * "Use the displays open now" takes them from its Simulation panel, Clear
+ * takes them away. Each one undoable edit.
+ *
  * Each change is one undoable edit, made when a field is left (or Enter in
  * a one-line field), not at every key. Another view of the same model, or
  * an undo, shows here at once — except in the field being typed in.
@@ -45,6 +50,21 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
       this._inputs[f.key] = input;
     });
     this._warn = $('<p class="slx-meta-note slx-meta-warn">').hide().appendTo(this.element);
+
+    const shown = $('<div class="slx-meta-read slx-meta-present">').appendTo(this.element);
+    $('<div class="slx-meta-read-head">').text('Default displays').appendTo(shown);
+    this._present = $('<div>').appendTo(shown);
+    const buttons = $('<div class="slx-meta-buttons">').appendTo(shown);
+    this._useBtn = $('<button type="button">').text('Use the displays open now')
+      .attr('title', 'The plots and sliders in this model’s Simulation panel, and its run settings, '
+        + 'become what the model opens with')
+      .appendTo(buttons);
+    this._clearBtn = $('<button type="button">').text('Clear').appendTo(buttons);
+    this._presentNote = $('<p class="slx-meta-note">').hide().appendTo(shown);
+    this._on(this._useBtn, { click: () => this._usePresentation() });
+    this._on(this._clearBtn, {
+      click: () => this._action('presentation', { presentation: null }, () => Sienna.userData.remove(this._ref() + '/presentation')),
+    });
     const read = $('<div class="slx-meta-read">').appendTo(this.element);
     $('<div class="slx-meta-read-head">').text('Read from the model').appendTo(read);
     this._size = $('<div>').appendTo(read);
@@ -87,8 +107,21 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
     this._action('edit', { metadata: now }, () => this._set('metadata', now));
   },
 
+  _usePresentation() {
+    const snap = Sienna.presentation.snapshot(window.app, this._ref());
+    if (!snap) {
+      this._presentNote.text('Open a plot or the sliders in this model’s Simulation panel first.').show();
+      return;
+    }
+    this._presentNote.hide();
+    this._action('presentation', { presentation: snap }, () => this._set('presentation', snap));
+  },
+
   _refresh() {
     if (!this._inputs) return;
+    const said = Sienna.presentation.describe(this._model() || {});
+    this._present.text(said ? 'Opens with ' + said : 'None: the model opens with an empty Displays area.');
+    this._clearBtn.prop('disabled', !said);
     const m = this._held();
     const shown = {
       title: m.title || '',

@@ -67,7 +67,7 @@
 <p>Set the value for the variable <em>gr</em> to <code>0.2</code>.</p>
 
 <h3>Step 8</h3>
-<p>Prepare the model for running: in the Simulation panel, click <span class="ui">load</span>.</p>
+<p>Look at the Simulation panel. There is nothing to load: its status line is green, <em>Ready to run</em>. When you run the model, Simile first prepares it from the diagram, which takes a few seconds.</p>
 
 <h3>Step 9</h3>
 <p>Set up a plotter for the <em>size</em> stock: <span class="ui">Widgets &rsaquo; Plotter</span>, select <code>size</code>, and click <span class="ui">add</span>.</p>
@@ -150,7 +150,7 @@
 <p>This states that a tree will &ldquo;die&rdquo; (be removed from the model) when its size exceeds 17.</p>
 
 <h3>Step 12</h3>
-<p>Set <span class="ui">Execute for</span> to <code>100</code>, and run the model again with <span class="ui">&#9654;</span>. You have changed the model since it was loaded, so the run control loads it again first.</p>
+<p>Set <span class="ui">Execute for</span> to <code>100</code>, and run the model again with <span class="ui">&#9654;</span>. You have changed the model since it was prepared, so the run control prepares it again first.</p>
 
 <figure>
   <img src="img/trees/s2-run.png" alt="The size plot now has a line for each tree: lines start at 3 at different times and rise at different slopes; the steepest stop at 17" width="1280" height="713">
@@ -192,7 +192,7 @@
 
 <h3>Step 4</h3>
 <p>Call up a plotter for the variable <em>total</em>: <span class="ui">Widgets &rsaquo; Plotter</span>, select <code>total</code>, and click <span class="ui">add</span>. To see both plots at once, click the <span class="ui">Arrange contents</span> button on the Displays titlebar and select <span class="ui">Tiled side by side</span>.</p>
-<p>The list shows <em>total</em> as &ldquo;from the next run&rdquo;: it is in your diagram, but not yet in the model that was loaded. It is plotted as soon as the model is loaded again, which the next step does for you.</p>
+<p>The list shows <em>total</em> as &ldquo;from the next run&rdquo;: it is in your diagram, but not yet in the model that was prepared. It is plotted as soon as the model is prepared again, which the next step does for you.</p>
 
 <h3>Step 5</h3>
 <p>Set <span class="ui">Execute for</span> to <code>300</code>, and run the model again.</p>
@@ -226,7 +226,7 @@
 <p>The trees can be anywhere between the front and the back of the 1 hectare plot. Hence, the y-coordinate for each tree is randomly determined between 0 and 100 m.</p>
 
 <h3>Step 4</h3>
-<p>Re-build the model: click <span class="ui">load</span>. (You could leave this to the next run, as in Stage 3, but loading now lets the display show the trees at the start.)</p>
+<p>Prepare the model again: click <span class="ui">&#9632;</span> (<em>Back to the start</em>). (You could leave this to the next run, as in Stage 3, but doing it now lets the display show the trees at the start.)</p>
 
 <h3>Step 5</h3>
 <p>Call up the lollipop display: <span class="ui">Widgets &rsaquo; Lollipop diagram</span>. It needs three variables, selected in the three lists along its top: <span class="ui">x</span>, <span class="ui">y</span> and <span class="ui">size</span>. Because our variables are called <em>x</em>, <em>y</em> and <em>size</em>, it has selected them already; in a model whose variables are named differently, you select them yourself.</p>

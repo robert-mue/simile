@@ -556,12 +556,22 @@ body > .slx-dlg-backdrop { position: fixed; z-index: 1000; }
   flex-shrink: 0;
 }
 
-/* A failed load is the one thing here the user must not miss: the play
-   button will simply be dead until it is dealt with. */
-.slx-run-error {
-  color: #a32b2b;
-  font-weight: 600;
+/* The status line is a traffic light (Robert, 2026-11-15), bold on a
+   coloured ground: green, it can go; orange, something is in progress; red,
+   it cannot go and says why. Dark text on each: white on orange or green
+   would fail contrast. */
+.slx-run-status.slx-run-go,
+.slx-run-status.slx-run-busy,
+.slx-run-status.slx-run-error {
+  font-weight: 700;
+  margin: 4px 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
 }
+.slx-run-status.slx-run-go { background: #d3f0d9; border-color: #8fd19e; color: #14532d; }
+.slx-run-status.slx-run-busy { background: #ffe0b2; border-color: #f5a623; color: #6b3a00; }
+.slx-run-status.slx-run-error { background: #f9d0d0; border-color: #e07a7a; color: #7f1d1d; }
 
 .slx-run-transport {
   display: flex;
@@ -1560,3 +1570,4 @@ button.slx-fn:hover { background: #eaf2fa; }
   color: #52514e;
 }
 .slx-meta-read-head { font-weight: 600; margin-bottom: 2px; }
+.slx-meta-buttons { display: flex; gap: 6px; margin-top: 6px; }

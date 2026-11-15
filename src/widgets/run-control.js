@@ -1,7 +1,16 @@
 /**
- * `sienna.runControl` — the transport for a simulation run: load a model, then
- * play / pause / reset it, with the five timing settings that decide what a run
- * means.
+ * `sienna.runControl` — the transport for a simulation run: play / pause /
+ * reset, with the five timing settings that decide what a run means.
+ *
+ * In a model's own Simulation panel (bound: it has a `ref`) there is no Load
+ * (Robert, 2026-11-15): ▶ prepares the model — compiles exactly what is
+ * drawn — if it is not ready, then runs it; ■ prepares it and goes to the
+ * start. Its settings are the model's own even before it is prepared. Only
+ * a run control about no model (the Free layout) keeps the model menu, the
+ * server path and load / unload, which are also the way to SimiLive's demos.
+ *
+ * The status line is a traffic light: green, it can go; orange, something is
+ * in progress; red, it cannot go, and why.
  *
  * All state lives in `Sienna.Simulation` (see `src/simulation.js`); this widget
  * owns no numbers of its own. That is what lets a second run-control panel show
@@ -60,8 +69,13 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     // control in a model's Simulation collection shows and drives only that
     // model's run; an unbound one, the session itself.
     this._sim = Sienna.Simulation.viewFor(this._ref());
+    this._bound = !!this._ref();
 
-    this._buildSource();
+    if (!this._bound) this._buildSource();
+    // Where progress and any failure is reported. A run control with nowhere
+    // to say "the model would not compile" is a play button that silently
+    // does nothing.
+    this._status = $('<div class="slx-run-status">').appendTo(this.element);
     this._buildTransport();
     this._buildFields();
 
@@ -85,10 +99,12 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     // An edit to the loaded model changes what ▶ will do (it reloads first),
     // so the status line says so. After the edit settles: comparing means
     // exporting the model, which is not for every keystroke.
+    // A bound one also says, before ▶, whether the model can run at all.
     this._unsubEdits = Sienna.userData.subscribe('models', () => {
       clearTimeout(this._staleTimer);
-      this._staleTimer = setTimeout(() => this._syncStatus(), 400);
+      this._staleTimer = setTimeout(() => { this._audit(); this._syncStatus(); }, 400);
     });
+    this._audit();
 
     this._followCurrent();
     this._syncAll();
@@ -121,11 +137,6 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     this._on(this._path, { input: () => this._demo.val('custom') });
     this._on(this._loadBtn, { click: () => this._load() });
     this._on(this._unloadBtn, { click: () => this._sim.unload() });
-
-    // Where a load's progress and any failure is reported. A run control with
-    // nowhere to say "the model would not compile" is a play button that
-    // silently does nothing.
-    this._status = $('<div class="slx-run-status">').appendTo(this.element);
   },
 
   _buildTransport() {
@@ -147,6 +158,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     this._on(this._playBtn, {
       click: () => {
         if (this._sim.status === 'running') this._action('pause', {}, () => this._sim.stop());
+        else if (this._bound) this._action('start', {}, () => this._prepared(() => this._sim.start()));
         else this._action('start', {}, () => this._sim.start());
       },
     });
@@ -185,6 +197,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
    * what shall I run? — however different the machinery behind them.
    */
   _fillSources() {
+    if (!this._demo) return;
     const ours = (Sienna.userData.keys('models') || []);
     const keep = this._demo.val();
     this._demo.empty();
@@ -228,6 +241,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
    * quietly retarget a session that is loaded or running.
    */
   _followCurrent() {
+    if (!this._demo) return;
     if (this._sim.status !== 'idle' && this._sim.status !== 'error') return;
     // A run control in a model's Simulation collection belongs to that model
     // (its panel's `ref`), whatever is current; only an unbound one follows.
@@ -283,8 +297,39 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
 
   _reset() {
     this._action('reset', {}, () => {
+      // Not yet prepared, or edited since: preparing it ends at the start.
+      if (this._bound && (!this._sim.base || this._sim.isStale())) { this._prepared(() => {}); return; }
       this._sim.reset().catch(() => { /* reported through status */ });
     });
+  },
+
+  /**
+   * Prepare this panel's model if it is not ready, then `then`. A failure
+   * before the session is this model's — a model that will not export — is
+   * kept here to be said, since the session's own status is another's.
+   */
+  _prepared(then) {
+    this._failed = null;
+    this._syncStatus();
+    return this._sim.prepare().then(then, (err) => {
+      if (err && err.superseded) return;
+      if (!this._sim.base) this._failed = (err && err.message) || String(err);
+      this._syncStatus();
+    });
+  },
+
+  /** How many elements are incomplete — red in the diagram — or 0. */
+  _audit() {
+    this._incomplete = 0;
+    if (!this._bound || !Sienna.equationCheck || !Sienna.Diagram) return;
+    if (!Sienna.userData.get(this._ref())) return;
+    try {
+      const d = new Sienna.Diagram(this._ref());
+      const check = Sienna.equationCheck.completeness;
+      // A pass that only reads: as the diagram's own drawing does.
+      this._incomplete = Sienna.Diagram.memo(() => ['nodes', 'submodels', 'arcs']
+        .reduce((n, fam) => n + d.ids(fam).filter((id) => !check(d, id).complete).length, 0));
+    } catch (e) { /* the run will say */ }
   },
 
   /**
@@ -314,6 +359,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
   _onEvent(e) {
     switch (e.type) {
       case 'status':
+        if (this._sim.base) this._failed = null;
         this._syncStatus();
         // A session that has just ended releases the menu: it can point at the
         // current model again, which may have moved while a model was loaded.
@@ -334,34 +380,65 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
     const sim = this._sim;
     const running = sim.status === 'running';
     const live = !!sim.base;
+    const state = this._state();
 
     this._status
-      .toggleClass('slx-run-error', sim.status === 'error')
+      .removeClass('slx-run-go slx-run-busy slx-run-error')
+      .addClass(state ? 'slx-run-' + state : '')
       .text(this._statusText());
 
-    this._playBtn.prop('disabled', !live)
+    // Bound: ▶ and ■ prepare the model first, so they work unless it cannot
+    // (a failed run may be tried again; an incomplete model may not).
+    const can = this._bound ? !this._blocked() : live;
+    const busy = sim.status === 'loading';
+    this._playBtn.prop('disabled', !can || busy)
       .attr('title', running ? 'Pause' : 'Run')
       .find('span')
       .attr('class', running ? 'slx-glyph-pause' : 'slx-glyph-play');
-    this._resetBtn.prop('disabled', !live);
-    this._unloadBtn.prop('disabled', !live);
-    this._loadBtn.prop('disabled', sim.status === 'loading');
+    this._resetBtn.prop('disabled', !can || busy);
+    if (this._unloadBtn) this._unloadBtn.prop('disabled', !live);
+    if (this._loadBtn) this._loadBtn.prop('disabled', busy);
 
     this.element.find('.slx-run-unit').text(sim.unitName);
+  },
+
+  /** Incomplete, and what ▶ would run is what is drawn: it cannot go. */
+  _blocked() {
+    const sim = this._sim;
+    return !!(this._bound && this._incomplete && (!sim.base || sim.isStale()));
+  },
+
+  /** 'go' (green), 'busy' (orange), 'error' (red), or '' (nothing to say). */
+  _state() {
+    const sim = this._sim;
+    if (sim.status === 'loading' || sim.status === 'running') return 'busy';
+    if (sim.status === 'error' || this._failed) return 'error';
+    if (this._blocked()) return 'error';
+    if (sim.base || this._bound) return 'go';
+    return '';
   },
 
   _statusText() {
     const sim = this._sim;
     if (sim.status === 'error') return sim.message;
-    if (sim.status === 'loading') return sim.message;
+    if (sim.status === 'loading') return sim.message || 'Preparing the model…';
+    if (this._failed) return this._failed;
+    if (this._blocked()) {
+      const n = this._incomplete;
+      return 'Cannot run yet: ' + n + (n === 1 ? ' element is' : ' elements are')
+        + ' incomplete, shown in red in the diagram.';
+    }
+    if (!sim.base && this._bound) {
+      return 'Ready to run: ▶ prepares the model (a few seconds) and runs it.';
+    }
     if (!sim.base) return 'No model loaded.';
     const what = sim.modelLink + (sim.params ? ' — ' + sim.params.intMethod : '');
-    if (sim.status === 'running') return 'Running ' + what;
+    if (sim.status === 'running') return 'Running ' + what + '…';
     let text = (sim.message ? sim.message + ' — ' : 'Ready — ') + what;
     // Said, not just done: either would otherwise look like ▶ misbehaving.
     // On the same line: the panel is sized to its contents when it opens,
     // and a second line has nowhere to go.
-    if (sim.isStale()) text += '. Edited since loaded: ▶ loads it again first.';
+    if (sim.isStale()) text += '. Edited since: ▶ prepares it again first.';
     else if (sim.stepPending() && !sim.atStart()) {
       text += '. New time step: used from the next start (■).';
     }

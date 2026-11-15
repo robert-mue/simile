@@ -67,7 +67,7 @@
     label: 'Metadata',
     title: 'Metadata',
     thumbnail: false,
-    workingSize: { width: 460, height: 520 },
+    workingSize: { width: 460, height: 620 },
   });
 
   // The Sample models panel (src/widgets/samples.js): the model gallery's

@@ -30,7 +30,7 @@ async def canvas_shot(name, pad=40, scale=1.5):
 async def waitready():
     for i in range(80):
         s = await ev("__sim().querySelector('.slx-run-status').textContent")
-        if s.startswith('Ready'): return s
+        if s.startswith('Ready —'): return s   # not 'Ready to run', before it is prepared
         await sleep(0.5)
     return s
 async def field(label, val):

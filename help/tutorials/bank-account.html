@@ -269,26 +269,21 @@
 
 <p>The Simulation panel contains the <strong>run control</strong>, with the controls for running the model, and below it an area called <strong>Displays</strong>, where the tools for showing model results go.</p>
 
+<p>The line at the top of the run control is its <strong>status</strong>. It is green when the model can run, orange while something is in progress, and red when the model cannot run, with the reason. Now it is green: <em>Ready to run</em>.</p>
+
 <figure>
   <img src="img/bank-account/11-simulation.png" alt="The Simulation panel brought to the front, showing the run control and an empty Displays area" width="1280" height="713">
   <figcaption>The Simulation panel, in front of the Model panel.</figcaption>
 </figure>
 
-<h3>2. Load the model</h3>
-<ul>
-  <li>The <span class="ui">MODEL</span> box at the top of the run control already names your model.</li>
-  <li>Click <span class="ui">load</span>.</li>
-</ul>
-<p>Simile sends your model to the Simile engine, which builds it ready to run. This takes a few seconds. When it is done, the run control says <em>Ready</em>.</p>
-
-<h3>3. Change the time step</h3>
+<h3>2. Change the time step</h3>
 <p>Simile supplies a default time step of 0.1 when you first run a model. In the natural sciences, a time step shorter than the time unit gives greater accuracy. Here, though, we are dealing with an unnatural example: a bank paying compound interest on the balance of the account at the start of each year.</p>
 <ul>
   <li>Change <span class="ui">Time step(s)</span> from <code>0.1</code> to <code>1</code>.</li>
 </ul>
 <p>This is because we want a time step of 1 year rather than 0.1 years.</p>
 
-<h3>4. Change the duration of the simulation run</h3>
+<h3>3. Change the duration of the simulation run</h3>
 <ul>
   <li>Change <span class="ui">Execute for</span> from <code>100</code> to <code>10</code>.</li>
 </ul>
@@ -314,7 +309,7 @@
   <figcaption>The Widgets menu.</figcaption>
 </figure>
 
-<p>The run settings you typed in <a href="#step4">Step 4</a> are remembered for this model, so they are still there whenever you load it again.</p>
+<p>The run settings you typed in <a href="#step4">Step 4</a> are remembered for this model, so they are still there whenever you run it again, on another day too.</p>
 
 
 <h3>2. Select the variable you want to see</h3>
@@ -331,7 +326,7 @@
 <ul>
   <li>Click the <span class="ui">&#9654;</span> (<em>Run</em>) button in the run control.</li>
 </ul>
-<p>A line appears on the graph, ending at $618.75 after 10 years. The first three years are the ones we worked out by hand: $320, $342 and $366.20. Hold the mouse over the graph to read off values.</p>
+<p>First, Simile prepares your model to run: it builds it from the diagram, which takes a few seconds, and the status turns orange while it does. Then it runs, and the status is green again. A line appears on the graph, ending at $618.75 after 10 years. The first three years are the ones we worked out by hand: $320, $342 and $366.20. Hold the mouse over the graph to read off values.</p>
 
 <figure>
   <img src="img/bank-account/17-run10.png" alt="The plotter showing account rising from 300 to about 619 over 10 years" width="1280" height="713">
@@ -373,7 +368,7 @@
 </ul>
 
 <figure>
-  <img src="img/bank-account/19-edited.png" alt="The run control saying the model has been edited since it was loaded, and that Run will load it again first" width="715" height="198">
+  <img src="img/bank-account/19-edited.png" alt="The run control saying the model has been edited since it was prepared, and that Run will prepare it again first" width="715" height="198">
   <figcaption>The run control after the edit.</figcaption>
 </figure>
 
@@ -387,7 +382,7 @@
 <!-- ------------------------------------------------------------------ -->
 <h2 id="step8">Step 8: Saving and loading the model</h2>
 
-<p>Simile on the web keeps your models in your browser as you work, and they are still there next time you open it in the same browser: open the <span class="ui">File</span> menu and select <span class="ui">Models</span>. But to keep a model safe, to move it to another computer, or to give it to someone else, save it to a file.</p>
+<p>Simile on the web keeps your models in your browser as you work, and they are still there next time you open it in the same browser: open the <span class="ui">File</span> menu and select <span class="ui">Your models</span>. But to keep a model safe, to move it to another computer, or to give it to someone else, save it to a file.</p>
 
 <h3>1. Save the model to a file</h3>
 <ul>
@@ -415,7 +410,7 @@
 </ul>
 <p>or:</p>
 <ul>
-  <li>Open the <span class="ui">File</span> menu and select <span class="ui">Recent</span>.</li>
+  <li>Open the <span class="ui">File</span> menu and select <span class="ui">Recent models</span>.</li>
   <li>Select from the list of recently used models.</li>
 </ul>
 

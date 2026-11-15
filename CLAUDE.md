@@ -137,6 +137,31 @@ footing (`src/widgets/grid.js` is the first).
   **Simile Prolog** (`.pl`, and `.sml`'s MIME wrapper). The exporter's header is
   the specification of the mapping; the importer reads it backwards. Menu:
   `Simile ▸ Import model… / Export current model…`.
+- **No Load; the run control's status a traffic light** (Robert,
+  2026-11-15; `src/widgets/run-control.js`): in a model's own Simulation
+  panel (bound: a `ref`) there is no model menu and no Load — ▶ prepares the
+  model (`viewFor(ref).prepare()`: compiles exactly what is drawn, if it is
+  not the one loaded or was edited since) then runs it; ■ prepares it and
+  goes to the start. Its settings are the model's own before it is prepared
+  (`Simulation.settingsBefore` / `setSettingBefore`, kept as a run's are).
+  The status line is bold on green (it can go), orange (in progress), red
+  (cannot: a failure, or "N elements are incomplete", counted with
+  `equationCheck.completeness` after each edit settles, ▶ and ■ greyed). An
+  unbound run control (Free layout, Widgets ▸ Run control) keeps the menu,
+  path box and load / unload: the way to SimiLive's demos.
+- **Default displays** (Robert, 2026-11-15; `src/presentation.js`,
+  `Sienna.presentation`): a model spec's `presentation` — `{ run: {runLength,
+  logEach, timeStep}, displays: [{widget: 'plotter', variables: [element
+  ids]}, {widget: 'sliders'}] }` — the modeller's recommended view, kept with
+  the model like `metadata`. When a model is OPENED (sienna's `documents`
+  `opened` hook — not a session or layout bringing panels back) and none of
+  its displays is open, they are opened in its Simulation panel, its run
+  settings taken unless this user has set their own (`settingsFor`), and it
+  is prepared and run once: a gallery model opens with its graphs drawn. Set
+  with the Metadata panel's "Use the displays open now" (`snapshot`), Clear.
+  A plot keeps its variables over a reload (`plotter.state()`). The model
+  gallery's five carry one (its `check/check.py` checks them). Check:
+  `tools/headless/scripts/presentation.py`.
 - `src/simulation.js` — the SimiLive session layer (no DOM): upload, compile,
   step, query. Its results feed the `plotter`, `grid` and `lollipop` widgets
   (a population variable is sent as `{member: value}`, keys kept for a
@@ -198,7 +223,10 @@ footing (`src/widgets/grid.js` is the first).
   "10": 7}`, or one bracket deeper, `[5, 7, 9]` for times 0, 1, 2 — with
   what the run sees between times (last, closest, interpolated)
   (`Simulation.readInputValue`). Values are NEVER in the model spec: the
-  ones used last are kept beside it (`simile.fileParameters.v1`,
+  ones used last are kept beside it (slot `fileParameters.v1`, `sienna.simile.` before
+  it as the shell's are, so a new-user preview has its own — until
+  2026-11-15 `simile.fileParameters.v1`, shared, adopted once; run settings
+  likewise, `runSettings.v1`;
   `Simulation.setInputValues`), and Load / Save write a JSON parameter file
   (`<model>.parameters.json`, nested by submodel); Simile's own (`.spf`, never renamed) are READ too, XML and its first, text format (`_fromSimileXml`, `_fromSimileText`), not written. Before
   each reset they go to the engine (`FileParameters`, ours, in

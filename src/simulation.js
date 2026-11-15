@@ -127,12 +127,28 @@
   }
 
   /**
+   * A storage slot of the app's own (`sienna.<app>.<slot>`), as the shell's
+   * are, so a new-user preview (`?newuser`) has its own and starts empty.
+   * Until 2026-11-15 these were `simile.<slot>`, shared by every store: the
+   * real store takes its old one over, once (copied, as the shell adopts).
+   */
+  function slotKey(slot) {
+    var key = Sienna.storageKey ? Sienna.storageKey(slot) : 'simile.' + slot;
+    var P = Sienna.persistence;
+    if (P && !Sienna.newUser && !Sienna.ephemeral && key !== 'simile.' + slot && P.readJSON(key) == null) {
+      var old = P.readJSON('simile.' + slot);
+      if (old != null) P.writeJSON(key, old);
+    }
+    return key;
+  }
+
+  /**
    * The run settings a modeller chose, per model, so loading a model again —
    * after an edit, or another day — does not put them back to the model's
    * defaults. Kept beside the models rather than inside them: they are how
    * this person likes to run it, not part of what the model says.
    */
-  var SETTINGS_KEY = 'simile.runSettings.v1';
+  var SETTINGS_KEY = slotKey('runSettings.v1');
 
   /**
    * What to call a component in a list or a legend. Simile names one by
@@ -185,7 +201,7 @@
    * (parameter files, saved and loaded in the panel). These are the ones
    * used last. (Before 2026-10-31b the store held `values` alone, flat.)
    */
-  var INPUTS_KEY = 'simile.fileParameters.v1';
+  var INPUTS_KEY = slotKey('fileParameters.v1');
   var inputsThisVisit = {};
 
   function inputsFor(path) {
@@ -517,7 +533,7 @@
         return Promise.reject(err);
       }
 
-      return this.unload().then(function () {
+      var loading = this.unload().then(function () {
         self.modelLink = model.name || model.id || path;
         self.modelPath = path;
         // What was run, to tell later whether the model has been
@@ -552,6 +568,9 @@
         self._setStatus('error', err.message || String(err));
         throw err;
       });
+      // For a second ▶ while this one is preparing: the same load, not another.
+      this._loadingPromise = loading;
+      return loading;
     },
 
     /** Start a compiled model in the page. */
@@ -974,6 +993,31 @@
       var keep = $.extend({}, rememberedFor(path) || {});
       KEPT.forEach(function (k) { if (settings && settings[k] != null) keep[k] = settings[k]; });
       remember(path, keep);
+    },
+
+    /**
+     * The run settings one of our models will be run with, before it is
+     * loaded: the engine's defaults (every model gets the same, see
+     * engine-local.js), under what was set for it. What its own run control
+     * shows and edits until ▶ prepares it.
+     */
+    settingsBefore: function (path) {
+      var out = { runLength: 100, current: 0, logEach: 1, timeStep: '0.1' };
+      var kept = rememberedFor(path) || {};
+      KEPT.forEach(function (k) { if (kept[k] != null) out[k] = kept[k]; });
+      if (out.updateEach == null) out.updateEach = chunkFor(Number(out.runLength), Number(out.logEach));
+      return out;
+    },
+
+    /** Change one setting of a model not loaded: kept for when it is. */
+    setSettingBefore: function (path, key, value) {
+      var next = this.settingsBefore(path);
+      var chosen = rememberedFor(path) || {};
+      // As `setSetting`: a chunk nobody chose follows the length and interval.
+      if (key !== 'updateEach' && chosen.updateEach == null) delete next.updateEach;
+      next[key] = value;
+      remember(path, next);
+      this._emit({ type: 'settings', path: path });
     },
 
     /** Change one run setting, and remember it for this model. */
@@ -1536,8 +1580,9 @@
       get message() { return mine() ? sim.message : ''; },
       get modelLink() { return mine() ? sim.modelLink : ''; },
       get params() { return mine() ? sim.params : null; },
-      get settings() { return sim.settings; },
-      get unitName() { return sim.unitName; },
+      // Its own, while another model or none is loaded: what ▶ will use.
+      get settings() { return mine() ? sim.settings : sim.settingsBefore(ref); },
+      get unitName() { return mine() ? sim.unitName : ''; },
       scalarComponents: function () { return mine() ? sim.scalarComponents() : []; },
       memberComponents: function () { return mine() ? sim.memberComponents() : []; },
       gridCandidates: function () { return mine() ? sim.gridCandidates() : []; },
@@ -1551,7 +1596,20 @@
       unload: function () { return mine() ? sim.unload() : Promise.resolve(); },
       reset: function () { return mine() ? sim.reset() : Promise.resolve(); },
       start: function () { if (mine()) sim.start(); },
-      setSetting: function (key, value) { return sim.setSetting(key, value); },
+      setSetting: function (key, value) {
+        return mine() && sim.base ? sim.setSetting(key, value) : sim.setSettingBefore(ref, key, value);
+      },
+      /**
+       * Make this model the one loaded — compiled for exactly what is drawn —
+       * if it is not already: the step ▶ and ■ take first, so a model's own
+       * Simulation panel needs no Load (Robert, 2026-11-15).
+       */
+      prepare: function () {
+        if (mine() && sim.base && !sim.isStale()) return Promise.resolve();
+        if (mine() && sim.status === 'loading') return sim._loadingPromise || Promise.resolve();
+        return claim(function () { return sim.loadOwn(ref); });
+      },
+      get loading() { return mine() && sim.status === 'loading'; },
       // A model's slider values are its own whichever model is loaded: they
       // apply when it next is.
       parameterValues: function (path) { return sim.parameterValues(path); },
@@ -1568,7 +1626,8 @@
       stop: function () { if (mine()) sim.stop(); },
       subscribe: function (fn) {
         return sim.subscribe(function (e) {
-          if (e.type === 'status' || e.type === 'parameters' || mine()) fn(e);
+          if (e.type === 'status' || e.type === 'parameters' || mine()
+              || (e.type === 'settings' && e.path === ref)) fn(e);
         });
       },
     };

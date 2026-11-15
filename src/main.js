@@ -211,6 +211,9 @@
     trailingItems: function () {
       return [{ label: 'Sample models…', onSelect: function () { openSamples(); } }];
     },
+    // A model just opened, not brought back with a session: its default
+    // displays, prepared and run once (src/presentation.js).
+    opened: function (path) { Sienna.presentation.apply(app, path); },
   });
 
   // =======================================================================
