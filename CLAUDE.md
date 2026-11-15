@@ -279,8 +279,9 @@ footing (`src/widgets/grid.js` is the first).
   Recent models under Open, Your models (all, A-Z) lower down. Check:
   `tools/headless/scripts/samples.py` (serves the gallery repo itself).
 - **Metadata** (Widgets ▸ Metadata, `src/widgets/metadata.js`; Robert,
-  2026-11-15): a model's `metadata` — title, description, keywords, paper
-  (citation, link) — entered and shown, empty fields left out, one undoable
+  2026-11-15): a model's `metadata` — title, description, keywords, web page
+  (`page`: a gallery model's page there), paper (citation, link) — entered
+  and shown, the two addresses also as links, empty fields left out, one undoable
   edit per field left; below, the size and features read from the model.
   No role: a panel of its own, the model's, opened at its working size
   (`openWidget` gives a role-less widget its `workingSize`). Checked in

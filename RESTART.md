@@ -26,6 +26,10 @@ embedded-widget pages. Brought up to date 2026-11-15.
   patch fuel load, 225 lines each; 120); pangolin (pangolins +
   common_species, then effort, then sliders; 50, log 0.5, step 0.1).
   check.py checks `presentation`; README says how to set it.
+- **Metadata: a Web page field** (Robert, after trying pangolin):
+  `metadata.page`, the model's page in the model gallery; the panel shows
+  it and the paper's address as links (new tab). Each gallery model has
+  its page (gallery check.py holds it to models/<name>/). samples.py 44/44.
 - **Bug found and fixed:** run settings and parameter values were in
   un-namespaced slots (`simile.runSettings.v1`, `simile.fileParameters.v1`),
   so ?newuser inherited the real store's (it made pangolin run with an old

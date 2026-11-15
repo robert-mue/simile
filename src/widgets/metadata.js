@@ -1,14 +1,17 @@
 /**
  * `sienna.metadata` — a model's METADATA, entered and shown (Widgets ▸
- * Metadata): its descriptive title, a description, keywords, and the paper
- * it was published in, if any. Held in the model spec, `<model>/metadata`
+ * Metadata): its descriptive title, a description, keywords, its web page
+ * (a model gallery model's page there), and the paper it was published in,
+ * if any. Held in the model spec, `<model>/metadata`
  * (Robert, 2026-11-15), so it travels with the model: File ▸ Save writes
  * it, and the Sample models panel shows it for the model gallery's models.
  *
  *   "metadata": { "title": "…", "description": "…", "keywords": ["…"],
+ *                 "page": "https://…",
  *                 "paper": { "citation": "…", "url": "https://…" } }
  *
- * A field left empty is left out. Below the fields, what is read from the
+ * A field left empty is left out. The web page and the paper's link are
+ * also shown as links, opened in a new tab. Below the fields, what is read from the
  * model's structure and never entered: its size and its Simile features
  * (`Sienna.modelSummary`), kept up to date as the model is edited.
  *
@@ -30,6 +33,7 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
     { key: 'title', label: 'Title', hint: 'A descriptive title, e.g. “Pangolin harvest: bioeconomic drivers of extinction”' },
     { key: 'description', label: 'Description', long: true, hint: 'One to three sentences: what the model is about' },
     { key: 'keywords', label: 'Keywords', hint: 'Separated by commas' },
+    { key: 'page', label: 'Web page', hint: 'The model’s page, e.g. in the model gallery: https://…' },
     { key: 'citation', label: 'Paper', long: true, hint: 'If the model is published: the full citation' },
     { key: 'url', label: 'Paper’s link', hint: 'https://doi.org/…' },
   ],
@@ -50,6 +54,7 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
       this._inputs[f.key] = input;
     });
     this._warn = $('<p class="slx-meta-note slx-meta-warn">').hide().appendTo(this.element);
+    this._links = $('<div class="slx-meta-links">').appendTo(this.element);
 
     const shown = $('<div class="slx-meta-read slx-meta-present">').appendTo(this.element);
     $('<div class="slx-meta-read-head">').text('Default displays').appendTo(shown);
@@ -92,6 +97,7 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
     if (v('description')) out.description = v('description');
     const kw = v('keywords').split(',').map((s) => s.trim()).filter(Boolean);
     if (kw.length) out.keywords = kw;
+    if (v('page')) out.page = v('page');
     if (v('citation') || v('url')) {
       out.paper = {};
       if (v('citation')) out.paper.citation = v('citation');
@@ -127,6 +133,7 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
       title: m.title || '',
       description: m.description || '',
       keywords: Array.isArray(m.keywords) ? m.keywords.join(', ') : '',
+      page: typeof m.page === 'string' ? m.page : '',
       citation: (m.paper && m.paper.citation) || '',
       url: (m.paper && m.paper.url) || '',
     };
@@ -134,10 +141,18 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
       const input = this._inputs[k];
       if (input[0] !== document.activeElement && input.val() !== shown[k]) input.val(shown[k]);
     });
+    const web = (u) => /^https?:\/\//i.test(u);
     const url = shown.url;
-    if (url && !/^https?:\/\//i.test(url)) this._warn.text('The paper’s link should be a web address, starting https://').show();
+    if (shown.page && !web(shown.page)) this._warn.text('The web page should be a web address, starting https://').show();
+    else if (url && !web(url)) this._warn.text('The paper’s link should be a web address, starting https://').show();
     else if (shown.citation && !url) this._warn.text('Give the paper’s link too, if it has one (its DOI address).').show();
     else this._warn.hide();
+    this._links.empty();
+    [[shown.page, 'The model’s web page'], [url, 'The paper']].forEach(([href, text]) => {
+      if (!web(href)) return;
+      $('<a target="_blank" rel="noopener">').attr({ href, title: href }).text(text + ' ↗').appendTo(this._links);
+    });
+    this._links.toggle(this._links.children().length > 0);
 
     const s = Sienna.modelSummary(this._model() || {});
     this._size.text('Size: ' + s.size.join('/') + ' (' + Sienna.modelSummary.sizeInWords(s.size) + ')');

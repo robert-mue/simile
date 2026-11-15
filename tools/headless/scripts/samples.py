@@ -117,6 +117,9 @@ async def main():
     val = lambda k: "$('.slx-meta [data-key=%s]').val()" % k
     check('Metadata: shows the title and keywords', await T.ev(val('title')) == 'Bank account'
           and await T.ev(val('keywords')) == 'introductory, compound interest, stock and flow')
+    page = 'https://robert-mue.github.io/model_gallery/models/bank-account/'
+    check('Metadata: its gallery page, shown and linked', await T.ev(val('page')) == page
+          and await T.ev("[...document.querySelectorAll('.slx-meta-links a')].map(a => a.href + ' ' + a.target).join()") == page + ' _blank')
     read = await T.ev("$('.slx-meta-read').text()")
     check('Metadata: size and features read from the model', 'Size: 0/1/2/1 (0 submodels, 1 stock, 2 flows, 1 variable)' in (read or ''), read)
     held = "JSON.stringify(Sienna.userData.get(%s).metadata)" % json.dumps(cur)
