@@ -4,11 +4,34 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
-**STATE 2026-11-15, end of day: RELEASED as 2026-11-15d** (Robert:
-"Release!"), live and checked (`src/release.js` on the site says 15d).
-simile 49b26c2 = `main` = `release`, tag and GitHub release 2026-11-15d;
-sienna 684bf7a; gallery 70808f9. All three match origin; nothing is
-half-finished. What 15d brought (Robert's "ready to roll": points 1-3 as
+**STATE 2026-11-15, end of day: RELEASED as 2026-11-15e** (Robert: "do a
+release, and I'll check out your changes"), live and checked
+(`src/release.js` on the site says 15e). simile `main` = `release`
+(5f79c39 plus restart-note commits), tag and GitHub release 2026-11-15e;
+sienna 76a1f80; gallery 70808f9. All three match origin; nothing is
+half-finished. ROBERT IS NOW TRYING 15e: the Please-wait note, and
+whether the empty Metadata panel comes back (see 15e below).
+
+**RELEASED as 2026-11-15e** (after 15d Robert found the Metadata panel
+empty on the released site after opening pangolin, and 17 s to open it
+in a new browser):
+- **"Please wait – this might take 30 secs"** (Robert's words), a note in
+  the middle of the page while the model compiler's tools load — the
+  first compile of a visit only (`pleaseWait` in src/model-compiler.js).
+- **Empty Metadata panel:** seen ONCE on the live site (fresh profile,
+  after Ready: script tag there, widget never registered, no error);
+  three more fresh tries all filled, so the cause is not pinned down.
+  Opened while the tools download, the widget's script waits behind
+  them. Sienna 76a1f80: a panel says "Loading <widget>…" while its
+  script comes (and "Still loading…" after 20 s), never an empty box —
+  if Robert sees that note stick, that is the clue.
+- A gallery model's preset run settings now show in its run control at
+  once (`presetSettings` emits `settings`), not 100 until prepared.
+- presentation.py observes the status classes (a kept compiled model
+  prepares faster than a poll). Checks: presentation 24/24, samples
+  44/44, added-widget all pass.
+
+**RELEASED as 2026-11-15d** (Robert's "ready to roll": points 1-3 as
 I proposed them, 4 my proposal, the colours his):
 - **No Load.** A model's own run control has no model menu or Load: ▶
   prepares (compiles what is drawn) and runs; ■ prepares and goes to the
@@ -52,27 +75,13 @@ tools/headless/ (one was committed by mistake, then removed) — give a
 relative name. A Chrome restarted on the same `--user-data-dir` restores
 its last tab; if that tab was mid-run it can hang every script (no
 answer even to Page.enable): stop it and start on a fresh profile
-directory. Chrome's 600 s cap can expire mid-script: give it 900.
+directory. Chrome's 600 s cap can expire mid-script: give it 900. Scratch
+files in tools/headless/ go under `_*` names: .gitignore keeps them out
+(two stray screenshots were committed today, then removed).
 
-**RELEASED as 2026-11-15e** (Robert asked, to check them; after 15d, Robert: Metadata empty on the released
-site after opening pangolin; 17 s to open it in a new browser):
-- **"Please wait – this might take 30 secs"** (Robert's words), a note in
-  the middle of the page while the model compiler's tools load — the
-  first compile of a visit only (`pleaseWait` in src/model-compiler.js).
-- **Empty Metadata panel:** seen ONCE on the live site (fresh profile,
-  after Ready: script tag there, widget never registered, no error);
-  three more fresh tries all filled, so the cause is not pinned down.
-  Opened while the tools download, the widget's script waits behind
-  them. Sienna 76a1f80: a panel says "Loading <widget>…" while its
-  script comes (and "Still loading…" after 20 s), never an empty box —
-  if Robert sees that note stick, that is the clue.
-- A gallery model's preset run settings now show in its run control at
-  once (`presetSettings` emits `settings`), not 100 until prepared.
-- presentation.py observes the status classes (a kept compiled model
-  prepares faster than a poll). Checks: presentation 24/24, samples
-  44/44, added-widget all pass.
-
-NEXT (Robert): correct the proposed default displays if he wants; a test
+NEXT: Robert's findings on 15e (if a panel sticks on "Loading…", or is
+blank with no note, that is the clue to the empty Metadata panel). Then
+for Robert: correct the proposed default displays if he wants; a test
 drive by trusted old-Simile users. Open for Robert: my draft keywords and
 descriptions in the gallery's five specs; which further models go in the
 gallery; a paper for LAMOS. Known limitation: in the areas layout, the
