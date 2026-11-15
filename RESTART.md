@@ -34,7 +34,7 @@ undoable edit per field, size and features below (`Sienna.modelSummary`,
 src/model-summary.js, shared). Not done: in the layout "Model and
 simulation areas" (View > Layout; the model's panels as tabs in two
 tiled areas) the Sample models panel opens as a tile, not floating;
-Robert told of it, content (a tester starts in the default layout,
+Robert told of it, said OK (a tester starts in the default layout,
 where it floats); the tutorial screenshots, if
 remade, will show the Sample models panel on a first visit.
 
