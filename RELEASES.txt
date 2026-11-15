@@ -585,3 +585,39 @@ Words
   menu, "Windows" is now "Panels" and "Arrange windows" is now
   "Arrange panels". The tutorials speak of the Model panel and the
   Simulation panel. Nothing works differently.
+
+
+------------------------------------------------------------------------
+Release 2026-11-15c
+------------------------------------------------------------------------
+
+Sample models
+- File > Sample models... (at the bottom of File) opens a panel listing
+  the models in the model gallery: each with its title and a short
+  description, keywords, its size, the Simile features it uses, links to
+  its gallery page and to its paper (if published), and an Open button.
+  Click a column heading to sort by it; click again to reverse. Size is
+  submodels/stocks/flows/variables, e.g. 1/1/1/4; size and features are
+  worked out from the model itself. Open makes the model one of yours,
+  as the gallery's own link does.
+- This panel belongs to no model: it stays open until you close it.
+
+Welcome
+- On a first visit, Simile opens the Sample models panel with a short
+  welcome, offering it and the tutorials. The welcome goes at your first
+  click or key press.
+- A new user's models now start empty: the built-in example models are
+  no longer added. If you have them already, you keep them.
+
+File menu
+- "Recent models" (the ones you opened last) is now just under Open
+  model file...
+- The list of all your models is now called "Your models".
+
+Metadata
+- Widgets > Metadata opens a panel for the current model's metadata:
+  a descriptive title, a description, keywords, and the paper it was
+  published in (citation and link). These are kept in the model, so
+  they go with it when you save it. Below them, the panel shows the
+  model's size and the Simile features it uses. Each change can be
+  undone.
