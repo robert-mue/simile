@@ -43,7 +43,7 @@ To retake a tutorial's pictures: run its script(s) with `HEADLESS_OUT` set to
 a scratch folder, compare with `help/tutorials/img/<tutorial>/`, and copy the
 ones the page uses (`<img src=…>`), setting each `<img>`'s width and height to
 the new size. Chrome capped (`timeout`), the scripts in order, one Chrome at a
-time on :9350. Last done 2026-11-09, all three tutorials.
+time on :9350. Last done 2026-11-15, all three tutorials (no Load; the Welcome put away by `quiet()`).
 - `scripts/two-views.py` — two diagrams of one model: a drag in one is
   followed by the other while in progress (element, submodel, label, bend,
   resize, port), nothing written until the drop; a click and a cancel leave

@@ -16,7 +16,7 @@ async def plots():
     return await ev("[...__sim().querySelectorAll('.slx-plot')].map(p=>$(p).plotter('instance')._series.map(s=>s.label+(s.many?' lines='+Object.keys(s.lines).length+' now='+s.now+' at='+s.at:' n='+s.pts.length+' last='+JSON.stringify(s.pts[s.pts.length-1]&&s.pts[s.pts.length-1].map(v=>+v.toFixed(2))))).join(';')).join(' || ')")
 
 # ---------------- Stage 1
-await nav('file:///home/user/Projects/simile/index.html?newuser=fresh'); await sleep(2); await defsim()
+await nav('file:///home/user/Projects/simile/index.html?newuser=fresh'); await sleep(2); await quiet(); await defsim()
 await menu('File'); await menu('New model'); await sleep(1.5)
 await ev("window.prompt=()=>'Trees'"); await menu('File'); await menu('Rename model…'); await sleep(0.6)
 await place('stock', 520, 480, 'size')

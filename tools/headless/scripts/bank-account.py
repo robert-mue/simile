@@ -26,7 +26,7 @@ async def account():
     return await ev("(()=>{const p=$(__sim().querySelector('.slx-plot')).plotter('instance'); const s=p._series[0]; const q=s.pts[s.pts.length-1]; return q[0]+'@'+q[1].toFixed(2)})()")
 
 # ---------------- Step 1
-await nav('file:///home/user/Projects/simile/index.html?newuser=fresh'); await sleep(2.5)
+await nav('file:///home/user/Projects/simile/index.html?newuser=fresh'); await sleep(2.5); await quiet()
 await menu('File'); await hover('New model'); await menu_shot('ba/01-file-menu.png', 420, 330)
 await menu('New model'); await sleep(1.5); await defsim()
 await ev("window.prompt=()=>'Bank account'")

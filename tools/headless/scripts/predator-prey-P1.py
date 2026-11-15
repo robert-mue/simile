@@ -1,6 +1,6 @@
 exec(open('lib.py').read(), globals())
 await defsim()
-await nav('file:///home/user/Projects/simile/index.html?newuser=fresh'); await defsim()
+await nav('file:///home/user/Projects/simile/index.html?newuser=fresh'); await quiet(); await defsim()
 await menu('File'); await menu('New model'); await sleep(1.5)
 await ev("window.prompt=()=>'Predator-prey'"); await menu('File'); await menu('Rename model…'); await sleep(0.6)
 # Stage 1

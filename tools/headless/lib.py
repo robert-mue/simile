@@ -73,3 +73,11 @@ async def subdlg(sid='submodel1'):
     r = await ev("(()=>{const e=document.querySelector('.slx-diagram [data-id=%s]'); const b=e.getBoundingClientRect(); return [b.x,b.y,b.width,b.height]})()" % sid)
     x, y = r[0]+r[2]-12, r[1]+r[3]-12
     await click(x,y); await sleep(0.1); await click(x,y,2); await sleep(0.6)
+async def quiet():
+    # A first visit opens the Sample models panel under a Welcome (2026-11-15):
+    # put both away, as the Bank account tutorial says, before any picture.
+    for i in range(20):
+        if await ev("!!document.querySelector('.slx-welcome') || app.windows().some($p=>app.widgetOf($p)==='samples')"): break
+        await sleep(0.25)
+    await ev("document.querySelector('.slx-welcome') && document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))")
+    await ev("app.windows().filter($p=>app.widgetOf($p)==='samples').forEach($p=>$p.panel('close'))"); await sleep(0.4)
