@@ -59,12 +59,16 @@ async def main():
     # set Execute for 20 before preparing
     await ev(RC+".find('.slx-run-field').first().find('input').val('20').trigger('change')")
     check('a setting typed before ▶ is kept', await ev(RC+".find('.slx-run-field').first().find('input').val()")=='20')
+    # Every class the status line takes, as it takes it: a compiled model kept
+    # from an earlier run prepares faster than a poll would see.
+    await ev("window.__seen=[]; (()=>{const e="+RC+".find('.slx-run-status')[0]; new MutationObserver(()=>__seen.push(e.className)).observe(e,{attributes:true,childList:true,characterData:true,subtree:true})})(); 1")
     await ev(RC+".find('.slx-run-btn').eq(1).click()")
     seen=set(); t0=time.time()
     while time.time()-t0<60:
         s=await st(); seen.add(s[0])
         if s[0]=='slx-run-go' and s[1].startswith('Ready —') and await ev("Sienna.Simulation.settings.current")==20: break
         await asyncio.sleep(0.2)
+    seen |= set(c for x in await ev("__seen") for c in x.split() if c.startswith('slx-run-'))
     check('▶ prepares (orange) and runs to 20, then green', 'slx-run-busy' in seen and s[0]=='slx-run-go' and await ev("Sienna.Simulation.settings.current")==20, (s, seen))
     # make it incomplete
     await ev("(()=>{const m=Sienna.userData.get('models/growth');const id=Object.keys(m.nodes).find(k=>m.nodes[k].type==='valve');Sienna.userData.set('models/growth/nodes/'+id+'/props/rate','');})()")

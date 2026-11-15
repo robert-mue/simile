@@ -993,6 +993,8 @@
       var keep = $.extend({}, rememberedFor(path) || {});
       KEPT.forEach(function (k) { if (settings && settings[k] != null) keep[k] = settings[k]; });
       remember(path, keep);
+      // Its run control, already open, shows them now, not once it is prepared.
+      this._emit({ type: 'settings', path: path });
     },
 
     /**

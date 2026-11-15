@@ -344,6 +344,26 @@
     });
   }
 
+  /**
+   * "Please wait" while the tools load (Robert, 2026-11-15): the first build
+   * of a visit fetches and starts some 30 MB of WebAssembly — up to half a
+   * minute on a first visit, the files not yet in the browser's cache. A
+   * note in the middle of the page, not in the way (clicks go through), gone
+   * when the build is done or has failed. Later builds of the visit, with
+   * the tools loaded, take a few seconds and show none.
+   */
+  function pleaseWait() {
+    if (generatorFiles && kitTree) return function () {};
+    if (!document.body) return function () {};
+    var note = document.createElement('div');
+    note.className = 'slx-wait-note';
+    note.setAttribute('role', 'status');
+    note.innerHTML = '<strong>Please wait \u2013 this might take 30 secs</strong>'
+      + '<span>Simile is loading its model compiler, once per visit.</span>';
+    document.body.appendChild(note);
+    return function () { if (note.parentNode) note.parentNode.removeChild(note); };
+  }
+
   Sienna.ModelCompiler = {
     generate: generate,
     compile: compile,
@@ -357,6 +377,7 @@
      */
     build: function (prolog, say) {
       say = say || function () {};
+      var done = pleaseWait();
       say('Making the model\'s C++ in the page…');
       // The compiler loads while the C++ is made, the worker being busy and
       // the page not (in the page, it waits its turn, as before).
@@ -365,7 +386,7 @@
         say(window.SIMILE_TOOL_CLANG ? 'Compiling the model in the page…'
           : 'Compiling the model in the page (loading the compiler first)…');
         return compile(cpp);
-      });
+      }).then(function (bytes) { done(); return bytes; }, function (err) { done(); throw err; });
     },
   };
 })(window.Sienna = window.Sienna || {});

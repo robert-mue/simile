@@ -54,6 +54,24 @@ its last tab; if that tab was mid-run it can hang every script (no
 answer even to Page.enable): stop it and start on a fresh profile
 directory. Chrome's 600 s cap can expire mid-script: give it 900.
 
+**After 15d, NOT RELEASED** (Robert: Metadata empty on the released
+site after opening pangolin; 17 s to open it in a new browser):
+- **"Please wait – this might take 30 secs"** (Robert's words), a note in
+  the middle of the page while the model compiler's tools load — the
+  first compile of a visit only (`pleaseWait` in src/model-compiler.js).
+- **Empty Metadata panel:** seen ONCE on the live site (fresh profile,
+  after Ready: script tag there, widget never registered, no error);
+  three more fresh tries all filled, so the cause is not pinned down.
+  Opened while the tools download, the widget's script waits behind
+  them. Sienna 76a1f80: a panel says "Loading <widget>…" while its
+  script comes (and "Still loading…" after 20 s), never an empty box —
+  if Robert sees that note stick, that is the clue.
+- A gallery model's preset run settings now show in its run control at
+  once (`presetSettings` emits `settings`), not 100 until prepared.
+- presentation.py observes the status classes (a kept compiled model
+  prepares faster than a poll). Checks: presentation 24/24, samples
+  44/44, added-widget all pass.
+
 NEXT (Robert): correct the proposed default displays if he wants; a test
 drive by trusted old-Simile users. Open for Robert: my draft keywords and
 descriptions in the gallery's five specs; which further models go in the

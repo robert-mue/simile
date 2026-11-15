@@ -194,7 +194,8 @@ footing (`src/widgets/grid.js` is the first).
   `vendor/swipl/`, `vendor/simile-generator/`, `vendor/clang/` (30 MB,
   gzipped) and `vendor/simile-runtime/model-kit.js`, all **generated** by
   `tools/engine/build-browser-tools.sh`. First compile of a visit ~7–9 s,
-  later ones ~3 s. The work runs in a Web Worker, so the page stays live;
+  later ones ~3 s (up to ~30 s on a first visit over the web: a "Please
+  wait" note, `.slx-wait-note`, shows while the tools load, Robert). The work runs in a Web Worker, so the page stays live;
   from file:// a worker can be made only from text, so each tool script
   defines ONE function (`SIMILE_TOOL_SWIPL`, `SIMILE_TOOL_CLANG`) whose text
   the page sends it. No worker to be had: the same code runs in the page.

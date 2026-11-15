@@ -1572,3 +1572,27 @@ button.slx-fn:hover { background: #eaf2fa; }
 .slx-meta-read-head { font-weight: 600; margin-bottom: 2px; }
 .slx-meta-buttons { display: flex; gap: 6px; margin-top: 6px; }
 .slx-meta-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; }
+
+/* "Please wait" while the model compiler's tools load (src/model-compiler.js). */
+.slx-wait-note {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 16px 22px;
+  border-radius: 8px;
+  background: #ffe0b2;
+  color: #6b3a00;
+  border: 1px solid #e0a35a;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  font-size: 15px;
+  text-align: center;
+}
+.slx-wait-note strong { font-size: 17px; }
