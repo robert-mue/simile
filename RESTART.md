@@ -4,9 +4,11 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
-**STATE 2026-11-15: the latest release is 2026-11-15** (checked live,
-and through the gallery's pangolin link in the live app). One change
-is unreleased, below. Both repos
+**STATE 2026-11-15: the latest release is 2026-11-15b** (checked live:
+release.js, the menu labels, sienna's app.js, the tutorials). Nothing of
+the app is unreleased; `release` lacks only restart-note commits.
+RELEASED as 2026-11-15 (checked through the gallery's pangolin link in
+the live app): Both repos
 (simile, sienna) match origin. In it: opened from an address (`?open=`,
 the gallery's link), the app starts CLEAN, the last session's panels not
 brought back, only the default layout and that model (`src/main.js`,
@@ -15,8 +17,8 @@ reservations" (the model made before is not shown) but agreed; all models
 stay in File > Open. open-address.py 26/26 (http), 23/23 (file://),
 two-tabs 13/13. And the default layout is now labelled "Model and
 simulation PANELS" (Robert: the project's word is panel, never window;
-its id stays 'windows', which saved sessions name). NOT RELEASED
-(2026-11-15, Robert asked): "panel" everywhere the user reads it — View >
+its id stays 'windows', which saved sessions name). RELEASED as
+2026-11-15b (Robert asked): "panel" everywhere the user reads it — View >
 Panels and Arrange panels, "(no panels open)", "Model panel" /
 "Simulation panel" in the tutorials, help/widgets.html and both widget
 briefs; sienna 300b249 (its DESIGN.md 19.2 vocabulary revised; API names
