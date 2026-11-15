@@ -9,7 +9,13 @@ the site's `src/release.js` and its diagram-following code). Nothing of
 the app is unreleased; `release` lacks only restart-note commits. Both
 repos (simile, sienna) match origin. The model gallery
 (robert-mue/model_gallery) has bank-account, lotka-volterra, trees,
-lamos, pangolin. Waiting on Robert: which models next in the gallery, a
+lamos, pangolin. NOT RELEASED (2026-11-15, Robert asked): opened from
+an address (`?open=`, the gallery's link), the app starts CLEAN, the last
+session's panels not brought back, only the default layout and that model
+(`src/main.js`, end); a plain start afterwards restores that session.
+Robert had "slight reservations" (the model made before is not shown) but
+agreed; all models stay in File > Open. open-address.py 26/26 (http),
+23/23 (file://), two-tabs 13/13. Waiting on Robert: which models next in the gallery, a
 paper for LAMOS, and the small things listed below.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213

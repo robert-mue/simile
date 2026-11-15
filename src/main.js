@@ -391,7 +391,7 @@
   // (`openedFrom`), so opening the same address again offers that copy.
   // Fetching from another site needs it to allow that (CORS); GitHub Pages
   // does, for any file. From a copy of the app opened from disk, only web
-  // addresses can be fetched.
+  // addresses can be fetched. The app then starts clean (see the end).
 
   /** `{model, parameters}` from the address bar, taken out of it, or null. */
   function openRequested() {
@@ -759,8 +759,14 @@
   if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
   if (!Sienna.userData.get('models/pangolin') && Sienna.demoPangolin) Sienna.demoPangolin();
 
-  app.restore().then(afterRestore).then(function () {
-    var wanted = openRequested();
+  // Opened from an address (the model gallery), the app starts CLEAN: the
+  // last session's panels are not brought back, only the default layout
+  // with the model asked for (Robert, 2026-11-15: another model showing
+  // first was confusing). The models themselves are all still there.
+  var wanted = openRequested();
+  var dflt = wanted && Sienna.layouts && Sienna.layouts.defaultName();
+  var started = dflt ? app.applyLayout(dflt, { keepPanels: false }) : app.restore();
+  started.then(afterRestore).then(function () {
     if (wanted) openFromAddress(wanted.model, wanted.parameters);
   });
 

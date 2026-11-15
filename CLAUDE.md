@@ -60,7 +60,10 @@ footing (`src/widgets/grid.js` is the first).
   panel's Load). The one exception to "no fetch": a REMOTE file, when asked
   for; another site must allow it (CORS — GitHub Pages does). Opened in a
   new tab, the app takes over from any other tab of it (sienna's one live
-  tab). Check: `tools/headless/scripts/open-address.py` (http and file://).
+  tab). Opened so, the app starts CLEAN (Robert, 2026-11-15): the last
+  session's panels are not brought back, only the default layout with the
+  model asked for; a plain start afterwards restores that. Check:
+  `tools/headless/scripts/open-address.py` (http and file://).
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it

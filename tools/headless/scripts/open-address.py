@@ -92,7 +92,7 @@ async def main():
     path = await T.ev("Sienna.documents.list().filter(d => (Sienna.userData.get(d.path).openedFrom || {}).url === 'http://localhost:8732/labour/labour.json').map(d => d.path)[0]")
     check('the copy records where it came from', bool(path), path)
     check('it is the current model', await T.ev("Sienna.documents.current(app)") == path)
-    check('its windows are open', await T.ev("app.panels().filter($p => $p.panel('ref') === %s).length" % json.dumps(path)) >= 2)
+    check('its panels are open', await T.ev("app.panels().filter($p => $p.panel('ref') === %s).length" % json.dumps(path)) >= 2)
     search = await T.ev('location.search')
     check('the address is taken out of the address bar', search == '?newuser', search)
     given = await T.ev("Object.keys(Sienna.Simulation.inputValues(%s).values).length" % json.dumps(path))
@@ -110,6 +110,14 @@ async def main():
     # No parameter file beside it: nothing said. One named: used.
     await T.go(opened('http://localhost:8732/growth/growth.json'), 7)
     check('no parameter file beside it: nothing said', await T.ev('__said') == [], await T.ev('__said'))
+    # Opened from an address, the app starts clean: labour's panels, open in
+    # the session before, are not brought back; only growth's. A plain start
+    # afterwards restores that session as usual.
+    refs = "JSON.stringify([...new Set(app.panels().map($p => $p.panel('ref')).filter(r => r))])"
+    gpath = await T.ev("Sienna.documents.current(app)")
+    check('starts clean: only the opened model has panels', json.loads(await T.ev(refs)) == [gpath], await T.ev(refs))
+    await T.go(APP + 'index.html?newuser', 6)
+    check('a plain start afterwards restores that session', json.loads(await T.ev(refs)) == [gpath], await T.ev(refs))
     await T.go(opened('http://localhost:8732/labour/labour.json', '&parameters=other-values.json'), 9)
     gp = await T.ev("(() => { const d = Sienna.documents.current(app); return JSON.stringify(Sienna.Simulation.inputValues(d).values); })()")
     check('&parameters= names the file', '2.5' in gp and '1.5' not in gp, gp)
