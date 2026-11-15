@@ -557,3 +557,20 @@ Diagrams
   arrow, resizing a submodel, and dragging a port. The model is still
   changed once, at the drop, so Undo takes back the whole drag in one
   step.
+
+
+------------------------------------------------------------------------
+Release 2026-11-15
+------------------------------------------------------------------------
+
+Opening a model from the model gallery
+- Simile now starts clean when a model is opened from the model gallery
+  (or from any link that opens a model): only that model's panels are
+  shown. Before, the panels you had open last time came back as well,
+  so another model could be what you saw first. Your other models are
+  all still there, in File > Open. Starting Simile in the usual way
+  still brings back the panels you had open last time.
+
+Layouts
+- The default layout is now called "Model and simulation panels"
+  (it was "Model and simulation windows"). It works as before.
