@@ -2,7 +2,15 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-11.
+embedded-widget pages. Brought up to date 2026-11-15.
+
+**STATE 2026-11-15: the latest release is 2026-11-11b** (checked live:
+the site's `src/release.js` and its diagram-following code). Nothing of
+the app is unreleased; `release` lacks only restart-note commits. Both
+repos (simile, sienna) match origin. The model gallery
+(robert-mue/model_gallery) has bank-account, lotka-volterra, trees,
+lamos, pangolin. Waiting on Robert: which models next in the gallery, a
+paper for LAMOS, and the small things listed below.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
