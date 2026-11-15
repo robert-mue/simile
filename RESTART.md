@@ -8,7 +8,10 @@ embedded-widget pages. Brought up to date 2026-11-15.
 with the real gallery: a fresh user gets the Welcome and the five sample
 models with the right sizes; Open; the Metadata panel; File's order).
 Nothing of the app is unreleased; `release` lacks only restart-note
-commits. NEXT (Robert): a test drive by trusted old-Simile users.
+commits. NEXT (Robert): a test drive by trusted old-Simile users. Open
+for Robert: look over my draft keywords and descriptions in the gallery's
+five specs (edit them in the Metadata panel, then save the spec back into
+model_gallery); which further models go in the gallery; a paper for LAMOS.
 
 **RELEASED as 2026-11-15c (Robert's design): SAMPLE MODELS and METADATA.** File:
 "Recent models" under Open, "Your models" (all, A-Z) lower down, "Sample
@@ -24,12 +27,15 @@ descriptions are MY DRAFTS: Robert to look over), `models/index.json`,
 check.py checks both. A first visit gets the panel and a Welcome
 (tutorial links; gone at the first press or key). New users' models start
 EMPTY: the built-in models seed only with `?demos` (the checks ask for
-them). Checks: samples.py 33/33; open-address 26/26 and 23/23 (file),
+them). Checks: samples.py 43/43; open-address 26/26 and 23/23 (file),
 two-tabs 13/13, two-views 22/22, editor 19/19, added-widget passes. METADATA panel (Widgets > Metadata, `src/widgets/metadata.js`, Robert
 asked before the release): a model's metadata entered and shown, one
 undoable edit per field, size and features below (`Sienna.modelSummary`,
-src/model-summary.js, shared); samples.py now 43/43. Not done: in the "areas"
-layout the panel is a tile, not floating; the tutorial screenshots, if
+src/model-summary.js, shared). Not done: in the layout "Model and
+simulation areas" (View > Layout; the model's panels as tabs in two
+tiled areas) the Sample models panel opens as a tile, not floating;
+Robert told of it, content (a tester starts in the default layout,
+where it floats); the tutorial screenshots, if
 remade, will show the Sample models panel on a first visit.
 
 RELEASED as 2026-11-15b: "panel" wording (below). Both
