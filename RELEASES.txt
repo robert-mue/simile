@@ -574,3 +574,14 @@ Opening a model from the model gallery
 Layouts
 - The default layout is now called "Model and simulation panels"
   (it was "Model and simulation windows"). It works as before.
+
+
+------------------------------------------------------------------------
+Release 2026-11-15b
+------------------------------------------------------------------------
+
+Words
+- Simile now says "panel" everywhere, never "window". In the View
+  menu, "Windows" is now "Panels" and "Arrange windows" is now
+  "Arrange panels". The tutorials speak of the Model panel and the
+  Simulation panel. Nothing works differently.
