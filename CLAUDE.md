@@ -71,7 +71,7 @@ footing (`src/widgets/grid.js` is the first).
 - `src/layouts.js` — simile's layouts (sienna `DESIGN.md` Part III). Each
   model gets a Model collection and a Simulation collection (run control +
   tabbed Displays), made from templates. The default, **Model and simulation
-  windows**, makes them floating windows opened together with the model;
+  panels**, makes them floating panels opened together with the model;
   **Model and simulation areas** gathers them into two tabbed areas; **Free**
   is the old floating workspace. View ▸ Layout switches.
 - `src/widgets/diagram.js` — the diagram widget: renders the model as SVG and

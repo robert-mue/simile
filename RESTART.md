@@ -1007,7 +1007,7 @@ The workspace is no longer one floating pile. sienna gained containers,
 tiled/tabbed modes, placement by role, per-document collections and layouts
 (sienna `DESIGN.md` Part III), and simile now uses them — `src/layouts.js`:
 
-- **Model and simulation windows** (the default since 2026-10-12, Robert's
+- **Model and simulation panels** (the default since 2026-10-12, Robert's
   choice for the novice): Simile's own arrangement — a model window and a
   simulation window, floating, each 56% of the workspace wide, both opened
   when a model is. A second model's pair arrives offset from the first.

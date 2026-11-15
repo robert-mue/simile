@@ -615,19 +615,19 @@
           return windowsOf(t).filter(function ($p) { return $p.panel('ref') === ref; });
         };
         arrange(pick('Model').concat(pick('Simulation')),
-          'This needs the current model\'s model and simulation windows open.');
+          'This needs the current model\'s model and simulation panels open.');
       },
     },
     {
       label: 'Two models side by side',
       onSelect: function () {
-        arrange(windowsOf('Model'), 'This needs two model windows open — the two frontmost are used.');
+        arrange(windowsOf('Model'), 'This needs two model panels open — the two frontmost are used.');
       },
     },
     {
       label: 'Two simulations side by side',
       onSelect: function () {
-        arrange(windowsOf('Simulation'), 'This needs two simulation windows open — the two frontmost are used.');
+        arrange(windowsOf('Simulation'), 'This needs two simulation panels open — the two frontmost are used.');
       },
     },
   ];

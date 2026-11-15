@@ -7,8 +7,9 @@
  * are kept apart because a modeller often compares two structures, and
  * separately two runs. The layouts differ in where the collections go:
  *
- *   - **Model and simulation windows** (the default): floating windows, as in
- *     Simile, both opened with the model — see where it is registered.
+ *   - **Model and simulation panels** (the default): floating panels, as in
+ *     Simile's windows, both opened with the model — see where it is
+ *     registered (its id is still 'windows', which saved sessions name).
  *   - **Model and simulation areas**: all the Model collections in one area
  *     and all the Simulation collections in another, side by side, each area
  *     tabbed by model, so either comparison is one switch (tile the area).
@@ -54,7 +55,7 @@
   };
 
   Sienna.layouts.register('windows', {
-    label: 'Model and simulation windows',
+    label: 'Model and simulation panels',
     default: true,
     mode: 'floating',
     templates: [
