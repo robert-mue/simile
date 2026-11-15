@@ -4,9 +4,12 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
-**STATE 2026-11-15: RELEASED as 2026-11-15d (Robert: "Release!"; simile
-651b07f..; sienna 684bf7a; gallery 70808f9):** Robert's
-"ready to roll" (1-3 agreed as proposed, 4 my proposal):
+**STATE 2026-11-15, end of day: RELEASED as 2026-11-15d** (Robert:
+"Release!"), live and checked (`src/release.js` on the site says 15d).
+simile 49b26c2 = `main` = `release`, tag and GitHub release 2026-11-15d;
+sienna 684bf7a; gallery 70808f9. All three match origin; nothing is
+half-finished. What 15d brought (Robert's "ready to roll": points 1-3 as
+I proposed them, 4 my proposal, the colours his):
 - **No Load.** A model's own run control has no model menu or Load: ▶
   prepares (compiles what is drawn) and runs; ■ prepares and goes to the
   start; its settings are its own before it is prepared. Unbound run
@@ -16,36 +19,46 @@ embedded-widget pages. Brought up to date 2026-11-15.
   ▶ greyed).
 - **Default displays**: `presentation` in the model spec (run settings;
   plots of element ids; sliders), src/presentation.js. A model OPENED with
-  one (sienna's new `documents` `opened` hook) gets its displays, prepared
+  one (sienna's `documents` `opened` hook) gets its displays, prepared
   and run once: a gallery model opens with its graphs drawn. Set with
   Metadata's "Use the displays open now"; a plot keeps its variables over
   a reload (`plotter.state()`).
-- **Gallery 1930568: MY PROPOSED defaults, for Robert to correct:** bank
-  account (account; run 10, step 1); Lotka-Volterra (X and Y; 50, log
-  0.5); Trees (total, then tree sizes; 300); LAMOS (patch soil water, then
-  patch fuel load, 225 lines each; 120); pangolin (pangolins +
+- **The gallery's defaults are MY PROPOSAL, still for Robert to correct**
+  (he tried pangolin and liked it): bank account (account; run 10, step
+  1); Lotka-Volterra (X and Y; 50, log 0.5); Trees (total, then tree
+  sizes; 300); LAMOS (patch soil water, then patch fuel load, 225 lines
+  each; 120 — the weak one: a grid would suit it); pangolin (pangolins +
   common_species, then effort, then sliders; 50, log 0.5, step 0.1).
-  check.py checks `presentation`; README says how to set it.
+  Gallery check.py checks `presentation`; its README says how to set it.
 - **Metadata: a Web page field** (Robert, after trying pangolin):
   `metadata.page`, the model's page in the model gallery; the panel shows
   it and the paper's address as links (new tab). Each gallery model has
-  its page (gallery check.py holds it to models/<name>/). samples.py 44/44.
-- **Bug found and fixed:** run settings and parameter values were in
-  un-namespaced slots (`simile.runSettings.v1`, `simile.fileParameters.v1`),
-  so ?newuser inherited the real store's (it made pangolin run with an old
-  log interval). Now `sienna.simile.<slot>`; the real store adopts its old
-  ones once.
-- Tutorials: no "click load"; Bank account's Step 1 tells of the Welcome and
-  Sample models; all pictures retaken (scripts put the Welcome away,
-  `quiet()` in lib.py).
-- Checks: presentation.py 24/24 (new); samples 43/43; open-address 26/26,
-  23/23 (file); two-tabs 13/13; two-views 22/22; editor 19/19;
-  added-widget; file-params 29/29; help-pages clean; both embedded-widget
-  pages run.
-NEXT (Robert): look over the proposed defaults; then
-a test drive by trusted old-Simile users. Open for Robert: my draft
-keywords and descriptions in the gallery's five specs; which further models
-go in the gallery; a paper for LAMOS.
+  its page (gallery check.py holds it to models/<name>/).
+- **Bug fixed:** run settings and parameter values were in un-namespaced
+  slots (`simile.runSettings.v1`, `simile.fileParameters.v1`), so
+  ?newuser inherited the real store's. Now `sienna.simile.<slot>`; the
+  real store adopts its old ones once.
+- Tutorials: no "click load"; Bank account's Step 1 tells of the Welcome
+  and Sample models; all pictures retaken (`quiet()` in lib.py puts the
+  Welcome away).
+- Checks, all passing: presentation.py 24/24 (new); samples 44/44;
+  open-address 26/26, 23/23 (file); two-tabs 13/13; two-views 22/22;
+  editor 19/19; added-widget; file-params 29/29; help-pages clean; both
+  embedded-widget pages run.
+
+Headless lessons from today: `shot(name)` writes to `$HEADLESS_OUT` or the
+cwd PLUS the name, so an absolute name lands in a nested folder under
+tools/headless/ (one was committed by mistake, then removed) — give a
+relative name. A Chrome restarted on the same `--user-data-dir` restores
+its last tab; if that tab was mid-run it can hang every script (no
+answer even to Page.enable): stop it and start on a fresh profile
+directory. Chrome's 600 s cap can expire mid-script: give it 900.
+
+NEXT (Robert): correct the proposed default displays if he wants; a test
+drive by trusted old-Simile users. Open for Robert: my draft keywords and
+descriptions in the gallery's five specs; which further models go in the
+gallery; a paper for LAMOS. Known limitation: in the areas layout, the
+Sample models panel is a tile, not floating.
 
 **RELEASED as 2026-11-15c (Robert's design): SAMPLE MODELS and METADATA.** File:
 "Recent models" under Open, "Your models" (all, A-Z) lower down, "Sample
