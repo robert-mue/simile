@@ -621,3 +621,51 @@ Metadata
   they go with it when you save it. Below them, the panel shows the
   model's size and the Simile features it uses. Each change can be
   undone.
+
+------------------------------------------------------------------------
+Release 2026-11-15d
+------------------------------------------------------------------------
+
+No Load
+- A model's Simulation panel no longer has Load. Press the run button
+  (the triangle): the model is prepared from the diagram as it is now
+  (a few seconds the first time) and then runs. The stop button (the
+  square) prepares it and goes back to the start, so you can see the
+  starting values. Run settings typed before the first run are kept.
+- A run control that belongs to no model (the Free layout) still has
+  the model list and Load, for SimiLive's own example models.
+
+Status line
+- The status line in the Simulation panel is now bold on a coloured
+  background: green when the model can run, orange while it is being
+  prepared or is running, red when it cannot run, with the reason -
+  for example "Cannot run yet: 3 elements are incomplete, shown in red
+  in the diagram". The run button is greyed out while it is red.
+
+Default displays
+- A model can say how it should be shown: its plots (and which
+  variables are on each), the sliders, and its run settings. When you
+  open such a model, these displays appear in its Simulation panel and
+  it runs once, so you see its graphs straight away. Your own run
+  settings for the model, if you have any, are used instead of its.
+- To set them for your own model: arrange its Simulation panel, then in
+  Widgets > Metadata press "Use the displays open now". Clear takes
+  them away. They are kept in the model, so they go with it when you
+  save it.
+- The models in the model gallery now have default displays.
+- A plot now keeps its variables when the page is reloaded.
+
+Metadata
+- A new field, Web page: the model's page on the web. The models in
+  the model gallery give their page there. The web page and the
+  paper's link are shown as links that open in a new tab.
+
+Fixed
+- "Session > Open as new user" no longer takes run settings and
+  parameter values from your own store: a new user starts with none.
+  Your own are kept as they were.
+
+Tutorials
+- The tutorials no longer ask you to press Load, and Bank account
+  describes the welcome and the Sample models panel. Their pictures
+  have been retaken.

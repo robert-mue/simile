@@ -4,8 +4,8 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
-**STATE 2026-11-15: the latest release is 2026-11-15c; NOT RELEASED since
-(simile 651b07f, b91057f; sienna 684bf7a; gallery 1930568):** Robert's
+**STATE 2026-11-15: RELEASED as 2026-11-15d (Robert: "Release!"; simile
+651b07f..; sienna 684bf7a; gallery 70808f9):** Robert's
 "ready to roll" (1-3 agreed as proposed, 4 my proposal):
 - **No Load.** A model's own run control has no model menu or Load: ▶
   prepares (compiles what is drawn) and runs; ■ prepares and goes to the
@@ -42,7 +42,7 @@ embedded-widget pages. Brought up to date 2026-11-15.
   23/23 (file); two-tabs 13/13; two-views 22/22; editor 19/19;
   added-widget; file-params 29/29; help-pages clean; both embedded-widget
   pages run.
-NEXT (Robert): look over the proposed defaults; say when to release; then
+NEXT (Robert): look over the proposed defaults; then
 a test drive by trusted old-Simile users. Open for Robert: my draft
 keywords and descriptions in the gallery's five specs; which further models
 go in the gallery; a paper for LAMOS.
