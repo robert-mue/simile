@@ -229,8 +229,26 @@ footing (`src/widgets/grid.js` is the first).
   Samples live in `pages/<name>/` (`pages/pages.css` is their own look; what
   any page needs is in `src/styles.css`). The author's guide is
   `help/pages.html`.
-- `src/demo-*.js` — fixtures seeded on first run: `growth`, `submodel`, and the
-  three reference models `landuse`, `farmers` and `lamos` (§9).
+- `src/demo-*.js` — the built-in models: `growth`, `submodel`, the
+  reference models `landuse`, `farmers` and `lamos` (§9), and others. Seeded
+  ONLY with `index.html?demos` (Robert, 2026-11-15: a new user's models
+  start empty); the checks that use them ask for them.
+- **Sample models and the Welcome** (Robert, 2026-11-15):
+  `src/widgets/samples.js`, File ▸ Sample models… (`openSamples` in
+  `src/main.js`; sienna's `trailingItems`, at the bottom of File). The ONE
+  panel about no model: no ref, no role, floats at the top level, keeps its
+  own title, closed only by the user, one at a time. A sortable table of the
+  model gallery's models, read when it opens: `models/index.json` names
+  them; each model spec's `metadata` (title, description, keywords, paper;
+  hand-written, kept with the model) and what is INFERRED from its structure,
+  never written down: size as submodels/stocks/flows/variables, and its
+  Simile features (`Sienna.samples.summary`). Open is the gallery link's
+  `openFromAddress` (`Sienna.openModelFromAddress`). A first visit (no
+  models, no session, not `?open=`) opens it with a Welcome over it,
+  offering it and the tutorials, gone at the first press or key (`welcome`).
+  `?gallery=<address>` points it at another copy. File's lists (sienna):
+  Recent models under Open, Your models (all, A-Z) lower down. Check:
+  `tools/headless/scripts/samples.py` (serves the gallery repo itself).
 - `src/styles.css` — app-specific styles, loaded after the shell's.
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole

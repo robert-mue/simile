@@ -17,7 +17,7 @@ async def press_move(x0, y0, steps):
 async def release(x, y): await mouse('mouseReleased', x, y); await sleep(0.4)
 
 async def two_views(M):
-    await nav('http://localhost:8731/index.html?newuser=fresh'); await sleep(3)
+    await nav('http://localhost:8731/index.html?newuser=fresh&demos'); await sleep(3)
     await ev("Sienna.documents.open(app,%r); 1" % M); await sleep(2)
     await menu('Widgets', 'Diagram'); await sleep(2)
     P = "app.panels().filter(p=>p.panel('ref')===%r&&app.widgetOf(p)==='diagram')" % M

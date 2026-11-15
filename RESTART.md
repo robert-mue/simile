@@ -4,9 +4,29 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
+**NOT RELEASED (2026-11-15, Robert's design): SAMPLE MODELS.** File:
+"Recent models" under Open, "Your models" (all, A-Z) lower down, "Sample
+models…" at the bottom (sienna 3e0572e, `trailingItems`). The Sample
+models panel (`src/widgets/samples.js`): the one panel about NO model,
+floating, closed only by the user; a sortable table of the gallery's
+models (title + description, keywords, size subs/stocks/flows/vars,
+features, Gallery page / Paper links, Open). Metadata (title,
+description, keywords, paper) lives IN THE MODEL SPEC, `metadata`
+(Robert); size and features inferred from the structure, never stored.
+Gallery 9433aa6: metadata in all five specs (keywords and short
+descriptions are MY DRAFTS: Robert to look over), `models/index.json`,
+check.py checks both. A first visit gets the panel and a Welcome
+(tutorial links; gone at the first press or key). New users' models start
+EMPTY: the built-in models seed only with `?demos` (the checks ask for
+them). Checks: samples.py 33/33; open-address 26/26 and 23/23 (file),
+two-tabs 13/13, two-views 22/22, editor 19/19, added-widget passes. Not
+done: no way in the app to edit a model's metadata yet; in the "areas"
+layout the panel is a tile, not floating; the tutorial screenshots, if
+remade, will show the Sample models panel on a first visit.
+
 **STATE 2026-11-15: the latest release is 2026-11-15b** (checked live:
-release.js, the menu labels, sienna's app.js, the tutorials). Nothing of
-the app is unreleased; `release` lacks only restart-note commits. Both
+release.js, the menu labels, sienna's app.js, the tutorials). Since then,
+Sample models (above), not released. Both
 repos (simile, sienna) match origin. RELEASED as 2026-11-15 (checked
 through the gallery's pangolin link in the live app): opened from an address (`?open=`,
 the gallery's link), the app starts CLEAN, the last session's panels not

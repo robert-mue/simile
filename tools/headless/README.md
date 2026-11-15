@@ -77,6 +77,11 @@ time on :9350. Last done 2026-11-09, all three tutorials.
   from another site (it serves one itself, with and without CORS), its
   parameter file, the copy offered again, the errors. Standalone, over http
   or with `file`. PASS/FAIL lines.
+- `scripts/samples.py` — a first visit (no models, the Welcome, the Sample
+  models panel), the panel's table against the model gallery's specs, its
+  sorting and Open, File's lists, `?demos`, a gallery out of reach. Serves
+  the gallery repo (`~/Projects/model_gallery`, or the directory given) on
+  :8734. Standalone, over http. PASS/FAIL lines.
 - `scripts/roundtrip.py` — feeds the 72 catalogue files to `test/roundtrip.html`.
 - `scripts/help-pages.py` — every tutorial page at phone width: overflow, broken
   images, dead anchors.

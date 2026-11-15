@@ -4,7 +4,7 @@
 # Over http (tools/serve.py). Prints PASS/FAIL lines.
 import json
 B='http://localhost:8731/'
-await nav(B+'index.html?newuser=fresh'); await sleep(4)
+await nav(B+'index.html?newuser=fresh&demos'); await sleep(4)
 async def check(what, ok, got): print(('PASS ' if ok else 'FAIL ') + what + ('' if ok else '  got: ' + str(got)))
 await ev("Sienna.documents.openOrShow(app, 'models/growth')"); await sleep(3)
 await ev("Sienna.addedWidgets.add({url:%s})" % json.dumps(B+'examples/widgets/big-number.js')); await sleep(1)

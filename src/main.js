@@ -80,6 +80,8 @@
   function nameIfUnnamed($p) {
     var widget = app.widgetOf($p);
     if (!widget || widget === 'container') return;
+    // About no model, and only ever one: it keeps its own name.
+    if (widget === 'samples') { $p.panel('title', 'Sample models'); return; }
     if (hasSchemeTitle($p)) return;
     var ref = $p.panel('ref') || '';
     // Titled after the model's id, as panels were before a model could be
@@ -122,7 +124,10 @@
   }
   // The app's own; the ones the user added come after, from the shell
   // (sienna's added-widgets.js), opened the same way.
-  var widgetItems = Sienna.widgetRegistry.list().filter(function (w) { return !w.external; }).map(function (w) {
+  // Not the Sample models panel, which is about no model: File opens it.
+  var widgetItems = Sienna.widgetRegistry.list().filter(function (w) {
+    return !w.external && w.name !== 'samples';
+  }).map(function (w) {
     return { label: w.label, onSelect: function () { openWidget(w); } };
   });
 
@@ -198,7 +203,65 @@
         { label: 'Export model as script (.js)…', onSelect: exportScriptFile },
       ];
     },
+    // At the very bottom (Robert): models the user does not have yet.
+    trailingItems: function () {
+      return [{ label: 'Sample models…', onSelect: function () { openSamples(); } }];
+    },
   });
+
+  // =======================================================================
+  // SAMPLE MODELS, AND THE WELCOME
+  // =======================================================================
+  // The Sample models panel (src/widgets/samples.js) lists the model
+  // gallery's models. ONE of it: asked for again, the one open is brought
+  // forward. `?gallery=<address>` points it at another copy of the gallery
+  // (a check's own).
+
+  function openSamples() {
+    var open = app.windows().filter(function ($p) { return app.widgetOf($p) === 'samples'; })[0];
+    if (open) { app.showWindow(open); return Promise.resolve(open); }
+    var gallery = null;
+    try { gallery = new URLSearchParams(window.location.search).get('gallery'); } catch (e) { /* none */ }
+    return app.addPanel({
+      title: 'Sample models',
+      widget: 'samples',
+      options: gallery ? { gallery: gallery } : undefined,
+      geometry: { width: 900, height: Math.max(300, Math.min(620, window.innerHeight - 120)) },
+    });
+  }
+
+  /**
+   * A first visit (no models, no session): the Sample models panel, and a
+   * word of welcome over it, gone at the user's first press or key
+   * (Robert, 2026-11-15). Its own links work: they are what it is for.
+   */
+  function welcome() {
+    openSamples();
+    var tutorials = [
+      ['Bank account', 'help/tutorials/bank-account.html'],
+      ['Predator-prey', 'help/tutorials/predator-prey.html'],
+      ['Trees', 'help/tutorials/trees.html'],
+    ];
+    var $box = $('<div class="slx-welcome" role="dialog" aria-label="Welcome to Simile">')
+      .append($('<h2>').text('Welcome to Simile'))
+      .append($('<p>').text('You can select a model from the list of sample models, and open it to explore, or work through a tutorial:'));
+    var $ul = $('<ul>').appendTo($box);
+    tutorials.forEach(function (t) {
+      $('<li>').append($('<a target="_blank" rel="noopener">').attr('href', t[1]).text(t[0])).appendTo($ul);
+    });
+    $box.append($('<p class="slx-welcome-small">')
+      .text('Later, File ▸ Sample models… and Help ▸ Tutorials bring them back.'))
+      .appendTo(document.body);
+    var gone = function (e) {
+      if (e && e.type === 'pointerdown' && $box[0].contains(e.target)) return;   // a click follows
+      $box.remove();
+      document.removeEventListener('pointerdown', gone, true);
+      document.removeEventListener('keydown', gone, true);
+    };
+    $box.on('click', function () { setTimeout(gone, 0); });
+    document.addEventListener('pointerdown', gone, true);
+    document.addEventListener('keydown', gone, true);
+  }
 
   // =======================================================================
   // REPLAY
@@ -745,19 +808,24 @@
     if (Sienna.Diagram.migrate(model)) Sienna.userData.set('models/' + id, model);
   });
 
-  // TEMPORARY dev convenience: seed the demo model so Widgets ▸ Diagram has
-  // something to draw on a fresh browser. Goes away once models can be created
-  // and opened through the UI.
-  if (!Sienna.userData.get('models/growth') && Sienna.demoGrowth) Sienna.demoGrowth();
-  if (!Sienna.userData.get('models/plant') && Sienna.demoSubmodel) Sienna.demoSubmodel();
-  if (!Sienna.userData.get('models/landuse') && Sienna.demoLanduse) Sienna.demoLanduse();
-  if (!Sienna.userData.get('models/farmers') && Sienna.demoFarmers) Sienna.demoFarmers();
-  if (!Sienna.userData.get('models/lamos') && Sienna.demoLamos) Sienna.demoLamos();
-  if (!Sienna.userData.get('models/stand') && Sienna.demoStand) Sienna.demoStand();
-  if (!Sienna.userData.get('models/drain') && Sienna.demoDrain) Sienna.demoDrain();
-  if (!Sienna.userData.get('models/rank') && Sienna.demoRank) Sienna.demoRank();
-  if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
-  if (!Sienna.userData.get('models/pangolin') && Sienna.demoPangolin) Sienna.demoPangolin();
+  // The built-in models (src/demo-*.js) are seeded ONLY when asked for,
+  // `index.html?demos`: a new user's models start empty (Robert,
+  // 2026-11-15), and examples come from File ▸ Sample models…. Checks and
+  // tinkering ask for them. A user who has them already keeps them.
+  var demos = false;
+  try { demos = new URLSearchParams(window.location.search).has('demos'); } catch (e) { /* no */ }
+  if (demos) {
+    if (!Sienna.userData.get('models/growth') && Sienna.demoGrowth) Sienna.demoGrowth();
+    if (!Sienna.userData.get('models/plant') && Sienna.demoSubmodel) Sienna.demoSubmodel();
+    if (!Sienna.userData.get('models/landuse') && Sienna.demoLanduse) Sienna.demoLanduse();
+    if (!Sienna.userData.get('models/farmers') && Sienna.demoFarmers) Sienna.demoFarmers();
+    if (!Sienna.userData.get('models/lamos') && Sienna.demoLamos) Sienna.demoLamos();
+    if (!Sienna.userData.get('models/stand') && Sienna.demoStand) Sienna.demoStand();
+    if (!Sienna.userData.get('models/drain') && Sienna.demoDrain) Sienna.demoDrain();
+    if (!Sienna.userData.get('models/rank') && Sienna.demoRank) Sienna.demoRank();
+    if (!Sienna.userData.get('models/mixed') && Sienna.demoMixed) Sienna.demoMixed();
+    if (!Sienna.userData.get('models/pangolin') && Sienna.demoPangolin) Sienna.demoPangolin();
+  }
 
   // Opened from an address (the model gallery), the app starts CLEAN: the
   // last session's panels are not brought back, only the default layout
@@ -766,9 +834,13 @@
   var wanted = openRequested();
   var dflt = wanted && Sienna.layouts && Sienna.layouts.defaultName();
   var started = dflt ? app.applyLayout(dflt, { keepPanels: false }) : app.restore();
-  started.then(afterRestore).then(function () {
+  started.then(function (restored) {
+    afterRestore();
     if (wanted) openFromAddress(wanted.model, wanted.parameters);
+    else if (!restored && !Sienna.documents.list().length) welcome();
   });
+  // The Sample models panel's Open, as the gallery's own link.
+  Sienna.openModelFromAddress = function (address) { return openFromAddress(address); };
 
   // Handy for tinkering from the browser console.
   window.app = app;

@@ -30,7 +30,7 @@ def check(name, cond):
     ok[0 if cond else 1] += 1; print(('PASS ' if cond else 'FAIL ') + name)
 async def main():
     U = BASE + 'index.html?newuser'
-    A = await Tab(new_tab(BASE + 'index.html?newuser=fresh')).open(); await asyncio.sleep(5)
+    A = await Tab(new_tab(BASE + 'index.html?newuser=fresh&demos')).open(); await asyncio.sleep(5)
     check('A is live on its own', await A.ev('Sienna.persistence.live()') is True)
     await A.ev("Sienna.userData.set('scratch/a', 1); 1")
     Bt = await Tab(new_tab(U)).open(); await asyncio.sleep(5)

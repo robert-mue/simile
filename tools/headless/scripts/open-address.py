@@ -54,7 +54,7 @@ def check(name, cond, detail=''):
 async def main():
     t = json.load(urllib.request.urlopen(urllib.request.Request(B + '/json/new?about:blank', method='PUT')))
     T = await Tab(t).open()
-    await T.go(APP + 'index.html?newuser=fresh')
+    await T.go(APP + 'index.html?newuser=fresh&demos')
     # The site's files: a model as File > Save writes it, with a parameter file
     # beside it (labour_by_priority1, which has fixed parameters), and one without.
     pl = open(os.path.join(ROOT, 'reference/catalogue/labour_by_priority1.pl'), errors='replace').read()

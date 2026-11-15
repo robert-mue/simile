@@ -59,6 +59,18 @@
   // The values of a model's FILE PARAMETERS, grouped by submodel, with
   // Load / Save of a parameter file (src/widgets/parameters.js). Not part
   // of the model: values for running it, like a slider's.
+  // The Sample models panel (src/widgets/samples.js): the model gallery's
+  // models in a table, each with Open. About NO model, so no role and no
+  // ref: it floats at the top level. Opened from File ▸ Sample models…, not
+  // from Widgets (main.js leaves it out there).
+  reg.register('samples', {
+    src: 'src/widgets/samples.js',
+    label: 'Sample models',
+    title: 'Sample models',
+    thumbnail: false,
+    workingSize: { width: 900, height: 620 },
+  });
+
   reg.register('parameters', {
     src: 'src/widgets/parameters.js',
     label: 'Parameters',
