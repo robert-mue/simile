@@ -4,19 +4,25 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
-**STATE 2026-11-15: the latest release is 2026-11-11b** (checked live:
-the site's `src/release.js` and its diagram-following code). Since then,
-one change, below. Both
-repos (simile, sienna) match origin. The model gallery
-(robert-mue/model_gallery) has bank-account, lotka-volterra, trees,
-lamos, pangolin. NOT RELEASED (2026-11-15, Robert asked): opened from
-an address (`?open=`, the gallery's link), the app starts CLEAN, the last
-session's panels not brought back, only the default layout and that model
-(`src/main.js`, end); a plain start afterwards restores that session.
-Robert had "slight reservations" (the model made before is not shown) but
-agreed; all models stay in File > Open. open-address.py 26/26 (http),
-23/23 (file://), two-tabs 13/13. Waiting on Robert: which models next in the gallery, a
-paper for LAMOS, and the small things listed below.
+**STATE 2026-11-15: the latest release is 2026-11-15** (checked live,
+and through the gallery's pangolin link in the live app). Nothing of the
+app is unreleased; `release` lacks only restart-note commits. Both repos
+(simile, sienna) match origin. In it: opened from an address (`?open=`,
+the gallery's link), the app starts CLEAN, the last session's panels not
+brought back, only the default layout and that model (`src/main.js`,
+end); a plain start afterwards restores that session. Robert had "slight
+reservations" (the model made before is not shown) but agreed; all models
+stay in File > Open. open-address.py 26/26 (http), 23/23 (file://),
+two-tabs 13/13. And the default layout is now labelled "Model and
+simulation PANELS" (Robert: the project's word is panel, never window;
+its id stays 'windows', which saved sessions name). STILL SAYING
+"window" to the user, not yet changed: View > Windows and View > Arrange
+windows, "(no windows open)" (sienna app.js), "Model window" /
+"Simulation window" in the tutorials, help/widgets.html and the widget
+brief (src/widget-brief-simile.js, sienna's widget-brief.js). The model
+gallery (robert-mue/model_gallery) has bank-account, lotka-volterra,
+trees, lamos, pangolin. Waiting on Robert: which models next in the
+gallery, a paper for LAMOS, and the small things listed below.
 
 **NOW: nkometou.pl** — a large old-Simile model (CamFlores lineage; forwarded by Jasper; 99 submodels, 5213
 influences), Robert's test of whether the app covers the whole model
@@ -60,7 +66,7 @@ could hold them); the submodel dialog's left-out features (image, external
 code, threads, data-records and grid kinds). Release only when Robert says
 so.
 
-**RELEASED as 2026-11-11b (the latest release; Robert asked): a drag in
+**RELEASED as 2026-11-11b (Robert asked): a drag in
 one diagram is FOLLOWED by every other diagram of the same model while in
 progress** (Robert: before, the other
 updated only at the drop). Sienna d69902c: `userData.announce(ref,
