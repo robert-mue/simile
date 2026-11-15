@@ -4,14 +4,44 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-15.
 
-**STATE 2026-11-15: the latest release is 2026-11-15c** (checked live
-with the real gallery: a fresh user gets the Welcome and the five sample
-models with the right sizes; Open; the Metadata panel; File's order).
-Nothing of the app is unreleased; `release` lacks only restart-note
-commits. NEXT (Robert): a test drive by trusted old-Simile users. Open
-for Robert: look over my draft keywords and descriptions in the gallery's
-five specs (edit them in the Metadata panel, then save the spec back into
-model_gallery); which further models go in the gallery; a paper for LAMOS.
+**STATE 2026-11-15: the latest release is 2026-11-15c; NOT RELEASED since
+(simile 651b07f, b91057f; sienna 684bf7a; gallery 1930568):** Robert's
+"ready to roll" (1-3 agreed as proposed, 4 my proposal):
+- **No Load.** A model's own run control has no model menu or Load: ▶
+  prepares (compiles what is drawn) and runs; ■ prepares and goes to the
+  start; its settings are its own before it is prepared. Unbound run
+  control (Free layout) keeps load/unload and SimiLive's demos.
+- **Status line a traffic light** (Robert): bold on green (can go), orange
+  (in progress), red (cannot: a failure, or "N elements are incomplete",
+  ▶ greyed).
+- **Default displays**: `presentation` in the model spec (run settings;
+  plots of element ids; sliders), src/presentation.js. A model OPENED with
+  one (sienna's new `documents` `opened` hook) gets its displays, prepared
+  and run once: a gallery model opens with its graphs drawn. Set with
+  Metadata's "Use the displays open now"; a plot keeps its variables over
+  a reload (`plotter.state()`).
+- **Gallery 1930568: MY PROPOSED defaults, for Robert to correct:** bank
+  account (account; run 10, step 1); Lotka-Volterra (X and Y; 50, log
+  0.5); Trees (total, then tree sizes; 300); LAMOS (patch soil water, then
+  patch fuel load, 225 lines each; 120); pangolin (pangolins +
+  common_species, then effort, then sliders; 50, log 0.5, step 0.1).
+  check.py checks `presentation`; README says how to set it.
+- **Bug found and fixed:** run settings and parameter values were in
+  un-namespaced slots (`simile.runSettings.v1`, `simile.fileParameters.v1`),
+  so ?newuser inherited the real store's (it made pangolin run with an old
+  log interval). Now `sienna.simile.<slot>`; the real store adopts its old
+  ones once.
+- Tutorials: no "click load"; Bank account's Step 1 tells of the Welcome and
+  Sample models; all pictures retaken (scripts put the Welcome away,
+  `quiet()` in lib.py).
+- Checks: presentation.py 24/24 (new); samples 43/43; open-address 26/26,
+  23/23 (file); two-tabs 13/13; two-views 22/22; editor 19/19;
+  added-widget; file-params 29/29; help-pages clean; both embedded-widget
+  pages run.
+NEXT (Robert): look over the proposed defaults; say when to release; then
+a test drive by trusted old-Simile users. Open for Robert: my draft
+keywords and descriptions in the gallery's five specs; which further models
+go in the gallery; a paper for LAMOS.
 
 **RELEASED as 2026-11-15c (Robert's design): SAMPLE MODELS and METADATA.** File:
 "Recent models" under Open, "Your models" (all, A-Z) lower down, "Sample
@@ -35,8 +65,7 @@ src/model-summary.js, shared). Not done: in the layout "Model and
 simulation areas" (View > Layout; the model's panels as tabs in two
 tiled areas) the Sample models panel opens as a tile, not floating;
 Robert told of it, said OK (a tester starts in the default layout,
-where it floats); the tutorial screenshots, if
-remade, will show the Sample models panel on a first visit.
+where it floats).
 
 RELEASED as 2026-11-15b: "panel" wording (below). Both
 repos (simile, sienna) match origin. RELEASED as 2026-11-15 (checked
