@@ -669,3 +669,17 @@ Tutorials
 - The tutorials no longer ask you to press Load, and Bank account
   describes the welcome and the Sample models panel. Their pictures
   have been retaken.
+
+------------------------------------------------------------------------
+Release 2026-11-15e
+------------------------------------------------------------------------
+
+- While Simile loads its model compiler (the first time a model is
+  prepared in each visit, up to about 30 seconds on a first visit), a
+  note in the middle of the page says "Please wait - this might take
+  30 secs". It goes when the model is ready.
+- A panel whose widget is still loading now says "Loading ..." instead
+  of staying empty.
+- A gallery model's run settings (for example Execute for 50) now show
+  in its Simulation panel straight away, not only once it has been
+  prepared.

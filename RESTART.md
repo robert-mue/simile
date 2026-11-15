@@ -54,7 +54,7 @@ its last tab; if that tab was mid-run it can hang every script (no
 answer even to Page.enable): stop it and start on a fresh profile
 directory. Chrome's 600 s cap can expire mid-script: give it 900.
 
-**After 15d, NOT RELEASED** (Robert: Metadata empty on the released
+**RELEASED as 2026-11-15e** (Robert asked, to check them; after 15d, Robert: Metadata empty on the released
 site after opening pangolin; 17 s to open it in a new browser):
 - **"Please wait – this might take 30 secs"** (Robert's words), a note in
   the middle of the page while the model compiler's tools load — the
