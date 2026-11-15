@@ -6,10 +6,9 @@ embedded-widget pages. Brought up to date 2026-11-15.
 
 **STATE 2026-11-15: the latest release is 2026-11-15b** (checked live:
 release.js, the menu labels, sienna's app.js, the tutorials). Nothing of
-the app is unreleased; `release` lacks only restart-note commits.
-RELEASED as 2026-11-15 (checked through the gallery's pangolin link in
-the live app): Both repos
-(simile, sienna) match origin. In it: opened from an address (`?open=`,
+the app is unreleased; `release` lacks only restart-note commits. Both
+repos (simile, sienna) match origin. RELEASED as 2026-11-15 (checked
+through the gallery's pangolin link in the live app): opened from an address (`?open=`,
 the gallery's link), the app starts CLEAN, the last session's panels not
 brought back, only the default layout and that model (`src/main.js`,
 end); a plain start afterwards restores that session. Robert had "slight
