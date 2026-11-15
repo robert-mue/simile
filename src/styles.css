@@ -1525,3 +1525,38 @@ button.slx-fn:hover { background: #eaf2fa; }
 .slx-welcome p { margin: 0 0 8px; }
 .slx-welcome ul { margin: 0 0 8px; padding-left: 20px; }
 .slx-welcome-small { color: #52514e; font-size: 12px; }
+
+/* ---- Metadata panel (src/widgets/metadata.js) ---------------------------- */
+.slx-meta {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 10px 12px;
+  font: 12px/1.4 system-ui, sans-serif;
+}
+.slx-meta-form {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 10px;
+  align-items: baseline;
+}
+.slx-meta-form label { font-weight: 600; color: #52514e; }
+.slx-meta-form input,
+.slx-meta-form textarea {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 5px;
+  border: 1px solid #c9c8c1;
+  border-radius: 3px;
+  resize: vertical;
+}
+.slx-meta-note { margin: 8px 0 0; color: #52514e; }
+.slx-meta-warn { color: #a3320b; }
+.slx-meta-read {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #d9d8d1;
+  color: #52514e;
+}
+.slx-meta-read-head { font-weight: 600; margin-bottom: 2px; }

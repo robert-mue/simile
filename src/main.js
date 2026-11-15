@@ -115,11 +115,15 @@
    */
   function openWidget(w) {
     var subject = Sienna.documents.current(app) || '';
+    // One with no role is a panel of its own at the top level (Metadata):
+    // it opens at its working size, not at a tool panel's.
+    var spec = Sienna.widgetRegistry.spec(w.name) || {};
     app.addPanel({
       title: panelTitle(subject, w.name),
       widget: w.name,
       ref: subject,
       options: w.options,
+      geometry: !spec.role && spec.workingSize ? spec.workingSize : undefined,
     });
   }
   // The app's own; the ones the user added come after, from the shell

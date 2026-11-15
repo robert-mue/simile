@@ -111,6 +111,43 @@ async def main():
     await T.ev("Sienna.documents.menuItems(app).find(i => i.label === 'Sample models…').onSelect(); 1"); await asyncio.sleep(1)
     check('Sample models… again: still one panel', await T.ev(panel + '.length') == 1)
 
+    # The Metadata panel (src/widgets/metadata.js) on that model: shows what
+    # it holds and what is read from it; an edit is one undoable change.
+    await T.ev("app.addPanel({ widget: 'metadata', ref: %s, title: 'meta' }).then(() => 1)" % json.dumps(cur)); await asyncio.sleep(2)
+    val = lambda k: "$('.slx-meta [data-key=%s]').val()" % k
+    check('Metadata: shows the title and keywords', await T.ev(val('title')) == 'Bank account'
+          and await T.ev(val('keywords')) == 'introductory, compound interest, stock and flow')
+    read = await T.ev("$('.slx-meta-read').text()")
+    check('Metadata: size and features read from the model', 'Size: 0/1/2/1 (0 submodels, 1 stock, 2 flows, 1 variable)' in (read or ''), read)
+    held = "JSON.stringify(Sienna.userData.get(%s).metadata)" % json.dumps(cur)
+    await T.ev("$('.slx-meta [data-key=title]').val('My bank account').trigger('change'); 1")
+    check('an edit is held in the model', json.loads(await T.ev(held)).get('title') == 'My bank account')
+    await T.ev("$('.slx-meta [data-key=keywords]').val('').trigger('change'); 1")
+    check('an emptied field is left out', 'keywords' not in json.loads(await T.ev(held)))
+    await T.ev("Sienna.history.undo(); 1"); await asyncio.sleep(0.5)
+    check('undo: back, field and model', 'keywords' in json.loads(await T.ev(held)) and await T.ev(val('keywords')) != '')
+    await T.ev("Sienna.history.undo(); 1"); await asyncio.sleep(0.5)
+    check('undo again: the title back', await T.ev(val('title')) == 'Bank account')
+    await T.ev("$('.slx-meta [data-key=citation]').val('Someone (2020). A paper.').trigger('change'); 1")
+    await T.ev("$('.slx-meta [data-key=url]').val('doi.org/10.1/x').trigger('change'); 1")
+    p = json.loads(await T.ev(held)).get('paper')
+    check('a paper: citation and link held', p == {'citation': 'Someone (2020). A paper.', 'url': 'doi.org/10.1/x'}, p)
+    check('a link that is not a web address is said', 'should be a web address' in (await T.ev("$('.slx-meta-warn:visible').text()") or ''))
+    await T.ev("Sienna.history.undo(); Sienna.history.undo(); 1"); await asyncio.sleep(0.5)
+    await T.ev("$('.slx-meta').closest('.slx-panel').panel('close'); 1")
+    # From the Widgets menu, as a user would: a panel of the model's, at its working size.
+    async def menu(label):
+        r = await T.ev("(() => { const e = [...document.querySelectorAll('.slx-menu-label')].find(e => e.textContent.trim() === %r && e.offsetParent); if (!e) return null; const b = e.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()" % label)
+        if not r: return False
+        for ty in ('mouseMoved', 'mousePressed', 'mouseReleased'):
+            await T.cmd('Input.dispatchMouseEvent', {'type': ty, 'x': r[0], 'y': r[1], 'button': 'left', 'clickCount': 1})
+        await asyncio.sleep(0.4); return True
+    check('Widgets ▸ Metadata is there', await menu('Widgets') and await menu('Metadata'))
+    await asyncio.sleep(1.5)
+    m = await T.ev("(() => { const p = app.windows().find($p => app.widgetOf($p) === 'metadata'); return p && [p.panel('ref'), p.outerWidth()]; })()")
+    check('it opens on the current model, at its working size', m and m[0] == cur and m[1] >= 440, m)
+    await T.ev("$('.slx-meta').closest('.slx-panel').panel('close'); 1")
+
     # Again, a reload: the panel back, no Welcome.
     await T.go(APP + '?newuser&gallery=' + G, 7)
     check('a reload: the panel is back', await T.ev(panel + '.length') == 1)

@@ -12,7 +12,8 @@
  * `models/<name>/<name>.json`, carries its `metadata` (title, description,
  * keywords, paper), written by hand. Everything that CAN be read from the
  * model's structure is, never written down (Robert): its SIZE, as
- * submodels/stocks/flows/variables, and its Simile FEATURES (`summary`).
+ * submodels/stocks/flows/variables, and its Simile FEATURES
+ * (`Sienna.modelSummary`, src/model-summary.js).
  * Open does what the gallery's own link does (`Sienna.openModelFromAddress`,
  * main.js): a copy among the user's models, or the copy they already have.
  *
@@ -20,41 +21,6 @@
  */
 (function () {
   'use strict';
-
-  /**
-   * What a model's structure says about it: `size` [submodels, stocks,
-   * flows, variables], and `features`, the Simile features it uses, in a
-   * fixed order. Conditional, satellite and association are inferred as the
-   * grammar infers them (grammar.js `kindsOf`): a condition inside, and how
-   * many role arrows point in.
-   */
-  function summary(spec) {
-    var nodes = Object.keys(spec.nodes || {}).map(function (k) { return spec.nodes[k]; });
-    var arcs = Object.keys(spec.arcs || {}).map(function (k) { return spec.arcs[k]; });
-    var subs = spec.submodels || {};
-    var ids = Object.keys(subs);
-    var count = function (type) { return nodes.filter(function (n) { return n.type === type; }).length; };
-    var has = {};
-    ids.forEach(function (id) {
-      var s = subs[id];
-      if (s.kind === 'fixed-membership') has['fixed membership'] = true;
-      if (s.kind === 'population') has.population = true;
-      if (s.parent) has['nested submodels'] = true;
-      if (nodes.some(function (n) { return n.type === 'condition' && n.parent === id; })) has.conditional = true;
-      var roles = arcs.filter(function (a) { return a.type === 'role' && a.to === id; }).length;
-      if (roles === 1) has.satellite = true;
-      else if (roles >= 2) has.association = true;
-    });
-    var events = { initialiser: 'creation', migrator: 'immigration', exterminator: 'loss', reproduction: 'reproduction' };
-    Object.keys(events).forEach(function (t) { if (count(t)) has[events[t]] = true; });
-    if (count('alarm')) has.alarm = true;
-    var order = ['fixed membership', 'population', 'nested submodels', 'conditional', 'satellite',
-      'association', 'creation', 'immigration', 'loss', 'reproduction', 'alarm'];
-    return {
-      size: [ids.length, count('stock'), count('valve'), count('variable')],
-      features: order.filter(function (f) { return has[f]; }),
-    };
-  }
 
   var COLUMNS = [
     { key: 'title', label: 'Model', sort: function (r) { return r.title.toLowerCase(); } },
@@ -99,7 +65,7 @@
           return Sienna.remote.text(spec).then((t) => {
             const m = JSON.parse(t);
             const meta = m.metadata || {};
-            const s = summary(m);
+            const s = Sienna.modelSummary(m);
             return {
               name, spec, page: base + 'models/' + name + '/',
               title: meta.title || m.name || name,
@@ -158,7 +124,7 @@
           .appendTo(tr);
         $('<td>').text(r.keywords.join(', ')).appendTo(tr);
         $('<td class="slx-samples-size">').text(r.size.join('/'))
-          .attr('title', r.size[0] + ' submodels, ' + r.size[1] + ' stocks, ' + r.size[2] + ' flows, ' + r.size[3] + ' variables')
+          .attr('title', Sienna.modelSummary.sizeInWords(r.size))
           .appendTo(tr);
         $('<td>').text(r.features.join(', ') || '—').appendTo(tr);
         const links = $('<td class="slx-samples-links">').appendTo(tr);
@@ -183,6 +149,5 @@
     },
   });
 
-  Sienna.samples = { summary };
   window.Sienna.widgetRegistry._loaded('samples', 'samples');
 })();

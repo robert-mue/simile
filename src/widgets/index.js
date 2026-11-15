@@ -59,6 +59,17 @@
   // The values of a model's FILE PARAMETERS, grouped by submodel, with
   // Load / Save of a parameter file (src/widgets/parameters.js). Not part
   // of the model: values for running it, like a slider's.
+  // A model's metadata — title, description, keywords, paper — entered and
+  // shown, with its size and Simile features read from it
+  // (src/widgets/metadata.js). No role: a panel of its own, the model's.
+  reg.register('metadata', {
+    src: 'src/widgets/metadata.js',
+    label: 'Metadata',
+    title: 'Metadata',
+    thumbnail: false,
+    workingSize: { width: 460, height: 520 },
+  });
+
   // The Sample models panel (src/widgets/samples.js): the model gallery's
   // models in a table, each with Open. About NO model, so no role and no
   // ref: it floats at the top level. Opened from File ▸ Sample models…, not

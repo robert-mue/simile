@@ -242,13 +242,21 @@ footing (`src/widgets/grid.js` is the first).
   them; each model spec's `metadata` (title, description, keywords, paper;
   hand-written, kept with the model) and what is INFERRED from its structure,
   never written down: size as submodels/stocks/flows/variables, and its
-  Simile features (`Sienna.samples.summary`). Open is the gallery link's
+  Simile features (`Sienna.modelSummary`, `src/model-summary.js`, shared with
+  the Metadata panel). Open is the gallery link's
   `openFromAddress` (`Sienna.openModelFromAddress`). A first visit (no
   models, no session, not `?open=`) opens it with a Welcome over it,
   offering it and the tutorials, gone at the first press or key (`welcome`).
   `?gallery=<address>` points it at another copy. File's lists (sienna):
   Recent models under Open, Your models (all, A-Z) lower down. Check:
   `tools/headless/scripts/samples.py` (serves the gallery repo itself).
+- **Metadata** (Widgets ▸ Metadata, `src/widgets/metadata.js`; Robert,
+  2026-11-15): a model's `metadata` — title, description, keywords, paper
+  (citation, link) — entered and shown, empty fields left out, one undoable
+  edit per field left; below, the size and features read from the model.
+  No role: a panel of its own, the model's, opened at its working size
+  (`openWidget` gives a role-less widget its `workingSize`). Checked in
+  `samples.py`.
 - `src/styles.css` — app-specific styles, loaded after the shell's.
 - `vendor/peggy.min.js` — this app's own vendored library (the shell's live in
   `sienna/vendor`). Compiles `src/equation-grammar.js`, which is the sole
