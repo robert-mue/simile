@@ -99,13 +99,21 @@ async def main():
     check('its parameter values were loaded from beside it', given == len(labels), given)
 
     # The same address again: the copy offered. Yes opens it; no makes another.
+    # Asked with buttons that say what they do, not confirm() (Robert).
+    ask = "[$('.slx-ask-head').text(), $('.slx-ask button').map((i, b) => b.textContent).get().join('|'), document.activeElement && document.activeElement.textContent]"
+    press = lambda label: T.ev("$('.slx-ask button').filter((i, b) => b.textContent === %r).click(); 1" % label)
     await T.go(opened('http://localhost:8732/labour/labour.json'), 7)
-    said = await T.ev('__said')
-    check('again: the copy is offered', len(said) == 1 and said[0].startswith('confirm: You already have a copy'), said)
-    check('again, OK: no new copy', await T.ev(count) == before + 1)
-    await T.cmd('Page.addScriptToEvaluateOnNewDocument', {'source': 'window.__answer = false;'})
-    await T.go(opened('http://localhost:8732/labour/labour.json'), 9)
-    check('again, Cancel: a new copy', await T.ev(count) == before + 2)
+    a = await T.ev(ask)
+    check('again: the copy is offered, the buttons saying what they do', a[0].startswith('You already have a copy')
+          and a[1] == 'Make new copy|Open previous copy' and a[2] == 'Open previous copy', a)
+    await press('Open previous copy'); await asyncio.sleep(2)
+    check('Open previous copy: no new copy, the dialog gone', await T.ev(count) == before + 1 and await T.ev("$('.slx-ask').length") == 0)
+    await T.go(opened('http://localhost:8732/labour/labour.json'), 7)
+    await T.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true})); 1"); await asyncio.sleep(1)
+    check('Escape: nothing done', await T.ev(count) == before + 1 and await T.ev("$('.slx-ask').length") == 0)
+    await T.go(opened('http://localhost:8732/labour/labour.json'), 7)
+    await press('Make new copy'); await asyncio.sleep(3)
+    check('Make new copy: a new copy', await T.ev(count) == before + 2)
 
     # No parameter file beside it: nothing said. One named: used.
     await T.go(opened('http://localhost:8732/growth/growth.json'), 7)
@@ -118,7 +126,8 @@ async def main():
     check('starts clean: only the opened model has panels', json.loads(await T.ev(refs)) == [gpath], await T.ev(refs))
     await T.go(APP + 'index.html?newuser', 6)
     check('a plain start afterwards restores that session', json.loads(await T.ev(refs)) == [gpath], await T.ev(refs))
-    await T.go(opened('http://localhost:8732/labour/labour.json', '&parameters=other-values.json'), 9)
+    await T.go(opened('http://localhost:8732/labour/labour.json', '&parameters=other-values.json'), 7)
+    await press('Make new copy'); await asyncio.sleep(3)
     gp = await T.ev("(() => { const d = Sienna.documents.current(app); return JSON.stringify(Sienna.Simulation.inputValues(d).values); })()")
     check('&parameters= names the file', '2.5' in gp and '1.5' not in gp, gp)
 

@@ -482,6 +482,39 @@
     return { model: model, parameters: parameters };
   }
 
+  /**
+   * A question with buttons that say what they do, in place of confirm().
+   * Resolves to the value of the button pressed, or null for Escape (nothing
+   * done). Enter presses the focused button, the `primary` one at first.
+   */
+  function askChoice(heading, text, buttons) {
+    return new Promise(function (resolve) {
+      var $back = $('<div class="slx-ask-back">');
+      var $box = $('<div class="slx-ask" role="alertdialog" aria-modal="true">')
+        .append($('<p class="slx-ask-head">').text(heading))
+        .append(text ? $('<p>').text(text) : null)
+        .appendTo($back);
+      var $row = $('<div class="slx-ask-buttons">').appendTo($box);
+      var first = null;
+      var done = function (value) {
+        document.removeEventListener('keydown', onKey, true);
+        $back.remove();
+        resolve(value);
+      };
+      buttons.forEach(function (b) {
+        var $b = $('<button type="button">').text(b.label).toggleClass('slx-ask-primary', !!b.primary)
+          .on('click', function () { done(b.value); }).appendTo($row);
+        if (b.primary) first = $b;
+      });
+      var onKey = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(null); }
+      };
+      document.addEventListener('keydown', onKey, true);
+      $back.appendTo(document.body);
+      (first || $row.children().first()).trigger('focus');
+    });
+  }
+
   function openFromAddress(address, parametersAddress) {
     var said = function (e) {
       var m = e && e.message ? e.message : String(e);
@@ -495,12 +528,17 @@
         var m = Sienna.userData.get(d.path);
         return m && m.openedFrom && m.openedFrom.url === got.url;
       })[0];
-      if (had && window.confirm('You already have a copy of this model: "' + had.name + '".\n\n'
-          + 'OK opens that copy, with any changes you made to it.\n'
-          + 'Cancel makes a new copy from the address.')) {
-        Sienna.documents.openOrShow(app, had.path);
-        return;
-      }
+      if (!had) return got;
+      // Not confirm(): its OK and Cancel do not say what they do (Robert).
+      return askChoice('You already have a copy of this model: “' + had.name + '”.',
+        'Open it with any changes you made to it, or make a new copy from the address.',
+        [{ label: 'Make new copy', value: 'new' },
+          { label: 'Open previous copy', value: 'old', primary: true }]).then(function (choice) {
+        if (choice === 'old') Sienna.documents.openOrShow(app, had.path);
+        return choice === 'new' ? got : null;
+      });
+    }).then(function (got) {
+      if (!got) return;
       var model = got.model;
       model.openedFrom = { url: got.url, at: new Date().toISOString() };
       var path;

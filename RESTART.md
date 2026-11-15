@@ -79,6 +79,12 @@ directory. Chrome's 600 s cap can expire mid-script: give it 900. Scratch
 files in tools/headless/ go under `_*` names: .gitignore keeps them out
 (two stray screenshots were committed today, then removed).
 
+**After 15e, NOT RELEASED:** the "You already have a copy of this model"
+question is no longer confirm(): its buttons say "Make new copy" and
+"Open previous copy" (focused); Escape does neither (`askChoice` in
+src/main.js, Robert). open-address.py presses them: 27/27 http, 24/24
+file.
+
 NEXT: Robert's findings on 15e (if a panel sticks on "Loading…", or is
 blank with no note, that is the clue to the empty Metadata panel). Then
 for Robert: correct the proposed default displays if he wants; a test

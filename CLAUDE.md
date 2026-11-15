@@ -53,7 +53,9 @@ footing (`src/widgets/grid.js` is the first).
   page, or any link, opens a model in the app. The file File ▸
   Save writes, FETCHED (from any address, Robert: a model is data, never
   run; checked as File ▸ Open checks one), added as a copy that records
-  `openedFrom` (so the same address again offers that copy), and opened;
+  `openedFrom` (so the same address again offers that copy: `askChoice`, buttons "Make
+  new copy" / "Open previous copy", Escape does neither — never
+  confirm(), whose OK / Cancel do not say what they do, Robert), and opened;
   `?open=` is then taken out of the address bar. Parameter values from
   `&parameters=<address>`, else `<name>.parameters.json` beside it if there
   is one (`Simulation.readParameterFile`, shared with the Parameters
