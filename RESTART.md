@@ -2,15 +2,31 @@
 
 *Rewritten 2026-10-13, at the end of two days that took the app public, wrote
 all three of the old Simile tutorials, and turned up the next big idea —
-embedded-widget pages. Brought up to date 2026-11-15.
+embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-15, end of day: RELEASED as 2026-11-15e** (Robert: "do a
-release, and I'll check out your changes"), live and checked
-(`src/release.js` on the site says 15e). simile `main` = `release`
-(5f79c39 plus restart-note commits), tag and GitHub release 2026-11-15e;
-sienna 76a1f80; gallery 70808f9. All three match origin; nothing is
-half-finished. ROBERT IS NOW TRYING 15e: the Please-wait note, and
-whether the empty Metadata panel comes back (see 15e below).
+**STATE 2026-11-16: RELEASED as 2026-11-16** (Robert: "OK, do a
+release"), live and checked (`src/release.js` on the site says
+2026-11-16). simile `main` = `release` (df23b43 plus restart-note
+commits), tag and GitHub release 2026-11-16; sienna 76a1f80; gallery
+70808f9. All three match origin; nothing is half-finished. Robert is
+trying 15e's changes (the Please-wait note; whether the empty Metadata
+panel comes back).
+
+**RELEASED as 2026-11-16:** the "You already have a copy of this model"
+question is no longer confirm(): its buttons say "Make new copy" and
+"Open previous copy" (focused); Escape does neither (`askChoice` in
+src/main.js, Robert). open-address.py presses them: 27/27 http, 24/24
+file. Robert asked how it meets EVENT LOGGING AND REPLAY; the answer
+(from the code, not run): replay never meets it. Replay re-applies
+effects, never commands — `menu.select` has no replay handler, so a
+logged File ▸ Sample models… re-performs only its nested `panel.add`;
+the samples panel's Open button is not logged, and neither is the
+dialog; what is logged is what the answer did (`documents.import` with
+the whole fetched model in its changes, then `panel.add`s; or nothing
+for Escape, or for Open previous copy of a copy already open). So the
+fetch and the question never run in a replay, as with File ▸ Open model
+file's picker. Not replayed: run settings and parameter values (kept in
+their own storage slots, not userData), and the first run.
 
 **RELEASED as 2026-11-15e** (after 15d Robert found the Metadata panel
 empty on the released site after opening pangolin, and 17 s to open it
@@ -78,12 +94,6 @@ answer even to Page.enable): stop it and start on a fresh profile
 directory. Chrome's 600 s cap can expire mid-script: give it 900. Scratch
 files in tools/headless/ go under `_*` names: .gitignore keeps them out
 (two stray screenshots were committed today, then removed).
-
-**RELEASED as 2026-11-16** (Robert asked): the "You already have a copy of this model"
-question is no longer confirm(): its buttons say "Make new copy" and
-"Open previous copy" (focused); Escape does neither (`askChoice` in
-src/main.js, Robert). open-address.py presses them: 27/27 http, 24/24
-file.
 
 NEXT: Robert's findings on 15e (if a panel sticks on "Loading…", or is
 blank with no note, that is the clue to the empty Metadata panel). Then
