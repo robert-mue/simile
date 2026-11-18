@@ -1,0 +1,74 @@
+{
+  "id": "farmers",
+  "name": "Farmers and fields",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Farmers and the fields they own",
+    "description": "Three farmers and six fields. Which farmer owns which field is an association, ownership, with a role from each: a pairing exists where the field's owner_id is the farmer's id. Each field yields in proportion to its area, and each farmer's wealth grows by the yield of the fields they own, less what they spend. Time is in years. A worked example for the model file reference.",
+    "keywords": ["association", "ownership", "fixed membership"]
+  },
+  "presentation": {
+    "run": { "runLength": 20, "logEach": 1, "timeStep": "0.1" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": { "kind": "fixed-membership", "parent": null, "label": "farmer",    "props": { "dimensions": "3" } },
+    "submodel2": { "kind": "fixed-membership", "parent": null, "label": "field",     "props": { "dimensions": "6" } },
+    "submodel3": { "kind": "single",           "parent": null, "label": "ownership", "props": {} }
+  },
+  "nodes": {
+    "node1":  { "type": "stock",    "parent": "submodel1", "label": "wealth",    "props": { "initial": "100", "units": "" } },
+    "node2":  { "type": "cloud",    "parent": "submodel1", "label": "",          "props": {} },
+    "node3":  { "type": "valve",    "parent": "submodel1", "label": "income",    "props": { "rate": "sum({field_yield_owner})", "units": "" } },
+    "node4":  { "type": "cloud",    "parent": "submodel1", "label": "",          "props": {} },
+    "node5":  { "type": "valve",    "parent": "submodel1", "label": "spending",  "props": { "rate": "spending_rate*wealth", "units": "" } },
+    "node6":  { "type": "variable", "parent": "submodel1", "label": "farmer_id", "props": { "value": "index(1)", "units": "" } },
+
+    "node7":  { "type": "variable", "parent": "submodel2", "label": "owner_id",  "props": { "value": "ceil(index(1)/2)", "units": "" } },
+    "node8":  { "type": "variable", "parent": "submodel2", "label": "area",      "props": { "value": "index(1)", "units": "" } },
+    "node9":  { "type": "variable", "parent": "submodel2", "label": "yield",     "props": { "value": "yield_per_area*area", "units": "" } },
+
+    "node10": { "type": "condition", "parent": "submodel3", "label": "owns",        "props": { "expr": "owner_id_land==farmer_id_owner" } },
+    "node11": { "type": "variable",  "parent": "submodel3", "label": "field_yield", "props": { "value": "yield_land", "units": "" } },
+
+    "node12": { "type": "variable", "parent": null, "label": "yield_per_area", "props": { "paramKind": "variable", "value": "5",   "units": "", "min": "0", "max": "10" } },
+    "node13": { "type": "variable", "parent": null, "label": "spending_rate",  "props": { "paramKind": "variable", "value": "0.2", "units": "", "min": "0", "max": "0.5" } }
+  },
+  "arcs": {
+    "arc1":  { "type": "role", "from": "submodel1", "to": "submodel3", "label": "owner", "props": {} },
+    "arc2":  { "type": "role", "from": "submodel2", "to": "submodel3", "label": "land",  "props": {} },
+
+    "arc3":  { "type": "flow", "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc4":  { "type": "flow", "from": "node1", "to": "node4", "valve": "node5", "props": {} },
+
+    "arc5":  { "type": "influence", "from": "node1",  "to": "node5",  "alias": "wealth",         "props": {} },
+    "arc6":  { "type": "influence", "from": "node13", "to": "node5",  "alias": "spending_rate",  "props": {} },
+    "arc7":  { "type": "influence", "from": "node8",  "to": "node9",  "alias": "area",           "props": {} },
+    "arc8":  { "type": "influence", "from": "node12", "to": "node9",  "alias": "yield_per_area", "props": {} },
+    "arc9":  { "type": "influence", "from": "node6",  "to": "node10", "alias": "farmer_id",      "props": {} },
+    "arc10": { "type": "influence", "from": "node7",  "to": "node10", "alias": "owner_id",       "props": {} },
+    "arc11": { "type": "influence", "from": "node9",  "to": "node11", "alias": "yield",          "props": {} },
+    "arc12": { "type": "influence", "from": "node11", "to": "node3",  "alias": "field_yield",    "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 170, "y": 150, "w": 280, "h": 170 },
+    "submodel2": { "x": 560, "y": 150, "w": 220, "h": 170 },
+    "submodel3": { "x": 360, "y": 380, "w": 220, "h": 120 },
+    "node1":  { "x": 170, "y": 170 },
+    "node2":  { "x": 70,  "y": 170 },
+    "node4":  { "x": 270, "y": 170 },
+    "node6":  { "x": 90,  "y": 105 },
+    "node7":  { "x": 500, "y": 110 },
+    "node8":  { "x": 590, "y": 110 },
+    "node9":  { "x": 590, "y": 190 },
+    "node10": { "x": 310, "y": 370 },
+    "node11": { "x": 410, "y": 400 },
+    "node12": { "x": 720, "y": 190 },
+    "node13": { "x": 220, "y": 30 }
+  }
+}

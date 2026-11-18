@@ -4,11 +4,11 @@
 one by hand, and for an AI assistant (Claude, or any other) given a paper
 that describes a model in words and equations and asked for the model file.
 
-*First draft, 2026-11-18; conditional submodels, curves and enumerated
-types added 2026-11-18. Covers stocks, flows, variables, parameters, the
-three kinds of submodel, conditional submodels, curves given as a graph or
-a table, and enumerated types. Not covered yet: associations (role arrows)
-and events. Build those in the app.*
+*First draft, 2026-11-18; conditional submodels, curves, enumerated types
+and associations added 2026-11-18. Covers stocks, flows, variables,
+parameters, the three kinds of submodel, conditional submodels, curves given
+as a graph or a table, enumerated types and associations. Not covered:
+events, which the app cannot run yet.*
 
 ## How to use it
 
@@ -60,6 +60,13 @@ These are Simile's terms. Simile's own manual explains each at more length.
 - **Enumerated type**: a named set of categories, such as `species: oak,
   beech, pine`. A fixed-membership submodel sized by it has one instance
   per member, and each instance knows which member it is.
+- **Association**: a submodel holding facts about **pairs** of instances
+  of other submodels: which farmer owns which field, which animal is
+  larger than which, which patches are neighbours. A **role arrow** runs
+  to it from each submodel taking part, named for the part it plays
+  (`owner`, `land`). Two role arrows from the same submodel make a
+  *self-association*, pairing its instances with each other. A condition
+  in the association says which pairings exist.
 - **Sketched graph**: a relationship given as a curve rather than an
   equation, held by the variable or flow that uses it, and read in its
   equation as `graph(x)`.
@@ -100,11 +107,14 @@ These are Simile's terms. Simile's own manual explains each at more length.
 9. **Named categories** ("for each of three species…", age classes, land
    uses) are an enumerated type, and the things that differ between them a
    fixed-membership submodel sized by it (section 4.4).
-10. **A relationship given as a table or a figure** (a curve read off a
+10. **Relationships between individuals** ("each farmer owns some
+   fields", "each animal competes with the larger ones") are an
+   association (section 4.5).
+11. **A relationship given as a table or a figure** (a curve read off a
    graph, monthly values) is `interpolate(x, [xs], [ys])` when the paper
    gives the numbers, or a sketched graph when it gives only a curve
    (section 4.3).
-11. **Choose the run settings** from the paper's figures: how long, and how
+12. **Choose the run settings** from the paper's figures: how long, and how
    often to record (section 9).
 
 ## 3. The file
@@ -118,7 +128,7 @@ A model spec is one JSON object.
 | `id` | yes | A short identifier: letters, digits and underscores. |
 | `name` | yes | The model's name as shown in the app. |
 | `nodes` | yes | Every element except submodels: `{ "node1": {…}, … }`. |
-| `arcs` | yes | Every flow and influence: `{ "arc1": {…}, … }`. |
+| `arcs` | yes | Every flow, influence and role: `{ "arc1": {…}, … }`. |
 | `submodels` | yes | `{ "submodel1": {…} }`, or `{}`. |
 | `layout` | yes | Where each element is drawn (section 8). |
 | `enums` | yes | Always `{}`. |
@@ -261,6 +271,42 @@ instance's **member, not a number**:
 leaving the submodel is an array, one value per member, as for any fixed
 membership: `sum([biomass])`.
 
+### 4.5 Associations
+
+An association is a `single` submodel with a **role arc** to it from each
+submodel taking part (section 5.4), and **a condition** saying which
+pairings exist. It has one instance per pairing for which the condition is
+true. Always give it a condition: without one every possible pairing
+exists, and its values come out in a form that is hard to use.
+
+**Into the association**, a value from a submodel taking part arrives
+**once per role** that submodel plays, named `<label>_<role>`. The
+influence runs straight from the element to the element in the
+association, and its `alias` is the plain label as always; only the
+equation adds the role:
+
+```
+condition owns:   owner_id_land == farmer_id_owner
+```
+
+Here `owner_id` comes from `field` (role `land`) and `farmer_id` from
+`farmer` (role `owner`). In a self-association, the same value arrives
+twice, once per role: `size_larger > size_smaller`.
+
+**Out of the association**, into an element of a submodel taking part, a
+value arrives as a **list** for each role that submodel plays: the values
+of the pairings in which this instance plays that role, written
+`{<label>_<role>}` and used through `sum`, `count` and the like:
+
+```
+income (in farmer):  sum({field_yield_owner})
+rank (in individual): count({outranks_smaller})+1
+```
+
+A value is used across an association only through the element in the
+association: an influence from `field` straight to `farmer` would mean
+every field, not the farmer's own.
+
 ## 5. Arcs
 
 ### 5.1 Flow
@@ -304,6 +350,18 @@ and `max`, its `value` must lie between them: `"value": "9.2e8"` with
 `"max": "76000"` runs with 76000, and nothing says so. Choose a range wide
 enough for every value the source uses, or leave `min` and `max` out.
 
+### 5.4 Role
+
+```json
+"arc1": { "type": "role", "from": "submodel1", "to": "submodel3", "label": "owner", "props": {} }
+```
+
+From a submodel taking part, to the association. `label` is the role's
+name, a label like any other (letters, digits, underscores), and is added
+to the names of values crossing (section 4.5). An association has exactly
+**two** role arcs: one from each of two submodels, or both from the same
+one (a self-association). Both roles' names must differ.
+
 ## 6. Names and how equations refer to them
 
 - A label is **letters, digits and underscores**, not starting with a
@@ -324,6 +382,8 @@ enough for every value the source uses, or leave `min` and `max` out.
 
   - out of a **conditional** submodel (section 4.2): curly brackets, a
     list, as for a population: `sum({catch})`
+  - into or out of an **association**: the role is added to the name,
+    `x_role`, and out of it the value is a list, `{x_role}` (section 4.5)
 
   The alias stays bare (`"biomass"`); only the equation has the brackets.
   Use such a value through a function that combines them (`sum`, `count`,
@@ -473,6 +533,9 @@ Before handing over the file, check every point:
    fixed-membership submodels, and a value leaving a conditional submodel
    is written `{x}`. An enumerated type is declared in the model's `props`,
    and a member is compared as `index(1)=="oak"`, never added to.
+   An association has a role arc from each submodel taking part, and a
+   condition; a value crossing it is named `x_role`, and leaves it as
+   `{x_role}`.
 9. Every node except valves, and every submodel, has a `layout` entry;
    everything in a submodel is drawn inside its box, and nothing else is.
 10. Every `units` is `""`.
@@ -960,6 +1023,152 @@ level, sums the three.
     "node4": { "x": 260, "y": 140 },
     "node5": { "x": 90,  "y": 210 },
     "node6": { "x": 510, "y": 180 }
+  }
+}
+```
+
+### 14.7 Farmers and fields: an association between two submodels
+
+Three farmers and six fields. `ownership` has a role from each, `owner`
+and `land`, and its condition `owner_id_land==farmer_id_owner` makes one
+pairing for each field with the farmer who owns it. Each field's yield
+comes into the association as `yield_land`; it goes out to its owner's
+`income` as `sum({field_yield_owner})`.
+
+<!-- example: examples/models/farmers.json -->
+
+```json
+{
+  "id": "farmers",
+  "name": "Farmers and fields",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Farmers and the fields they own",
+    "description": "Three farmers and six fields. Which farmer owns which field is an association, ownership, with a role from each: a pairing exists where the field's owner_id is the farmer's id. Each field yields in proportion to its area, and each farmer's wealth grows by the yield of the fields they own, less what they spend. Time is in years. A worked example for the model file reference.",
+    "keywords": ["association", "ownership", "fixed membership"]
+  },
+  "presentation": {
+    "run": { "runLength": 20, "logEach": 1, "timeStep": "0.1" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": { "kind": "fixed-membership", "parent": null, "label": "farmer",    "props": { "dimensions": "3" } },
+    "submodel2": { "kind": "fixed-membership", "parent": null, "label": "field",     "props": { "dimensions": "6" } },
+    "submodel3": { "kind": "single",           "parent": null, "label": "ownership", "props": {} }
+  },
+  "nodes": {
+    "node1":  { "type": "stock",    "parent": "submodel1", "label": "wealth",    "props": { "initial": "100", "units": "" } },
+    "node2":  { "type": "cloud",    "parent": "submodel1", "label": "",          "props": {} },
+    "node3":  { "type": "valve",    "parent": "submodel1", "label": "income",    "props": { "rate": "sum({field_yield_owner})", "units": "" } },
+    "node4":  { "type": "cloud",    "parent": "submodel1", "label": "",          "props": {} },
+    "node5":  { "type": "valve",    "parent": "submodel1", "label": "spending",  "props": { "rate": "spending_rate*wealth", "units": "" } },
+    "node6":  { "type": "variable", "parent": "submodel1", "label": "farmer_id", "props": { "value": "index(1)", "units": "" } },
+
+    "node7":  { "type": "variable", "parent": "submodel2", "label": "owner_id",  "props": { "value": "ceil(index(1)/2)", "units": "" } },
+    "node8":  { "type": "variable", "parent": "submodel2", "label": "area",      "props": { "value": "index(1)", "units": "" } },
+    "node9":  { "type": "variable", "parent": "submodel2", "label": "yield",     "props": { "value": "yield_per_area*area", "units": "" } },
+
+    "node10": { "type": "condition", "parent": "submodel3", "label": "owns",        "props": { "expr": "owner_id_land==farmer_id_owner" } },
+    "node11": { "type": "variable",  "parent": "submodel3", "label": "field_yield", "props": { "value": "yield_land", "units": "" } },
+
+    "node12": { "type": "variable", "parent": null, "label": "yield_per_area", "props": { "paramKind": "variable", "value": "5",   "units": "", "min": "0", "max": "10" } },
+    "node13": { "type": "variable", "parent": null, "label": "spending_rate",  "props": { "paramKind": "variable", "value": "0.2", "units": "", "min": "0", "max": "0.5" } }
+  },
+  "arcs": {
+    "arc1":  { "type": "role", "from": "submodel1", "to": "submodel3", "label": "owner", "props": {} },
+    "arc2":  { "type": "role", "from": "submodel2", "to": "submodel3", "label": "land",  "props": {} },
+
+    "arc3":  { "type": "flow", "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc4":  { "type": "flow", "from": "node1", "to": "node4", "valve": "node5", "props": {} },
+
+    "arc5":  { "type": "influence", "from": "node1",  "to": "node5",  "alias": "wealth",         "props": {} },
+    "arc6":  { "type": "influence", "from": "node13", "to": "node5",  "alias": "spending_rate",  "props": {} },
+    "arc7":  { "type": "influence", "from": "node8",  "to": "node9",  "alias": "area",           "props": {} },
+    "arc8":  { "type": "influence", "from": "node12", "to": "node9",  "alias": "yield_per_area", "props": {} },
+    "arc9":  { "type": "influence", "from": "node6",  "to": "node10", "alias": "farmer_id",      "props": {} },
+    "arc10": { "type": "influence", "from": "node7",  "to": "node10", "alias": "owner_id",       "props": {} },
+    "arc11": { "type": "influence", "from": "node9",  "to": "node11", "alias": "yield",          "props": {} },
+    "arc12": { "type": "influence", "from": "node11", "to": "node3",  "alias": "field_yield",    "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 170, "y": 150, "w": 280, "h": 170 },
+    "submodel2": { "x": 560, "y": 150, "w": 220, "h": 170 },
+    "submodel3": { "x": 360, "y": 380, "w": 220, "h": 120 },
+    "node1":  { "x": 170, "y": 170 },
+    "node2":  { "x": 70,  "y": 170 },
+    "node4":  { "x": 270, "y": 170 },
+    "node6":  { "x": 90,  "y": 105 },
+    "node7":  { "x": 500, "y": 110 },
+    "node8":  { "x": 590, "y": 110 },
+    "node9":  { "x": 590, "y": 190 },
+    "node10": { "x": 310, "y": 370 },
+    "node11": { "x": 410, "y": 400 },
+    "node12": { "x": 720, "y": 190 },
+    "node13": { "x": 220, "y": 30 }
+  }
+}
+```
+
+### 14.8 Ranking: a self-association
+
+Ten individuals ranked by size. `ranking` has two roles from `individual`,
+`larger` and `smaller`; a pairing exists where `size_larger>size_smaller`.
+An individual's rank is one more than the number of pairings in which it
+is the smaller: `count({outranks_smaller})+1`. After Simile's own
+`ranking1`.
+
+<!-- example: examples/models/ranking.json -->
+
+```json
+{
+  "id": "ranking",
+  "name": "Ranking",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Ranking the members of a population",
+    "description": "Ten individuals, each with a random size, ranked by it: 1 for the largest. Comparing members with each other is a self-association, ranking, with two roles from the same submodel, larger and smaller; a pairing exists where the larger one's size is greater. An individual's rank is one more than the number of pairings in which it is the smaller. After Simile's ranking1. A worked example for the model file reference.",
+    "keywords": ["association", "self-association", "population"]
+  },
+  "presentation": {
+    "run": { "runLength": 1, "logEach": 1, "timeStep": "1" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node2"] }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": { "kind": "population", "parent": null, "label": "individual", "props": {} },
+    "submodel2": { "kind": "single",     "parent": null, "label": "ranking",    "props": {} }
+  },
+  "nodes": {
+    "node1": { "type": "variable",    "parent": "submodel1", "label": "size",    "props": { "value": "rand_const(0,100)", "units": "" } },
+    "node2": { "type": "variable",    "parent": "submodel1", "label": "rank",    "props": { "value": "count({outranks_smaller})+1", "units": "" } },
+    "node3": { "type": "initialiser", "parent": "submodel1", "label": "initial", "props": { "expr": "10" } },
+
+    "node4": { "type": "condition",   "parent": "submodel2", "label": "is_larger", "props": { "expr": "size_larger>size_smaller" } },
+    "node5": { "type": "variable",    "parent": "submodel2", "label": "outranks",  "props": { "value": "1", "units": "" } }
+  },
+  "arcs": {
+    "arc1": { "type": "role", "from": "submodel1", "to": "submodel2", "label": "larger",  "props": {} },
+    "arc2": { "type": "role", "from": "submodel1", "to": "submodel2", "label": "smaller", "props": {} },
+
+    "arc3": { "type": "influence", "from": "node1", "to": "node4", "alias": "size",     "props": {} },
+    "arc4": { "type": "influence", "from": "node5", "to": "node2", "alias": "outranks", "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 160, "y": 160, "w": 220, "h": 180 },
+    "submodel2": { "x": 470, "y": 160, "w": 180, "h": 140 },
+    "node1": { "x": 140, "y": 130 },
+    "node2": { "x": 140, "y": 200 },
+    "node3": { "x": 90,  "y": 95 },
+    "node4": { "x": 440, "y": 140 },
+    "node5": { "x": 500, "y": 190 }
   }
 }
 ```

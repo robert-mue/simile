@@ -1414,8 +1414,14 @@ no arithmetic on it); fixed: the completeness check now accepts the type's
 name, the grammar a double-quoted member ("oak"); WHOLE-MODEL types via
 MODEL PROPERTIES (the model as the top-level submodel, Robert; see
 CLAUDE.md), without which a value leaving to the top level does not build.
-examples/models/species.json. NEXT: associations (Robert asked for both;
-enums first). Open: a Metadata tab in Model properties? submodels as
+examples/models/species.json. ASSOCIATIONS (2026-11-18, reference 4.5,
+5.4): a single submodel with two role arcs and a condition; in, `x_role`
+(even with one role per base); out to a base, `{x_role}` (a list, even for
+a fixed base); with NO condition every pairing exists and a value comes out
+as `[[x]]` (arrays of the bases' sizes), so the reference says always give
+one. Learnt from catalogue ranking1 (runs: ranks 1-10). Examples
+farmers.json (two-party, incomes 15/35/55 checked) and ranking.json (self).
+The reference now covers all but events. Open: a Metadata tab in Model properties? submodels as
 modules (Robert: do not start, think first).
 
 Robert's question: someone who wants a model built by describing it to Claude,

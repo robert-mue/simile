@@ -1,0 +1,46 @@
+{
+  "id": "ranking",
+  "name": "Ranking",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Ranking the members of a population",
+    "description": "Ten individuals, each with a random size, ranked by it: 1 for the largest. Comparing members with each other is a self-association, ranking, with two roles from the same submodel, larger and smaller; a pairing exists where the larger one's size is greater. An individual's rank is one more than the number of pairings in which it is the smaller. After Simile's ranking1. A worked example for the model file reference.",
+    "keywords": ["association", "self-association", "population"]
+  },
+  "presentation": {
+    "run": { "runLength": 1, "logEach": 1, "timeStep": "1" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node2"] }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": { "kind": "population", "parent": null, "label": "individual", "props": {} },
+    "submodel2": { "kind": "single",     "parent": null, "label": "ranking",    "props": {} }
+  },
+  "nodes": {
+    "node1": { "type": "variable",    "parent": "submodel1", "label": "size",    "props": { "value": "rand_const(0,100)", "units": "" } },
+    "node2": { "type": "variable",    "parent": "submodel1", "label": "rank",    "props": { "value": "count({outranks_smaller})+1", "units": "" } },
+    "node3": { "type": "initialiser", "parent": "submodel1", "label": "initial", "props": { "expr": "10" } },
+
+    "node4": { "type": "condition",   "parent": "submodel2", "label": "is_larger", "props": { "expr": "size_larger>size_smaller" } },
+    "node5": { "type": "variable",    "parent": "submodel2", "label": "outranks",  "props": { "value": "1", "units": "" } }
+  },
+  "arcs": {
+    "arc1": { "type": "role", "from": "submodel1", "to": "submodel2", "label": "larger",  "props": {} },
+    "arc2": { "type": "role", "from": "submodel1", "to": "submodel2", "label": "smaller", "props": {} },
+
+    "arc3": { "type": "influence", "from": "node1", "to": "node4", "alias": "size",     "props": {} },
+    "arc4": { "type": "influence", "from": "node5", "to": "node2", "alias": "outranks", "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 160, "y": 160, "w": 220, "h": 180 },
+    "submodel2": { "x": 470, "y": 160, "w": 180, "h": 140 },
+    "node1": { "x": 140, "y": 130 },
+    "node2": { "x": 140, "y": 200 },
+    "node3": { "x": 90,  "y": 95 },
+    "node4": { "x": 440, "y": 140 },
+    "node5": { "x": 500, "y": 190 }
+  }
+}
