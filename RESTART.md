@@ -4,13 +4,17 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-16: RELEASED as 2026-11-16** (Robert: "OK, do a
-release"), live and checked (`src/release.js` on the site says
-2026-11-16). simile `main` = `release` (df23b43 plus restart-note
-commits), tag and GitHub release 2026-11-16; sienna 76a1f80; gallery
-70808f9. All three match origin; nothing is half-finished. Robert is
-trying 15e's changes (the Please-wait note; whether the empty Metadata
-panel comes back).
+**STATE 2026-11-18: RELEASED as 2026-11-18** (Robert: "make a release"),
+live and checked (`src/release.js` on the site says 2026-11-18). simile
+`main` = `release` (0d7f4d1 plus restart-note commits), tag and GitHub
+release 2026-11-18; sienna 76a1f80; gallery 3baeb91. All three match
+origin; nothing is half-finished. In it: the model file reference (job 6,
+first draft; Robert tried it: Claude wrote Pangolin from the paper, it
+loads and runs, and matches ours to ~1e-15 once given the same settings),
+crossings placed in a hand-written model, Pangolin's extinction below Ne
+(both copies). Waiting on Robert: what to cover next in the reference
+(conditions, graphs, enums, associations), and the run-modes proposal
+(`NOTE-run-modes.md`, for discussion).
 
 **RELEASED as 2026-11-16:** the "You already have a copy of this model"
 question is no longer confirm(): its buttons say "Make new copy" and
