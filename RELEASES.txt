@@ -691,3 +691,25 @@ Release 2026-11-16
 - Opening a model you already have a copy of (from the Sample models
   panel or a link) now asks with two buttons that say what they do:
   "Make new copy" and "Open previous copy". Escape does neither.
+
+------------------------------------------------------------------------
+Release 2026-11-18
+------------------------------------------------------------------------
+
+Writing a model without the app
+- A model file reference, help/model-file-reference.md: everything
+  needed to write a Simile model file by hand, or to have an AI
+  assistant (such as Claude) write one from a paper. Give it the
+  reference and the paper, save what it writes as a .json file, and
+  open it with File > Open model file. Three worked examples are in
+  examples/models/.
+- A model file written outside the app, with a submodel, no longer
+  shows a stray circle at the top left of its diagram: where its
+  arrows cross a submodel's edge is now placed when it is opened.
+
+Pangolin harvest
+- As in the authors' R script, a population that falls below Ne is now
+  set to 0 (two new flows, pangolin_extinction and common_extinction).
+  The default run is unchanged. A copy you already have keeps the old
+  version: open it again from File > Sample models and choose "Make
+  new copy" for the new one.
