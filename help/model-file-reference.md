@@ -121,10 +121,10 @@ Every node has the same four keys:
 
 | `type` | Is | `props` | Required |
 |---|---|---|---|
-| `stock` | a stock | `initial`: an expression for the starting value. `units` | `initial` |
-| `valve` | a flow's valve: its name and rate | `rate`: the amount flowing per unit of time. `units` | `rate` |
+| `stock` | a stock | `initial`: an expression for the starting value. `units`: `""` | `initial` |
+| `valve` | a flow's valve: its name and rate | `rate`: the amount flowing per unit of time. `units`: `""` | `rate` |
 | `cloud` | the outside end of a flow | `{}` | |
-| `variable` | a value | `value`: the equation, or a parameter's default. `paramKind`: `""`, `"variable"` or `"fixed"` (5.3). `min`, `max`: a slider's range. `units` | `value`, unless a parameter |
+| `variable` | a value | `value`: the equation, or a parameter's default. `paramKind`: `""`, `"variable"` or `"fixed"` (5.3). `min`, `max`: a slider's range. `units`: `""` | `value`, unless a parameter |
 | `initialiser` | *creation* (population only) | `expr`: the number of members at the start | `expr` |
 | `migrator` | *immigration* (population only) | `expr`: new members per unit of time | `expr` |
 | `reproduction` | *reproduction* (population only) | `expr`: new members per member per unit of time | `expr` |
@@ -296,14 +296,24 @@ When the model is opened, these displays open and the model runs once.
 All optional. `description`: what the model is about, in two or three
 sentences. If the model came from a paper, give the paper.
 
-## 11. Units: leave time out of them
+## 11. Units: leave them empty
 
-`units` is optional. **Do not put a unit of time in it** (`1/year`,
-`kg/day`, `m/year`). The engine converts time units to its own, and the
-model's time unit is not a year or a day, so a `/year` silently divides a
-rate by 365. A unit with no time in it (`kg`, `m`, `individuals`) is safe.
-When in doubt, leave `units` as `""`, and say in the description what the
-time unit is ("time is in years").
+**Always write `"units": ""`.** Say what the units are in the model's
+`description` instead ("time is in years; populations are numbers of
+animals").
+
+`units` is not a free-text note. It goes straight to Simile's engine as
+part of the value's type, and two things go wrong there, neither shown as a
+red element:
+
+- **A name the engine does not know** (`individuals`, `animals`, `USD`)
+  stops the model being built. The app says only "Simile could not make C++
+  of this model", or that the C++ would not compile.
+- **A unit of time** (`1/year`, `kg/day`) is converted to the engine's own
+  time unit, which is not a year, so a `/year` silently divides a rate by
+  365 and the model runs with the wrong values.
+
+Empty units lose nothing: the model runs exactly as it would with them.
 
 ## 12. Checklist
 
@@ -326,7 +336,7 @@ Before handing over the file, check every point:
    has a creation or an immigration.
 9. Every node except valves, and every submodel, has a `layout` entry;
    everything in a submodel is drawn inside its box, and nothing else is.
-10. No unit of time in any `units`.
+10. Every `units` is `""`.
 11. `presentation` is there, with a sensible `timeStep`, and plots the
     stocks that matter.
 
@@ -340,7 +350,7 @@ Before handing over the file, check every point:
 - Names with spaces, or a paper's symbols with primes or subscripts
   (`N'`, `K_{max}`): write `N_dash`, `K_max`.
 - Using `=` for equality, or `if … then … else` without the `then`.
-- A unit of time in `units`.
+- Anything in `units`, such as `individuals` or `1/year` (section 11).
 
 ## 13. Checking a model
 
@@ -352,7 +362,24 @@ For developers, `tools/headless/scripts/model-file.py` takes model spec
 files and applies the app's own checks: it reads the file as File ▸ Open
 does, reports each incomplete element and grammar breach, exports it to
 Simile's own format, compiles it, runs it with the file's run settings and
-prints the values at the end of the run.
+prints the values at the end of the run. If the model cannot be built, it
+names the elements that have `units`, the usual cause.
+
+It needs:
+
+- the repository cloned **with its submodule**: `git clone
+  --recurse-submodules …`, or `git submodule update --init` afterwards.
+  Without it, `sienna/` is empty and the app does not load, so every file
+  fails with "no answer";
+- the app served over http: `python3 tools/serve.py`;
+- Chrome running headless, started as in `tools/headless/README.md`;
+- Python's `websockets` package.
+
+Then, from the repository root:
+
+```
+MODEL_FILES="my-model.json" python3 tools/headless/cdp.py tools/headless/scripts/model-file.py
+```
 
 ## 14. Worked examples
 
@@ -475,14 +502,14 @@ coming in from outside, and `total` going out as `sum([biomass])`.
     }
   },
   "nodes": {
-    "node1": { "type": "stock",    "parent": "submodel1", "label": "biomass",     "props": { "initial": "1", "units": "kg" } },
+    "node1": { "type": "stock",    "parent": "submodel1", "label": "biomass",     "props": { "initial": "1", "units": "" } },
     "node2": { "type": "cloud",    "parent": "submodel1", "label": "",            "props": {} },
     "node3": { "type": "valve",    "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*biomass*(1-biomass/max_biomass)", "units": "" } },
     "node4": { "type": "variable", "parent": "submodel1", "label": "growth_rate", "props": { "value": "base_rate*(0.5+0.25*index(1))", "units": "" } },
 
     "node5": { "type": "variable", "parent": null, "label": "base_rate",   "props": { "paramKind": "variable", "value": "0.1", "units": "", "min": "0.02", "max": "0.3" } },
-    "node6": { "type": "variable", "parent": null, "label": "max_biomass", "props": { "paramKind": "fixed",    "value": "50",  "units": "kg" } },
-    "node7": { "type": "variable", "parent": null, "label": "total",       "props": { "value": "sum([biomass])", "units": "kg" } }
+    "node6": { "type": "variable", "parent": null, "label": "max_biomass", "props": { "paramKind": "fixed",    "value": "50",  "units": "" } },
+    "node7": { "type": "variable", "parent": null, "label": "total",       "props": { "value": "sum([biomass])", "units": "" } }
   },
   "arcs": {
     "arc1": { "type": "flow",      "from": "node2", "to": "node1", "valve": "node3", "props": {} },
@@ -540,18 +567,18 @@ and position. Outside, `count({size})` and `sum({size})`.
     }
   },
   "nodes": {
-    "node1":  { "type": "stock",        "parent": "submodel1", "label": "size",        "props": { "initial": "3", "units": "m" } },
+    "node1":  { "type": "stock",        "parent": "submodel1", "label": "size",        "props": { "initial": "3", "units": "" } },
     "node2":  { "type": "cloud",        "parent": "submodel1", "label": "",            "props": {} },
     "node3":  { "type": "valve",        "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*(1-size/25)", "units": "" } },
     "node4":  { "type": "variable",     "parent": "submodel1", "label": "growth_rate", "props": { "value": "rand_const(0.1,0.3)", "units": "" } },
     "node5":  { "type": "initialiser",  "parent": "submodel1", "label": "initial",     "props": { "expr": "5" } },
     "node6":  { "type": "migrator",     "parent": "submodel1", "label": "recruitment", "props": { "expr": "recruits_per_year" } },
     "node7":  { "type": "exterminator", "parent": "submodel1", "label": "death",       "props": { "expr": "size>17" } },
-    "node9":  { "type": "variable",     "parent": "submodel1", "label": "x",           "props": { "value": "rand_const(0,100)", "units": "m" } },
-    "node10": { "type": "variable",     "parent": "submodel1", "label": "y",           "props": { "value": "rand_const(0,100)", "units": "m" } },
+    "node9":  { "type": "variable",     "parent": "submodel1", "label": "x",           "props": { "value": "rand_const(0,100)", "units": "" } },
+    "node10": { "type": "variable",     "parent": "submodel1", "label": "y",           "props": { "value": "rand_const(0,100)", "units": "" } },
 
     "node8":  { "type": "variable", "parent": null, "label": "number_of_trees",   "props": { "value": "count({size})", "units": "" } },
-    "node11": { "type": "variable", "parent": null, "label": "total_size",        "props": { "value": "sum({size})", "units": "m" } },
+    "node11": { "type": "variable", "parent": null, "label": "total_size",        "props": { "value": "sum({size})", "units": "" } },
     "node12": { "type": "variable", "parent": null, "label": "recruits_per_year", "props": { "paramKind": "variable", "value": "2", "units": "", "min": "0", "max": "5" } }
   },
   "arcs": {

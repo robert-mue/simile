@@ -36,7 +36,12 @@ CHECK = r"""(async () => {
   const grammar = Sienna.grammar.validate(d).map(r => r.label + ': ' + r.message);
   let prolog = null, exportErr = null;
   try { prolog = Sienna.exportSimile.prolog(Sienna.userData.get(path)); } catch (e) { exportErr = e.message; }
-  const out = {unplaced, incomplete, grammar, exportErr, run: null};
+  // The usual reason a model will not build: `units` is Simile's type
+  // expression, and a unit name the engine does not know stops it (the
+  // reference, section 11). Named only if the build fails.
+  const withUnits = Object.keys(m.nodes).filter(id => String((m.nodes[id].props || {}).units || '').trim())
+    .map(id => (m.nodes[id].label || id) + ' (' + m.nodes[id].props.units + ')');
+  const out = {unplaced, incomplete, grammar, exportErr, withUnits, run: null};
   if (prolog) {
     const run = Object.assign({runLength: 10, logEach: 1, timeStep: '0.1'}, (m.presentation || {}).run || {});
     try {
@@ -79,7 +84,10 @@ for f in files:
     if r['exportErr']: print('  FAIL export refused:', r['exportErr']); problems += 1
     run = r['run']
     if run is None: pass
-    elif 'error' in run: print('  FAIL run:', run['error']); problems += 1
+    elif 'error' in run:
+        print('  FAIL run:', run['error']); problems += 1
+        if r['withUnits']:
+            print('     the usual cause, units (leave them ""):', ', '.join(r['withUnits']))
     else:
         print('  %s run to t=%s, %d points' % ('PASS' if run['completed'] else 'FAIL', run['time'], run['points']))
         if not run['completed']: problems += 1

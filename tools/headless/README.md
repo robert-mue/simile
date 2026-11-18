@@ -13,6 +13,8 @@ in is wiped on reboot. Not a test framework: a script per job.
   --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl about:blank &
 ```
 
+In a container, Chrome may also need `--no-sandbox`.
+
 It keeps running between scripts, so a script can carry on from where the last
 left the app (the model persists in that profile's localStorage).
 

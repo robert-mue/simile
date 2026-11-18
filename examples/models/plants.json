@@ -25,14 +25,14 @@
     }
   },
   "nodes": {
-    "node1": { "type": "stock",    "parent": "submodel1", "label": "biomass",     "props": { "initial": "1", "units": "kg" } },
+    "node1": { "type": "stock",    "parent": "submodel1", "label": "biomass",     "props": { "initial": "1", "units": "" } },
     "node2": { "type": "cloud",    "parent": "submodel1", "label": "",            "props": {} },
     "node3": { "type": "valve",    "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*biomass*(1-biomass/max_biomass)", "units": "" } },
     "node4": { "type": "variable", "parent": "submodel1", "label": "growth_rate", "props": { "value": "base_rate*(0.5+0.25*index(1))", "units": "" } },
 
     "node5": { "type": "variable", "parent": null, "label": "base_rate",   "props": { "paramKind": "variable", "value": "0.1", "units": "", "min": "0.02", "max": "0.3" } },
-    "node6": { "type": "variable", "parent": null, "label": "max_biomass", "props": { "paramKind": "fixed",    "value": "50",  "units": "kg" } },
-    "node7": { "type": "variable", "parent": null, "label": "total",       "props": { "value": "sum([biomass])", "units": "kg" } }
+    "node6": { "type": "variable", "parent": null, "label": "max_biomass", "props": { "paramKind": "fixed",    "value": "50",  "units": "" } },
+    "node7": { "type": "variable", "parent": null, "label": "total",       "props": { "value": "sum([biomass])", "units": "" } }
   },
   "arcs": {
     "arc1": { "type": "flow",      "from": "node2", "to": "node1", "valve": "node3", "props": {} },

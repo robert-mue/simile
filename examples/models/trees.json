@@ -25,18 +25,18 @@
     }
   },
   "nodes": {
-    "node1":  { "type": "stock",        "parent": "submodel1", "label": "size",        "props": { "initial": "3", "units": "m" } },
+    "node1":  { "type": "stock",        "parent": "submodel1", "label": "size",        "props": { "initial": "3", "units": "" } },
     "node2":  { "type": "cloud",        "parent": "submodel1", "label": "",            "props": {} },
     "node3":  { "type": "valve",        "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*(1-size/25)", "units": "" } },
     "node4":  { "type": "variable",     "parent": "submodel1", "label": "growth_rate", "props": { "value": "rand_const(0.1,0.3)", "units": "" } },
     "node5":  { "type": "initialiser",  "parent": "submodel1", "label": "initial",     "props": { "expr": "5" } },
     "node6":  { "type": "migrator",     "parent": "submodel1", "label": "recruitment", "props": { "expr": "recruits_per_year" } },
     "node7":  { "type": "exterminator", "parent": "submodel1", "label": "death",       "props": { "expr": "size>17" } },
-    "node9":  { "type": "variable",     "parent": "submodel1", "label": "x",           "props": { "value": "rand_const(0,100)", "units": "m" } },
-    "node10": { "type": "variable",     "parent": "submodel1", "label": "y",           "props": { "value": "rand_const(0,100)", "units": "m" } },
+    "node9":  { "type": "variable",     "parent": "submodel1", "label": "x",           "props": { "value": "rand_const(0,100)", "units": "" } },
+    "node10": { "type": "variable",     "parent": "submodel1", "label": "y",           "props": { "value": "rand_const(0,100)", "units": "" } },
 
     "node8":  { "type": "variable", "parent": null, "label": "number_of_trees",   "props": { "value": "count({size})", "units": "" } },
-    "node11": { "type": "variable", "parent": null, "label": "total_size",        "props": { "value": "sum({size})", "units": "m" } },
+    "node11": { "type": "variable", "parent": null, "label": "total_size",        "props": { "value": "sum({size})", "units": "" } },
     "node12": { "type": "variable", "parent": null, "label": "recruits_per_year", "props": { "paramKind": "variable", "value": "2", "units": "", "min": "0", "max": "5" } }
   },
   "arcs": {
