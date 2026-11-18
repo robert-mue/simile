@@ -747,3 +747,12 @@ Model file reference (help/model-file-reference.md)
 - Now covers enumerated types and associations (role arrows) too, with
   three more worked examples: three tree species, farmers and the
   fields they own, and ranking the members of a population.
+
+------------------------------------------------------------------------
+Release 2026-11-18d
+------------------------------------------------------------------------
+
+- Model properties (double-click on the diagram's background, or Edit >
+  Model properties) now opens on a Metadata tab: the model's title,
+  description, keywords, web page and paper, the same as the Metadata
+  panel shows. Everything changed in one visit is one step to undo.
