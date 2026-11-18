@@ -724,3 +724,26 @@ Model file reference (help/model-file-reference.md)
   interpolate(x, [xs], [ys]), or a sketched graph, read with graph(x).
 - Two more worked examples in examples/models/: a fishery closed below
   a stock level, and a reservoir fed by seasonal rain drawn as a graph.
+
+------------------------------------------------------------------------
+Release 2026-11-18c
+------------------------------------------------------------------------
+
+Model properties
+- The whole model now has properties of its own, as a submodel does:
+  comments, and on the Advanced tab enumerated types, units in maths
+  and whether the first index is 0. Double-click on the diagram's
+  background, or choose Edit > Model properties.
+- Enumerated types declared there are known throughout the model.
+
+Enumerated types
+- A fixed-membership submodel can be sized by an enumerated type (for
+  example species: oak, beech, pine), one instance per member. Such a
+  model is no longer marked incomplete.
+- A member can be written in an equation in double quotes, as in
+  if index(1)=="oak" then 0.05 else 0.1.
+
+Model file reference (help/model-file-reference.md)
+- Now covers enumerated types and associations (role arrows) too, with
+  three more worked examples: three tree species, farmers and the
+  fields they own, and ranking the members of a population.
