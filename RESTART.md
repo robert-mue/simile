@@ -1400,8 +1400,15 @@ rate by 365 (the run's time unit is `unit` = 1 day, `TIME_LIB`); the reference
 says to leave time out of units. And a hand-written file has no
 `layout.ports`: now placed when a model is opened (`Diagram.portsMissing`,
 main.js `opened`, page.js `fresh`). Still to do: field tables generated from
-the schema; associations, conditions, enums, graphs; trying it on a real
-paper with an assistant that has only the document.
+the schema; associations, enums; trying it on a real
+paper with an assistant that has only the document (DONE 2026-11-18: Robert's
+Claude wrote Pangolin from the paper; matches ours ~1e-15). Added 2026-11-18:
+submodels described (4.2), CONDITIONAL submodels (a value out is a list,
+`{x}`, empty while closed; flows stay outside: examples/models/fishery.json),
+CURVES (4.3): `interpolate(x,[xs],[ys])` for a table (exact; engine checked)
+or a sketched graph, `props.graph` + `graph(x)` (examples/models/reservoir.json;
+truncate = nearest end, checked). A condition in a FIXED membership also
+makes a list (checked).
 
 Robert's question: someone who wants a model built by describing it to Claude,
 without using the app, needs a document to point Claude at. The full reasoning

@@ -1,0 +1,68 @@
+{
+  "id": "fishery",
+  "name": "Fishery",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "A fishery closed below a threshold",
+    "description": "A fish stock grows logistically and is fished in proportion to its size, but only while it is above a closure level: fishing is a conditional submodel, which exists only while its condition is true. Time is in years. A worked example for the model file reference.",
+    "keywords": ["fishery", "harvesting", "conditional submodel"]
+  },
+  "presentation": {
+    "run": { "runLength": 50, "logEach": 0.25, "timeStep": "0.05" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "plotter", "variables": ["node5"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": {
+      "kind": "single",
+      "parent": null,
+      "label": "fishing",
+      "props": {}
+    }
+  },
+  "nodes": {
+    "node1":  { "type": "stock", "parent": null, "label": "fish", "props": { "initial": "800", "units": "" } },
+    "node2":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node3":  { "type": "valve", "parent": null, "label": "births",  "props": { "rate": "growth_rate*fish*(1-fish/capacity)", "units": "" } },
+    "node4":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node5":  { "type": "valve", "parent": null, "label": "harvest", "props": { "rate": "sum({catch})", "units": "" } },
+
+    "node6":  { "type": "variable", "parent": null, "label": "growth_rate",   "props": { "paramKind": "variable", "value": "0.5", "units": "", "min": "0.1", "max": "1" } },
+    "node7":  { "type": "variable", "parent": null, "label": "capacity",      "props": { "paramKind": "fixed",    "value": "1000", "units": "" } },
+    "node8":  { "type": "variable", "parent": null, "label": "closure_level", "props": { "paramKind": "variable", "value": "500", "units": "", "min": "0", "max": "800" } },
+    "node9":  { "type": "variable", "parent": null, "label": "effort",        "props": { "paramKind": "variable", "value": "0.3", "units": "", "min": "0", "max": "1" } },
+
+    "node10": { "type": "condition", "parent": "submodel1", "label": "open",  "props": { "expr": "fish>closure_level" } },
+    "node11": { "type": "variable",  "parent": "submodel1", "label": "catch", "props": { "value": "effort*fish", "units": "" } }
+  },
+  "arcs": {
+    "arc1":  { "type": "flow", "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc2":  { "type": "flow", "from": "node1", "to": "node4", "valve": "node5", "props": {} },
+
+    "arc3":  { "type": "influence", "from": "node1",  "to": "node3",  "alias": "fish",          "props": {} },
+    "arc4":  { "type": "influence", "from": "node6",  "to": "node3",  "alias": "growth_rate",   "props": {} },
+    "arc5":  { "type": "influence", "from": "node7",  "to": "node3",  "alias": "capacity",      "props": {} },
+    "arc6":  { "type": "influence", "from": "node1",  "to": "node10", "alias": "fish",          "props": {} },
+    "arc7":  { "type": "influence", "from": "node8",  "to": "node10", "alias": "closure_level", "props": {} },
+    "arc8":  { "type": "influence", "from": "node1",  "to": "node11", "alias": "fish",          "props": {} },
+    "arc9":  { "type": "influence", "from": "node9",  "to": "node11", "alias": "effort",        "props": {} },
+    "arc10": { "type": "influence", "from": "node11", "to": "node5",  "alias": "catch",         "props": {} }
+  },
+  "layout": {
+    "node1":  { "x": 250, "y": 110 },
+    "node2":  { "x": 110, "y": 110 },
+    "node4":  { "x": 430, "y": 110 },
+    "node6":  { "x": 130, "y": 40 },
+    "node7":  { "x": 230, "y": 40 },
+    "node8":  { "x": 200, "y": 250 },
+    "node9":  { "x": 560, "y": 290 },
+    "submodel1": { "x": 400, "y": 270, "w": 220, "h": 120 },
+    "node10": { "x": 350, "y": 250 },
+    "node11": { "x": 450, "y": 290 }
+  }
+}

@@ -4,10 +4,11 @@
 one by hand, and for an AI assistant (Claude, or any other) given a paper
 that describes a model in words and equations and asked for the model file.
 
-*First draft, 2026-11-18. Covers stocks, flows, variables, parameters and
-the three kinds of submodel. Not covered yet: associations (role arrows),
-conditional submodels, enumerated types, sketched graphs and events. Build
-those in the app.*
+*First draft, 2026-11-18; conditional submodels and sketched graphs added
+2026-11-18. Covers stocks, flows, variables, parameters, the three kinds of
+submodel, conditional submodels, and curves given as a graph or a table.
+Not covered yet: associations (role arrows), enumerated types and events.
+Build those in the app.*
 
 ## How to use it
 
@@ -45,10 +46,20 @@ These are Simile's terms. Simile's own manual explains each at more length.
 - **Influence**: a thin arrow saying "this value is used in that equation".
   **An equation may only use a name that arrives along an influence.** That
   includes the stock a flow's own rate depends on.
-- **Submodel**: a box of elements that is repeated. A *fixed-membership*
-  submodel has a set number of copies (instances), like 5 plants or 10
-  fields. A *population* submodel has members that are created and removed
-  as the model runs, like trees in a forest.
+- **Submodel**: a box of elements. A *single* submodel is one part of the
+  model, boxed. A *fixed-membership* submodel has a set number of copies
+  (instances), like 5 plants or 10 fields. A *population* submodel has
+  members that are created and removed as the model runs, like trees in a
+  forest.
+- **Condition** (a diamond): a true-or-false expression inside a single or
+  fixed-membership submodel. The submodel, or each instance of it, exists
+  only while its condition is true. Such a submodel is called
+  *conditional*. It is how a model says "this only happens while…": a
+  fishery open only above a stock level, a crop only in the growing
+  season.
+- **Sketched graph**: a relationship given as a curve rather than an
+  equation, held by the variable or flow that uses it, and read in its
+  equation as `graph(x)`.
 - **Population symbols**, inside a population submodel only: *creation*
   (how many members at the start), *immigration* (new members per unit of
   time), *reproduction* (new members per member per unit of time), *loss*
@@ -79,7 +90,15 @@ These are Simile's terms. Simile's own manual explains each at more length.
 7. **A discrete-time model** `x(t+1) = x(t) + f(x(t))` is a stock `x` with
    one flow of rate `f`, run with time step 1. For `x(t+1) = g(x(t))`
    write the flow as `g(x) - x`.
-8. **Choose the run settings** from the paper's figures: how long, and how
+8. **"Only while…"**: a process that happens only while something is true
+   is a conditional submodel (section 4.2) if it involves several
+   elements, or simply `if … then … else 0` in one equation if it does
+   not.
+9. **A relationship given as a table or a figure** (a curve read off a
+   graph, monthly values) is `interpolate(x, [xs], [ys])` when the paper
+   gives the numbers, or a sketched graph when it gives only a curve
+   (section 4.3).
+10. **Choose the run settings** from the paper's figures: how long, and how
    often to record (section 9).
 
 ## 3. The file
@@ -122,9 +141,10 @@ Every node has the same four keys:
 | `type` | Is | `props` | Required |
 |---|---|---|---|
 | `stock` | a stock | `initial`: an expression for the starting value. `units`: `""` | `initial` |
-| `valve` | a flow's valve: its name and rate | `rate`: the amount flowing per unit of time. `units`: `""` | `rate` |
+| `valve` | a flow's valve: its name and rate | `rate`: the amount flowing per unit of time. `units`: `""`. `graph` (4.3) | `rate` |
 | `cloud` | the outside end of a flow | `{}` | |
-| `variable` | a value | `value`: the equation, or a parameter's default. `paramKind`: `""`, `"variable"` or `"fixed"` (5.3). `min`, `max`: a slider's range. `units`: `""` | `value`, unless a parameter |
+| `variable` | a value | `value`: the equation, or a parameter's default. `paramKind`: `""`, `"variable"` or `"fixed"` (5.3). `min`, `max`: a slider's range. `units`: `""`. `graph` (4.3) | `value`, unless a parameter |
+| `condition` | a submodel's condition (not in a population) | `expr`: true or false, e.g. `fish>closure_level` | `expr` |
 | `initialiser` | *creation* (population only) | `expr`: the number of members at the start | `expr` |
 | `migrator` | *immigration* (population only) | `expr`: new members per unit of time | `expr` |
 | `reproduction` | *reproduction* (population only) | `expr`: new members per member per unit of time | `expr` |
@@ -136,6 +156,75 @@ A flow is a `valve` node, plus a `flow` arc (section 5.1) that names the
 valve and the two ends. An end that is not a stock is a `cloud` node. Give
 **each cloud to one flow only**, and put the valve, its clouds and its
 stock(s) **in the same submodel** (the same `parent`).
+
+### 4.2 Submodels
+
+```json
+"submodel1": { "kind": "fixed-membership", "parent": null, "label": "plant", "props": { "dimensions": "5" } }
+```
+
+- `kind`: `"single"`, `"fixed-membership"` or `"population"`.
+- `parent`: the submodel it is in, or `null`.
+- `label`: its name, shown on the box.
+- `props`: `{ "dimensions": "5" }` for a fixed-membership submodel: the
+  number of instances (`"4,44"` is a 4 × 44 grid). `{}` for the others.
+
+Its elements say `"parent": "submodel1"`. A submodel needs a `layout`
+entry with its size (section 8).
+
+**A conditional submodel** is a single (or fixed-membership) submodel with
+one or more `condition` nodes in it. It exists while all its conditions
+are true, and while it does not exist its elements have no values. So a
+value leaving it is a **list** (section 6), with no members while it does
+not exist: `sum({catch})` is the catch while the fishery is open and 0
+while it is closed. A flow that should run only while the condition holds
+is therefore drawn OUTSIDE the submodel, with its rate taken from inside:
+see the fishery (14.4). A condition may use values from outside, along
+influences, like any equation. A population submodel cannot have one.
+
+### 4.3 Curves: interpolate, or a sketched graph
+
+A relationship the paper gives as a **table** (monthly rainfall, a dose
+and its response) is best written with `interpolate`, which keeps the
+numbers exactly:
+
+```
+interpolate(month, [0, 3, 6, 9, 12], [160, 80, 10, 90, 160])
+```
+
+The first argument is the x value, then the x values of the table in
+increasing order, then the y value for each. Between two x values it
+interpolates in a straight line.
+
+A relationship given only as a **curve**, or one the user should be able
+to redraw by hand in the app (its Graph tab), is a **sketched graph**:
+the variable or valve holds it in `props.graph`, and its equation reads it
+with `graph(x)`:
+
+```json
+"props": {
+  "value": "graph(month)", "units": "",
+  "graph": {
+    "xmin": 0, "xmax": 12, "ymin": 0, "ymax": 200,
+    "points": [0.8, 0.7, 0.55, 0.4, 0.25, 0.1, 0.05, 0.1, 0.25, 0.45, 0.65, 0.75, 0.8],
+    "outside": "truncate", "between": "interpolate"
+  }
+}
+```
+
+- `xmin`, `xmax`, `ymin`, `ymax`: the axes, as **numbers** (not strings).
+- `points`: the curve's heights at evenly spaced x values from `xmin` to
+  `xmax` (13 points from 0 to 12 is one per month), each a **fraction of
+  the y range** from 0 to 1: the value is `ymin + point × (ymax − ymin)`.
+  So 0.8 above is 160. At least 2 points. Heights are kept to 1/400 of the
+  y range, as in Simile.
+- `outside`: what x beyond the axes gives: `"truncate"` (the nearest end),
+  `"extrapolate"` or `"wraparound"`.
+- `between`: `"interpolate"` (a straight line between points) or
+  `"round"` (the nearest point).
+
+One graph per element. The x value comes along an influence, as usual
+(`month → rainfall`).
 
 ## 5. Arcs
 
@@ -198,9 +287,14 @@ enough for every value the source uses, or leave `min` and `max` out.
   - out of a **population** submodel: curly brackets, a list:
     `sum({size})`, `count({size})`
 
+  - out of a **conditional** submodel (section 4.2): curly brackets, a
+    list, as for a population: `sum({catch})`
+
   The alias stays bare (`"biomass"`); only the equation has the brackets.
   Use such a value through a function that combines them (`sum`, `count`,
   `greatest`, `least`, `any`, `all`, `product`, `element`).
+- Out of a **single** submodel with no condition, a value is one value,
+  written plainly.
 - **Inside a submodel**, `index(1)` is the instance's number (1, 2, …), so
   instances can differ: `base_rate*(0.5+0.25*index(1))`.
 
@@ -228,6 +322,7 @@ Written as Simile writes them:
 | Random | `rand_const(lo,hi)` uniform, drawn once (at the start, or when a member is created); `rand_var(lo,hi)` uniform, drawn every step; `gaussian_var(mean, sd)` normal, every step; `poidev(mean)`; `exprnd(mean)`; `binome(prob, n)` |
 | Arrays and lists | `sum(…)`, `count(…)`, `product(…)`, `greatest(…)`, `least(…)`, `any(…)`, `all(…)`, `element([x], i)`, `makearray(x, n)`, `index(1)` |
 | Delays and smoothing | `delay1(input, duration)`, `delay3(input, duration)`, `smth1(input, time)`, `smth3(input, time)` |
+| Curves | `interpolate(x, [xs], [ys])` a table; `graph(x)` this element's sketched graph (section 4.3) |
 
 Do not use a function that is not listed in Simile's manual, and do not
 invent new ones. `pow(x,y)` and `x^y` are the same.
@@ -339,12 +434,16 @@ Before handing over the file, check every point:
 7. Equality is `==`. No `=` in an equation. Every parameter's `value` lies
    between its `min` and `max`.
 8. Population symbols are only in population submodels; every population
-   has a creation or an immigration.
+   has a creation or an immigration. Conditions are only in single or
+   fixed-membership submodels, and a value leaving a conditional submodel
+   is written `{x}`.
 9. Every node except valves, and every submodel, has a `layout` entry;
    everything in a submodel is drawn inside its box, and nothing else is.
 10. Every `units` is `""`.
 11. `presentation` is there, with a sensible `timeStep`, and plots the
     stocks that matter.
+12. A sketched graph's axes are numbers and its `points` fractions from 0
+    to 1, and the element's equation reads it with `graph(x)`.
 
 ### Common mistakes
 
@@ -610,6 +709,157 @@ and position. Outside, `count({size})` and `sum({size})`.
     "node8":  { "x": 460, "y": 120 },
     "node11": { "x": 460, "y": 200 },
     "node12": { "x": 240, "y": 20 }
+  }
+}
+```
+
+### 14.4 A fishery: a conditional submodel
+
+A fish stock grows logistically. While it is above `closure_level`, the
+`fishing` submodel exists and `catch` takes `effort` of the stock a year;
+below it, the fishery is closed. The `harvest` flow, outside, takes
+`sum({catch})`: the catch while open, 0 while closed. The stock is fished
+down to the closure level and held there.
+
+<!-- example: examples/models/fishery.json -->
+
+```json
+{
+  "id": "fishery",
+  "name": "Fishery",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "A fishery closed below a threshold",
+    "description": "A fish stock grows logistically and is fished in proportion to its size, but only while it is above a closure level: fishing is a conditional submodel, which exists only while its condition is true. Time is in years. A worked example for the model file reference.",
+    "keywords": ["fishery", "harvesting", "conditional submodel"]
+  },
+  "presentation": {
+    "run": { "runLength": 50, "logEach": 0.25, "timeStep": "0.05" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "plotter", "variables": ["node5"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": {
+      "kind": "single",
+      "parent": null,
+      "label": "fishing",
+      "props": {}
+    }
+  },
+  "nodes": {
+    "node1":  { "type": "stock", "parent": null, "label": "fish", "props": { "initial": "800", "units": "" } },
+    "node2":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node3":  { "type": "valve", "parent": null, "label": "births",  "props": { "rate": "growth_rate*fish*(1-fish/capacity)", "units": "" } },
+    "node4":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node5":  { "type": "valve", "parent": null, "label": "harvest", "props": { "rate": "sum({catch})", "units": "" } },
+
+    "node6":  { "type": "variable", "parent": null, "label": "growth_rate",   "props": { "paramKind": "variable", "value": "0.5", "units": "", "min": "0.1", "max": "1" } },
+    "node7":  { "type": "variable", "parent": null, "label": "capacity",      "props": { "paramKind": "fixed",    "value": "1000", "units": "" } },
+    "node8":  { "type": "variable", "parent": null, "label": "closure_level", "props": { "paramKind": "variable", "value": "500", "units": "", "min": "0", "max": "800" } },
+    "node9":  { "type": "variable", "parent": null, "label": "effort",        "props": { "paramKind": "variable", "value": "0.3", "units": "", "min": "0", "max": "1" } },
+
+    "node10": { "type": "condition", "parent": "submodel1", "label": "open",  "props": { "expr": "fish>closure_level" } },
+    "node11": { "type": "variable",  "parent": "submodel1", "label": "catch", "props": { "value": "effort*fish", "units": "" } }
+  },
+  "arcs": {
+    "arc1":  { "type": "flow", "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc2":  { "type": "flow", "from": "node1", "to": "node4", "valve": "node5", "props": {} },
+
+    "arc3":  { "type": "influence", "from": "node1",  "to": "node3",  "alias": "fish",          "props": {} },
+    "arc4":  { "type": "influence", "from": "node6",  "to": "node3",  "alias": "growth_rate",   "props": {} },
+    "arc5":  { "type": "influence", "from": "node7",  "to": "node3",  "alias": "capacity",      "props": {} },
+    "arc6":  { "type": "influence", "from": "node1",  "to": "node10", "alias": "fish",          "props": {} },
+    "arc7":  { "type": "influence", "from": "node8",  "to": "node10", "alias": "closure_level", "props": {} },
+    "arc8":  { "type": "influence", "from": "node1",  "to": "node11", "alias": "fish",          "props": {} },
+    "arc9":  { "type": "influence", "from": "node9",  "to": "node11", "alias": "effort",        "props": {} },
+    "arc10": { "type": "influence", "from": "node11", "to": "node5",  "alias": "catch",         "props": {} }
+  },
+  "layout": {
+    "node1":  { "x": 250, "y": 110 },
+    "node2":  { "x": 110, "y": 110 },
+    "node4":  { "x": 430, "y": 110 },
+    "node6":  { "x": 130, "y": 40 },
+    "node7":  { "x": 230, "y": 40 },
+    "node8":  { "x": 200, "y": 250 },
+    "node9":  { "x": 560, "y": 290 },
+    "submodel1": { "x": 400, "y": 270, "w": 220, "h": 120 },
+    "node10": { "x": 350, "y": 250 },
+    "node11": { "x": 450, "y": 290 }
+  }
+}
+```
+
+### 14.5 A reservoir: a sketched graph
+
+Rain follows a seasonal curve, drawn as a graph of rainfall against the
+month (`fmod(time(),12)`, time in months). Written from a table instead,
+`rainfall` would be `interpolate(month, [0,3,6,9,12], [160,80,10,90,160])`
+with no `graph`.
+
+<!-- example: examples/models/reservoir.json -->
+
+```json
+{
+  "id": "reservoir",
+  "name": "Reservoir",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "A reservoir fed by seasonal rain",
+    "description": "A reservoir filled by rain that follows a seasonal curve, drawn as a sketched graph of rainfall against the month, and emptied by a release in proportion to what it holds. Time is in months. A worked example for the model file reference.",
+    "keywords": ["water", "seasonal", "sketched graph"]
+  },
+  "presentation": {
+    "run": { "runLength": 48, "logEach": 0.25, "timeStep": "0.05" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "plotter", "variables": ["node6"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {},
+  "nodes": {
+    "node1": { "type": "stock", "parent": null, "label": "water", "props": { "initial": "200", "units": "" } },
+    "node2": { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node3": { "type": "valve", "parent": null, "label": "inflow",  "props": { "rate": "rainfall*catchment", "units": "" } },
+    "node4": { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node5": { "type": "valve", "parent": null, "label": "release", "props": { "rate": "release_fraction*water", "units": "" } },
+
+    "node6": { "type": "variable", "parent": null, "label": "rainfall", "props": {
+      "value": "graph(month)", "units": "",
+      "graph": {
+        "xmin": 0, "xmax": 12, "ymin": 0, "ymax": 200,
+        "points": [0.8, 0.7, 0.55, 0.4, 0.25, 0.1, 0.05, 0.1, 0.25, 0.45, 0.65, 0.75, 0.8],
+        "outside": "truncate", "between": "interpolate"
+      } } },
+    "node7": { "type": "variable", "parent": null, "label": "month",            "props": { "value": "fmod(time(),12)", "units": "" } },
+    "node8": { "type": "variable", "parent": null, "label": "catchment",        "props": { "paramKind": "fixed",    "value": "0.5", "units": "" } },
+    "node9": { "type": "variable", "parent": null, "label": "release_fraction", "props": { "paramKind": "variable", "value": "0.2", "units": "", "min": "0", "max": "0.5" } }
+  },
+  "arcs": {
+    "arc1": { "type": "flow", "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc2": { "type": "flow", "from": "node1", "to": "node4", "valve": "node5", "props": {} },
+
+    "arc3": { "type": "influence", "from": "node6", "to": "node3", "alias": "rainfall",         "props": {} },
+    "arc4": { "type": "influence", "from": "node8", "to": "node3", "alias": "catchment",        "props": {} },
+    "arc5": { "type": "influence", "from": "node7", "to": "node6", "alias": "month",            "props": {} },
+    "arc6": { "type": "influence", "from": "node1", "to": "node5", "alias": "water",            "props": {} },
+    "arc7": { "type": "influence", "from": "node9", "to": "node5", "alias": "release_fraction", "props": {} }
+  },
+  "layout": {
+    "node1": { "x": 260, "y": 120 },
+    "node2": { "x": 120, "y": 120 },
+    "node4": { "x": 400, "y": 120 },
+    "node6": { "x": 150, "y": 50 },
+    "node7": { "x": 60,  "y": 50 },
+    "node8": { "x": 240, "y": 50 },
+    "node9": { "x": 360, "y": 190 }
   }
 }
 ```

@@ -1,0 +1,58 @@
+{
+  "id": "reservoir",
+  "name": "Reservoir",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "A reservoir fed by seasonal rain",
+    "description": "A reservoir filled by rain that follows a seasonal curve, drawn as a sketched graph of rainfall against the month, and emptied by a release in proportion to what it holds. Time is in months. A worked example for the model file reference.",
+    "keywords": ["water", "seasonal", "sketched graph"]
+  },
+  "presentation": {
+    "run": { "runLength": 48, "logEach": 0.25, "timeStep": "0.05" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "plotter", "variables": ["node6"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {},
+  "nodes": {
+    "node1": { "type": "stock", "parent": null, "label": "water", "props": { "initial": "200", "units": "" } },
+    "node2": { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node3": { "type": "valve", "parent": null, "label": "inflow",  "props": { "rate": "rainfall*catchment", "units": "" } },
+    "node4": { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node5": { "type": "valve", "parent": null, "label": "release", "props": { "rate": "release_fraction*water", "units": "" } },
+
+    "node6": { "type": "variable", "parent": null, "label": "rainfall", "props": {
+      "value": "graph(month)", "units": "",
+      "graph": {
+        "xmin": 0, "xmax": 12, "ymin": 0, "ymax": 200,
+        "points": [0.8, 0.7, 0.55, 0.4, 0.25, 0.1, 0.05, 0.1, 0.25, 0.45, 0.65, 0.75, 0.8],
+        "outside": "truncate", "between": "interpolate"
+      } } },
+    "node7": { "type": "variable", "parent": null, "label": "month",            "props": { "value": "fmod(time(),12)", "units": "" } },
+    "node8": { "type": "variable", "parent": null, "label": "catchment",        "props": { "paramKind": "fixed",    "value": "0.5", "units": "" } },
+    "node9": { "type": "variable", "parent": null, "label": "release_fraction", "props": { "paramKind": "variable", "value": "0.2", "units": "", "min": "0", "max": "0.5" } }
+  },
+  "arcs": {
+    "arc1": { "type": "flow", "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc2": { "type": "flow", "from": "node1", "to": "node4", "valve": "node5", "props": {} },
+
+    "arc3": { "type": "influence", "from": "node6", "to": "node3", "alias": "rainfall",         "props": {} },
+    "arc4": { "type": "influence", "from": "node8", "to": "node3", "alias": "catchment",        "props": {} },
+    "arc5": { "type": "influence", "from": "node7", "to": "node6", "alias": "month",            "props": {} },
+    "arc6": { "type": "influence", "from": "node1", "to": "node5", "alias": "water",            "props": {} },
+    "arc7": { "type": "influence", "from": "node9", "to": "node5", "alias": "release_fraction", "props": {} }
+  },
+  "layout": {
+    "node1": { "x": 260, "y": 120 },
+    "node2": { "x": 120, "y": 120 },
+    "node4": { "x": 400, "y": 120 },
+    "node6": { "x": 150, "y": 50 },
+    "node7": { "x": 60,  "y": 50 },
+    "node8": { "x": 240, "y": 50 },
+    "node9": { "x": 360, "y": 190 }
+  }
+}
