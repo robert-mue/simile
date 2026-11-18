@@ -713,3 +713,14 @@ Pangolin harvest
   The default run is unchanged. A copy you already have keeps the old
   version: open it again from File > Sample models and choose "Make
   new copy" for the new one.
+
+------------------------------------------------------------------------
+Release 2026-11-18b
+------------------------------------------------------------------------
+
+Model file reference (help/model-file-reference.md)
+- Now covers conditional submodels (a part of the model that exists
+  only while a condition is true) and curves: a table, written with
+  interpolate(x, [xs], [ys]), or a sketched graph, read with graph(x).
+- Two more worked examples in examples/models/: a fishery closed below
+  a stock level, and a reservoir fed by seasonal rain drawn as a graph.
