@@ -4,17 +4,16 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-18: RELEASED as 2026-11-18b** (Robert: "make a release"; 18b adds the reference's conditions and curves),
-live and checked (`src/release.js` on the site says 2026-11-18b). simile
-`main` = `release` (406fe5d plus restart-note commits), tags and GitHub
-releases 2026-11-18, 18b; sienna 76a1f80; gallery 3baeb91. All three match
-origin; nothing is half-finished. In it: the model file reference (job 6,
-first draft; Robert tried it: Claude wrote Pangolin from the paper, it
-loads and runs, and matches ours to ~1e-15 once given the same settings),
-crossings placed in a hand-written model, Pangolin's extinction below Ne
-(both copies). Waiting on Robert: what to cover next in the reference
-(conditions, graphs, enums, associations), and the run-modes proposal
-(`NOTE-run-modes.md`, for discussion).
+**STATE 2026-11-18: RELEASED as 2026-11-18c** (Robert: "make a release"),
+live and checked (`src/release.js` on the site says 2026-11-18c). simile
+`main` = `release` (4ce045b plus restart-note commits), tags and GitHub
+releases 2026-11-18, 18b, 18c; sienna 76a1f80; gallery 3baeb91. All three
+match origin; nothing is half-finished. 18c: Model properties (the model as
+the top-level submodel), whole-model enumerated types, enumerated types
+usable (type names as sizes, "oak" in equations), and the reference
+covering enums and associations. Open with Robert: a Metadata tab in Model
+properties; submodels as modules (think first); the run-modes proposal
+(`NOTE-run-modes.md`).
 
 **RELEASED as 2026-11-16:** the "You already have a copy of this model"
 question is no longer confirm(): its buttons say "Make new copy" and
