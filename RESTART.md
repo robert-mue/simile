@@ -4,10 +4,10 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-18: RELEASED as 2026-11-18** (Robert: "make a release"),
-live and checked (`src/release.js` on the site says 2026-11-18). simile
-`main` = `release` (0d7f4d1 plus restart-note commits), tag and GitHub
-release 2026-11-18; sienna 76a1f80; gallery 3baeb91. All three match
+**STATE 2026-11-18: RELEASED as 2026-11-18b** (Robert: "make a release"; 18b adds the reference's conditions and curves),
+live and checked (`src/release.js` on the site says 2026-11-18b). simile
+`main` = `release` (406fe5d plus restart-note commits), tags and GitHub
+releases 2026-11-18, 18b; sienna 76a1f80; gallery 3baeb91. All three match
 origin; nothing is half-finished. In it: the model file reference (job 6,
 first draft; Robert tried it: Claude wrote Pangolin from the paper, it
 loads and runs, and matches ours to ~1e-15 once given the same settings),
