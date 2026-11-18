@@ -1228,6 +1228,19 @@
     },
 
     /**
+     * Does any port lack a position? The editor and the importer place one
+     * when its arc is made; a model spec written OUTSIDE the app (by hand, or
+     * by an AI assistant from help/model-file-reference.md) has none, and an
+     * unplaced port is drawn at the origin. `_seedAllPorts` places them.
+     */
+    portsMissing: function () {
+      var self = this;
+      return Diagram.memo(function () {
+        return self.allPorts().some(function (p) { return !self.layout(p.key); });
+      });
+    },
+
+    /**
      * Rename an element. The label IS the equation name (§14), so this is a
      * model change, validated against the notation's naming rule.
      *

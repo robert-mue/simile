@@ -66,6 +66,15 @@ footing (`src/widgets/grid.js` is the first).
   session's panels are not brought back, only the default layout with the
   model asked for; a plain start afterwards restores that. Check:
   `tools/headless/scripts/open-address.py` (http and file://).
+- **The model file reference** (`help/model-file-reference.md`, first draft
+  2026-11-18): the model spec format for someone, or an AI assistant given a
+  paper, writing a model WITHOUT the app. Self-contained, so its worked
+  examples are written out in it, copied from `examples/models/*.json` by
+  `tools/reference-examples.py` (`--check`); change an example there, never
+  in the reference. `tools/headless/scripts/model-file.py` holds model spec
+  files to the app's checks and runs them (the examples by default). A
+  hand-written file has no port positions: placed when it is opened
+  (`Diagram.portsMissing`, `opened` in `main.js`, `fresh` in `page.js`).
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it

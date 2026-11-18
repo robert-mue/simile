@@ -68,6 +68,11 @@
     m.id = name;
     if (Sienna.Diagram && Sienna.Diagram.migrate) Sienna.Diagram.migrate(m);
     Sienna.userData.set(pathOf(name), m);
+    // A model spec written outside the app: its crossings placed (Diagram.portsMissing).
+    if (Sienna.Diagram) {
+      var d = new Sienna.Diagram(pathOf(name));
+      if (d.portsMissing()) d._seedAllPorts();
+    }
   }
 
   /** A widget's options from its element's `data-show` and `data-options`. */

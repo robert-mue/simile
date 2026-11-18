@@ -1,0 +1,65 @@
+{
+  "id": "trees",
+  "name": "Trees",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "A population of trees",
+    "description": "Trees start as a few, more arrive each year, each grows towards a maximum size at its own rate, and a tree dies once it is big enough. Each has a position. Shows a population submodel, whose members come and go. A worked example for the model file reference.",
+    "keywords": ["population", "individual-based", "spatial"]
+  },
+  "presentation": {
+    "run": { "runLength": 200, "logEach": 1, "timeStep": "1" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node8"] },
+      { "widget": "plotter", "variables": ["node11"] }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": {
+      "kind": "population",
+      "parent": null,
+      "label": "tree",
+      "props": {}
+    }
+  },
+  "nodes": {
+    "node1":  { "type": "stock",        "parent": "submodel1", "label": "size",        "props": { "initial": "3", "units": "m" } },
+    "node2":  { "type": "cloud",        "parent": "submodel1", "label": "",            "props": {} },
+    "node3":  { "type": "valve",        "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*(1-size/25)", "units": "" } },
+    "node4":  { "type": "variable",     "parent": "submodel1", "label": "growth_rate", "props": { "value": "rand_const(0.1,0.3)", "units": "" } },
+    "node5":  { "type": "initialiser",  "parent": "submodel1", "label": "initial",     "props": { "expr": "5" } },
+    "node6":  { "type": "migrator",     "parent": "submodel1", "label": "recruitment", "props": { "expr": "recruits_per_year" } },
+    "node7":  { "type": "exterminator", "parent": "submodel1", "label": "death",       "props": { "expr": "size>17" } },
+    "node9":  { "type": "variable",     "parent": "submodel1", "label": "x",           "props": { "value": "rand_const(0,100)", "units": "m" } },
+    "node10": { "type": "variable",     "parent": "submodel1", "label": "y",           "props": { "value": "rand_const(0,100)", "units": "m" } },
+
+    "node8":  { "type": "variable", "parent": null, "label": "number_of_trees",   "props": { "value": "count({size})", "units": "" } },
+    "node11": { "type": "variable", "parent": null, "label": "total_size",        "props": { "value": "sum({size})", "units": "m" } },
+    "node12": { "type": "variable", "parent": null, "label": "recruits_per_year", "props": { "paramKind": "variable", "value": "2", "units": "", "min": "0", "max": "5" } }
+  },
+  "arcs": {
+    "arc1": { "type": "flow",      "from": "node2",  "to": "node1", "valve": "node3", "props": {} },
+    "arc2": { "type": "influence", "from": "node1",  "to": "node3", "alias": "size",              "props": {} },
+    "arc3": { "type": "influence", "from": "node4",  "to": "node3", "alias": "growth_rate",       "props": {} },
+    "arc4": { "type": "influence", "from": "node1",  "to": "node7", "alias": "size",              "props": {} },
+    "arc5": { "type": "influence", "from": "node1",  "to": "node8", "alias": "size",              "props": {} },
+    "arc6": { "type": "influence", "from": "node1",  "to": "node11", "alias": "size",             "props": {} },
+    "arc7": { "type": "influence", "from": "node12", "to": "node6", "alias": "recruits_per_year", "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 250, "y": 160, "w": 260, "h": 180 },
+    "node1":  { "x": 330, "y": 200 },
+    "node2":  { "x": 170, "y": 200 },
+    "node4":  { "x": 210, "y": 140 },
+    "node5":  { "x": 170, "y": 95 },
+    "node6":  { "x": 240, "y": 95 },
+    "node7":  { "x": 330, "y": 95 },
+    "node9":  { "x": 300, "y": 240 },
+    "node10": { "x": 340, "y": 240 },
+    "node8":  { "x": 460, "y": 120 },
+    "node11": { "x": 460, "y": 200 },
+    "node12": { "x": 240, "y": 20 }
+  }
+}

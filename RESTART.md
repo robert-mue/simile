@@ -1385,6 +1385,20 @@ means the next session starts from the queue above rather than from his notes.
 
 ### 6. A model file reference — writing models without the app (2026-10-14)
 
+**First draft written 2026-11-18** (Robert asked): `help/model-file-reference.md`,
+its three worked examples in `examples/models/` (predator-prey, plants: fixed
+membership, trees: population) copied in by `tools/reference-examples.py`
+(`--check`: in step), and the checking route for developers,
+`tools/headless/scripts/model-file.py` (read as File ▸ Open reads it,
+completeness, grammar, export, compile, run). Found on the way: a TIME unit in
+`units` (`m/year`) is converted to the engine's day and silently divides the
+rate by 365 (the run's time unit is `unit` = 1 day, `TIME_LIB`); the reference
+says to leave time out of units. And a hand-written file has no
+`layout.ports`: now placed when a model is opened (`Diagram.portsMissing`,
+main.js `opened`, page.js `fresh`). Still to do: field tables generated from
+the schema; associations, conditions, enums, graphs; trying it on a real
+paper with an assistant that has only the document.
+
 Robert's question: someone who wants a model built by describing it to Claude,
 without using the app, needs a document to point Claude at. The full reasoning
 is in `NOTE-model-file-reference.md`. Settled:

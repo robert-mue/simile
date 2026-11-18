@@ -1,7 +1,8 @@
 # A model file reference: writing models without the app
 
 *Recorded 2026-10-14 from a conversation with Robert. Queued as job 6 in
-`RESTART.md`; nothing has been built yet.*
+`RESTART.md`. First draft written 2026-11-18: `help/model-file-reference.md`
+(see RESTART.md job 6 for what it covers and what is left).*
 
 ## The question
 

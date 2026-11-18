@@ -1,0 +1,54 @@
+{
+  "id": "plants",
+  "name": "Plants",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Five plants",
+    "description": "Five plants, each growing logistically towards a shared maximum at its own rate, and their total biomass. Shows a fixed-membership submodel, with values crossing its boundary in both directions. A worked example for the model file reference.",
+    "keywords": ["submodel", "fixed membership", "array"]
+  },
+  "presentation": {
+    "run": { "runLength": 60, "logEach": 1, "timeStep": "0.1" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "plotter", "variables": ["node7"] }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": {
+      "kind": "fixed-membership",
+      "parent": null,
+      "label": "plant",
+      "props": { "dimensions": "5" }
+    }
+  },
+  "nodes": {
+    "node1": { "type": "stock",    "parent": "submodel1", "label": "biomass",     "props": { "initial": "1", "units": "kg" } },
+    "node2": { "type": "cloud",    "parent": "submodel1", "label": "",            "props": {} },
+    "node3": { "type": "valve",    "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*biomass*(1-biomass/max_biomass)", "units": "" } },
+    "node4": { "type": "variable", "parent": "submodel1", "label": "growth_rate", "props": { "value": "base_rate*(0.5+0.25*index(1))", "units": "" } },
+
+    "node5": { "type": "variable", "parent": null, "label": "base_rate",   "props": { "paramKind": "variable", "value": "0.1", "units": "", "min": "0.02", "max": "0.3" } },
+    "node6": { "type": "variable", "parent": null, "label": "max_biomass", "props": { "paramKind": "fixed",    "value": "50",  "units": "kg" } },
+    "node7": { "type": "variable", "parent": null, "label": "total",       "props": { "value": "sum([biomass])", "units": "kg" } }
+  },
+  "arcs": {
+    "arc1": { "type": "flow",      "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc2": { "type": "influence", "from": "node1", "to": "node3", "alias": "biomass",     "props": {} },
+    "arc3": { "type": "influence", "from": "node4", "to": "node3", "alias": "growth_rate", "props": {} },
+    "arc4": { "type": "influence", "from": "node5", "to": "node4", "alias": "base_rate",   "props": {} },
+    "arc5": { "type": "influence", "from": "node6", "to": "node3", "alias": "max_biomass", "props": {} },
+    "arc6": { "type": "influence", "from": "node1", "to": "node7", "alias": "biomass",     "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 300, "y": 180, "w": 260, "h": 160 },
+    "node1": { "x": 380, "y": 210 },
+    "node2": { "x": 210, "y": 210 },
+    "node4": { "x": 250, "y": 140 },
+    "node5": { "x": 90,  "y": 120 },
+    "node6": { "x": 90,  "y": 240 },
+    "node7": { "x": 510, "y": 180 }
+  }
+}

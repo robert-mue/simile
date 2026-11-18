@@ -1,0 +1,69 @@
+{
+  "id": "predator_prey",
+  "name": "Predator-prey",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Predator-prey (Lotka-Volterra)",
+    "description": "Prey grow exponentially and are eaten by predators; predators grow in proportion to what they eat and die at a constant rate. The two populations cycle. A worked example for the model file reference.",
+    "keywords": ["predator-prey", "population dynamics", "differential equations"]
+  },
+  "presentation": {
+    "run": { "runLength": 30, "logEach": 0.1, "timeStep": "0.01" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1", "node2"] },
+      { "widget": "sliders" }
+    ]
+  },
+  "enums": {},
+  "submodels": {},
+  "nodes": {
+    "node1":  { "type": "stock", "parent": null, "label": "prey",      "props": { "initial": "10", "units": "" } },
+    "node2":  { "type": "stock", "parent": null, "label": "predators", "props": { "initial": "5",  "units": "" } },
+
+    "node3":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node4":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node5":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+    "node6":  { "type": "cloud", "parent": null, "label": "", "props": {} },
+
+    "node7":  { "type": "valve", "parent": null, "label": "prey_births",     "props": { "rate": "prey_birth_rate*prey", "units": "" } },
+    "node8":  { "type": "valve", "parent": null, "label": "predation",       "props": { "rate": "predation_rate*prey*predators", "units": "" } },
+    "node9":  { "type": "valve", "parent": null, "label": "predator_births", "props": { "rate": "conversion*predation_rate*prey*predators", "units": "" } },
+    "node10": { "type": "valve", "parent": null, "label": "predator_deaths", "props": { "rate": "predator_death_rate*predators", "units": "" } },
+
+    "node11": { "type": "variable", "parent": null, "label": "prey_birth_rate",     "props": { "paramKind": "variable", "value": "1",    "units": "", "min": "0.5",  "max": "2" } },
+    "node12": { "type": "variable", "parent": null, "label": "predation_rate",      "props": { "paramKind": "variable", "value": "0.1",  "units": "",       "min": "0.05", "max": "0.2" } },
+    "node13": { "type": "variable", "parent": null, "label": "conversion",          "props": { "paramKind": "variable", "value": "0.75", "units": "",       "min": "0.25", "max": "1" } },
+    "node14": { "type": "variable", "parent": null, "label": "predator_death_rate", "props": { "paramKind": "variable", "value": "1.5",  "units": "", "min": "0.5",  "max": "3" } }
+  },
+  "arcs": {
+    "arc1":  { "type": "flow", "from": "node3", "to": "node1", "valve": "node7",  "props": {} },
+    "arc2":  { "type": "flow", "from": "node1", "to": "node4", "valve": "node8",  "props": {} },
+    "arc3":  { "type": "flow", "from": "node5", "to": "node2", "valve": "node9",  "props": {} },
+    "arc4":  { "type": "flow", "from": "node2", "to": "node6", "valve": "node10", "props": {} },
+
+    "arc5":  { "type": "influence", "from": "node1",  "to": "node7",  "alias": "prey",                "props": {} },
+    "arc6":  { "type": "influence", "from": "node11", "to": "node7",  "alias": "prey_birth_rate",     "props": {} },
+    "arc7":  { "type": "influence", "from": "node1",  "to": "node8",  "alias": "prey",                "props": {} },
+    "arc8":  { "type": "influence", "from": "node2",  "to": "node8",  "alias": "predators",           "props": {} },
+    "arc9":  { "type": "influence", "from": "node12", "to": "node8",  "alias": "predation_rate",      "props": {} },
+    "arc10": { "type": "influence", "from": "node1",  "to": "node9",  "alias": "prey",                "props": {} },
+    "arc11": { "type": "influence", "from": "node2",  "to": "node9",  "alias": "predators",           "props": {} },
+    "arc12": { "type": "influence", "from": "node12", "to": "node9",  "alias": "predation_rate",      "props": {} },
+    "arc13": { "type": "influence", "from": "node13", "to": "node9",  "alias": "conversion",          "props": {} },
+    "arc14": { "type": "influence", "from": "node2",  "to": "node10", "alias": "predators",           "props": {} },
+    "arc15": { "type": "influence", "from": "node14", "to": "node10", "alias": "predator_death_rate", "props": {} }
+  },
+  "layout": {
+    "node1":  { "x": 250, "y": 110 },
+    "node2":  { "x": 250, "y": 250 },
+    "node3":  { "x": 110, "y": 110 },
+    "node4":  { "x": 390, "y": 110 },
+    "node5":  { "x": 110, "y": 250 },
+    "node6":  { "x": 390, "y": 250 },
+    "node11": { "x": 150, "y": 50 },
+    "node12": { "x": 350, "y": 50 },
+    "node13": { "x": 150, "y": 310 },
+    "node14": { "x": 350, "y": 310 }
+  }
+}

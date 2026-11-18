@@ -213,7 +213,17 @@
     },
     // A model just opened, not brought back with a session: its default
     // displays, prepared and run once (src/presentation.js).
-    opened: function (path) { Sienna.presentation.apply(app, path); },
+    // A model spec written outside the app has no positions for where its
+    // arcs cross a submodel's edge: placed now, as the editor would have
+    // placed them, one undoable action and only when one is missing.
+    opened: function (path) {
+      var d = new Sienna.Diagram(path);
+      if (d.portsMissing()) {
+        Sienna.actions.dispatch({ type: 'diagram.seedPorts', target: path, payload: {} },
+          function () { d._seedAllPorts(); });
+      }
+      Sienna.presentation.apply(app, path);
+    },
   });
 
   // =======================================================================
