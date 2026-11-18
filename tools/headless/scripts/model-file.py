@@ -41,7 +41,13 @@ CHECK = r"""(async () => {
   // reference, section 11). Named only if the build fails.
   const withUnits = Object.keys(m.nodes).filter(id => String((m.nodes[id].props || {}).units || '').trim())
     .map(id => (m.nodes[id].label || id) + ' (' + m.nodes[id].props.units + ')');
-  const out = {unplaced, incomplete, grammar, exportErr, withUnits, run: null};
+  // A parameter's value outside its slider range is clamped by the engine,
+  // silently: it runs with min or max instead (the reference, section 5.3).
+  const clamped = Object.keys(m.nodes).map(id => m.nodes[id]).filter(n => n.type === 'variable').filter(n => {
+    const p = n.props || {}, v = Number(p.value), lo = parseFloat(p.min), hi = parseFloat(p.max);
+    return String(p.value || '').trim() !== '' && isFinite(v) && ((isFinite(lo) && v < lo) || (isFinite(hi) && v > hi));
+  }).map(n => n.label + ' = ' + n.props.value + ', range ' + (n.props.min || '') + ' to ' + (n.props.max || '') + ': runs with the nearer end');
+  const out = {unplaced, incomplete, grammar, exportErr, withUnits, clamped, run: null};
   if (prolog) {
     const run = Object.assign({runLength: 10, logEach: 1, timeStep: '0.1'}, (m.presentation || {}).run || {});
     try {
@@ -79,7 +85,7 @@ for f in files:
     if r is None: print('  FAIL no answer'); failed += 1; continue
     if 'fatal' in r: print('  FAIL refused:', r['fatal']); failed += 1; continue
     problems = 0
-    for key, title in (('unplaced', 'no layout'), ('incomplete', 'incomplete'), ('grammar', 'grammar')):
+    for key, title in (('unplaced', 'no layout'), ('incomplete', 'incomplete'), ('grammar', 'grammar'), ('clamped', 'outside its range')):
         for line in r[key]: print('  FAIL', title + ':', line); problems += 1
     if r['exportErr']: print('  FAIL export refused:', r['exportErr']); problems += 1
     run = r['run']

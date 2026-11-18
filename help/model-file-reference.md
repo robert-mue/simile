@@ -175,6 +175,11 @@ A variable is one of three kinds, by `paramKind`:
 Give a parameter a plain number as its `value`, and draw no influence into
 it.
 
+**A value outside its slider's range is clamped.** If a parameter has `min`
+and `max`, its `value` must lie between them: `"value": "9.2e8"` with
+`"max": "76000"` runs with 76000, and nothing says so. Choose a range wide
+enough for every value the source uses, or leave `min` and `max` out.
+
 ## 6. Names and how equations refer to them
 
 - A label is **letters, digits and underscores**, not starting with a
@@ -331,7 +336,8 @@ Before handing over the file, check every point:
    is left unused.**
 6. A value leaving a submodel is written `[x]` (fixed membership) or `{x}`
    (population) in the equation, inside a function such as `sum`.
-7. Equality is `==`. No `=` in an equation.
+7. Equality is `==`. No `=` in an equation. Every parameter's `value` lies
+   between its `min` and `max`.
 8. Population symbols are only in population submodels; every population
    has a creation or an immigration.
 9. Every node except valves, and every submodel, has a `layout` entry;
@@ -363,7 +369,8 @@ files and applies the app's own checks: it reads the file as File ▸ Open
 does, reports each incomplete element and grammar breach, exports it to
 Simile's own format, compiles it, runs it with the file's run settings and
 prints the values at the end of the run. If the model cannot be built, it
-names the elements that have `units`, the usual cause.
+names the elements that have `units`, the usual cause. It also names any
+parameter whose value lies outside its slider's range.
 
 It needs:
 
