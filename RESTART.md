@@ -1408,7 +1408,15 @@ submodels described (4.2), CONDITIONAL submodels (a value out is a list,
 CURVES (4.3): `interpolate(x,[xs],[ys])` for a table (exact; engine checked)
 or a sketched graph, `props.graph` + `graph(x)` (examples/models/reservoir.json;
 truncate = nearest end, checked). A condition in a FIXED membership also
-makes a list (checked).
+makes a list (checked). ENUMERATED TYPES (2026-11-18): a fixed membership
+sized by a type builds (index(1) is the member: =="oak", as_number, first;
+no arithmetic on it); fixed: the completeness check now accepts the type's
+name, the grammar a double-quoted member ("oak"); WHOLE-MODEL types via
+MODEL PROPERTIES (the model as the top-level submodel, Robert; see
+CLAUDE.md), without which a value leaving to the top level does not build.
+examples/models/species.json. NEXT: associations (Robert asked for both;
+enums first). Open: a Metadata tab in Model properties? submodels as
+modules (Robert: do not start, think first).
 
 Robert's question: someone who wants a model built by describing it to Claude,
 without using the app, needs a document to point Claude at. The full reasoning

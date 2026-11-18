@@ -867,4 +867,88 @@
     $dlg.find('#fld-label').focus().select();
     return { close: close, element: $dlg };
   };
+
+  /**
+   * `Sienna.modelDialog(d, host)` — **Model properties**: the whole model's
+   * own settings (Robert, 2026-11-18: the model is, in effect, the top-level
+   * submodel). Its fields are the submodel dialog's that the schema marks
+   * `atTop`, on the same tabs, made by the same rows; they are kept in the
+   * model's `props` (`Diagram.setModelProperties`, one undo step). Opened by a
+   * double-click on the diagram's background, or Edit ▸ Model properties….
+   * No Name row: a model is renamed with File ▸ Rename model.
+   *
+   * @param {Sienna.Diagram} d
+   * @param {jQuery} [host] element to overlay (defaults to the document body)
+   */
+  Sienna.modelDialog = function (d, host) {
+    var m = d.model();
+    if (!m) return null;
+    var schema = d.schema();
+    var fields = ((schema.submodel || {}).fields || []).filter(function (f) { return f.atTop; });
+    var el = { props: d.modelProps() };
+
+    var tabs = [];
+    fields.forEach(function (f) {
+      var label = f.tab || 'Properties';
+      var t = tabs.filter(function (x) { return x.label === label; })[0];
+      if (!t) tabs.push(t = { key: 'tab-' + label, label: label, rows: [] });
+      t.rows.push(fieldHtml(f, readValue(el, f)));
+    });
+    var strip = tabs.map(function (t, i) {
+      return '<button type="button" class="slx-dlg-tab' + (i === 0 ? ' slx-dlg-tab-on' : '')
+        + '" data-tab="' + esc(t.key) + '">' + esc(t.label) + '</button>';
+    }).join('');
+    var panels = tabs.map(function (t, i) {
+      return '<div class="slx-dlg-tab-panel' + (i === 0 ? '' : ' slx-hidden')
+        + '" data-panel="' + esc(t.key) + '">' + t.rows.join('') + '</div>';
+    }).join('');
+
+    var $host = host && host.length ? host : $('body');
+    $host.find('.slx-dlg-backdrop').remove();
+    var $back = $('<div class="slx-dlg-backdrop">').appendTo($host);
+    var $dlg = $(
+      '<div class="slx-dlg slx-dlg-tabbed slx-dlg-model" role="dialog" aria-modal="true">'
+      + '<h2>Model properties: ' + esc(m.name || m.id || '') + '</h2>'
+      + '<div class="slx-dlg-tabs" role="tablist">' + strip + '</div>'
+      + '<div class="slx-dlg-fields">' + panels + '</div>'
+      + '<div class="slx-dlg-buttons">'
+      + '<button type="button" data-act="cancel">Cancel</button>'
+      + '<button type="button" data-act="ok">OK</button>'
+      + '</div></div>'
+    ).appendTo($back);
+
+    $dlg.on('click', '.slx-dlg-tab', function () {
+      var key = $(this).attr('data-tab');
+      $dlg.find('.slx-dlg-tab').removeClass('slx-dlg-tab-on').filter(this).addClass('slx-dlg-tab-on');
+      $dlg.find('.slx-dlg-tab-panel').addClass('slx-hidden')
+        .filter('[data-panel="' + key + '"]').removeClass('slx-hidden');
+    });
+
+    function close() {
+      $(document).off('keydown.slxmodeldlg');
+      $back.remove();
+    }
+    function commit() {
+      var changes = {};
+      $dlg.find('[data-field]').each(function () {
+        changes[$(this).attr('data-field')] = this.type === 'checkbox' ? this.checked : $(this).val();
+      });
+      // Only what changed, so OK on an untouched dialog writes nothing.
+      var was = d.modelProps();
+      Object.keys(changes).forEach(function (k) {
+        if (String(changes[k] == null ? '' : changes[k]) === String(was[k] == null ? '' : was[k])) delete changes[k];
+      });
+      if (Object.keys(changes).length) d.setModelProperties(changes);
+      close();
+    }
+    $dlg.on('click', '[data-act=ok]', commit);
+    $dlg.on('click', '[data-act=cancel]', close);
+    $back.on('mousedown', function (e) { if (e.target === $back[0]) close(); });
+    $(document).on('keydown.slxmodeldlg', function (e) {
+      if (e.key === 'Escape') close();
+      else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') commit();
+    });
+    $dlg.find('[data-field]').first().focus();
+    return { close: close, element: $dlg };
+  };
 })(window.Sienna, window.jQuery);

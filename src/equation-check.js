@@ -289,9 +289,13 @@
     // An enumerated type's name — `species` in a submodel's size, one
     // instance per member — needs no arrow either: it is declared in the
     // Enumerated types of this submodel or one it is in, Simile's scope.
+    // The model's own (Model properties) are known everywhere in it.
     var typeNames = {};
-    (String(id).indexOf('submodel') === 0 ? [id] : []).concat(d.ancestorsOf(id)).forEach(function (sid) {
-      String((((d.get(sid) || {}).props) || {}).enumTypes || '').split('\n').forEach(function (line) {
+    var scopes = (String(id).indexOf('submodel') === 0 ? [id] : []).concat(d.ancestorsOf(id))
+      .map(function (sid) { return ((d.get(sid) || {}).props) || {}; })
+      .concat([d.modelProps ? d.modelProps() : {}]);
+    scopes.forEach(function (props) {
+      String(props.enumTypes || '').split('\n').forEach(function (line) {
         var at = line.indexOf(':');
         if (at > 0) typeNames[line.slice(0, at).trim()] = true;
       });

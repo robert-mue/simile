@@ -456,6 +456,13 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
           return;
         }
         if (this._tool) { this._placeAt(e); return; }                  // creating, not panning
+        // A double-click on the background is the model's own dialog, as one
+        // on an element is that element's: the model is the top-level
+        // submodel (Robert, 2026-11-18). Not in a view-only diagram (a page).
+        if (this._isDoubleClick(':model', e) && this.options.tools !== 'view') {
+          this._openModelDialog();
+          return;
+        }
         if (this._sel.length) { this._sel = []; this._render(); }       // click away = deselect
         this._userView = true;
         const start = { x: e.clientX, y: e.clientY, vx: this._view.x, vy: this._view.y };
@@ -2515,6 +2522,15 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     this._render();
     const host = this._panel().length ? this.element : $('body');
     if (Sienna.propertyDialog) Sienna.propertyDialog(d, id, host);
+  },
+
+  /** Model properties (`Sienna.modelDialog`), over the diagram as an element's dialog is. */
+  _openModelDialog() {
+    const d = this._diagram();
+    if (!d || this.element[0].querySelector('.slx-dlg')
+        || document.querySelector('body > .slx-dlg-backdrop')) return;
+    const host = this._panel().length ? this.element : $('body');
+    if (Sienna.modelDialog) Sienna.modelDialog(d, host);
   },
 
   /**

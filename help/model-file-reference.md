@@ -4,11 +4,11 @@
 one by hand, and for an AI assistant (Claude, or any other) given a paper
 that describes a model in words and equations and asked for the model file.
 
-*First draft, 2026-11-18; conditional submodels and sketched graphs added
-2026-11-18. Covers stocks, flows, variables, parameters, the three kinds of
-submodel, conditional submodels, and curves given as a graph or a table.
-Not covered yet: associations (role arrows), enumerated types and events.
-Build those in the app.*
+*First draft, 2026-11-18; conditional submodels, curves and enumerated
+types added 2026-11-18. Covers stocks, flows, variables, parameters, the
+three kinds of submodel, conditional submodels, curves given as a graph or
+a table, and enumerated types. Not covered yet: associations (role arrows)
+and events. Build those in the app.*
 
 ## How to use it
 
@@ -57,6 +57,9 @@ These are Simile's terms. Simile's own manual explains each at more length.
   *conditional*. It is how a model says "this only happens while…": a
   fishery open only above a stock level, a crop only in the growing
   season.
+- **Enumerated type**: a named set of categories, such as `species: oak,
+  beech, pine`. A fixed-membership submodel sized by it has one instance
+  per member, and each instance knows which member it is.
 - **Sketched graph**: a relationship given as a curve rather than an
   equation, held by the variable or flow that uses it, and read in its
   equation as `graph(x)`.
@@ -94,11 +97,14 @@ These are Simile's terms. Simile's own manual explains each at more length.
    is a conditional submodel (section 4.2) if it involves several
    elements, or simply `if … then … else 0` in one equation if it does
    not.
-9. **A relationship given as a table or a figure** (a curve read off a
+9. **Named categories** ("for each of three species…", age classes, land
+   uses) are an enumerated type, and the things that differ between them a
+   fixed-membership submodel sized by it (section 4.4).
+10. **A relationship given as a table or a figure** (a curve read off a
    graph, monthly values) is `interpolate(x, [xs], [ys])` when the paper
    gives the numbers, or a sketched graph when it gives only a curve
    (section 4.3).
-10. **Choose the run settings** from the paper's figures: how long, and how
+11. **Choose the run settings** from the paper's figures: how long, and how
    often to record (section 9).
 
 ## 3. The file
@@ -115,7 +121,8 @@ A model spec is one JSON object.
 | `arcs` | yes | Every flow and influence: `{ "arc1": {…}, … }`. |
 | `submodels` | yes | `{ "submodel1": {…} }`, or `{}`. |
 | `layout` | yes | Where each element is drawn (section 8). |
-| `enums` | yes | Always `{}` for now. |
+| `enums` | yes | Always `{}`. |
+| `props` | no | The whole model's own settings, as a submodel has them: `enumTypes` (section 4.4) and `comment`. |
 | `metadata` | no | Title, description, keywords, paper (section 10). |
 | `presentation` | no | Run settings and the graphs to open (section 9). Strongly recommended. |
 
@@ -225,6 +232,34 @@ with `graph(x)`:
 
 One graph per element. The x value comes along an influence, as usual
 (`month → rainfall`).
+
+### 4.4 Enumerated types
+
+Declare a type in the **whole model's** `props`, one line per type, its
+name, a colon, then its members:
+
+```json
+"props": { "enumTypes": "species: oak, beech, pine\nage_class: young, mature, old" }
+```
+
+(`\n` separates two types.) A type can also be declared in a submodel's
+`props.enumTypes`, but then it is known only inside that submodel, and a
+value leaving the submodel to the top level will not build. Declare it for
+the whole model.
+
+**Use it as the size of a fixed-membership submodel**: `"dimensions":
+"species"` gives one instance per member. Inside, `index(1)` is the
+instance's **member, not a number**:
+
+- compare it with a member, written in double quotes:
+  `if index(1)=="oak" then 0.05 elseif index(1)=="beech" then 0.08 else 0.12`
+- `as_number(index(1))` is its position, 1, 2, 3, for arithmetic or for
+  `element([0.05, 0.08, 0.12], as_number(index(1)))`;
+- `first(index(1))` is true for the first member.
+
+**Arithmetic on the member itself (`1+index(1)`) does not build.** A value
+leaving the submodel is an array, one value per member, as for any fixed
+membership: `sum([biomass])`.
 
 ## 5. Arcs
 
@@ -436,7 +471,8 @@ Before handing over the file, check every point:
 8. Population symbols are only in population submodels; every population
    has a creation or an immigration. Conditions are only in single or
    fixed-membership submodels, and a value leaving a conditional submodel
-   is written `{x}`.
+   is written `{x}`. An enumerated type is declared in the model's `props`,
+   and a member is compared as `index(1)=="oak"`, never added to.
 9. Every node except valves, and every submodel, has a `layout` entry;
    everything in a submodel is drawn inside its box, and nothing else is.
 10. Every `units` is `""`.
@@ -860,6 +896,70 @@ with no `graph`.
     "node7": { "x": 60,  "y": 50 },
     "node8": { "x": 240, "y": 50 },
     "node9": { "x": 360, "y": 190 }
+  }
+}
+```
+
+### 14.6 Three tree species: an enumerated type
+
+The type `species` is declared for the whole model, and the `stand`
+submodel has one instance for each species. Each grows at its own rate,
+chosen by comparing `index(1)` with a member, and `total`, at the top
+level, sums the three.
+
+<!-- example: examples/models/species.json -->
+
+```json
+{
+  "id": "species",
+  "name": "Species",
+  "format": 3,
+  "schema": "simile-v1",
+  "metadata": {
+    "title": "Three tree species",
+    "description": "The biomass of three tree species, oak, beech and pine, each growing logistically at its own rate towards a shared maximum, and their total. The species are an enumerated type, declared for the whole model, and the submodel has one instance per member. Time is in years. A worked example for the model file reference.",
+    "keywords": ["enumerated type", "fixed membership", "array"]
+  },
+  "props": { "enumTypes": "species: oak, beech, pine" },
+  "presentation": {
+    "run": { "runLength": 100, "logEach": 1, "timeStep": "0.5" },
+    "displays": [
+      { "widget": "plotter", "variables": ["node1"] },
+      { "widget": "plotter", "variables": ["node6"] }
+    ]
+  },
+  "enums": {},
+  "submodels": {
+    "submodel1": {
+      "kind": "fixed-membership",
+      "parent": null,
+      "label": "stand",
+      "props": { "dimensions": "species" }
+    }
+  },
+  "nodes": {
+    "node1": { "type": "stock",    "parent": "submodel1", "label": "biomass",     "props": { "initial": "5", "units": "" } },
+    "node2": { "type": "cloud",    "parent": "submodel1", "label": "",            "props": {} },
+    "node3": { "type": "valve",    "parent": "submodel1", "label": "growth",      "props": { "rate": "growth_rate*biomass*(1-biomass/max_biomass)", "units": "" } },
+    "node4": { "type": "variable", "parent": "submodel1", "label": "growth_rate", "props": { "value": "if index(1)==\"oak\" then 0.05 elseif index(1)==\"beech\" then 0.08 else 0.12", "units": "" } },
+
+    "node5": { "type": "variable", "parent": null, "label": "max_biomass", "props": { "paramKind": "variable", "value": "300", "units": "", "min": "100", "max": "500" } },
+    "node6": { "type": "variable", "parent": null, "label": "total",       "props": { "value": "sum([biomass])", "units": "" } }
+  },
+  "arcs": {
+    "arc1": { "type": "flow",      "from": "node2", "to": "node1", "valve": "node3", "props": {} },
+    "arc2": { "type": "influence", "from": "node1", "to": "node3", "alias": "biomass",     "props": {} },
+    "arc3": { "type": "influence", "from": "node4", "to": "node3", "alias": "growth_rate", "props": {} },
+    "arc4": { "type": "influence", "from": "node5", "to": "node3", "alias": "max_biomass", "props": {} },
+    "arc5": { "type": "influence", "from": "node1", "to": "node6", "alias": "biomass",     "props": {} }
+  },
+  "layout": {
+    "submodel1": { "x": 300, "y": 180, "w": 260, "h": 160 },
+    "node1": { "x": 380, "y": 210 },
+    "node2": { "x": 210, "y": 210 },
+    "node4": { "x": 260, "y": 140 },
+    "node5": { "x": 90,  "y": 210 },
+    "node6": { "x": 510, "y": 180 }
   }
 }
 ```

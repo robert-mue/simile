@@ -822,6 +822,38 @@
       return map ? Sienna.userData.get(this.path + '/' + map + '/' + id) : undefined;
     },
 
+    /**
+     * The whole model's own settings — the submodel fields marked `atTop` in
+     * the schema (enumerated types, comments…): the model as the top-level
+     * submodel. `{}` when none are set.
+     */
+    modelProps: function () {
+      var m = this.model();
+      return (m && m.props) || {};
+    },
+
+    /**
+     * Set the whole model's settings, merged, as ONE action (one visit to
+     * Model properties = one undo step). An empty value is removed, so a
+     * model that never used one stays as it was.
+     */
+    setModelProperties: function (changes) {
+      var self = this;
+      var merged = Object.assign({}, this.modelProps());
+      Object.keys(changes || {}).forEach(function (k) {
+        var v = changes[k];
+        if (v == null || String(v).trim() === '') delete merged[k];
+        else merged[k] = v;
+      });
+      Sienna.actions.dispatch(
+        { type: 'diagram.setModelProperties', target: this.path, payload: { fields: Object.keys(changes || {}) } },
+        function () {
+          if (Object.keys(merged).length) Sienna.userData.set(self.path + '/props', merged);
+          else if (self.model() && self.model().props) Sienna.userData.remove(self.path + '/props');
+        }
+      );
+    },
+
     /** An element's label, or '' — used to default influence aliases (§14.1). */
     label: function (id) {
       var el = this.get(id);

@@ -75,6 +75,18 @@ footing (`src/widgets/grid.js` is the first).
   files to the app's checks and runs them (the examples by default). A
   hand-written file has no port positions: placed when it is opened
   (`Diagram.portsMissing`, `opened` in `main.js`, `fresh` in `page.js`).
+- **Model properties** (Robert, 2026-11-18: the model is, in effect, the
+  top-level submodel, as in Simile's file, whose file-level `properties`
+  carry a submodel's keys): the submodel dialog's fields the schema marks
+  `atTop` (comment; units in maths, first index 0, enumerated types), held
+  in the model spec's own `props` (`Diagram.modelProps` /
+  `setModelProperties`, one undo step), shown by `Sienna.modelDialog`
+  (`src/dialog.js`). Opened by a double-click on the diagram's background
+  or Edit ▸ Model properties…. Exported into, and imported from, the
+  file-level `properties` (`notes` in export-simile.js). A type declared
+  there is known everywhere (equation-check's `typeNames`); one declared on
+  a submodel only inside it. Check: `tools/headless/scripts/model-props.py`.
+  Not yet: a Metadata tab there, submodels as modules (Robert: think first).
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it

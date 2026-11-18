@@ -367,7 +367,9 @@
         } else if (c.functor === 'roots') {
           self.roots = items(a[0]);
         } else if (c.functor === 'properties') {
-          self.title = unquote(pairs(a[0], '-').name || '');
+          var top = pairs(a[0], '-');
+          self.title = unquote(top.name || '');
+          self.top = top;
         }
       });
       return this;
@@ -468,6 +470,18 @@
 
       var m = Sienna.Diagram.emptyModel('imported', { name: this.title || 'Imported' });
       this.m = m;
+      // The model as the top-level submodel: what Simile's file-level
+      // `properties(…)` holds that a submodel's dialog holds too (the
+      // schema's `atTop` fields), into the model's own props.
+      var top = this.top || {};
+      var topProps = {};
+      var comment = top.comment == null ? '' : unquote(top.comment);
+      if (comment) topProps.comment = comment;
+      if (top.eqn_units != null && unquote(top.eqn_units)) topProps.eqnUnits = unquote(top.eqn_units);
+      if (top.index0 != null && unquote(top.index0)) topProps.index0 = unquote(top.index0);
+      var topTypes = enumTypes(top.enum_types);
+      if (topTypes) topProps.enumTypes = topTypes;
+      if (Object.keys(topProps).length) m.props = topProps;
       this.ours = {};     // simile id -> our id
       this.n = { node: 0, submodel: 0, arc: 0 };
 

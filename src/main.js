@@ -750,6 +750,16 @@
     },
   ];
 
+  /** Model properties of the current model, over its diagram if one is open. */
+  function openModelProperties() {
+    var path = Sienna.documents.current(app);
+    if (!path || !Sienna.userData.get(path)) { window.alert('No model is open.'); return; }
+    var $p = app.panels().filter(function ($x) { return $x.panel('ref') === path && $x.find('.slx-diagram').length; })[0];
+    var $host = $p ? $p.find('.slx-diagram').first() : $('body');
+    if ($p) app.showWindow($p);
+    Sienna.modelDialog(new Sienna.Diagram(path), $host);
+  }
+
   function buildMenu() {
     return [
     {
@@ -757,6 +767,10 @@
       items: [
         { label: 'Undo', onSelect: function () { Sienna.history.undo(); } },
         { label: 'Redo', onSelect: function () { Sienna.history.redo(); } },
+        // The model's own settings, as a submodel's dialog holds a submodel's
+        // (the model is the top-level submodel, Robert 2026-11-18). Also a
+        // double-click on the diagram's background.
+        { label: 'Model properties…', onSelect: openModelProperties },
       ],
     },
     {

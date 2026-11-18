@@ -278,11 +278,18 @@
 
         // Notes. Simile's `description` and `comment`.
         { name: 'description', label: 'Description', type: 'text', tab: 'Notes' },
-        { name: 'comment', label: 'Comments', type: 'longtext', tab: 'Notes',
+        { name: 'comment', label: 'Comments', type: 'longtext', tab: 'Notes', atTop: true,
           help: 'What this submodel represents, where it came from, anything a '
               + 'reader of the model should know.' },
 
-        // Advanced. Simile's `step=N` on a submodel: which time base it runs
+        // `atTop: true` — the WHOLE MODEL has this field too (Robert, 2026-11-18:
+    // the model is, in effect, the top-level submodel). Simile writes the
+    // same keys in its file-level `properties(…)` as on a submodel; across
+    // the catalogue the top level carries comment, enum_types, eqn_units,
+    // index0 and fill_colour, never description, which is why description is
+    // not marked. Held in the model's own `props`, set in Model properties
+    // (Edit menu, or a double-click on the diagram's background).
+    // Advanced. Simile's `step=N` on a submodel: which time base it runs
         // on. Each base has its own time step (`dt(N)` in an equation; the
         // run's time step is then one value per base, "0.1 0.01"). Default is
         // the time base of the submodel it is in. Dropped on import until
@@ -301,11 +308,11 @@
           ],
           help: 'Default runs with the submodel it is in. 2nd, 3rd… run on a '
               + 'further time base, with its own time step, dt(2)…' },
-        { name: 'eqnUnits', label: 'Use units in math', type: 'choice', tab: 'Advanced',
+        { name: 'eqnUnits', label: 'Use units in math', type: 'choice', tab: 'Advanced', atTop: true,
           options: [{ value: '', label: 'Default' }, { value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }] },
-        { name: 'index0', label: 'First index is 0', type: 'choice', tab: 'Advanced',
+        { name: 'index0', label: 'First index is 0', type: 'choice', tab: 'Advanced', atTop: true,
           options: [{ value: '', label: 'Default' }, { value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }] },
-        { name: 'enumTypes', label: 'Enumerated types', type: 'longtext', rows: 2, tab: 'Advanced',
+        { name: 'enumTypes', label: 'Enumerated types', type: 'longtext', rows: 2, tab: 'Advanced', atTop: true,
           help: 'One type per line, its name then its members: fruit: apple, orange, lemon' },
       ],
     },

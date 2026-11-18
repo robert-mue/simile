@@ -1085,20 +1085,7 @@
     submodelNotes: function (id) {
       var props = (this.m.submodels[id] || {}).props || {};
       var g = (this.m.layout || {})[id] || {};
-      var out = [];
-      if (props.description) out.push('description=' + atom(props.description));
-      if (props.comment) out.push('comment=' + atom(props.comment));
-      if (props.eqnUnits) out.push('eqn_units=' + atom(props.eqnUnits));
-      if (props.index0) out.push('index0=' + atom(props.index0));
-      if (g.fill) out.push('fill_colour=' + atom(g.fill));
-      var types = String(props.enumTypes || '').split('\n').map(function (line) {
-        var at = line.indexOf(':');
-        if (at < 1) return '';
-        var members = line.slice(at + 1).split(',').map(function (m) { return m.trim(); }).filter(Boolean);
-        return atom(line.slice(0, at).trim()) + '-[' + members.map(atom).join(',') + ']';
-      }).filter(Boolean);
-      if (types.length) out.push('enum_types=[' + types.join(',') + ']');
-      return out;
+      return notes(props, g, '=');
     },
 
     /**
@@ -1157,7 +1144,7 @@
         'multiplication_spec-[count=[]]',
         'name-' + atom(m.name || m.id || 'Desktop'),
         'separate-0',
-      ]) + ').');
+      ].concat(notes(m.props || {}, null, '-'))) + ').');
       out.push('');
 
       Object.keys(m.submodels || {}).forEach(function (id) {
@@ -1213,6 +1200,29 @@
       '',
       base64(body),
       ''].join('\n');
+  }
+
+  /**
+   * A submodel's Notes and Advanced settings, and its shade, as Simile writes
+   * them — `key=value` on a submodel, `key-value` in the file-level
+   * `properties(…)`, where the WHOLE model's own (`model.props`, the schema's
+   * `atTop` fields) go. Written only where set.
+   */
+  function notes(props, g, sep) {
+    var out = [];
+    if (props.description) out.push('description' + sep + atom(props.description));
+    if (props.comment) out.push('comment' + sep + atom(props.comment));
+    if (props.eqnUnits) out.push('eqn_units' + sep + atom(props.eqnUnits));
+    if (props.index0) out.push('index0' + sep + atom(props.index0));
+    if (g && g.fill) out.push('fill_colour' + sep + atom(g.fill));
+    var types = String(props.enumTypes || '').split('\n').map(function (line) {
+      var at = line.indexOf(':');
+      if (at < 1) return '';
+      var members = line.slice(at + 1).split(',').map(function (m) { return m.trim(); }).filter(Boolean);
+      return atom(line.slice(0, at).trim()) + '-[' + members.map(atom).join(',') + ']';
+    }).filter(Boolean);
+    if (types.length) out.push('enum_types' + sep + '[' + types.join(',') + ']');
+    return out;
   }
 
   /**
