@@ -4,17 +4,17 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-18: RELEASED as 2026-11-18c** (Robert: "make a release"),
-live and checked (`src/release.js` on the site says 2026-11-18c). simile
-`main` = `release` (4ce045b plus restart-note commits), tags and GitHub
-releases 2026-11-18, 18b, 18c; sienna 76a1f80; gallery 3baeb91. All three
+**STATE 2026-11-18: RELEASED as 2026-11-18d** (Robert: "commit and push and
+release"), live and checked (`src/release.js` on the site says 2026-11-18d).
+simile `main` = `release` (760dc4c plus restart-note commits), tags and
+GitHub releases 2026-11-18, 18b, 18c, 18d; sienna 76a1f80; gallery 3baeb91. All three
 match origin; nothing is half-finished. 18c: Model properties (the model as
 the top-level submodel), whole-model enumerated types, enumerated types
 usable (type names as sizes, "oak" in equations), and the reference
-covering enums and associations. Since 18c, not released: a METADATA tab
+covering enums and associations. RELEASED as 18d: a METADATA tab
 first in Model properties (Robert asked; `Sienna.metadataForm` shared with
 the Metadata panel; model-props.py 18/18, samples.py 44/44). Open with
-Robert: whether the Metadata panel is still wanted beside it (it also shows
+Robert (he is unsure; leave as is for now): whether the Metadata panel is still wanted beside it (it also shows
 default displays and what is read from the model); submodels as modules
 (think first); the run-modes proposal (`NOTE-run-modes.md`).
 
