@@ -30,13 +30,15 @@
  *
  * ## Rows
  *
- * `[model, equation, expectedToFail, element]`. 21 rows are marked
+ * `[model, equation, expectedToFail, element]`. 20 rows are marked
  * expected-to-fail, and every one is in a class the grammar drops ON PURPOSE
  * (`src/equation-grammar.js` §3):
  *
  *   12  comma as `and` and semicolon as `or` — `if (x<0;x>100) then 1 else 0`
  *   8  local bindings — `off=sqrt(3/4), x+element([0,off,…],index(1))`
- *   1  a double-quoted string literal — `"false"`
+ *
+ * A double-quoted literal — `"false"`, a member of an enumerated type — was a
+ * 21st until 2026-11-18, when the grammar took it (`StringLiteral`).
  *
  * The generator REFUSES to mark anything outside those classes, so a new
  * failure cannot be absorbed silently: it fails the page instead.
@@ -921,7 +923,7 @@ window.Sienna.equationCorpus = [
   ["landuse1b.pl", "state==1", 0, "exists"],
   ["landuse1b.pl", "state==2", 0, "exists"],
   ["landuse1b.pl", "sum({crop_neighbour_0})", 0, "n_crop_neighbour"],
-  ["life_input.pl", "\"false\"", 1, "alive"],
+  ["life_input.pl", "\"false\"", 0, "alive"],
   ["life_input.pl", "(editor_row-1)*editor_width+editor_column", 0, "square_for_value"],
   ["life_input.pl", "[column,column-1,column-1,column]", 0, "borders_x"],
   ["life_input.pl", "[row,row,row-1,row-1]", 0, "borders_y"],

@@ -286,8 +286,20 @@
     var submodelNames = {};
     d.ids('submodels').forEach(function (sid) { submodelNames[key((d.get(sid) || {}).label || '')] = true; });
 
+    // An enumerated type's name — `species` in a submodel's size, one
+    // instance per member — needs no arrow either: it is declared in the
+    // Enumerated types of this submodel or one it is in, Simile's scope.
+    var typeNames = {};
+    (String(id).indexOf('submodel') === 0 ? [id] : []).concat(d.ancestorsOf(id)).forEach(function (sid) {
+      String((((d.get(sid) || {}).props) || {}).enumTypes || '').split('\n').forEach(function (line) {
+        var at = line.indexOf(':');
+        if (at > 0) typeNames[line.slice(0, at).trim()] = true;
+      });
+    });
+
     Object.keys(usedNames).forEach(function (name) {
       if (usedNames[name].onlySize && submodelNames[key(name)]) return;
+      if (typeNames[name]) return;
       if (!suppliedSet[name]) {
         var where = usedNames[name];
         out.push({

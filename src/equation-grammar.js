@@ -168,6 +168,7 @@ Primary
   / "{" _ items:ExprList _ "}" { return { t: 'list', items: items }; }
   / "[" _ items:ExprList _ "]" { return { t: 'array', items: items }; }
   / QuotedName
+  / StringLiteral
   / Number
   / Identifier
   / "(" _ e:Conditional _ ")" { return e; }
@@ -197,6 +198,12 @@ QuotedName
         : { t: 'str', v: s, at: location().start.offset };
     }
 
+// "beech": a member of an enumerated type (or "true"/"false"), as a modeller
+// types it. The same literal as '"beech"', Simile's form in a file, into
+// which the exporter turns it; added 2026-11-18 for the model file reference.
+StringLiteral
+  = '"' s:$[^"]* '"'
+    { return { t: 'str', v: '"' + s + '"', at: location().start.offset }; }
 Identifier
   = !(Keyword) name:$IdentifierText
     { return { t: 'name', name: name, at: location().start.offset }; }
