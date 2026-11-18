@@ -11,9 +11,12 @@ releases 2026-11-18, 18b, 18c; sienna 76a1f80; gallery 3baeb91. All three
 match origin; nothing is half-finished. 18c: Model properties (the model as
 the top-level submodel), whole-model enumerated types, enumerated types
 usable (type names as sizes, "oak" in equations), and the reference
-covering enums and associations. Open with Robert: a Metadata tab in Model
-properties; submodels as modules (think first); the run-modes proposal
-(`NOTE-run-modes.md`).
+covering enums and associations. Since 18c, not released: a METADATA tab
+first in Model properties (Robert asked; `Sienna.metadataForm` shared with
+the Metadata panel; model-props.py 18/18, samples.py 44/44). Open with
+Robert: whether the Metadata panel is still wanted beside it (it also shows
+default displays and what is read from the model); submodels as modules
+(think first); the run-modes proposal (`NOTE-run-modes.md`).
 
 **RELEASED as 2026-11-16:** the "You already have a copy of this model"
 question is no longer confirm(): its buttons say "Make new copy" and

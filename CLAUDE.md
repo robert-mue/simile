@@ -86,7 +86,11 @@ footing (`src/widgets/grid.js` is the first).
   file-level `properties` (`notes` in export-simile.js). A type declared
   there is known everywhere (equation-check's `typeNames`); one declared on
   a submodel only inside it. Check: `tools/headless/scripts/model-props.py`.
-  Not yet: a Metadata tab there, submodels as modules (Robert: think first).
+  Its first tab is **Metadata** (title, description, keywords, web page,
+  paper), the model spec's `metadata`, written in the same action as the
+  rest; the fields and their conversion are stated once,
+  `Sienna.metadataForm` (src/dialog.js), shared with the Metadata panel.
+  Not yet: submodels as modules (Robert: think first).
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it

@@ -33,7 +33,9 @@ await dbl(*blank)
 head = await ev("$('.slx-dlg-model h2').text()")
 check('double-click on the background: Model properties', head.startswith('Model properties'), head)
 tabs = await ev("$('.slx-dlg-model .slx-dlg-tab').map((i,b)=>b.textContent).get().join('|')")
-check('its tabs: Notes, Advanced', tabs == 'Notes|Advanced', tabs)
+check('its tabs: Metadata, Notes, Advanced', tabs == 'Metadata|Notes|Advanced', tabs)
+title = await ev("$('.slx-dlg-model [data-meta=title]').val()")
+check('the Metadata tab shows what is held', title == 'Predator-prey (Lotka-Volterra)', title)
 fields = await ev("$('.slx-dlg-model [data-field]').map((i,f)=>f.getAttribute('data-field')).get().join('|')")
 check('its fields: the submodel fields marked atTop', fields == 'comment|eqnUnits|index0|enumTypes', fields)
 
@@ -53,6 +55,29 @@ check('one undo takes both back', await ev("JSON.stringify(Sienna.userData.get(%
 await ev("Sienna.history.redo(); 1"); await sleep(0.5)
 check('redo puts them back', 'beech' in (await ev("JSON.stringify(Sienna.userData.get(%s).props || null)" % json.dumps(path)) or ''))
 
+# Metadata and settings in one visit: one action, one undo.
+was_meta = await ev("JSON.stringify(Sienna.userData.get(%s).metadata)" % json.dumps(path))
+await dbl(*blank)
+await ev("""$('.slx-dlg-model [data-meta=keywords]').val('predator-prey, cycles');
+  $('.slx-dlg-model [data-meta=citation]').val('Lotka (1925); Volterra (1926).');
+  $('.slx-dlg-model [data-field=index0]').val('Yes'); $('.slx-dlg-model [data-act=ok]').click(); 1""")
+await sleep(0.5)
+meta = json.loads(await ev("JSON.stringify(Sienna.userData.get(%s).metadata)" % json.dumps(path)))
+check('metadata kept: keywords a list, the paper a citation', meta.get('keywords') == ['predator-prey', 'cycles']
+      and meta.get('paper') == {'citation': 'Lotka (1925); Volterra (1926).'} and meta.get('title') == 'Predator-prey (Lotka-Volterra)', meta)
+check('and the setting with it', await ev("(Sienna.userData.get(%s).props || {}).index0" % json.dumps(path)) == 'Yes')
+await ev("Sienna.history.undo(); 1"); await sleep(0.5)
+check('one undo takes back both', await ev("JSON.stringify(Sienna.userData.get(%s).metadata)" % json.dumps(path)) == was_meta
+      and await ev("(Sienna.userData.get(%s).props || {}).index0 || null" % json.dumps(path)) is None)
+await ev("Sienna.history.redo(); 1"); await sleep(0.5)
+
+# The Metadata panel shows the same, from the same statement of the fields.
+await ev("Sienna.widgetRegistry && 1"); 
+await ev("$('*').filter((i,e)=>e.children.length===0 && e.textContent.trim()==='Widgets').first().click(); 1"); await sleep(0.4)
+await ev("$('*').filter((i,e)=>e.children.length===0 && e.textContent.trim()==='Metadata').first().click(); 1"); await sleep(2)
+panel_kw = await ev("$('.slx-meta [data-key=keywords]').val()")
+check('the Metadata panel shows the same', panel_kw == 'predator-prey, cycles', panel_kw)
+
 # Edit > Model properties... opens the same dialog, showing what is kept.
 await ev("$('.slx-menubar, .sienna-menubar, [role=menubar]').find('*').filter((i,e)=>e.textContent.trim()==='Edit').first().click(); 1"); await sleep(0.4)
 await ev("$('*').filter((i,e)=>e.children.length===0 && e.textContent.trim()==='Model properties…').first().click(); 1"); await sleep(0.6)
@@ -61,6 +86,7 @@ check('Edit > Model properties...: the same dialog, with what is kept', shown ==
 await ev("$('.slx-dlg-model [data-act=cancel]').click(); 1")
 
 # Out to Simile's format and back: the file-level properties.
+props = await ev("JSON.stringify(Sienna.userData.get(%s).props)" % json.dumps(path))   # as now
 pl = await ev("Sienna.exportSimile.prolog(Sienna.userData.get(%s))" % json.dumps(path))
 line = [l for l in pl.split('\n') if l.startswith('properties(')][0]
 check('exported in the file-level properties', 'enum_types-[species-[oak,beech,pine]]' in line and "comment-'Lotka and Volterra.'" in line, line)

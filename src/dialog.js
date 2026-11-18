@@ -869,8 +869,52 @@
   };
 
   /**
-   * `Sienna.modelDialog(d, host)` — **Model properties**: the whole model's
-   * own settings (Robert, 2026-11-18: the model is, in effect, the top-level
+   * A model's METADATA (`<model>/metadata`, Robert 2026-11-15) as fields: the
+   * one statement of them, used by Model properties' Metadata tab and the
+   * Metadata panel (src/widgets/metadata.js). `toFields` gives each field's
+   * text from what is held; `fromFields` the metadata from the fields' text,
+   * empty ones left out — keywords a list, the paper `{citation, url}`.
+   */
+  Sienna.metadataForm = {
+    FIELDS: [
+      { key: 'title', label: 'Title', hint: 'A descriptive title, e.g. “Pangolin harvest: bioeconomic drivers of extinction”' },
+      { key: 'description', label: 'Description', long: true, hint: 'One to three sentences: what the model is about' },
+      { key: 'keywords', label: 'Keywords', hint: 'Separated by commas' },
+      { key: 'page', label: 'Web page', hint: 'The model’s page, e.g. in the model gallery: https://…' },
+      { key: 'citation', label: 'Paper', long: true, hint: 'If the model is published: the full citation' },
+      { key: 'url', label: 'Paper’s link', hint: 'https://doi.org/…' },
+    ],
+    toFields: function (m) {
+      m = m && typeof m === 'object' ? m : {};
+      return {
+        title: m.title || '',
+        description: m.description || '',
+        keywords: Array.isArray(m.keywords) ? m.keywords.join(', ') : '',
+        page: typeof m.page === 'string' ? m.page : '',
+        citation: (m.paper && m.paper.citation) || '',
+        url: (m.paper && m.paper.url) || '',
+      };
+    },
+    fromFields: function (f) {
+      var v = function (k) { return String(f[k] == null ? '' : f[k]).trim(); };
+      var out = {};
+      if (v('title')) out.title = v('title');
+      if (v('description')) out.description = v('description');
+      var kw = v('keywords').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+      if (kw.length) out.keywords = kw;
+      if (v('page')) out.page = v('page');
+      if (v('citation') || v('url')) {
+        out.paper = {};
+        if (v('citation')) out.paper.citation = v('citation');
+        if (v('url')) out.paper.url = v('url');
+      }
+      return out;
+    },
+  };
+
+  /**
+   * `Sienna.modelDialog(d, host)` — **Model properties**: its Metadata
+   * (`Sienna.metadataForm`), then the whole model's own settings (Robert, 2026-11-18: the model is, in effect, the top-level
    * submodel). Its fields are the submodel dialog's that the schema marks
    * `atTop`, on the same tabs, made by the same rows; they are kept in the
    * model's `props` (`Diagram.setModelProperties`, one undo step). Opened by a
@@ -887,7 +931,18 @@
     var fields = ((schema.submodel || {}).fields || []).filter(function (f) { return f.atTop; });
     var el = { props: d.modelProps() };
 
-    var tabs = [];
+    // **Metadata** first: what most people will come here for. Its fields
+    // are `data-meta`, not `data-field`: they are the model's `metadata`,
+    // not its props.
+    var meta = Sienna.metadataForm;
+    var heldMeta = meta.toFields(m.metadata);
+    var tabs = [{ key: 'tab-Metadata', label: 'Metadata', rows: meta.FIELDS.map(function (f) {
+      var id = 'fld-meta-' + f.key;
+      var control = f.long
+        ? '<textarea id="' + id + '" rows="3" data-meta="' + f.key + '" placeholder="' + esc(f.hint) + '">' + esc(heldMeta[f.key]) + '</textarea>'
+        : '<input type="text" id="' + id + '" data-meta="' + f.key + '" placeholder="' + esc(f.hint) + '" value="' + esc(heldMeta[f.key]) + '">';
+      return '<div class="slx-dlg-row"><label for="' + id + '">' + esc(f.label) + '</label>' + control + '</div>';
+    }) }];
     fields.forEach(function (f) {
       var label = f.tab || 'Properties';
       var t = tabs.filter(function (x) { return x.label === label; })[0];
@@ -938,7 +993,13 @@
       Object.keys(changes).forEach(function (k) {
         if (String(changes[k] == null ? '' : changes[k]) === String(was[k] == null ? '' : was[k])) delete changes[k];
       });
-      if (Object.keys(changes).length) d.setModelProperties(changes);
+      var typed = {};
+      $dlg.find('[data-meta]').each(function () { typed[$(this).attr('data-meta')] = $(this).val(); });
+      var nowMeta = meta.fromFields(typed);
+      var metaChanged = JSON.stringify(nowMeta) !== JSON.stringify(meta.fromFields(heldMeta));
+      if (Object.keys(changes).length || metaChanged) {
+        d.setModelProperties(changes, metaChanged ? nowMeta : undefined);
+      }
       close();
     }
     $dlg.on('click', '[data-act=ok]', commit);
@@ -948,7 +1009,7 @@
       if (e.key === 'Escape') close();
       else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') commit();
     });
-    $dlg.find('[data-field]').first().focus();
+    $dlg.find('[data-meta], [data-field]').first().focus();
     return { close: close, element: $dlg };
   };
 })(window.Sienna, window.jQuery);

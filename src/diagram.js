@@ -835,9 +835,10 @@
     /**
      * Set the whole model's settings, merged, as ONE action (one visit to
      * Model properties = one undo step). An empty value is removed, so a
-     * model that never used one stays as it was.
+     * model that never used one stays as it was. With `metadata`, the
+     * model's metadata too, in the same action.
      */
-    setModelProperties: function (changes) {
+    setModelProperties: function (changes, metadata) {
       var self = this;
       var merged = Object.assign({}, this.modelProps());
       Object.keys(changes || {}).forEach(function (k) {
@@ -846,10 +847,16 @@
         else merged[k] = v;
       });
       Sienna.actions.dispatch(
-        { type: 'diagram.setModelProperties', target: this.path, payload: { fields: Object.keys(changes || {}) } },
+        { type: 'diagram.setModelProperties', target: this.path,
+          payload: { fields: Object.keys(changes || {}).concat(metadata !== undefined ? ['metadata'] : []) } },
         function () {
           if (Object.keys(merged).length) Sienna.userData.set(self.path + '/props', merged);
           else if (self.model() && self.model().props) Sienna.userData.remove(self.path + '/props');
+          // `metadata` given: the model's metadata, replaced (empty = none).
+          if (metadata !== undefined) {
+            if (metadata && Object.keys(metadata).length) Sienna.userData.set(self.path + '/metadata', metadata);
+            else if (self.model() && self.model().metadata) Sienna.userData.remove(self.path + '/metadata');
+          }
         }
       );
     },

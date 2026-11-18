@@ -29,14 +29,9 @@
 $.widget('sienna.metadata', $.sienna.widgetBase, {
   options: {},
 
-  FIELDS: [
-    { key: 'title', label: 'Title', hint: 'A descriptive title, e.g. “Pangolin harvest: bioeconomic drivers of extinction”' },
-    { key: 'description', label: 'Description', long: true, hint: 'One to three sentences: what the model is about' },
-    { key: 'keywords', label: 'Keywords', hint: 'Separated by commas' },
-    { key: 'page', label: 'Web page', hint: 'The model’s page, e.g. in the model gallery: https://…' },
-    { key: 'citation', label: 'Paper', long: true, hint: 'If the model is published: the full citation' },
-    { key: 'url', label: 'Paper’s link', hint: 'https://doi.org/…' },
-  ],
+  // The fields and their conversion are stated once, in src/dialog.js
+  // (`Sienna.metadataForm`), shared with Model properties' Metadata tab.
+  FIELDS: Sienna.metadataForm.FIELDS,
 
   _create() {
     this.element.addClass('slx-meta');
@@ -91,19 +86,9 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
 
   /** The metadata as the fields say, empty fields left out. */
   _fromFields() {
-    const v = (k) => String(this._inputs[k].val() || '').trim();
-    const out = {};
-    if (v('title')) out.title = v('title');
-    if (v('description')) out.description = v('description');
-    const kw = v('keywords').split(',').map((s) => s.trim()).filter(Boolean);
-    if (kw.length) out.keywords = kw;
-    if (v('page')) out.page = v('page');
-    if (v('citation') || v('url')) {
-      out.paper = {};
-      if (v('citation')) out.paper.citation = v('citation');
-      if (v('url')) out.paper.url = v('url');
-    }
-    return out;
+    const typed = {};
+    Object.keys(this._inputs).forEach((k) => { typed[k] = this._inputs[k].val(); });
+    return Sienna.metadataForm.fromFields(typed);
   },
 
   _commit() {
@@ -128,15 +113,7 @@ $.widget('sienna.metadata', $.sienna.widgetBase, {
     const said = Sienna.presentation.describe(this._model() || {});
     this._present.text(said ? 'Opens with ' + said : 'None: the model opens with an empty Displays area.');
     this._clearBtn.prop('disabled', !said);
-    const m = this._held();
-    const shown = {
-      title: m.title || '',
-      description: m.description || '',
-      keywords: Array.isArray(m.keywords) ? m.keywords.join(', ') : '',
-      page: typeof m.page === 'string' ? m.page : '',
-      citation: (m.paper && m.paper.citation) || '',
-      url: (m.paper && m.paper.url) || '',
-    };
+    const shown = Sienna.metadataForm.toFields(this._held());
     Object.keys(shown).forEach((k) => {
       const input = this._inputs[k];
       if (input[0] !== document.activeElement && input.val() !== shown[k]) input.val(shown[k]);
