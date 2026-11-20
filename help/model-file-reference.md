@@ -456,6 +456,22 @@ A layout that works:
 
 The app places the points where arrows cross a submodel's edge itself.
 
+**A flow that turns corners** — round the outside of the diagram, or
+because another flow runs straight between the same two stocks — lists its
+corners, in order from its source, under `layout.arcs`, keyed by the FLOW
+ARC's id:
+
+```json
+"layout": {
+  "arcs": { "arc3": { "points": [ {"x": 565, "y": 347}, {"x": 565, "y": 450},
+                                  {"x": 131, "y": 450}, {"x": 131, "y": 345} ] } }
+}
+```
+
+The flow runs straight from its source to the first corner, between the
+corners, and from the last to its end; its valve sits halfway along. A flow
+with no entry is straight.
+
 ## 9. Run settings and displays: `presentation`
 
 ```json
@@ -470,6 +486,10 @@ The app places the points where arrows cross a submodel's edge itself.
 
 When the model is opened, these displays open and the model runs once.
 
+- `startTime` (optional, 0 if absent): the time a run starts from. A
+  model in calendar years that uses them in its equations (a change from
+  1970, say) starts at its first year: `"startTime": 1850`, and
+  `time()` is then the year.
 - `runLength`: how long a run is, in the model's time units.
 - `logEach`: how often a value is recorded for the graphs.
 - `timeStep`: the integration step, **a string**. Small enough to be

@@ -57,8 +57,8 @@ async def main():
     check('▶ enabled', await ev(RC+".find('.slx-run-btn').eq(1).prop('disabled')") is False)
     check('no plots: nothing ran by itself', await ev("Sienna.Simulation.status") in ('idle',''), await ev("Sienna.Simulation.status"))
     # set Execute for 20 before preparing
-    await ev(RC+".find('.slx-run-field').first().find('input').val('20').trigger('change')")
-    check('a setting typed before ▶ is kept', await ev(RC+".find('.slx-run-field').first().find('input').val()")=='20')
+    await ev(RC+".find('.slx-run-field').filter((i,f)=>$(f).find('.slx-run-label').text()==='Execute for').find('input').val('20').trigger('change')")
+    check('a setting typed before ▶ is kept', await ev(RC+".find('.slx-run-field').filter((i,f)=>$(f).find('.slx-run-label').text()==='Execute for').find('input').val()")=='20')
     # Every class the status line takes, as it takes it: a compiled model kept
     # from an earlier run prepares faster than a poll would see.
     await ev("window.__seen=[]; (()=>{const e="+RC+".find('.slx-run-status')[0]; new MutationObserver(()=>__seen.push(e.className)).observe(e,{attributes:true,childList:true,characterData:true,subtree:true})})(); 1")

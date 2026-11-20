@@ -56,6 +56,7 @@ $.widget('sienna.runControl', $.sienna.widgetBase, {
 
   // label, settings key, title
   _FIELDS: [
+    ['Start time', 'startTime', 'The model time a run starts from, and ■ goes back to'],
     ['Execute for', 'runLength', 'How much model time this run covers'],
     ['Current time', 'current', 'Where the model has got to'],
     ['Update each', 'updateEach', 'Model time per request to the server — display smoothness, not results'],

@@ -7,12 +7,16 @@
 #
 #   python3 tools/headless/cdp.py tools/headless/scripts/model-file.py
 #   MODEL_FILES="a.json b.json" python3 tools/headless/cdp.py tools/headless/scripts/model-file.py
+#   MODEL_LIST=files.txt python3 tools/headless/cdp.py tools/headless/scripts/model-file.py
 #
 # Default: the reference's worked examples, examples/models/*.json. Over http
 # (tools/serve.py); Chrome on :9350 (tools/headless/README.md). A new-user
 # preview, so the real store is not touched.
 import glob, os
-files = os.environ.get('MODEL_FILES', '').split() or sorted(glob.glob(os.path.join(os.getcwd(), 'examples/models/*.json')))
+# MODEL_LIST: a file naming one model spec per line (names with spaces).
+listed = [l.strip() for l in open(os.environ['MODEL_LIST'])] if os.environ.get('MODEL_LIST') else []
+files = [l for l in listed if l] or os.environ.get('MODEL_FILES', '').split() \
+    or sorted(glob.glob(os.path.join(os.getcwd(), 'examples/models/*.json')))
 if not files: raise SystemExit('run it from the repository root, or set MODEL_FILES')
 
 CHECK = r"""(async () => {
@@ -57,8 +61,9 @@ CHECK = r"""(async () => {
         const desc = JSON.parse(await s.act('Describe'));
         const ids = Object.keys(desc).filter(k => desc[k].type !== 'VALUELESS');
         s._steps(String(run.timeStep));
-        s._call('sx_reset', 'number', ['number', 'number', 'number'], [0, -2, 12345]);
-        const rows = JSON.parse(await s.act('ExecuteMulti', {current: 0, step: String(run.timeStep),
+        const t0 = Number(run.startTime) || 0;    // presentation.run.startTime
+        s._call('sx_reset', 'number', ['number', 'number', 'number'], [t0, -2, 12345]);
+        const rows = JSON.parse(await s.act('ExecuteMulti', {current: t0, step: String(run.timeStep),
           runlength: Number(run.runLength), log: Number(run.logEach), note: JSON.stringify(ids)}));
         const ok = rows[rows.length - 1], last = rows[rows.length - 2] || [];
         const at = {};
@@ -78,7 +83,11 @@ CHECK = r"""(async () => {
 
 await nav('http://localhost:8731/index.html?newuser=fresh'); await sleep(5)
 failed = 0
-for f in files:
+for n_file, f in enumerate(files):
+    # A page's memory grows with each model compiled in it: a fresh page
+    # every few, as run-values.py does, for a long batch.
+    if n_file and n_file % 6 == 0:
+        await nav('http://localhost:8731/index.html?newuser=fresh'); await sleep(5)
     print('==', os.path.relpath(f))
     await ev('window.__txt = %s; 1' % json.dumps(open(f).read()))
     r = await ev(CHECK)

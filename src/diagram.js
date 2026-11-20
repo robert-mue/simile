@@ -107,6 +107,22 @@
     return text;
   }
 
+  /** The point halfway along a polyline, by length. */
+  function halfway(pts) {
+    var len = 0, i;
+    for (i = 1; i < pts.length; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    var left = len / 2;
+    for (i = 1; i < pts.length; i++) {
+      var l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      if (l >= left && l > 0) {
+        var t = left / l;
+        return { x: pts[i - 1].x + t * (pts[i].x - pts[i - 1].x), y: pts[i - 1].y + t * (pts[i].y - pts[i - 1].y) };
+      }
+      left -= l;
+    }
+    return { x: pts[0].x, y: pts[0].y };
+  }
+
   /**
    * Where the segment p→q crosses the boundary of `rect` (centre cx/cy, w/h),
    * or null if it does not. Used to seed a port's position on the boundary it
@@ -1069,6 +1085,10 @@
           var a = this.box(host.from, override);
           var z = this.box(host.to, override);
           geom = { x: (a.cx + z.cx) / 2, y: (a.cy + z.cy) / 2 };
+          // On a bent flow, halfway along its path.
+          var hostId = this._hostArcId(id);
+          var bends = hostId ? this.flowBends(hostId) : [];
+          if (bends.length) geom = halfway([{ x: a.cx, y: a.cy }].concat(bends, [{ x: z.cx, y: z.cy }]));
         }
       }
       var style = (this.schema().style || {})[el ? el.type : 'submodel'] || {};
@@ -1140,12 +1160,35 @@
       return found;
     },
 
+    /** The id of the flow a valve rides on, or null. */
+    _hostArcId: function (nodeId) {
+      var x = derived(this.model());
+      if (x) return x.host[nodeId] != null ? x.host[nodeId] : null;
+      var self = this;
+      return this.ids('arcs').filter(function (a) {
+        var arc = self.get(a);
+        return arc && arc.valve === nodeId;
+      })[0] || null;
+    },
+
     /**
      * A label's offset from its element's default anchor, in world units.
      * Absent means "wherever the notation puts it".
      */
     labelOffset: function (id) {
       return this.layout('labels/' + id) || null;
+    },
+
+    /**
+     * A flow's bends, in order from its source: `[{x, y}]`, `[]` for a
+     * straight one. Held in layout (`arcs/<id>.points`): they change no
+     * equation.
+     */
+    flowBends: function (id) {
+      var arc = this.get(id);
+      if (!arc || arc.type !== 'flow') return [];
+      var rec = this.layout('arcs/' + id);
+      return rec && Array.isArray(rec.points) ? rec.points : [];
     },
 
     /**
@@ -1233,6 +1276,10 @@
       var z = this.box(arc.to, override);
       var pts = [{ x: a.cx, y: a.cy }];
       var self = this;
+      // A flow's BENDS (Robert, 2026-11-20): where it turns between its ends,
+      // as Simile's `course` and Vensim's pipes have them. A flow stays
+      // inside one submodel, so it has no ports to pass as well.
+      this.flowBends(arcId).forEach(function (b) { pts.push({ x: b.x, y: b.y, bend: true }); });
       this.portsFor(arcId).forEach(function (p) {
         // `override` lets a drag preview a new position without writing to the
         // store: mid-drag values are not model changes, only the drop is.
@@ -1658,8 +1705,31 @@
             // alias, not to this label, so nothing breaks.
             self._renameIfClashing(reparent.id, reparent.parent);
           }
+          // A flow both of whose ends move by the same amount — the two
+          // dragged together, or inside a submodel dragged — takes its bends
+          // with it, as the drag's ghost showed (it moved such arcs whole).
+          var shift = {};
+          ids.forEach(function (k) {
+            var was = self.layout(k);
+            if (was && moves[k] && typeof was.x === 'number') {
+              shift[k] = { dx: moves[k].x - was.x, dy: moves[k].y - was.y };
+            }
+          });
+          var bent = self.ids('arcs').filter(function (a) { return self.flowBends(a).length; });
+          var carried = {};
+          bent.forEach(function (a) {
+            var arc = self.get(a);
+            var s1 = shift[arc.from], s2 = shift[arc.to];
+            if (s1 && s2 && Math.abs(s1.dx - s2.dx) < 1e-6 && Math.abs(s1.dy - s2.dy) < 1e-6
+                && (s1.dx || s1.dy)) {
+              carried[a] = self.flowBends(a).map(function (b) { return { x: b.x + s1.dx, y: b.y + s1.dy }; });
+            }
+          });
           ids.forEach(function (k) {
             Sienna.userData.set(self.path + '/layout/' + k, moves[k]);
+          });
+          Object.keys(carried).forEach(function (a) {
+            Sienna.userData.set(self.path + '/layout/arcs/' + a + '/points', carried[a]);
           });
           if (reparent) {
             var touched = [reparent.id].concat(self.descendantsOf(reparent.id));

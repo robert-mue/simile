@@ -36,7 +36,7 @@ async def waitready():
 async def field(label, val):
     p = await at("[...__sim().querySelectorAll('.slx-run-field')].find(r=>r.querySelector('.slx-run-label').textContent===%r).querySelector('input')" % label)
     await click(p[0],p[1]); await ev("document.activeElement.select()"); await typekeys(val); await press('Tab','Tab',9); await sleep(0.3)
-async def curtime(): return await ev("[...__sim().querySelectorAll('.slx-run-field')][1].querySelector('input').value")
+async def curtime(): return await ev("[...__sim().querySelectorAll('.slx-run-field')].find(r=>r.querySelector('.slx-run-label').textContent==='Current time').querySelector('input').value")
 async def runall():
     play = await at("__sim().querySelectorAll('.slx-run-btn')[1]"); await click(play[0],play[1]); await sleep(1.5)
     for i in range(120):

@@ -1174,7 +1174,9 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
       if (b.shape === 'valve') ly = b.cy + b.h / 2 + 13 * k;
       else if (b.shape === 'rect') ly = b.cy + b.h / 2 + 8 * k;
       else ly = b.cy - b.h / 2 - 6 * k;
-      this._placeLabel(d, id, node.label, b.cx, ly, null, k);
+      const t = this._placeLabel(d, id, node.label, b.cx, ly, null, k);
+      // A long name on several lines, growing away from its glyph.
+      this._wrapLabel(t, node.label, b.shape !== 'valve' && b.shape !== 'rect');
     }
   },
 
@@ -1206,6 +1208,35 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     t.addEventListener('pointerdown', (e) => this._beginLabelDrag(e, d, id, off));
     this._layer.labels.appendChild(t);
     return t;
+  },
+
+  /**
+   * A long name broken after underscores onto lines of at most `_WRAP`
+   * characters (Robert, 2026-11-20: Vensim's names are long, and Vensim
+   * wraps them too). The underscore stays at the end of its line, so the
+   * name still reads as the one name it is. `up`: the label sits above its
+   * glyph, so its last line keeps the anchor and the others go above.
+   * Display only: the label, its editing and its equation name are unchanged.
+   */
+  _WRAP: 16,
+  _wrapLabel(t, text, up) {
+    if (!t || String(text).length <= this._WRAP || String(text).indexOf('_') < 0) return;
+    const words = String(text).split('_');
+    const lines = [];
+    let line = '';
+    words.forEach((w, i) => {
+      const piece = w + (i < words.length - 1 ? '_' : '');
+      if (line && (line + piece).length > this._WRAP - 2) { lines.push(line); line = piece; } else line += piece;
+    });
+    if (line) lines.push(line);
+    if (lines.length < 2) return;
+    const x = t.getAttribute('x');
+    t.textContent = '';
+    lines.forEach((l, i) => {
+      const span = this._el('tspan', { x, dy: i === 0 ? (up ? -(lines.length - 1) * 1.1 + 'em' : '0') : '1.1em' });
+      span.textContent = l;
+      t.appendChild(span);
+    });
   },
 
   /** Show a label at an offset while it is dragged: only the label is touched. */
@@ -1425,9 +1456,10 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
   _fanOf(d, id, arc) {
     const key = [arc.from, arc.to].sort().join('|');
     const pool = this._index ? this._index.at[arc.from] || [] : d.ids('arcs');
+    // A bent flow takes its own way, so it does not share the pair's.
     const set = pool.filter((a) => {
       const x = d.get(a);
-      return x && [x.from, x.to].sort().join('|') === key;
+      return x && [x.from, x.to].sort().join('|') === key && !d.flowBends(a).length;
     });
     return { i: Math.max(0, set.indexOf(id)), n: set.length };
   },
@@ -1451,6 +1483,8 @@ $.widget('sienna.diagram', $.sienna.widgetBase, {
     const stored = d.arcBow(id);
     if (stored != null) return stored;
 
+    // A bent flow goes the way its bends say, straight between them.
+    if (arc.type === 'flow' && d.flowBends(id).length) return 0;
     // Influences and roles are drawn curved, so they can be bent (a curved
     // arrow's strip takes the drag); a flow is straight.
     const base = arc.type === 'influence' || arc.type === 'role' ? this.options.bowFraction : 0;

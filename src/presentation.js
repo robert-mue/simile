@@ -30,7 +30,7 @@
   'use strict';
 
   var WIDGETS = { plotter: true, sliders: true };
-  var RUN = ['runLength', 'logEach', 'timeStep'];
+  var RUN = ['startTime', 'runLength', 'logEach', 'timeStep'];
 
   /** A variable's name as displays give it: its submodels from the top, then its own. */
   function nameOf(m, id) {
@@ -74,6 +74,7 @@
     });
     var r = p.run;
     var run = [];
+    if (r.startTime) run.push('start at ' + r.startTime);
     if (r.runLength != null) run.push('run for ' + r.runLength);
     if (r.logEach != null) run.push('log each ' + r.logEach);
     if (r.timeStep != null) run.push('time step ' + r.timeStep);
@@ -105,7 +106,8 @@
     if (!displays.length) return null;
     var s = Sienna.Simulation.viewFor(path).settings;
     return {
-      run: { runLength: Number(s.runLength), logEach: Number(s.logEach), timeStep: String(s.timeStep) },
+      run: $.extend(Number(s.startTime) ? { startTime: Number(s.startTime) } : {},
+        { runLength: Number(s.runLength), logEach: Number(s.logEach), timeStep: String(s.timeStep) }),
       displays: displays,
     };
   }

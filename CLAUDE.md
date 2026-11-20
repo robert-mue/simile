@@ -91,6 +91,30 @@ footing (`src/widgets/grid.js` is the first).
   rest; the fields and their conversion are stated once,
   `Sienna.metadataForm` (src/dialog.js), shared with the Metadata panel.
   Not yet: submodels as modules (Robert: think first).
+- **Vensim models** (Robert, 2026-11-20: his System Zoo `.mdl` suite, for
+  the model gallery): `tools/vensim/mdl2json.py` converts a Vensim text
+  model into a model spec. Equations (INTEG to stocks and flows, a net
+  inflow that is not a sum of flows to ONE `<stock>_change` flow, Vensim's
+  functions to Simile's: RAMP, PULSE, PULSE TRAIN, IF THEN ELSE, XIDZ,
+  lookups and WITH LOOKUP to `interpolate`), names lower case with `_`, a
+  stock's first letter a capital (Robert: one style across the gallery),
+  the sketch's positions at full scale, its pipes' corners as flow BENDS,
+  its arrows' curves as bows, its `:GRAPH`s as default displays, INITIAL
+  TIME as the run's start time, units listed in the model's comment.
+  Elements the sketch does not draw are set out in a block to its right.
+  Says what it could not convert (exit 1): `A FUNCTION OF`, Vensim's
+  placeholder, means an unfinished model.
+- **Run start time** (`startTime`, a kept run setting and a model's
+  `presentation.run.startTime`; Robert, 2026-11-20): the time a run starts
+  from and ■ goes back to; the run control's first field. The engine's reset
+  takes it (`_startTime` in simulation.js; it was always the engine's 0).
+- **Flow bends** (`layout.arcs.<flowArc>.points`, `Diagram.flowBends`):
+  a flow's corners, drawn through (`arcPoints`), its valve halfway along its
+  path, carried when both its ends are dragged together (`commitDrag`), left
+  out of the fan of arcs sharing its ends; Simile's `course` both ways.
+  Check: `tools/headless/scripts/bends.py`.
+- **Long names wrap** in the diagram (`_wrapLabel`): over 16 characters,
+  after underscores; display only.
 - `src/widgets/index.js` — the widget **manifest**. A widget's `src` is resolved
   relative to `index.html`, so use `src/widgets/<name>.js`. Each widget's
   `role` (`diagram`, `run-control`, `display`) decides which collection it

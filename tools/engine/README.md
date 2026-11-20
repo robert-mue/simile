@@ -444,3 +444,42 @@ model with the old and new versions and compare the C++ bar line 2 (its date):
 `check/generate-all.sh`, see `MAINTAINING.md`.
 `pack.js` puts them in `vendor/simile-generator/`: run it after any change here.
 See NOTE-nkometou.md.
+
+## Known faults: delays, smoothing and `const_delay` (found 2026-11-20, NOT FIXED)
+
+Found while converting Robert's Vensim models (System Zoo, `tools/vensim/`).
+Each was checked in the smallest model there is — `x = time()` and one
+variable using the function — through `tools/headless/scripts/model-file.py`
+(export, the in-page generator, clang, a run). Robert: record them; the
+Vensim conversion does without them.
+
+1. **`delay1`, `delay3`, `smth1`, `smth3` do not build at all**, with two
+   arguments or three: `a = smth1(x, 2.0)` stops at "Simile could not make
+   C++ of this model", and the generator says nothing. Simile defines them
+   in `Functions/Arithmetic.pl` (`delay1(input,delay) --> delayf(input,
+   delay,1,input)`, likewise `smthf`) on top of FRAGMENTS,
+   `Functions/Fragments/delayf,…sml` and `smthf,…sml`. Those files are in
+   the bundled generator (`vendor/simile-generator/simile-generator.js`
+   lists `/simile/Functions/Fragments/smthf,output.r,input.r,…sml`), so
+   the fault is in how the headless generator expands a fragment, or in
+   what it needs from Tcl to do so (`tools/engine/generator/headless.pl`
+   answers only the Tcl calls seen so far). Not yet looked into.
+2. **The three-argument forms** (`delay1(input, delay, initial)` and the
+   rest), which Simile's source defines too, are also refused by our
+   schema's function table (`src/schema/simile-v1.js`: arity 2). Fix the
+   table when the functions build.
+3. **`const_delay` builds but does not delay.** `const_delay(x, 2)` returns
+   `x` itself at every step (time step 0.5); `const_delay(x, 2, 7.0)` (the
+   three-argument form, `Functions/Model properties.pl`) returns 7, its
+   starting value, for the whole run (time step 0.1). Its definition keeps
+   a buffer of `10*duration` slots counted on `round(10*time(0))`, i.e. it
+   assumes a resolution of 0.1 time units; even at that step it never
+   passes the input through here. The schema also allows it only 2
+   arguments.
+
+Effect: a model in the app using any of these, typed by a modeller or
+imported from Simile, fails to build (1) or silently gives wrong results
+(3). The Vensim converter makes every delay and smoothing of stocks instead
+(their System Dynamics definition), and leaves out the three System Zoo
+models that use `DELAY FIXED` (EZ211 FlightDynamics, EZ501 Supply chain,
+EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.

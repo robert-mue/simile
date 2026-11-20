@@ -879,13 +879,26 @@
       var bounds = [];
       var k = 0;
 
+      // A bent flow in one scope: its path as Simile's `course`, ends
+      // included, in the scope's frame (the importer reads it back).
+      var bends = (((this.m.layout || {}).arcs || {})[id] || {}).points || [];
+      var course = null;
+      if (bends.length && !this.crossings(a.from, a.to).out.length && !this.crossings(a.from, a.to).into.length) {
+        var scope = this.parentOf(a.from);
+        var ends = [this.m.layout[a.from] || {}, this.m.layout[a.to] || {}];
+        var pts = [ends[0]].concat(bends, [ends[1]]).map(function (q) {
+          return '[' + self.local(scope, q.x || 0, q.y || 0).join(',') + ']';
+        });
+        course = 'course=[' + pts.join(',') + ']';
+      }
+
       function seg(from, to) {
         var sid = k === at ? self.flowArc[id] : simId('arc', ++self.arcN);
         self.arcLines.push('arc(' + sid + ',' + from + ',' + to + ',flow,' + list([
           'attached=' + list(k === at && self.fn[a.valve] ? [self.fn[a.valve]] : []),
           'complete=true',
           'name=' + name,
-        ]) + ',' + list(['caption_offset=[0,0]']) + ').');
+        ]) + ',' + list(['caption_offset=[0,0]'].concat(course ? [course] : [])) + ').');
         k++;
         return sid;
       }
@@ -1329,6 +1342,11 @@
         // `dXdt = 0.5*dXdt…`, the flow in terms of itself. Simile writes 'X'.
         out += /^[A-Z_]/.test(name) ? "'" + name + "'" : name;
       } else {
+        // A sign straight after an operator — `x>-0.1`, `a*-b`, `2^-1` — is
+        // written apart from it: Prolog reads neighbouring symbol characters
+        // as ONE operator (`>-`, unknown), and the generator then fails
+        // without a word (System Zoo's EZ513, 2026-11-20).
+        if ((c === '-' || c === '+') && /[<>=*\/^+\-]$/.test(out)) out += ' ';
         out += c;
         i++;
       }

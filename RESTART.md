@@ -18,6 +18,22 @@ Robert (he is unsure; leave as is for now): whether the Metadata panel is still 
 default displays and what is read from the model); submodels as modules
 (think first); the run-modes proposal (`NOTE-run-modes.md`).
 
+**Since 18d, NOT RELEASED (2026-11-20):** Robert's Vensim suite (System
+Zoo, 114 `.mdl` in ~/Projects/vensim_models/ZOO MDL) for the gallery. Built:
+`tools/vensim/mdl2json.py`; run START TIME; flow BENDS (+ Simile course);
+long-name WRAPPING; names lower case, stocks capitalised (Robert). EZ302
+Cglobal matches a direct Euler run of its equations to 12 figures. 111 of
+114 convert cleanly; 3 are unfinished exercises (A FUNCTION OF): EZ115,
+EZ603 Pensions supplement, EZ606. Checks: bends 10/10, model-props 18/18,
+presentation 24/24 (its field found by label now: Start time came first),
+editor 19/19, two-views 22/22, round trip 65/72 as before.
+ENGINE FAULTS FOUND (recorded, NOT fixed; Robert): delay1/delay3/smth1/smth3
+do not build at all, const_delay builds but does not delay — see
+tools/engine/README.md, "Known faults". The converter makes delays of stocks;
+the 3 DELAY FIXED models (EZ211, EZ501, EZ502) are LEFT OUT (Robert). Also
+fixed on the way: the exporter wrote `x>-0.1` as Prolog's unknown `>-`
+(a space now goes between an operator and a sign; EZ513 built after).
+
 **RELEASED as 2026-11-16:** the "You already have a copy of this model"
 question is no longer confirm(): its buttons say "Make new copy" and
 "Open previous copy" (focused); Escape does neither (`askChoice` in

@@ -937,6 +937,22 @@
         var ours = self.put('arc', {
           type: 'flow', from: from, to: to, valve: valve, props: {},
         }, null);
+        // Its bends: the inner points of Simile's `course` (the path, ends
+        // included), for a flow of one segment, placed as node centres are.
+        if (segs.length === 1 && a.g.course) {
+          var o = self.origin(self.parent[a.from] == null ? null : self.parent[a.from]);
+          var pts = items(a.g.course).map(nums).filter(function (q) { return q.length >= 2; })
+            .map(function (q) { return { x: o.x + o.k * q[0], y: o.y + o.k * q[1] }; });
+          var inner = pts.slice(1, -1).filter(function (q, i) {
+            var p0 = pts[i], p2 = pts[i + 2];              // its neighbours in pts
+            var span = Math.hypot(p2.x - p0.x, p2.y - p0.y) || 1;
+            return Math.abs((q.x - p0.x) * (p2.y - p0.y) - (q.y - p0.y) * (p2.x - p0.x)) / span > 1;
+          });
+          if (inner.length) {
+            self.m.layout.arcs = self.m.layout.arcs || {};
+            self.m.layout.arcs[ours] = { points: inner };
+          }
+        }
         segs.forEach(function (s) { self.ours[s] = ours; });
         // An influence into ANY segment's rate is an influence into the valve.
         fns.forEach(function (f) { self.valveFor[f] = valve; });

@@ -166,7 +166,9 @@
   function essence(prolog) {
     return String(prolog).replace(/^source\(.*\)\.\n/, '');
   }
-  var KEPT = ['runLength', 'updateEach', 'logEach', 'timeStep'];
+  // `startTime`: the model time a run starts from, and ■ goes back to (Robert,
+  // 2026-11-20: a model in years, 1850 to 2050). 0 unless set.
+  var KEPT = ['runLength', 'updateEach', 'logEach', 'timeStep', 'startTime'];
 
   // The same, for this visit only. Where nothing is stored — a page that keeps
   // nothing (`Sienna.ephemeral`), or no storage at all — settings must still
@@ -456,7 +458,8 @@
         var logEach = parseFloat(self.params.displayInt);
         self.settings = {
           runLength: runLength,
-          current: parseFloat(self.params.resetTo),
+          startTime: parseFloat(self.params.resetTo) || 0,
+          current: parseFloat(self.params.resetTo) || 0,
           // NOT displayInt, which is what these two used to share. `logEach` is
           // how often the model records a point and belongs to the model;
           // `updateEach` is how much of the run is asked for in one request and
@@ -481,6 +484,8 @@
           if (kept.updateEach == null) {
             self.settings.updateEach = chunkFor(Number(self.settings.runLength), Number(self.settings.logEach));
           }
+          // A start time kept for it: the model is there until it is reset.
+          if (kept.startTime != null) self.settings.current = Number(kept.startTime) || 0;
         }
         self.settings.timeStep = padSteps(self.settings.timeStep, timeBasesOf(self.modelPath));
         if (self.params.errLimit == null) self.params.errLimit = 0;
@@ -645,7 +650,7 @@
 
       this._running = false;
       var note = this.noteList();
-      var current = this.params ? parseFloat(this.params.resetTo) : 0;
+      var current = this._startTime();
       // The step a run is made with is fixed here, at its start. SimiLive
       // takes a new step one request late — a change made at the start of a
       // run gave 320.18 for a first year that is 320 — so a change waits for
@@ -760,8 +765,14 @@
 
     /** True while nothing has been run since the last reset. */
     atStart: function () {
-      var from = this.params ? parseFloat(this.params.resetTo) : 0;
-      return Number(this.settings.current) === from;
+      return Number(this.settings.current) === this._startTime();
+    },
+
+    /** Where a run starts: the start time set for this model, else the engine's. */
+    _startTime: function () {
+      var t = this.settings && Number(this.settings.startTime);
+      if (isFinite(t) && this.settings.startTime != null && this.settings.startTime !== '') return t;
+      return this.params ? (parseFloat(this.params.resetTo) || 0) : 0;
     },
 
     /** A time step has been typed that the run in progress is not using. */
@@ -1004,9 +1015,10 @@
      * shows and edits until ▶ prepares it.
      */
     settingsBefore: function (path) {
-      var out = { runLength: 100, current: 0, logEach: 1, timeStep: '0.1' };
+      var out = { runLength: 100, startTime: 0, current: 0, logEach: 1, timeStep: '0.1' };
       var kept = rememberedFor(path) || {};
       KEPT.forEach(function (k) { if (kept[k] != null) out[k] = kept[k]; });
+      out.current = Number(out.startTime) || 0;
       if (out.updateEach == null) out.updateEach = chunkFor(Number(out.runLength), Number(out.logEach));
       return out;
     },
@@ -1033,7 +1045,11 @@
         next[key] = value;
         this.settings.updateEach = chunkFor(Number(next.runLength), Number(next.logEach));
       }
+      // A new start time, at the start: the run is there now. Mid-run it
+      // waits for ■, as a new time step does.
+      var wasAtStart = key === 'startTime' && this.atStart();
       this.settings[key] = value;
+      if (wasAtStart) this.settings.current = Number(value);
       remember(this._settingsKey(), this.settings);
       this._emit({ type: 'settings' });
     },
