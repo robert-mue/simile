@@ -483,3 +483,11 @@ imported from Simile, fails to build (1) or silently gives wrong results
 (their System Dynamics definition), and leaves out the three System Zoo
 models that use `DELAY FIXED` (EZ211 FlightDynamics, EZ501 Supply chain,
 EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
+
+4. **A log interval that is not a whole number of time steps changes the
+   run** (found 2026-11-20). Logging every 3.75 with a time step of 1, the
+   engine takes a short step to reach each log time, and the run drifts:
+   System Zoo's EZ107 ended at 15.0192 instead of 15.0212, which it gives
+   exactly when logging every step. Possibly Simile's own behaviour rather
+   than a fault; worth knowing, and perhaps worth a warning in the run
+   control. The Vensim converter logs at whole multiples of the step.

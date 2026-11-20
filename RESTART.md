@@ -28,6 +28,22 @@ Cglobal matches a direct Euler run of its equations to 12 figures. 111 of
 EZ603 Pensions supplement, EZ606. Checks: bends 10/10, model-props 18/18,
 presentation 24/24 (its field found by label now: Start time came first),
 editor 19/19, two-views 22/22, round trip 65/72 as before.
+OVERNIGHT 2026-11-20 (committed after his review): the 108
+converted models in ~/Projects/vensim_models/Simile JSON/, the diagrams PDF
+there too (System Zoo diagrams.pdf, 18 pages). World3 builds (ACTIVE
+INITIAL). An independent Vensim simulator (tools/vensim/vensim_sim.py) and
+compare.py found drift the app's checks could not: logging between steps
+(engine takes a short step), the engine's time()/dt() not exact (Z_ models'
+INTEGER cells), now all fixed in the converter. Lorenz (EZ206) and EZ214
+FluidFlow differ by rounding amplified (chaos; a near-singular DET): they
+agree for the first 50 steps to 9 figures. Open for Robert: TIME written as
+`(round(time()/0.1)*0.1)` is correct but wordy in equations — a helper
+variable instead?
+THEN (2026-11-20, day): a delay/smoothing x stays as the sketch draws it,
+equal to a stock `<x> smoothed`/`<x> delayed` above it (x had BECOME the
+stock, a valve too: EZ210's rate_of_turn); 18 models reconverted, all agree.
+PDF redone without the Welcome / please-wait overlays. tools/check_models.py
+for Robert: the gallery's five recorded (--save) in check-expected.json.
 ENGINE FAULTS FOUND (recorded, NOT fixed; Robert): delay1/delay3/smth1/smth3
 do not build at all, const_delay builds but does not delay — see
 tools/engine/README.md, "Known faults". The converter makes delays of stocks;

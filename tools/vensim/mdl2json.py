@@ -30,7 +30,8 @@ where Vensim has the arrow. Units are left out, as the reference says, and
 listed in the model's comment instead.
 
 TIME: the run starts at Vensim's INITIAL TIME (`presentation.run.startTime`),
-so `TIME` is `time()` and every time in an equation is as Vensim has it.
+and `TIME` is the run's time on the step grid (`Expr.now`), so every time in
+an equation is as Vensim has it and comparisons with it land on the step.
 
 Prints what it could not convert, and exits 1 if anything.
 """
@@ -217,6 +218,17 @@ class Expr:
                 parts.append(self.operand())
         return ''.join(parts)
 
+    def now(self):
+        """Vensim's TIME: the run's time snapped to the step grid. The
+        engine's time() adds up the steps, so at a step meant to be t=2 it can
+        be 1.9999999, and a comparison `Time<2` (EZ214), or a PULSE TRAIN
+        landing on its interval (the Z_ models), goes the wrong way. The step
+        is the model's own number, not dt() (see `time step`)."""
+        t0, h = self.t0, self.step
+        if float(t0):
+            return '(%s+round((time()-%s)/%s)*%s)' % (t0, t0, h, h)
+        return '(round(time()/%s)*%s)' % (h, h)
+
     def operand(self):
         kind, val = self.take()
         key = norm(val)
@@ -228,11 +240,19 @@ class Expr:
         if is_call and key not in self.names:
             return self.function(key, self.args())
         if key == 'time':
-            return 'time()'
+            return self.now()
         if key == 'time step':
-            return 'dt()'
+            # The number itself: the engine's dt() is not exactly 0.1, and
+            # the Z_ models' INTEGER(10*…) then lands on the wrong cell.
+            return self.step
         if key in getattr(self, 'constants', {}):
             return self.constants[key]
+        if getattr(self, 'initial', False) and key in getattr(self, 'ai', {}):
+            sub = Expr(self.names, self.lookups, self.t0)
+            sub.constants, sub.ai, sub.initial = self.constants, self.ai, True
+            out, used = sub.convert(self.ai[key])
+            self.used |= used
+            return '(' + out + ')'
         if key in self.names:
             self.used.add(key)
             return self.names[key]
@@ -250,14 +270,14 @@ class Expr:
             return '(if %s then %s else %s)' % tuple(a)
         if f == 'ramp':
             s, t1 = a[0], a[1]
-            t = 'time()'
+            t = self.now()
             if len(a) == 2:
                 return '(if %s<%s then 0.0 else %s*(%s-%s))' % (t, t1, s, t, t1)
             t2 = a[2]
             return '(if %s<%s then 0.0 elseif %s<%s then %s*(%s-%s) else %s*(%s-%s))' % (
                 t, t1, t, t2, s, t, t1, s, t2, t1)
         if f == 'pulse':
-            t = 'time()'
+            t = self.now()
             return '(if %s>=%s and %s<%s+%s then 1.0 else 0.0)' % (t, a[0], t, a[0], a[1])
         if f == 'xidz':
             return '(if %s==0.0 then %s else %s/%s)' % (a[1], a[2], a[0], a[1])
@@ -266,7 +286,7 @@ class Expr:
         if f == 'log' and len(a) == 2:
             return '(log(%s)/log(%s))' % (a[0], a[1])
         if f == 'pulse train':
-            t = 'time()'
+            t = self.now()
             return '(if %s>=%s and %s<=%s and fmod(%s-%s,%s)<%s then 1.0 else 0.0)' % (
                 t, a[0], t, a[3], t, a[0], a[2], a[1])
         if f == 'delay fixed':
@@ -275,13 +295,11 @@ class Expr:
             # faults"), and a lag has no stock form. Left out (Robert).
             raise ValueError('DELAY FIXED (a pure time lag) cannot be converted until the engine\'s '
                              'const_delay works: see tools/engine/README.md, "Known faults"')
-        if f == 'active initial':
-            return a[0]
         if f == 'random uniform':
             return 'rand_var(%s,%s)' % (a[0], a[1])
         if f == 'step':
             # Vensim STEP(height, time) is Simile's step(height, time), time absolute.
-            return 'step(%s,%s)' % (a[0], a[1])
+            return '(if %s>=%s then %s else 0.0)' % (self.now(), a[1], a[0])
         if f in simple and simple[f]:
             return '%s(%s)' % (simple[f], ', '.join(a))
         raise ValueError('no Simile equivalent for the function %s' % f.upper())
@@ -391,13 +409,38 @@ def convert(path):
 
     model_eqs = [(l, r if isinstance(r, tuple) else unwrap(r), u, c) for l, r, u, c in model_eqs]
 
+    # `x = ACTIVE INITIAL(active, initial)`: `active` while running, `initial`
+    # while the model is set up — where a stock's starting value would
+    # otherwise depend on stocks (World3). So x's equation is `active`, and in
+    # every stock's starting value x is read as `initial` (Expr.initial).
+    active_initial = {}
+    stripped = []
+    for l, r, u, c in model_eqs:
+        m = None if isinstance(r, tuple) else re.match(r'^\s*ACTIVE\s+INITIAL\s*\((.*)\)\s*$', r, re.S | re.I)
+        if m:
+            depth, cut = 0, None
+            for i, ch in enumerate(m.group(1)):
+                depth += {'(': 1, ')': -1}.get(ch, 0)
+                if ch == ',' and depth == 0:
+                    cut = i
+            if cut is not None:
+                active_initial[norm(l)] = m.group(1)[cut + 1:].strip()
+                r = m.group(1)[:cut].strip()
+        stripped.append((l, r, u, c))
+    model_eqs = stripped
+
     # A delay or smoothing WITH a starting value, as a whole equation —
     # `x = DELAY1I(input, time, start)` — is its stocks, as System Dynamics
     # defines it: Simile's engine will not build delay1/delay3/smth1 with a
-    # third argument. First order: x a stock from `start`, changing by
-    # (input − x)/time. Third order: two stages and x, each with a third of
-    # the time. Placed where x is drawn (`stage_of`).
+    # third argument. First order: a stock from `start`, changing by
+    # (input − it)/time. Third order: two stages and it, each with a third of
+    # the time. x itself stays what the sketch draws it as (a valve stays a
+    # valve), equal to that stock, `<x> smoothed` / `<x> delayed`, set out
+    # just above it, its stages to its left (`stage_of`: name -> (placed
+    # from, dx, dy)). A helper pulled out of a larger expression has no place
+    # in the sketch: it is the stock itself, set out beside what uses it.
     stage_of = {}
+    helper_names = set()
     def top_args(text):
         out, depth, cur = [], 0, ''
         for ch in text:
@@ -441,7 +484,8 @@ def convert(path):
         r2, helpers = pull_out(l, r)
         for h, call in helpers:
             pulled.append((h, call, u, ''))
-            stage_of[norm(h)] = (norm(l), 1)
+            stage_of[norm(h)] = (norm(l), 260, 110 * (len(helper_names) % 3 + 1))
+            helper_names.add(norm(h))
         pulled.append((l, r2, u, c))
     model_eqs = pulled
 
@@ -461,16 +505,21 @@ def convert(path):
             continue
         f = {'SMOOTHI': 'SMOOTHI', 'SMOOTH3I': 'SMOOTH3I'}.get(f, f)
         inp, T, init = a
+        st = l
+        if norm(l) not in helper_names:
+            st = l + (' smoothed' if f.startswith('SMOOTH') else ' delayed')
+            expanded.append((l, st, u, c))
+            stage_of[norm(st)] = (norm(l), 0, -120)
         if f in ('DELAY1I', 'SMOOTHI'):
-            expanded.append((l, 'INTEG((%s-%s)/(%s), %s)' % (inp, l, T, init), u, c))
+            expanded.append((st, 'INTEG((%s-%s)/(%s), %s)' % (inp, st, T, init), u, ''))
         else:
             s1, s2 = l + ' stage 1', l + ' stage 2'
             third = '((%s)/3)' % T
             expanded.append((s1, 'INTEG((%s-%s)/%s, %s)' % (inp, s1, third, init), u, ''))
             expanded.append((s2, 'INTEG((%s-%s)/%s, %s)' % (s1, s2, third, init), u, ''))
-            expanded.append((l, 'INTEG((%s-%s)/%s, %s)' % (s2, l, third, init), u, c))
-            stage_of[norm(s1)] = (norm(l), -2)
-            stage_of[norm(s2)] = (norm(l), -1)
+            expanded.append((st, 'INTEG((%s-%s)/%s, %s)' % (s2, st, third, init), u, ''))
+            stage_of[norm(s1)] = (norm(st), -600, 0)
+            stage_of[norm(s2)] = (norm(st), -300, 0)
     model_eqs = expanded
 
     # Stocks first: their names are capitalised.
@@ -496,6 +545,8 @@ def convert(path):
 
     X = Expr(names, lookups, t0s)
     X.constants = {'initial time': '%g' % t0, 'final time': '%g' % t1, 'saveper': '%g' % save}
+    X.step = real('%r' % dt if dt != int(dt) else '%d' % dt)
+    X.ai = active_initial
 
     # Stocks: INTEG(net, init).
     stocks = {}       # norm -> {'net': terms, 'init': text}
@@ -659,7 +710,7 @@ def convert(path):
                 else:
                     unplaced_clouds.append((c, ids[(dsts or srcs)[0]], which))
                     return c
-                layout[c] = {'x': ox + (-60 if which == 'src' else 60), 'y': oy}
+                layout[c] = {'x': ox + (-150 if which == 'src' else 150), 'y': oy}
             return c
         a_end = end(srcs, 'src')
         z_end = end(dsts, 'dst')
@@ -691,6 +742,7 @@ def convert(path):
         if isinstance(rhs, tuple) or k not in ids:
             continue
         text = stocks[k]['init'] if k in stocks else rhs
+        X.initial = k in stocks            # a starting value: ACTIVE INITIAL's initial
         try:
             out, used = X.convert(text)
         except ValueError as e:
@@ -716,22 +768,40 @@ def convert(path):
         y0 = min(g['y'] for g in placed)
     else:
         x0 = y0 = 100
-    for k2, (main, step) in stage_of.items():
-        if k2 in ids and ids[k2] not in layout and ids.get(main) in layout:
-            g = layout[ids[main]]
-            layout[ids[k2]] = {'x': g['x'] + step * 110, 'y': g['y'] + 70}
+    # A delay's or smoothing's stocks, from what they are placed from (which
+    # may itself be one of them: a stage from its last stock).
+    # A valve has no place of its own (the app puts it halfway along its
+    # flow): there, from its flow's ends.
+    def at(i):
+        if i in layout:
+            return layout[i]
+        f = next((x for x in arcs.values() if x.get('type') == 'flow' and x.get('valve') == i), None)
+        if f and f['from'] in layout and f['to'] in layout:
+            p, q = layout[f['from']], layout[f['to']]
+            return {'x': (p['x'] + q['x']) / 2, 'y': (p['y'] + q['y']) / 2}
+        return None
+    more = True
+    while more:
+        more = False
+        for k2, (main, dx, dy) in stage_of.items():
+            g = at(ids[main]) if main in ids else None
+            if k2 in ids and ids[k2] not in layout and g:
+                layout[ids[k2]] = {'x': g['x'] + dx, 'y': g['y'] + dy}
+                more = True
+    # A stock's cloud far enough off that its valve's name (halfway) clears
+    # the stock's.
     for c, st, which in list(unplaced_clouds):
         if st in layout:
             g = layout[st]
-            layout[c] = {'x': g['x'] + (-70 if which == 'src' else 70), 'y': g['y'] + (12 if which == 'dst' else 0)}
+            layout[c] = {'x': g['x'] + (-150 if which == 'src' else 150), 'y': g['y']}
             unplaced_clouds.remove((c, st, which))
     loose = [i for i, n in nodes.items() if i not in layout and n['type'] in ('stock', 'variable')]
     loose.sort(key=lambda i: (nodes[i]['type'] != 'stock', nodes[i]['label']))
     for j, i in enumerate(loose):
-        layout[i] = {'x': x0 + (j % 4) * 220, 'y': y0 + (j // 4) * 90}
+        layout[i] = {'x': x0 + (j % 4) * 400, 'y': y0 + (j // 4) * 110}
     for c, st, which in unplaced_clouds:
         g = layout.get(st, {'x': x0, 'y': y0})
-        layout[c] = {'x': g['x'] + (-70 if which == 'src' else 70), 'y': g['y'] + (12 if which == 'dst' else 0)}
+        layout[c] = {'x': g['x'] + (-150 if which == 'src' else 150), 'y': g['y']}
 
     # Presentation: the book's graphs, the run.
     displays = []
@@ -743,9 +813,15 @@ def convert(path):
                 got.append(ids[v])
         if got:
             displays.append({'widget': 'plotter', 'variables': got})
+    # A log interval a whole number of time steps: logging between steps
+    # makes the engine take a short step to reach the log time, which
+    # changes the run (EZ107 drifted by 1 in 10,000). A long run at a small
+    # step logs every so many steps, about 400 points.
     log_each = save
     if (t1 - t0) / max(save, 1e-9) > 1000:
         log_each = (t1 - t0) / 400
+    steps_per_log = max(1, int(math.ceil(round(log_each / dt, 9))))
+    log_each = float('%.12g' % (steps_per_log * dt))
     pres = {'run': {'startTime': t0, 'runLength': t1 - t0, 'logEach': log_each, 'timeStep': '%g' % dt}}
     if not t0:
         del pres['run']['startTime']

@@ -103,7 +103,26 @@ footing (`src/widgets/grid.js` is the first).
   TIME as the run's start time, units listed in the model's comment.
   Elements the sketch does not draw are set out in a block to its right.
   Says what it could not convert (exit 1): `A FUNCTION OF`, Vensim's
-  placeholder, means an unfinished model.
+  placeholder, means an unfinished model; `DELAY FIXED` is refused (the
+  engine's const_delay does not delay). Every delay and smoothing is made of
+  STOCKS (the engine's own do not build): x stays what the sketch draws (a
+  valve stays a valve), equal to a stock `<x> smoothed` / `<x> delayed` set
+  out above it, a third order's stages to its left; `ACTIVE INITIAL`'s initial is used
+  in stocks' starting values (World3). For exact agreement with Vensim:
+  numbers are written as reals, Vensim's TIME is the time on the step grid
+  with the model's literal step (`Expr.now`; the engine's time() and dt()
+  drift), and logging is at whole multiples of the step. CHECKED against
+  the originals by `tools/vensim/vensim_sim.py`, an independent Vensim
+  simulator, and `tools/vensim/compare.py` (the app's end values from
+  model-file.py, name by name).
+- **`tools/check_models.py`** (Robert, 2026-11-20: for him to run, no
+  Python needed beyond typing it): checks model files — the gallery by
+  default, or files / folders given — load, are complete, export, compile
+  and run (model-file.py through cdp.py, starting serve.py and a headless
+  Chrome if they are not running); `--vensim <mdl folder>` adds compare.py;
+  `--save` records end values as right in `check-expected.json` (git
+  ignores it, and `check-report.txt`), and later runs say SAME / CHANGED.
+  The engine's random numbers repeat run to run, so random models compare.
 - **Run start time** (`startTime`, a kept run setting and a model's
   `presentation.run.startTime`; Robert, 2026-11-20): the time a run starts
   from and ■ goes back to; the run control's first field. The engine's reset

@@ -10,3 +10,6 @@
 .claude/
 .~lock.*#
 tools/headless/_*
+check-report.txt
+check-expected.json
+__pycache__/
