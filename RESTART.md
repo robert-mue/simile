@@ -4,8 +4,9 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-18: RELEASED as 2026-11-18d** (Robert: "commit and push and
-release"), live and checked (`src/release.js` on the site says 2026-11-18d).
+**STATE 2026-11-20: RELEASED as 2026-11-20** (Robert: "make a release"),
+live and checked (`src/release.js` on the site says 2026-11-20); tag and GitHub
+release 2026-11-20. Before it, 2026-11-18d:
 simile `main` = `release` (760dc4c plus restart-note commits), tags and
 GitHub releases 2026-11-18, 18b, 18c, 18d; sienna 76a1f80; gallery 3baeb91. All three
 match origin; nothing is half-finished. 18c: Model properties (the model as
@@ -18,7 +19,7 @@ Robert (he is unsure; leave as is for now): whether the Metadata panel is still 
 default displays and what is read from the model); submodels as modules
 (think first); the run-modes proposal (`NOTE-run-modes.md`).
 
-**Since 18d, NOT RELEASED (2026-11-20):** Robert's Vensim suite (System
+**RELEASED as 2026-11-20 (live, checked; tag and GitHub release):** Robert's Vensim suite (System
 Zoo, 114 `.mdl` in ~/Projects/vensim_models/ZOO MDL) for the gallery. Built:
 `tools/vensim/mdl2json.py`; run START TIME; flow BENDS (+ Simile course);
 long-name WRAPPING; names lower case, stocks capitalised (Robert). EZ302
