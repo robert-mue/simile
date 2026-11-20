@@ -756,3 +756,24 @@ Release 2026-11-18d
   Model properties) now opens on a Metadata tab: the model's title,
   description, keywords, web page and paper, the same as the Metadata
   panel shows. Everything changed in one visit is one step to undo.
+
+------------------------------------------------------------------------
+Release 2026-11-20
+------------------------------------------------------------------------
+
+Running models
+- A run can start at any time: the run control has a new first field,
+  Start time (for example 1850 for a model in calendar years). Stop
+  goes back to it, and the plots' time axis starts there.
+
+Diagrams
+- A flow can turn corners. Flows imported from Simile models keep their
+  bends (they used to be drawn straight), the valve sits halfway along,
+  and dragging both ends of a bent flow together takes its corners
+  with it.
+- Long names are written on several lines, broken after an underscore.
+
+Fixed
+- An equation with a sign straight after an operator, such as
+  if x>-0.1 then ... , made the model fail to build without saying why.
+  It now builds.
