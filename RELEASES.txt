@@ -777,3 +777,12 @@ Fixed
 - An equation with a sign straight after an operator, such as
   if x>-0.1 then ... , made the model fail to build without saying why.
   It now builds.
+
+------------------------------------------------------------------------
+Release 2026-11-21
+------------------------------------------------------------------------
+
+Fixed
+- The help for the function ramp (in the equation dialog's function
+  list) gave its arguments the wrong way round. It is ramp(slope, time):
+  a ramp of the given slope, starting at the given time.
