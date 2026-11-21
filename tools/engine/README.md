@@ -552,3 +552,26 @@ EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
    what a full reset does with a VarParamData whose time points were
    created after load. Check any fix with the coral model and a parameter
    file loaded after the model.
+
+8. **A run that never finishes, with many variable parameters and values
+   over time** (found 2026-11-21, NOT investigated). The coral model
+   (examples/papers/coral) with its 14 regional constants and `T_data` (1752
+   monthly values over time) as variable parameters (15) runs 2146 years in
+   under a second. Making nine more constants variable parameters too (24 in all,
+   the nine with only their defaults) makes the same run never finish: a page
+   at 100% of a core (check_models.py's --time-limit stopped it). Related,
+   perhaps: model-file.py driving the engine directly (FileParameters, then
+   sx_reset depth -2, then one ExecuteMulti) never finished between months
+   1500 and 1751 with the same file, where Simulation's route did. A guess
+   to test: `nextSeriesEvt` (shank.cpp's run loop) left behind `xtime`, so
+   `aim_for - xtime` is negative and every step is `minFreq` long. Worked
+   round: the notebook varies constants by editing the model spec instead.
+   ALSO (2026-11-21), with no extra parameters: the coral model, SEA RCP 4.5,
+   N = 2.65e-13, with the constant `b` 25% lower (0.0633 x 0.75, a changed
+   copy of the model spec): the 2000-year spin-up runs (8 s, compile
+   included), 1955 to 2079 runs, the whole run to 2100 never finishes. By
+   2055 the symbionts are at 1e-15 cells, by 2079 at 1e-63, heading for
+   underflow; with `b` as published they never get so low. So perhaps a
+   value sinking to denormal or zero sends the run loop round for ever (an
+   event prediction, `event_predict`, gone wrong?). Reproduce with
+   tools/python/simile_run.py; the coral notebook records it and carries on.

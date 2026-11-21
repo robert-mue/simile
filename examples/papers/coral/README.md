@@ -33,6 +33,8 @@ emission scenarios (RCP 2.6, 4.5 and 8.5).
 | `coral.json` | the model spec (57 elements); its parameters' defaults are the GBR's |
 | `make_coral.py` | writes `coral.json` and the nine parameter files from the authors' repository |
 | `results_to_csv.py` | the authors' published runs (numpy pickles) as CSV, read safely without numpy |
+| `coral.ipynb` | the notebook: calibration, projections and sensitivity in Python, saved with its results (below) |
+| `make_notebook.py` | writes `coral.ipynb` afresh, without results: `python make_notebook.py coral.ipynb`, then run it |
 
 The nine parameter files, `coral-<GBR|SEA|CAR>-<RCP26|RCP45|RCP85>.parameters.json`,
 are not in the repository, because they hold the authors' temperature data.
@@ -88,9 +90,26 @@ realisation of the random draws, and ours are others.
   parameter with a default ignores a parameter file loaded after the model
   (`tools/engine/README.md`, known fault 7).
 
-## What Simile cannot do from this paper yet
+## The notebook: calibration, projections and sensitivity
 
-The calibration of the speed of acclimation N (their Fig 2) and the
-sensitivity analysis (Figs 5 and 6) each need hundreds of runs over a range
-of parameter values. That is the multiple-run modes proposed in
-`NOTE-run-modes.md`.
+`coral.ipynb` does with the model what the paper does with its code: one run
+against the authors' published one; calibrating N against the observed coral
+cover (their Fig 2, here also as a least-squares fit); the projections to 2100
+under the three scenarios beside the paper's numbers; and the sensitivity to
+N and to ±25% in each of ten parameters (Figs 5 and 6, for one region and
+scenario). The model stays the Simile diagram; the runs are Simile's own,
+driven from Python by `tools/python/simile_run.py`, a PROTOTYPE that runs the
+web app's engine in a hidden Chrome on the same machine (so not yet in a
+notebook elsewhere). To open it:
+
+```
+~/Projects/simile-notebook-env/bin/jupyter lab examples/papers/coral/coral.ipynb
+```
+
+(`simile-notebook-env`: a Python environment with Jupyter, numpy, pandas,
+matplotlib and websockets, made 2026-11-21.) The first run fetches the
+authors' repository into `their-code/` and makes the parameter files in
+`generated/`, both beside it and ignored by git. About ten minutes in all.
+
+Simile itself cannot yet do these many-run experiments without Python: that
+is the multiple-run modes proposed in `NOTE-run-modes.md`.

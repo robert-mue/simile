@@ -126,6 +126,23 @@ footing (`src/widgets/grid.js` is the first).
   derivatives by hand, copying traps) and section 13 (comparing:
   `check_models.py --parameters --csv`, then `tools/compare_series.py`).
   Their data is not in the repo (the parameter files are made from it).
+  `coral.ipynb` (Robert, 2026-11-21, "tempting"): the paper's calibration of
+  N, projections and sensitivity, in Python, the model staying the diagram;
+  runs through **`tools/python/simile_run.py`** — `Session(model,
+  parameters).run({...}, variables=[...])` → a pandas DataFrame — a PROTOTYPE
+  driving the app's engine in a hidden Chrome here (Simulation's own route:
+  values before each reset, then start; compile once, ~0.5 s a run after;
+  time limits, closes what it started). A constant is varied as a changed
+  COPY of the model spec, not by making it a parameter (engine README fault 8:
+  24 variable parameters and a series never finished). Its Python:
+  ~/Projects/simile-notebook-env (no pip on this machine's Python: pip was
+  installed into the env from its PyPI wheel). **`NOTE-jupyter.md`** (Robert,
+  2026-11-21): why (common ground with researchers who write Python to run
+  experiments with models), how to make a notebook for ANY model (a template),
+  and the DECISION — a pip-installable package (likely Simile's wasm engine
+  under Node.js; the GPL of Jasper's run-time to agree first), not
+  JupyterLite. A FIXED parameter changed between runs: `run` reloads the
+  model first (fault 7 otherwise).
 - **`tools/check_models.py`** (Robert, 2026-11-20: for him to run, no
   Python needed beyond typing it): checks model files — the gallery by
   default, or files / folders given — load, are complete, export, compile
