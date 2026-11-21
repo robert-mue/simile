@@ -814,3 +814,25 @@ Fixed
   month_start = time()>5) can now be used as the condition of an if in
   another equation. Before, the model failed to build, saying only that
   Simile could not make C++ of it.
+
+------------------------------------------------------------------------
+Release 2026-11-21d
+------------------------------------------------------------------------
+
+Model file reference (for writing a model without the app, or for an AI
+assistant writing one from a paper)
+- New guidance on reproducing a published model: reading the authors'
+  code first, a sudden change in a stock (a harvest, bleaching), a
+  spin-up before the data begins, forcing data such as monthly
+  temperatures as values over time in a parameter file, a time step
+  that keeps time() exact, building a function Simile lacks, and the
+  traps in copying equations (in Simile, -z^2 is (-z)^2).
+- How to check a model against the authors' own published results.
+
+Model gallery (File > Sample models...)
+- Two new models: Trees over pasture, individual trees shading a grid of
+  pasture, which opens in the Field in 3D display; and Coral
+  acclimation, a published model of coral reefs and bleaching in a
+  warming ocean, 1955 to 2100, checked against its authors' results.
+
+The app itself is unchanged since 2026-11-21c.

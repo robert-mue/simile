@@ -4,9 +4,10 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-21 (evening): everything committed and pushed** — simile `main`
-(released as 2026-11-21c; later commits are tools, docs and checks only, no app
-change), gallery 0431a09 (live, checked). Since 21c:
+**STATE 2026-11-21 (evening): RELEASED as 2026-11-21d** (the reference's guidance on
+reproducing published models; the app unchanged since 21c; tag and GitHub release),
+gallery 0431a09 (live, checked). Robert tried Field in 3D in a real browser window:
+"worked fine". Since 21c:
 - GALLERY: two new models, live and checked from the live app — `agroforestry`
   ("Trees over pasture", opens in Field in 3D) and `coral` (opens with
   `coral.parameters.json`, the authors' GBR RCP 4.5 temperatures, cited; Robert
@@ -26,7 +27,7 @@ change), gallery 0431a09 (live, checked). Since 21c:
   `pkill -f "^/opt/google/chrome/chrome --headless=new --remote-debugging-port=9350"`
   (a pattern on `--user-data-dir=...` also matches, and kills, your own shell).
 - WAITING ON ROBERT: the run-control modes (NOTE-run-modes.md; he will reply);
-  Field in 3D tried in a real browser window; Jasper on faults 5 and 7.
+  Jasper on faults 5 and 7.
 **RELEASED as 2026-11-21c (live; tag and GitHub release): fault 6 fixed** (a true/false
 variable as an `if` condition; engine README). Fault 7 diagnosed, NOT fixed (two tries
 hung the engine; Robert's fan). The coral model (Raharinirina et al. 2022) in
@@ -34,8 +35,8 @@ hung the engine; Robert's fan). The coral model (Raharinirina et al. 2022) in
 **RELEASED as 2026-11-21b (live, checked; tag and GitHub release): Field in 3D** (`src/widgets/field3d.js`,
 three.js r147 in `vendor/three/`) and the agroforestry model
 (now in the gallery as `agroforestry`): trees over 1600 pasture
-patches, vertical-sun shading by association. Robert: "Really impressive!". Not yet
-tried in a real browser window (headless only). Ideas: roots in the soil, felling
+patches, vertical-sun shading by association. Robert: "Really impressive!"; tried
+in a real browser window, "worked fine". Ideas: roots in the soil, felling
 animation, planting in rows.
 **STATE 2026-11-21: RELEASED as 2026-11-21** (ramp's help; live, checked; tag and GitHub release). Before it,
 **2026-11-20: RELEASED as 2026-11-20** (Robert: "make a release"),
