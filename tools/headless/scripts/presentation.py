@@ -108,7 +108,9 @@ async def main():
         await ev("document.dispatchEvent(new KeyboardEvent('keydown',{key:'x'}))")
         await wait("document.querySelectorAll('button[data-open]').length", 20)
         await ev("[...document.querySelectorAll('button[data-open]')].find(b=>b.dataset.open.endsWith('/%s.json')).click()" % name)
-        want = pr['run'].get('runLength')
+        # The run ends at its start time plus its length (the coral model
+        # starts 2000 years before its data, at -24012 months).
+        want = (pr['run'].get('startTime') or 0) + pr['run'].get('runLength')
         done = await wait("Sienna.Simulation.status==='ready' && Number(Sienna.Simulation.settings.current)===%s" % want, 90)
         plots = await ev("JSON.stringify(app.panels().filter($p=>app.widgetOf($p)==='plotter').map($p=>$p.panel('content').plotter('instance')._series.map(s=>[s.label, s.pts.length + Object.keys(s.lines||{}).length])))")
         nplots = sum(1 for d in pr['displays'] if d['widget'] == 'plotter')
