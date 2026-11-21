@@ -4,7 +4,8 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-20: RELEASED as 2026-11-20** (Robert: "make a release"),
+**STATE 2026-11-21: RELEASED as 2026-11-21** (ramp's help; live, checked; tag and GitHub release). Before it,
+**2026-11-20: RELEASED as 2026-11-20** (Robert: "make a release"),
 live and checked (`src/release.js` on the site says 2026-11-20); tag and GitHub
 release 2026-11-20. Before it, 2026-11-18d:
 simile `main` = `release` (760dc4c plus restart-note commits), tags and
