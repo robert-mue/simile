@@ -4,6 +4,10 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
+**RELEASED as 2026-11-21c (live; tag and GitHub release): fault 6 fixed** (a true/false
+variable as an `if` condition; engine README). Fault 7 diagnosed, NOT fixed (two tries
+hung the engine; Robert's fan). The coral model (Raharinirina et al. 2022) in
+~/Projects/simile_models/coral/: agrees with the authors' published runs.
 **RELEASED as 2026-11-21b (live, checked; tag and GitHub release): Field in 3D** (`src/widgets/field3d.js`,
 three.js r147 in `vendor/three/`) and the agroforestry model
 (~/Projects/simile_models/agroforestry/, outside the repo): trees over 1600 pasture

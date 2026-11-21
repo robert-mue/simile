@@ -804,3 +804,13 @@ Displays
 - The variables are chosen from their names (Pasture, px, py; x, y,
   Height, crown_radius) and can be changed under Choose. A model can
   open it as one of its default displays.
+
+------------------------------------------------------------------------
+Release 2026-11-21c
+------------------------------------------------------------------------
+
+Fixed
+- A variable whose value is true or false (for example
+  month_start = time()>5) can now be used as the condition of an if in
+  another equation. Before, the model failed to build, saying only that
+  Simile could not make C++ of it.
