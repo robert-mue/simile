@@ -786,3 +786,21 @@ Fixed
 - The help for the function ramp (in the equation dialog's function
   list) gave its arguments the wrong way round. It is ramp(slope, time):
   a ramp of the given slope, starting at the given time.
+
+------------------------------------------------------------------------
+Release 2026-11-21b
+------------------------------------------------------------------------
+
+Displays
+- Field in 3D (Widgets > Field in 3D): a model's ground patches and its
+  trees in three dimensions. The patches are coloured from dry straw to
+  green and raised by a variable such as pasture biomass, on a slab of
+  soil; the members of a population stand on them as trees, as tall as
+  their height and as wide as their crown. The sun is straight overhead,
+  so each crown's shadow falls directly beneath it.
+- Play runs the model's history back as a time-lapse of about fifteen
+  seconds; the slider moves through it; Tour flies slowly round the
+  field. Drag to look round, scroll to come closer.
+- The variables are chosen from their names (Pasture, px, py; x, y,
+  Height, crown_radius) and can be changed under Choose. A model can
+  open it as one of its default displays.
