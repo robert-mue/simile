@@ -413,7 +413,7 @@ Written as Simile writes them:
 | Arithmetic | `abs(x)`, `exp(x)`, `log(x)` (natural), `log10(x)`, `sqrt(x)`, `pow(x,y)`, `min(x,y)`, `max(x,y)`, `floor(x)`, `ceil(x)`, `round(x)`, `int(x)`, `sgn(x)`, `fmod(x,y)`, `hypot(x,y)`, `pi()` |
 | Trigonometry | `sin(x)`, `cos(x)`, `tan(x)`, `asin(x)`, `acos(x)`, `atan(x)`, `atan2(x,y)`, `sinh`, `cosh`, `tanh` (radians) |
 | Time | `time()` the current time; `dt()` the time step; `prev(n)` this element's own value n steps ago; `last(x)` x's value at the previous step |
-| Inputs over time | `step(height, time)`, `ramp(time, slope)`, `pulse(magnitude, first_time [, interval])` |
+| Inputs over time | `step(height, time)`, `ramp(slope, time)`, `pulse(magnitude, first_time [, interval])` |
 | Random | `rand_const(lo,hi)` uniform, drawn once (at the start, or when a member is created); `rand_var(lo,hi)` uniform, drawn every step; `gaussian_var(mean, sd)` normal, every step; `poidev(mean)`; `exprnd(mean)`; `binome(prob, n)` |
 | Arrays and lists | `sum(…)`, `count(…)`, `product(…)`, `greatest(…)`, `least(…)`, `any(…)`, `all(…)`, `element([x], i)`, `makearray(x, n)`, `index(1)` |
 | Delays and smoothing | `delay1(input, duration)`, `delay3(input, duration)`, `smth1(input, time)`, `smth3(input, time)` |

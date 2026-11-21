@@ -751,7 +751,7 @@
       prev: ['prev(N)', 'Returns the value of this element itself, N time steps ago. See last , for a function that returns a previous value of any element other than this one…'],
       product: ['product([X])', 'Result is the product of all elements of the array [X] or the list {X}.'],
       pulse: ['pulse(magnitude, first_time [, interval])', 'Generate a pulse with a duration of a single time step and a given cumulative value.'],
-      ramp: ['ramp(time,slope)', 'Generates a ramp of slope slope, starting at time time and zero before that time.'],
+      ramp: ['ramp(slope, time)', 'Generates a ramp of slope slope, starting at time time and zero before that time.'],
       rand_const: ['rand_const(X,Y)', 'Returns a random number between X and Y at the start of the simulation or when the submodel instance is created.'],
       rand_var: ['rand_var(X,Y)', 'Returns a random number between X and Y, with a new value every time step.'],
       rankings: ['rankings([X])', 'Returns an array with the ranks of the corresponding elements: 1 for the largest, the array size for the smallest.'],

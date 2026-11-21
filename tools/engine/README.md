@@ -491,3 +491,21 @@ EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
    exactly when logging every step. Possibly Simile's own behaviour rather
    than a fault; worth knowing, and perhaps worth a warning in the run
    control. The Vensim converter logs at whole multiples of the step.
+
+5. **`time()` and `dt()` drift: the clock is a running sum** (cause found
+   2026-11-21, NOT FIXED; Robert is asking Jasper). `Run/shank.cpp`, the
+   run loop (`ExecutingModel`'s run, ~line 1690): `xtime+=freq` adds the
+   step on each step; `set_dts` makes each base's `dt()` as `xtime -
+   lts[phase]`, and `advance_time` moves `lts[phase]` (what `time(P)`
+   reads: the generator writes `time(P)` as `ts[P]`, `Prolog/language.pl`
+   ~1309) by `lts += ldts*fraction`. 0.02 is not exact in binary, so after
+   100 steps `time()` is 2.0000000000000013, not 2 (0.01 x 1000 steps:
+   9.999999999999831). A test on the time — `time() >= 2`, and Simile's
+   own `pulse`, `ramp`, `step` in `Functions/Arithmetic.pl`, all on
+   `time()` — can then go the wrong way for one step. The Vensim converter
+   works round it (`Expr.now`: the time rounded to the step grid).
+   Proposed fix: in a fixed-step run, the time from the step count, start
+   + n x step, and `dt()` the step itself; what an adaptive step (errlim),
+   events and several time bases (`phase_for`, also on floor(t/step))
+   need is to be worked out with Jasper. (Our help had `ramp(time,slope)`;
+   Simile's definition is `ramp(slope,start_time)`: corrected 2026-11-21.)
