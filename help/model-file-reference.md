@@ -117,6 +117,52 @@ These are Simile's terms. Simile's own manual explains each at more length.
 12. **Choose the run settings** from the paper's figures: how long, and how
    often to record (section 9).
 
+What a published model often needs beyond that, each found reproducing one
+(the coral model, `examples/papers/coral/`, which agrees with its authors'
+published runs):
+
+13. **Read the authors' code first**, when it is published. It settles what
+    the paper leaves open: which reading of an equation, the exact constants
+    (often more precise than the paper's table), the initial values, the
+    time unit, and how events are applied. Their published results are what
+    the model is checked against (section 13).
+14. **A sudden change in a stock** (a harvest, a fire, bleaching that cuts a
+    population at once) is a flow that makes the whole change in one time
+    step: `(1-kept)*symbionts/dt()` with `kept` the fraction left, or 1 when
+    nothing happens. The flow is multiplied by that same `dt()`, so the
+    change is exact. Decide in the paper's terms when it happens (`if … then
+    … else 1.0`).
+15. **A spin-up** (years at constant conditions to reach equilibrium, then
+    the real forcing): start the run before 0 (`"startTime": -24012`) and
+    make the forcing constant until 0:
+    `T = if time()<0 then T_spinup else T_data`. Time 0 is then the first
+    forcing data (January 1955, say).
+16. **Forcing data** (a temperature or rainfall series): a variable
+    parameter given values over time in a parameter file, beside the model
+    as `<model>.parameters.json`: `{"variables": {"T_data": [25.9, 22.9,
+    …]}, "fill": {"T_data": "use_last"}}`, the values for times 0, 1, 2, …
+    (`use_last` holds each until the next). Scenarios, or regions that
+    differ only in constants, are one model and a parameter file each. For
+    now give those constants as variable parameters, not fixed ones (section
+    5.3).
+17. **The time step: a number exact in binary** (0.5, 0.25, 0.125, 0.0625),
+    not 0.1. Simile adds the step up to get `time()`, so with 0.1 it drifts,
+    and a test on the time (`time()>=10`, the start of a month) can go the
+    wrong way for one step. With 0.125, `time()` is exact.
+18. **A function Simile lacks** is built from those it has, as variables:
+    the normal distribution's cumulative function, for instance, from
+    Abramowitz and Stegun's approximation to `erf` (7.1.26, error under
+    1.5e-7). A function of one input only can also be a table,
+    `interpolate(x, [xs], [ys])`, computed from the paper's formula.
+19. **A derivative in the paper** (`dU/dt = N·∂F/∂U`): Simile does not
+    differentiate. Work it out by hand and write it as an equation; check it
+    against the authors' code.
+20. **Copying an equation, watch for:** `-z^2`, which is `(-z)^2` in Simile
+    (section 7); an `if` with a whole number in one branch and a decimal in
+    another, which may not build: write `1.0`, not `1`; very large or small
+    numbers (10^21 cells), which are fine; and small numbers the authors add
+    to denominators to keep them off zero, which belong in the model too.
+
 ## 3. The file
 
 A model spec is one JSON object.
@@ -584,6 +630,25 @@ Before handing over the file, check every point:
 - Anything in `units`, such as `individuals` or `1/year` (section 11).
 
 ## 13. Checking a model
+
+**Checking against a paper's results.** `tools/check_models.py` (it starts
+what it needs) runs a model with a parameter file and writes its values over
+the run as CSV, and `tools/compare_series.py` compares them with the
+authors' results, value by value:
+
+```
+python3 tools/check_models.py coral.json --parameters coral-SEA-RCP85.parameters.json \
+    --csv results --vars Coral,Trait,Symbiont
+python3 tools/compare_series.py results/coral.csv theirs.csv \
+    --map Coral=CORAL,Trait=TRAIT,Symbiont=SYMB --offset -24012
+```
+
+`--offset` is added to their times to give the model's, where the two count
+from different origins. It prints the values side by side at a dozen times,
+then for each quantity its largest difference over every shared time. A
+model with random numbers cannot agree value for value: compare the
+quantities the randomness does not dominate, and several runs' range. The
+worked example, its commands and results: `examples/papers/coral/README.md`.
 
 In the app, a model that is not complete shows its incomplete elements in
 **red**, and the Simulation panel's status line says how many there are.

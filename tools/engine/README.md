@@ -531,6 +531,12 @@ EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
    VARIABLE parameter with one. file-params.py has no case of a fixed
    parameter with a default: add one with the fix. Worked round in the
    coral model by making its region constants variable parameters.
+   SMALLEST CASE (2026-11-21, written up for Jasper): `k` fixed (default 2),
+   `p` variable (default 1), `y = k+p`, values given after the first reset.
+   With the "reset as the first" attempt: `k` alone right (6); a series for
+   `p` alone right (12); `k` and a whole-run `p` = 6 (`p` lost); `k` and a
+   series for `p` NEVER RETURNS. So a series given after loading does not
+   hang on its own (the note below said so, wrongly): the two together do.
 
    CAUSE (2026-11-21): the generated code sets a fixed parameter's default
    and `collect`s a file's value over it in the block `if (-1>=phase)`,

@@ -115,6 +115,17 @@ footing (`src/widgets/grid.js` is the first).
   the originals by `tools/vensim/vensim_sim.py`, an independent Vensim
   simulator, and `tools/vensim/compare.py` (the app's end values from
   model-file.py, name by name).
+- **A published model reproduced** (Robert, 2026-11-21: "in a year's time,
+  will it be straightforward?"): `examples/papers/coral/` — the coral
+  acclimation model of Raharinirina et al. 2022, its generator from the
+  authors' repository, and how it was checked against their published runs
+  (it agrees). THE PRECEDENT for another paper: start from its README, the
+  model file reference's section 2 items 13-20 (authors' code first, sudden
+  changes as one-step flows, spin-up before 0, forcing data as values over
+  time in a parameter file, a binary-exact time step, missing functions,
+  derivatives by hand, copying traps) and section 13 (comparing:
+  `check_models.py --parameters --csv`, then `tools/compare_series.py`).
+  Their data is not in the repo (the parameter files are made from it).
 - **`tools/check_models.py`** (Robert, 2026-11-20: for him to run, no
   Python needed beyond typing it): checks model files — the gallery by
   default, or files / folders given — load, are complete, export, compile
@@ -123,6 +134,11 @@ footing (`src/widgets/grid.js` is the first).
   `--save` records end values as right in `check-expected.json` (git
   ignores it, and `check-report.txt`), and later runs say SAME / CHANGED.
   The engine's random numbers repeat run to run, so random models compare.
+  `--parameters FILE` runs with a parameter file (given before the model is
+  first loaded, as the app's Load and ?open=&parameters= do, so fixed
+  parameters take it); `--csv FOLDER [--vars a,b]` writes values over the run;
+  `--time-limit` (300 s) stops a model that never finishes, and its Chrome
+  (a run stuck in the engine keeps a processor at full speed: Robert's fan).
 - **Run start time** (`startTime`, a kept run setting and a model's
   `presentation.run.startTime`; Robert, 2026-11-20): the time a run starts
   from and ■ goes back to; the run control's first field. The engine's reset

@@ -20,6 +20,13 @@ Run it from the simile folder (cd ~/Projects/simile). Examples:
   python3 tools/check_models.py "~/Projects/vensim_models/Simile JSON" --vensim "~/Projects/vensim_models/ZOO MDL"
         and compare each with the Vensim original of the same name
 
+  python3 tools/check_models.py ~/Projects/simile_models/coral/coral.json \
+        --parameters ~/Projects/simile_models/coral/coral-GBR-RCP26.parameters.json --csv results
+        run with a parameter file's values (given before the model's first
+        reset), and write each model's values over the run to results/<model>.csv
+        (every variable with one value, or only those named: --vars Coral,Trait),
+        to compare with a paper's own results (tools/compare_series.py)
+
   python3 tools/check_models.py --save
         check the gallery, and record each model's values at the end of its
         run as the right ones (in check-expected.json, in the simile folder)
@@ -43,7 +50,7 @@ It starts what it needs if it is not running already, the app's web server
 (tools/serve.py, port 8731) and a hidden Chrome (port 9350), and stops
 what it started when it is done.
 """
-import argparse, json, os, re, shutil, socket, subprocess, sys, tempfile, time
+import argparse, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GALLERY = os.path.expanduser('~/Projects/model_gallery/models')
@@ -55,6 +62,12 @@ ap = argparse.ArgumentParser(description='Check that models build and run in the
 ap.add_argument('where', nargs='*', help='model files (.json) or folders of them (default: the model gallery)')
 ap.add_argument('--only', help='only models whose file names start with one of these, comma-separated')
 ap.add_argument('--vensim', metavar='MDL_FOLDER', help='also compare with the Vensim originals in this folder')
+ap.add_argument('--parameters', metavar='FILE', help='a parameter file whose values the run uses')
+ap.add_argument('--csv', metavar='FOLDER', help='write each model\'s values over the run to FOLDER/<model>.csv')
+ap.add_argument('--vars', help='with --csv: only these variables, comma-separated')
+ap.add_argument('--time-limit', type=float, default=300, metavar='SECONDS',
+                help='stop if one model takes longer than this (default 300): a run that never ends '
+                     'would otherwise keep a processor busy')
 ap.add_argument('--save', action='store_true',
                 help='record the values at the end of each run as the right ones (check-expected.json)')
 ap.add_argument('--report', default='check-report.txt', help='where to write the report (default: check-report.txt)')
@@ -89,9 +102,11 @@ def find_chrome():
 
 
 def home(path):
-    """A model's file as recorded: ~ for the home folder."""
+    """A model's file as recorded: ~ for the home folder; with a parameter
+    file, that too, since its values give other results."""
     h = os.path.expanduser('~')
-    return '~' + path[len(h):] if path.startswith(h + os.sep) else path
+    short = lambda p: '~' + p[len(h):] if p.startswith(h + os.sep) else p
+    return short(path) + (' with ' + short(params) if params else '')
 
 
 def same(a, b):
@@ -127,6 +142,10 @@ if args.only:
 if not files:
     sys.exit('No model files (.json) to check.')
 mdl_dir = os.path.abspath(os.path.expanduser(args.vensim)) if args.vensim else None
+params = os.path.abspath(os.path.expanduser(args.parameters)) if args.parameters else None
+if params and not os.path.isfile(params):
+    sys.exit('No such parameter file: %s' % params)
+csv_dir = os.path.abspath(os.path.expanduser(args.csv)) if args.csv else None
 if mdl_dir and not os.path.isdir(mdl_dir):
     sys.exit('No such folder: %s\n(a name with spaces goes in "quotes")' % mdl_dir)
 try:
@@ -166,17 +185,33 @@ try:
     with open(app_out, 'w') as out:
         p = subprocess.Popen([sys.executable, os.path.join(REPO, 'tools/headless/cdp.py'),
                               os.path.join(REPO, 'tools/headless/scripts/model-file.py')],
-                             cwd=REPO, env=dict(os.environ, MODEL_LIST=listing),
+                             cwd=REPO, env=dict(os.environ, MODEL_LIST=listing, MODEL_PARAMS=params or '',
+                                                SERIES_DIR=csv_dir or '', SERIES_VARS=args.vars or ''),
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         current = None
+        # A model that never finishes (the engine in a loop) keeps a
+        # processor at full speed: give up on it after --time-limit.
+        since = [time.time()]
+        overran = []
+        def watch():
+            while p.poll() is None:
+                if current and time.time() - since[0] > args.time_limit:
+                    overran.append(current or 'the first model')
+                    p.kill()
+                    return
+                time.sleep(1)
+        threading.Thread(target=watch, daemon=True).start()
         for line in p.stdout:
             out.write(line)
             s = line.strip()
             if s.startswith('== ') and s.endswith('.json'):
                 current = os.path.basename(s[3:-5]); n += 1
+                since[0] = time.time()
                 cur_file = os.path.normpath(os.path.join(REPO, s[3:]))
                 values[cur_file] = {}
                 say('  [%d/%d] %s' % (n, len(files), current))
+            elif s.startswith('series:'):
+                say('        ' + s)
             elif s.startswith(('FAIL', 'JSERR', 'EXC', 'Traceback')):
                 say('        ' + s)
                 if current and current not in failed:
@@ -188,6 +223,21 @@ try:
                 if m and current:
                     values[cur_file][m.group(1)] = m.group(2).strip()
         p.wait()
+    if overran:
+        say('\nSTOPPED: %s took longer than %g seconds, so the check was stopped '
+            '(and the hidden Chrome with it).' % (overran[0], args.time_limit))
+        if overran[0] not in failed:
+            failed.append(overran[0])
+        try:      # a Chrome we did not start: close its pages, which ends the loop
+            import urllib.request
+            for t in json.load(urllib.request.urlopen('http://127.0.0.1:9350/json', timeout=5)):
+                if t.get('type') == 'page':
+                    urllib.request.urlopen('http://127.0.0.1:9350/json/close/' + t['id'], timeout=5)
+        except Exception:
+            pass
+        for proc in started:
+            proc.terminate()
+        started.clear()
     say('\n%d of %d passed: they load, are complete, export, compile and run.' % (len(passed), len(files)))
     missing = [os.path.basename(f)[:-5] for f in files
                if os.path.basename(f)[:-5] not in passed and os.path.basename(f)[:-5] not in failed]

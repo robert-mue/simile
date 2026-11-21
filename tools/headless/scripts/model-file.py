@@ -9,10 +9,18 @@
 #   MODEL_FILES="a.json b.json" python3 tools/headless/cdp.py tools/headless/scripts/model-file.py
 #   MODEL_LIST=files.txt python3 tools/headless/cdp.py tools/headless/scripts/model-file.py
 #
+#   MODEL_PARAMS=coral-GBR-RCP26.parameters.json ...   a parameter file, its values
+#       given before the first reset (as the Parameters panel's Load would)
+#   SERIES_DIR=out/ ...   each model's values over the run, <model>.csv: time,
+#       then every variable with one value (or SERIES_VARS="Coral,Trait")
+#
 # Default: the reference's worked examples, examples/models/*.json. Over http
 # (tools/serve.py); Chrome on :9350 (tools/headless/README.md). A new-user
 # preview, so the real store is not touched.
-import glob, os
+import csv, glob, os
+PARAMS = json.load(open(os.environ['MODEL_PARAMS'])) if os.environ.get('MODEL_PARAMS') else None
+SERIES_DIR = os.environ.get('SERIES_DIR') or None
+SERIES_VARS = [v.strip() for v in os.environ.get('SERIES_VARS', '').split(',') if v.strip()]
 # MODEL_LIST: a file naming one model spec per line (names with spaces).
 listed = [l.strip() for l in open(os.environ['MODEL_LIST'])] if os.environ.get('MODEL_LIST') else []
 files = [l for l in listed if l] or os.environ.get('MODEL_FILES', '').split() \
@@ -51,7 +59,49 @@ CHECK = r"""(async () => {
     const p = n.props || {}, v = Number(p.value), lo = parseFloat(p.min), hi = parseFloat(p.max);
     return String(p.value || '').trim() !== '' && isFinite(v) && ((isFinite(lo) && v < lo) || (isFinite(hi) && v > hi));
   }).map(n => n.label + ' = ' + n.props.value + ', range ' + (n.props.min || '') + ' to ' + (n.props.max || '') + ': runs with the nearer end');
-  const out = {unplaced, incomplete, grammar, exportErr, withUnits, clamped, run: null};
+  const out = {unplaced, incomplete, grammar, exportErr, withUnits, clamped, run: null, params: []};
+  const summary = v => {   // a population's or a fixed membership's values, in one line
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch (x) {} }
+    if (v && typeof v === 'object') { const n = Object.keys(v).length; const xs = Object.values(v).map(Number); v = n + ' values' + (n ? ', ' + Math.min(...xs) + ' to ' + Math.max(...xs) : ''); }
+    return v;
+  };
+  const wanted = (cp) => !__series.length || __series.includes(cp.replace(/^\//, '')) || __series.includes(cp.split('/').pop());
+  // With a parameter file (MODEL_PARAMS): run as the app runs a model, the
+  // values given before it is first loaded (Parameters > Load, or ?open= with
+  // &parameters=), so fixed parameters take them (engine README fault 7).
+  if (prolog && __params) {
+    const run = Object.assign({runLength: 10, logEach: 1, timeStep: '0.1'}, (m.presentation || {}).run || {});
+    const sim = Sienna.Simulation, v = sim.viewFor(path);
+    const got = sim.readParameterFile(path, __params);
+    out.params = got.unknown.map(x => 'not a parameter of this model: ' + x).concat(got.bad);
+    try {
+      await sim.setInputValues(path, got.values, true, got.fills);
+      sim.presetSettings(path, run);
+      await v.prepare();
+      const comps = v.components, ids = Object.keys(comps).filter(k => comps[k].type !== 'VALUELESS');
+      const series = __series ? ids.filter(k => (comps[k].dims || []).length === 1 && wanted(comps[k].captpath)) : [];
+      series.forEach((k, i) => v.addTarget('model-file:' + i, k));
+      const rows = [];
+      const unsub = v.subscribe(e => { if (e.type === 'data') rows.push([e.time].concat(series.map(k => e.values[k]))); });
+      await v.reset();
+      rows.length = 0;
+      if (series.length) { const q = await v.query(series); rows.push([Number(v.settings.current)].concat(series.map(k => q[k]))); }
+      const t0 = Number(run.startTime) || 0, end = t0 + Number(run.runLength), began = performance.now();
+      v.start();
+      while (Number(v.settings.current) < end - 1e-9 && v.status !== 'error' && performance.now() - began < 600000)
+        await new Promise(r => setTimeout(r, 100));
+      unsub();
+      if (v.status === 'error') throw new Error(v.message);
+      const q = await v.query(ids), at = {};
+      ids.forEach(k => { at[comps[k].captpath] = summary(q[k]); });
+      out.run = {completed: Number(v.settings.current) >= end - 1e-9, time: Number(v.settings.current), points: rows.length, values: at};
+      if (__series) out.series = {names: series.map(k => comps[k].captpath.replace(/^\//, '')), rows: rows};
+    } catch (e) { out.run = {error: String(e.message || e)}; }
+    await sim.setInputValues(path, {}, true);
+    await v.unload();
+    Sienna.userData.remove(path);
+    return out;
+  }
   if (prolog) {
     const run = Object.assign({runLength: 10, logEach: 1, timeStep: '0.1'}, (m.presentation || {}).run || {});
     try {
@@ -68,12 +118,14 @@ CHECK = r"""(async () => {
         const ok = rows[rows.length - 1], last = rows[rows.length - 2] || [];
         const at = {};
         ids.forEach((k, i) => {
-          let v = last[i];
-          if (typeof v === 'string') { try { v = JSON.parse(v); } catch (x) {} }
-          if (v && typeof v === 'object') { const n = Object.keys(v).length; const xs = Object.values(v).map(Number); v = n + ' values' + (n ? ', ' + Math.min(...xs) + ' to ' + Math.max(...xs) : ''); }
-          at[desc[k].captpath] = v;
+          at[desc[k].captpath] = summary(last[i]);
         });
         out.run = {completed: !!ok, time: last[last.length - 1], points: rows.length - 1, values: at};
+        if (__series) {   // SERIES_DIR: single values only, by name
+          const want = ids.map((k, i) => [k, i]).filter(([k]) => (desc[k].dims || []).length === 1 && wanted(desc[k].captpath));
+          out.series = {names: want.map(([k]) => desc[k].captpath.replace(/^\//, '')),
+            rows: rows.slice(0, -1).map(r => [r[r.length - 1]].concat(want.map(([, i]) => r[i])))};
+        }
       } finally { s.exit(); }
     } catch (e) { out.run = {error: String(e.message || e)}; }
   }
@@ -88,13 +140,14 @@ for n_file, f in enumerate(files):
     # every few, as run-values.py does, for a long batch.
     if n_file and n_file % 6 == 0:
         await nav('http://localhost:8731/index.html?newuser=fresh'); await sleep(5)
-    print('==', os.path.relpath(f))
-    await ev('window.__txt = %s; 1' % json.dumps(open(f).read()))
+    print('==', os.path.relpath(f), flush=True)
+    await ev('window.__txt = %s; window.__params = %s; window.__series = %s; 1'
+             % (json.dumps(open(f).read()), json.dumps(PARAMS), json.dumps(SERIES_VARS if SERIES_DIR else None)))
     r = await ev(CHECK)
     if r is None: print('  FAIL no answer'); failed += 1; continue
     if 'fatal' in r: print('  FAIL refused:', r['fatal']); failed += 1; continue
     problems = 0
-    for key, title in (('unplaced', 'no layout'), ('incomplete', 'incomplete'), ('grammar', 'grammar'), ('clamped', 'outside its range')):
+    for key, title in (('unplaced', 'no layout'), ('incomplete', 'incomplete'), ('grammar', 'grammar'), ('clamped', 'outside its range'), ('params', 'parameter file')):
         for line in r[key]: print('  FAIL', title + ':', line); problems += 1
     if r['exportErr']: print('  FAIL export refused:', r['exportErr']); problems += 1
     run = r['run']
@@ -107,6 +160,12 @@ for n_file, f in enumerate(files):
         print('  %s run to t=%s, %d points' % ('PASS' if run['completed'] else 'FAIL', run['time'], run['points']))
         if not run['completed']: problems += 1
         for k, v in sorted(run['values'].items()): print('     ', k, '=', v)
+        if SERIES_DIR and run.get('completed') is not None and r.get('series'):
+            os.makedirs(SERIES_DIR, exist_ok=True)
+            out_csv = os.path.join(SERIES_DIR, os.path.basename(f)[:-5] + '.csv')
+            with open(out_csv, 'w', newline='') as fh:
+                w = csv.writer(fh); w.writerow(['time'] + r['series']['names']); w.writerows(r['series']['rows'])
+            print('  series: %d rows of %d variables -> %s' % (len(r['series']['rows']), len(r['series']['names']), out_csv))
     if not problems: print('  PASS loads, complete, exports, runs')
     failed += 1 if problems else 0
 print('%d of %d files had problems' % (failed, len(files)))
