@@ -36,9 +36,11 @@ compare.py found drift the app's checks could not: logging between steps
 (engine takes a short step), the engine's time()/dt() not exact (Z_ models'
 INTEGER cells), now all fixed in the converter. Lorenz (EZ206) and EZ214
 FluidFlow differ by rounding amplified (chaos; a near-singular DET): they
-agree for the first 50 steps to 9 figures. Open for Robert: TIME written as
-`(round(time()/0.1)*0.1)` is correct but wordy in equations — a helper
-variable instead?
+agree for the first 50 steps to 9 figures. TIME is written as
+`(round(time()/0.1)*0.1)` in equations: NO helper variable (Robert,
+2026-11-21: it would add to the diagram, unlike the published one). When
+the engine's time() is fixed (tools/engine/README.md fault 5, with Jasper),
+reconvert with plain time() and compare with Vensim again.
 THEN (2026-11-20, day): a delay/smoothing x stays as the sketch draws it,
 equal to a stock `<x> smoothed`/`<x> delayed` above it (x had BECOME the
 stock, a valve too: EZ210's rate_of_turn); 18 models reconverted, all agree.
