@@ -4,16 +4,39 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
+**STATE 2026-11-21 (evening): everything committed and pushed** — simile `main`
+(released as 2026-11-21c; later commits are tools, docs and checks only, no app
+change), gallery 0431a09 (live, checked). Since 21c:
+- GALLERY: two new models, live and checked from the live app — `agroforestry`
+  ("Trees over pasture", opens in Field in 3D) and `coral` (opens with
+  `coral.parameters.json`, the authors' GBR RCP 4.5 temperatures, cited; Robert
+  agreed to publishing their data). The gallery's check/check.py now allows a
+  start time and field3d; presentation.py takes a run's start time.
+- A PUBLISHED MODEL REPRODUCED, as a precedent (Robert: will it be straightforward
+  in a year?): `examples/papers/coral/` (model, generator from the authors' repo,
+  safe reader of their results, README with agreement and differences); the
+  reference's section 2 items 13-20 and section 13 (comparing);
+  `check_models.py --parameters --csv --vars --time-limit`; `tools/compare_series.py`.
+  CLAUDE.md points to it.
+- FAULT 7 written up for Jasper (a Claude Docs doc, Robert saved it as PDF):
+  smallest case in the engine README. Open until Jasper answers. Fault 5 (time()
+  drift) also with Jasper (~/Projects/for_jasper/time-drift-discussion.md).
+- CPU CARE: a page stuck in the engine spins a core until its Chrome is killed
+  (Robert's fan, twice). Test with `timeout`, and kill only the test Chrome:
+  `pkill -f "^/opt/google/chrome/chrome --headless=new --remote-debugging-port=9350"`
+  (a pattern on `--user-data-dir=...` also matches, and kills, your own shell).
+- WAITING ON ROBERT: the run-control modes (NOTE-run-modes.md; he will reply);
+  Field in 3D tried in a real browser window; Jasper on faults 5 and 7.
 **RELEASED as 2026-11-21c (live; tag and GitHub release): fault 6 fixed** (a true/false
 variable as an `if` condition; engine README). Fault 7 diagnosed, NOT fixed (two tries
 hung the engine; Robert's fan). The coral model (Raharinirina et al. 2022) in
 ~/Projects/simile_models/coral/: agrees with the authors' published runs.
 **RELEASED as 2026-11-21b (live, checked; tag and GitHub release): Field in 3D** (`src/widgets/field3d.js`,
 three.js r147 in `vendor/three/`) and the agroforestry model
-(~/Projects/simile_models/agroforestry/, outside the repo): trees over 1600 pasture
+(now in the gallery as `agroforestry`): trees over 1600 pasture
 patches, vertical-sun shading by association. Robert: "Really impressive!". Not yet
 tried in a real browser window (headless only). Ideas: roots in the soil, felling
-animation, planting in rows, a gallery page.
+animation, planting in rows.
 **STATE 2026-11-21: RELEASED as 2026-11-21** (ramp's help; live, checked; tag and GitHub release). Before it,
 **2026-11-20: RELEASED as 2026-11-20** (Robert: "make a release"),
 live and checked (`src/release.js` on the site says 2026-11-20); tag and GitHub
