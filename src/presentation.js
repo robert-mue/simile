@@ -29,7 +29,7 @@
 (function (Sienna) {
   'use strict';
 
-  var WIDGETS = { plotter: true, sliders: true };
+  var WIDGETS = { plotter: true, sliders: true, field3d: true };
   var RUN = ['startTime', 'runLength', 'logEach', 'timeStep'];
 
   /** A variable's name as displays give it: its submodels from the top, then its own. */

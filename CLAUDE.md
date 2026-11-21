@@ -279,6 +279,21 @@ footing (`src/widgets/grid.js` is the first).
   exported as Simile's ONE node (value, range, units on the variable, no
   function node), and imported by Simile's rule (no function node → a
   parameter). See `NOTE-file-parameters.md`.
+- `src/widgets/field3d.js` — **Field in 3D** (Robert, 2026-11-21: glitz,
+  for teaching and public engagement; conservation): a fixed-membership
+  submodel's instances as ground patches (colour and height from one
+  variable, placed by `px`/`py`, else a square grid) on a soil slab, a
+  population as low-poly trees (x, y, height, crown radius), the sun
+  STRAIGHT OVERHEAD so shadows fall where a vertical-sun model shades.
+  Variables guessed by name, chosen under "choose", kept by name. Every
+  frame of a run is kept: ▶ plays it back as a time-lapse (~15 s,
+  blended between frames), the slider scrubs, "tour" orbits. three.js
+  r147 in `vendor/three/` (MIT; the last release with classic-script
+  builds of three and OrbitControls, so no bundler), loaded when the first
+  one opens. A model may list it in `presentation.displays` (`field3d`).
+  First model: ~/Projects/simile_models/agroforestry/ (trees over 1600
+  pasture patches, shading by an association with a condition on crown
+  distance — the first grid × population association; it builds and runs).
 - `src/widgets/sliders.js` — a slider per variable parameter with a numeric
   value, a Minimum and a Maximum (`exportSimile.isParameter`,
   `Simulation.parametersOf`). A slider's value is a RUN setting

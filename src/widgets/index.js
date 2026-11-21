@@ -109,6 +109,16 @@
     role: 'display',
   });
 
+  // A field in 3D (three.js): a grid of ground patches and a population of
+  // trees on it, played back as a time-lapse (src/widgets/field3d.js).
+  reg.register('field3d', {
+    src: 'src/widgets/field3d.js',
+    label: 'Field in 3D',
+    title: 'Field in 3D',
+    workingSize: { width: 820, height: 600 },
+    role: 'display',
+  });
+
   reg.register('grid', {
     src: 'src/widgets/grid.js',
     label: 'Spatial grid',

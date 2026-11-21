@@ -4,6 +4,12 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
+**NEW 2026-11-21 (night, committed, NOT released): Field in 3D** (`src/widgets/field3d.js`,
+three.js r147 in `vendor/three/`) and the agroforestry model
+(~/Projects/simile_models/agroforestry/, outside the repo): trees over 1600 pasture
+patches, vertical-sun shading by association. Robert: "Really impressive!". Not yet
+tried in a real browser window (headless only). Ideas: roots in the soil, felling
+animation, planting in rows, a gallery page.
 **STATE 2026-11-21: RELEASED as 2026-11-21** (ramp's help; live, checked; tag and GitHub release). Before it,
 **2026-11-20: RELEASED as 2026-11-20** (Robert: "make a release"),
 live and checked (`src/release.js` on the site says 2026-11-20); tag and GitHub
