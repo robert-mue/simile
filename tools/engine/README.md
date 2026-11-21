@@ -509,3 +509,23 @@ EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
    events and several time bases (`phase_for`, also on floor(t/step))
    need is to be worked out with Jasper. (Our help had `ramp(time,slope)`;
    Simile's definition is `ramp(slope,start_time)`: corrected 2026-11-21.)
+
+6. **A true/false variable used as the condition of an `if` does not build**
+   (found 2026-11-21, OURS, NOT FIXED). `month_start = time()>5` builds;
+   `if month_start then 0.5 else 1.0` in another variable stops at "Simile
+   could not make C++ of this model", even for `1>0`. Simile writes such a
+   variable `units=boolean` (74 in the catalogue); our exporter writes
+   `units=1` for empty units (`export-simile.js`, the parameter and
+   function nodes). Fix: infer boolean from the equation (a comparison, and /
+   or / not, a boolean variable, an `if` of booleans) and write
+   `units=boolean`. Worked round in the coral model with 1.0 / 0.0.
+
+7. **A FIXED parameter with a default in the model ignores a parameter
+   file's value** (found 2026-11-21, NOT FIXED). The value reaches the
+   engine (`FileParameters` → `sx_param_fill`, answered 'ok'), but the run
+   uses the model's default: apparently the reset sets the parameter from
+   its compiled `value` after the slot was filled. A fixed parameter
+   WITHOUT a default takes the file's value (file-params.py), and so does a
+   VARIABLE parameter with one. file-params.py has no case of a fixed
+   parameter with a default: add one with the fix. Worked round in the
+   coral model by making its region constants variable parameters.
