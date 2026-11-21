@@ -511,7 +511,9 @@ EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
    Simile's definition is `ramp(slope,start_time)`: corrected 2026-11-21.)
 
 6. **A true/false variable used as the condition of an `if` does not build**
-   (found 2026-11-21, OURS, NOT FIXED). `month_start = time()>5` builds;
+   (found 2026-11-21, OURS; FIXED 2026-11-21: the exporter writes
+   `units=boolean` for a variable whose equation gives true or false,
+   `Diagram.isBooleanValued`; round trip, crossings, run values unchanged). `month_start = time()>5` builds;
    `if month_start then 0.5 else 1.0` in another variable stops at "Simile
    could not make C++ of this model", even for `1>0`. Simile writes such a
    variable `units=boolean` (74 in the catalogue); our exporter writes
@@ -529,3 +531,18 @@ EZ502 Orders), which a pure lag needs. To fix: `tools/engine/MAINTAINING.md`.
    VARIABLE parameter with one. file-params.py has no case of a fixed
    parameter with a default: add one with the fix. Worked round in the
    coral model by making its region constants variable parameters.
+
+   CAUSE (2026-11-21): the generated code sets a fixed parameter's default
+   and `collect`s a file's value over it in the block `if (-1>=phase)`,
+   which only the FIRST reset runs (`sx_reset`: reset(t0,0,-2) then
+   reset(t0,-1,0)); later resets are reset(t0,-1,0), top phase 0. Values
+   given before the model's first reset are taken; values given later are
+   not. TRIED, both reverted: (a) a later reset at top phase -1; (b) a later
+   reset done as the first is. Both work for fixed parameters alone, but
+   NEVER RETURN (the page spins at 100% CPU) when a variable parameter has
+   values over time that were given AFTER the model's first reset — the
+   coral model. Taking the series away for the full reset and putting it
+   back did not help either. Needs the engine stepped through (or Jasper):
+   what a full reset does with a VarParamData whose time points were
+   created after load. Check any fix with the coral model and a parameter
+   file loaded after the model.

@@ -583,6 +583,67 @@
     return indexDims(model, subId);
   };
 
+  var REL_OPS = { '==': 1, '!=': 1, '<': 1, '<=': 1, '>': 1, '>=': 1, is: 1 };
+  var LOGIC_OPS = { and: 1, or: 1, xor: 1 };
+
+  /**
+   * Does an equation give TRUE OR FALSE? A comparison; and, or, xor, not;
+   * any(…), all(…); "true" or "false"; an `if` whose every branch does; a
+   * plain name for which `nameIs(name)` says so. Simile must be told: it
+   * writes such a value's units as `boolean`, and one written `1` is a number
+   * to the generator, so `if flag then …` does not build (Robert's coral
+   * model, 2026-11-21; tools/engine/README.md fault 6).
+   */
+  Diagram.isBooleanExpression = function (text, nameIs) {
+    var parsed = Sienna.equation && String(text || '').trim() ? Sienna.equation.parse(text) : null;
+    if (!parsed || !parsed.ok) return false;
+    var bool = function (a) {
+      if (!a) return false;
+      switch (a.t) {
+        case 'binary': return !!(REL_OPS[String(a.op).toLowerCase()] || LOGIC_OPS[String(a.op).toLowerCase()]);
+        case 'not': return true;
+        case 'if': return a.otherwise != null && bool(a.otherwise)
+          && a.clauses.every(function (c) { return bool(c.value); });
+        case 'let': return bool(a.body);
+        case 'call': return a.name === 'any' || a.name === 'all';
+        case 'str': return a.v === '"true"' || a.v === '"false"';
+        case 'name': return !!(nameIs && nameIs(a.name));
+        default: return false;
+      }
+    };
+    return bool(parsed.ast);
+  };
+
+  /**
+   * Is a variable's value true or false: its units say `boolean`, or, with
+   * none given, its equation gives one (`isBooleanExpression`, following a
+   * plain name back along the influence that supplies it).
+   */
+  Diagram.isBooleanValued = function (model, id, seen) {
+    var n = (model.nodes || {})[id];
+    if (!n) return false;
+    var units = String((n.props || {}).units || '').trim();
+    if (units) return units === 'boolean';
+    if (n.type !== 'variable') return false;
+    seen = seen || {};
+    if (seen[id]) return false;
+    seen[id] = true;
+    var arcs = model.arcs || {};
+    return Diagram.isBooleanExpression((n.props || {}).value, function (name) {
+      var from = null;
+      Object.keys(arcs).some(function (k) {
+        var a = arcs[k];
+        if (a.type !== 'influence' || a.to !== id) return false;
+        var src = (model.nodes || {})[a.from] || {};
+        if ((a.alias || src.label) !== name) return false;
+        from = a.from;
+        return true;
+      });
+      if (!from) return name === 'true' || name === 'false';
+      return Diagram.isBooleanValued(model, from, seen);
+    });
+  };
+
   /** `array(1,5)` → {base: '1', dims: ['5']}; `kg` → {base: '1', dims: []}. */
   function ownArray(units) {
     var dims = [];

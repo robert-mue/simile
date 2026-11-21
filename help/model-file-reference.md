@@ -413,12 +413,6 @@ Written as Simile writes them:
 `z = 3` it is 9, not −9 as in mathematics, Python or R. A paper's −z²/2
 (a normal density, say) is written `-(z^2)/2` or `-0.5*z*z`.
 
-**A true-or-false variable cannot yet be the condition of an `if`.** A
-variable whose equation is a comparison (`month_start = time()>5`) builds,
-but `if month_start then …` in another equation does not (a fault in the
-app, to be fixed). Write the comparison in the `if` itself, or make the
-variable a number, `if time()>5 then 1.0 else 0.0`, and test `month_start>0.5`.
-
 **Functions.** The ones most often needed:
 
 | | |

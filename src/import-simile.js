@@ -718,7 +718,13 @@
       }
       if (units != null && units !== '') {
         var u = unquote(units);
-        if (u !== (BOOLEAN_TYPE[type] ? 'boolean' : '1')) out.units = u;
+        // A variable whose equation itself gives true or false is written
+        // `boolean` by the exporter (Diagram.isBooleanValued), so it is
+        // dropped there too; one that is boolean only through a name keeps it.
+        var supplied = BOOLEAN_TYPE[type]
+          || (type === 'variable' && out.value != null && Sienna.Diagram.isBooleanExpression(out.value))
+          ? 'boolean' : '1';
+        if (u !== supplied) out.units = u;
       }
 
       // `table_data` is one of two things. A sketched graph (`file='/graph/'`;

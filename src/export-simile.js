@@ -757,7 +757,8 @@
         if (hi != null) props.push('max_val=' + hi);
         if (lo != null) props.push('min_val=' + lo);
         if (kind === 'fixed') props.push('param_type=file');
-        props.push('units=' + (String(p.units || '').trim() || '1'));
+        props.push('units=' + (String(p.units || '').trim()
+          || (Sienna.Diagram.isBooleanValued(this.m, id) ? 'boolean' : '1')));
         if (num != null) props.push('spec=' + atom(String(p.value).trim()), 'value=' + num);
         else if (String(p.value || '').trim()) props.push('value=(' + prologExpr(p.value) + ')');
       }
@@ -782,8 +783,12 @@
       // then never filters — every association pair exists, and a ranking model
       // returns 5,5,5,5 where it should return 4,3,2,1. Every condition in the
       // 72-model corpus carries `boolean` (28) or `cond_spec` (9); none carries 1.
+      // Likewise a VARIABLE whose equation gives true or false: Simile writes
+      // it `boolean`, and one written `1` cannot be the condition of an `if`
+      // elsewhere — "Simile could not make C++" (engine README fault 6).
       var units = String((n.props || {}).units || '').trim()
-        || (BOOLEAN_TYPE[n.type] ? 'boolean' : '1');
+        || (BOOLEAN_TYPE[n.type] || (n.type === 'variable' && Sienna.Diagram.isBooleanValued(this.m, id))
+          ? 'boolean' : '1');
       // The equation is ALWAYS parenthesised, and that is not cosmetic.
       // `value=…` is a Prolog `=`, an xfx operator of priority 700, so neither
       // argument may itself be a 700 operator — and every comparison is one.
