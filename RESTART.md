@@ -4,7 +4,28 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-21 (evening): RELEASED as 2026-11-21d** (the reference's guidance on
+**STATE 2026-11-22 (just after midnight): everything committed and pushed; no release
+since 21d** (all later work is examples, tools and notes; nothing for the app's users).
+- JUPYTER (Robert: "That's amazing"; research is a MAIN audience, common ground with
+  people who write Python to run experiments with models): `examples/papers/coral/
+  coral.ipynb`, committed WITH its results (readable on GitHub): the model's diagram
+  and equations (read from the model), one run against the authors', calibrating N
+  (the paper's own N fits as well as a least-squares grid), projections (close to the
+  paper's headline numbers), sensitivity (273 runs; `b` -25% missing: fault 8).
+  `tools/python/simile_run.py` (PROTOTYPE: the app's engine in a hidden Chrome here):
+  `Session(...).run(...)` -> DataFrame, `diagram()`, `equations()`. `NOTE-jupyter.md`:
+  how to make a notebook for any model, and Robert's DECISION: a pip-installable
+  package next (first a trial: the wasm engine under Node.js; licence with Jasper).
+  Python: ~/Projects/simile-notebook-env (open with its bin/jupyter lab). Robert edited
+  and re-ran cells himself: "very cool".
+- CAREFUL: JupyterLab left open holds its copy of a notebook and SAVES IT BACK over a
+  file rebuilt on disk (it did, 2026-11-21 23:43). Before rebuilding or re-running
+  coral.ipynb, ask Robert to close its tab.
+- ENGINE FAULT 8 (with Jasper, like 5 and 7): runs that never finish — 24 variable
+  parameters with a series; and `b` x0.75, the symbionts sinking past 1e-63. Engine
+  README has how to reproduce.
+
+**2026-11-21 (evening): RELEASED as 2026-11-21d** (the reference's guidance on
 reproducing published models; the app unchanged since 21c; tag and GitHub release),
 gallery 0431a09 (live, checked). Robert tried Field in 3D in a real browser window:
 "worked fine". Since 21c:
@@ -27,7 +48,7 @@ gallery 0431a09 (live, checked). Robert tried Field in 3D in a real browser wind
   `pkill -f "^/opt/google/chrome/chrome --headless=new --remote-debugging-port=9350"`
   (a pattern on `--user-data-dir=...` also matches, and kills, your own shell).
 - WAITING ON ROBERT: the run-control modes (NOTE-run-modes.md; he will reply);
-  Jasper on faults 5 and 7.
+  Jasper on faults 5, 7 and 8; when to start the pip package (NOTE-jupyter.md).
 **RELEASED as 2026-11-21c (live; tag and GitHub release): fault 6 fixed** (a true/false
 variable as an `if` condition; engine README). Fault 7 diagnosed, NOT fixed (two tries
 hung the engine; Robert's fan). The coral model (Raharinirina et al. 2022) in
