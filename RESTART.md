@@ -4,7 +4,21 @@
 all three of the old Simile tutorials, and turned up the next big idea —
 embedded-widget pages. Brought up to date 2026-11-16.
 
-**STATE 2026-11-22 (just after midnight): everything committed and pushed; no release
+**STATE 2026-11-23: RELEASED as 2026-11-23** (live, checked; tag and GitHub release):
+a model's FAMILY in the Metadata panel (family.py 10/10; live: 13 listed, a click
+opens another beside it), and 20 of Norman Owen-Smith's TrueBASIC wildlife models in
+the gallery (gallery 0b296c6, 27 models; his permission by email to Robert,
+2026-11-23). Conversion: `~/Projects/models_from_others/wildlife_models_from_owen_smith/`
+(README; convert/make_models.py, make_gallery.py), built with tools/python/simile_build.py.
+NEXT with these models (Robert): the 24 "matrix" programs, most likely as
+fixed-membership submodels (as the AGEINTR family shows); the 4 rainfall-driven
+age-structured ones (KUDUDYN, KUDYNMRB, UNGULDYN, RHINODYN). LATER, once those are in:
+a display widget for matrices, a square grid showing e.g. vegetation state
+transitions (Robert: "not something I've done much work with"). WAITING: Jasper, on
+how a population submodel orders births and deaths within a step (Robert emailed
+him); the individual-based AGEINTR is held back from the gallery until then.
+
+**2026-11-22 (just after midnight): everything committed and pushed; no release
 since 21d** (all later work is examples, tools and notes; nothing for the app's users).
 - JUPYTER (Robert: "That's amazing"; research is a MAIN audience, common ground with
   people who write Python to run experiments with models): `examples/papers/coral/
