@@ -1657,3 +1657,9 @@ button.slx-fn:hover { background: #eaf2fa; }
   pointer-events: none;
 }
 .slx-field3d-choices[hidden] { display: none; }
+
+/* ---- A model's family, in the Metadata panel (src/widgets/metadata.js) ---- */
+.slx-meta-family-list { margin: 4px 0 0; padding-left: 22px; }
+.slx-meta-family-list li { margin: 2px 0; line-height: 1.35; }
+.slx-meta-family-list li.slx-meta-family-this { background: #eef4fb; border-radius: 3px; }
+.slx-meta-family-list a { color: #1f5fa8; }

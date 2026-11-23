@@ -564,6 +564,32 @@ When the model is opened, these displays open and the model runs once.
 All optional. `description`: what the model is about, in two or three
 sentences. If the model came from a paper, give the paper.
 
+**A family of models.** Models that are alternatives to one another (several
+forms of an equation, several ways of building the same model) can each list
+the whole set, so a reader can open the others beside it:
+
+```json
+"family": {
+  "title": "Descriptive population models: thirteen forms of density dependence",
+  "members": [
+    { "model": "descrpop-logistic", "title": "Logistic", "summary": "…", "file": "../descrpop-logistic/descrpop-logistic.json" },
+    { "model": "descrpop-ricker", "title": "Ricker", "summary": "…", "file": "../descrpop-ricker/descrpop-ricker.json" }
+  ],
+  "current": "descrpop-logistic"
+}
+```
+
+`file` is each member's model file, relative to this model's own address
+(as the model gallery lays them out, `../<model>/<model>.json`); `current`
+is this model's own `model`. Simile's Metadata panel lists them, this one
+marked and each other a link that opens it in the same window.
+
+**An array of a submodel's values, at the top level** (a variable whose
+equation is `[ageing_out]`, read back inside the submodel): give that
+variable's `units` its size, `"array(1,5)"` for 5 instances, and write it
+`[ageing]` where it is used. This is the one exception to section 11: without
+it the model does not build.
+
 ## 11. Units: leave them empty
 
 **Always write `"units": ""`.** Say what the units are in the model's

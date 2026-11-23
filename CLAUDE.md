@@ -143,6 +143,28 @@ footing (`src/widgets/grid.js` is the first).
   under Node.js; the GPL of Jasper's run-time to agree first), not
   JupyterLite. A FIXED parameter changed between runs: `run` reloads the
   model first (fault 7 otherwise).
+- **A model's FAMILY** (Robert, 2026-11-23): `metadata.family = {title,
+  members: [{model, title, summary, file}], current}`, models that are
+  alternatives to one another. The Metadata panel lists them, this one
+  marked, the others links opening them in this window
+  (`Sienna.openFamilyMember`, src/widgets/metadata.js: `file` relative to
+  `openedFrom.url`, else `metadata.page`; with neither, a member already among
+  the user's models; else it says which file). `Sienna.metadataForm.fromFields
+  (f, held)` keeps entries the fields do not edit, so an edited title keeps the
+  family. Check: `tools/headless/scripts/family.py`. The gallery's check.py
+  verifies every member's file.
+- **Converting other people's models** (`~/Projects/models_from_others/`):
+  **`tools/python/simile_build.py`** builds model specs from Python, every
+  influence drawn from the equations (in, out `[x]`/`{x}`, across associations
+  `x_role`). First used for Norman Owen-Smith's TrueBASIC models (his book's CD,
+  2007): `models_from_others/wildlife_models_from_owen_smith/convert/`
+  (`make_models.py`, `make_gallery.py`, README there) — 20 in the gallery,
+  two families (13 descriptive equations; one age-structured model built three
+  ways in Simile). Found: `binome(p, n)` needs a whole number n (`int()`); a
+  top-level array of a submodel's values needs units `array(1,n)` (the app
+  could infer it); a population submodel's births and deaths in one step are
+  not ordered as assumed (the individual-based AGEINTR declines; held back,
+  question to Robert).
 - **`tools/check_models.py`** (Robert, 2026-11-20: for him to run, no
   Python needed beyond typing it): checks model files — the gallery by
   default, or files / folders given — load, are complete, export, compile

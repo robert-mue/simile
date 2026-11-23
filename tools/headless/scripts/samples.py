@@ -70,17 +70,21 @@ async def main():
     check('it lists every model in the gallery', isinstance(got, list) and len(got) == len(names), got)
     for name in names:
         size, meta = expected(name)
-        row = [r for r in (got or []) if r[0].startswith(meta['title'])]
+        # by title AND description: one title can begin another ("Trees", "Trees over pasture")
+        row = [r for r in (got or []) if r[0].startswith(meta['title']) and meta['description'] in r[0]]
         check(name + ': title, description, keywords, size', len(row) == 1 and meta['description'] in row[0][0]
               and row[0][1] == ', '.join(meta['keywords']) and row[0][2] == size, row)
         if 'paper' in meta:
             check(name + ': its paper is linked', await T.ev("[...document.querySelectorAll('.slx-samples-links a')].some(a => a.href === %s)" % json.dumps(meta['paper']['url'])) is True)
-    trees = [r for r in got if r[0].startswith('Trees')]
+    trees = [r for r in got if r[0].startswith('TreesA population')]
     check('features read from the structure (trees: population, creation, immigration, loss)',
           trees and trees[0][3] == 'population, creation, immigration, loss', trees)
     lamos = [r for r in got if r[0].startswith('LAMOS')]
     check('features read from the structure (LAMOS: association among them)', lamos and 'association' in lamos[0][3], lamos)
-    check('sorted by title at first', [r[0] for r in got] == sorted([r[0] for r in got], key=str.lower))
+    # In the reader's language's order (localeCompare), as the panel sorts, not Python's.
+    check('sorted by title at first', await T.ev(
+        "(() => { const t = [...document.querySelectorAll('.slx-samples-table tbody .slx-samples-title')].map(e => e.textContent.toLowerCase());"
+        " return t.every((x, i) => i === 0 || t[i-1].localeCompare(x) <= 0) })()") is True)
     await T.ev("$('th[data-sort=size]').click(); 1")
     total = lambda r: sum(int(x) for x in r[2].split('/'))
     by = await T.ev(rows)

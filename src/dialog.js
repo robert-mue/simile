@@ -873,7 +873,19 @@
    * one statement of them, used by Model properties' Metadata tab and the
    * Metadata panel (src/widgets/metadata.js). `toFields` gives each field's
    * text from what is held; `fromFields` the metadata from the fields' text,
-   * empty ones left out — keywords a list, the paper `{citation, url}`.
+   * empty ones left out — keywords a list, the paper `{citation, url}` —
+   * and, given what was `held`, every entry the fields do not edit kept as
+   * it was: a model's `family` (below), or anything a later version adds,
+   * must not vanish when a title is edited.
+   *
+   * A FAMILY (Robert, 2026-11-23): models that are alternatives to one
+   * another — thirteen forms of density dependence, four ways of building
+   * the same model — each listing them all, `{title, members: [{model,
+   * title, summary, file}], current}`; `file` is the member's model spec,
+   * relative to this model's own address (as the model gallery lays them
+   * out, `../<model>/<model>.json`). The Metadata panel lists them, this one
+   * marked, each other a link that opens it in this window
+   * (`Sienna.openFamilyMember`, src/widgets/metadata.js).
    */
   Sienna.metadataForm = {
     FIELDS: [
@@ -895,9 +907,14 @@
         url: (m.paper && m.paper.url) || '',
       };
     },
-    fromFields: function (f) {
+    EDITED: ['title', 'description', 'keywords', 'page', 'paper'],
+    fromFields: function (f, held) {
       var v = function (k) { return String(f[k] == null ? '' : f[k]).trim(); };
       var out = {};
+      var edited = this.EDITED;
+      if (held && typeof held === 'object') {
+        Object.keys(held).forEach(function (k) { if (edited.indexOf(k) < 0) out[k] = held[k]; });
+      }
       if (v('title')) out.title = v('title');
       if (v('description')) out.description = v('description');
       var kw = v('keywords').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
@@ -995,8 +1012,8 @@
       });
       var typed = {};
       $dlg.find('[data-meta]').each(function () { typed[$(this).attr('data-meta')] = $(this).val(); });
-      var nowMeta = meta.fromFields(typed);
-      var metaChanged = JSON.stringify(nowMeta) !== JSON.stringify(meta.fromFields(heldMeta));
+      var nowMeta = meta.fromFields(typed, m.metadata);
+      var metaChanged = JSON.stringify(nowMeta) !== JSON.stringify(meta.fromFields(heldMeta, m.metadata));
       if (Object.keys(changes).length || metaChanged) {
         d.setModelProperties(changes, metaChanged ? nowMeta : undefined);
       }
