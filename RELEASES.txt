@@ -836,3 +836,29 @@ Model gallery (File > Sample models...)
   warming ocean, 1955 to 2100, checked against its authors' results.
 
 The app itself is unchanged since 2026-11-21c.
+
+------------------------------------------------------------------------
+Release 2026-11-23
+------------------------------------------------------------------------
+
+Models
+- A model can belong to a family: models that are alternatives to one
+  another, such as several forms of an equation or several ways of
+  building the same model. Its Metadata panel (Widgets > Metadata) lists
+  the family, this model marked, and each of the others is a link that
+  opens it in the same window, beside this one.
+- Editing a model's metadata (its title, say) no longer loses entries the
+  form does not show, such as its family.
+
+Model gallery (File > Sample models...)
+- Twenty wildlife population models from Norman Owen-Smith's book
+  Introduction to Modeling in Wildlife and Resource Conservation
+  (Blackwell, 2007), converted from its TrueBASIC programs with his
+  permission: thirteen descriptive equations of density dependence and
+  one age-structured model built three ways in Simile (two families),
+  Caughley's herbivore-vegetation model, a random walk of a small
+  population, habitat choice, and an elementary population model.
+
+Model file reference
+- The family, in a model's metadata; and an array of a submodel's values
+  used at the top level, which needs its size in its units.
